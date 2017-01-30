@@ -1,2 +1,3 @@
 scikit-learn
 numpy
+symfeat==0.3.0

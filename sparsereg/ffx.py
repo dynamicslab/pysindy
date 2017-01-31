@@ -19,30 +19,30 @@ def cardinality(x):
 
 class FFXModel:
     def __init__(self, coefs, alpha, sym, metric=mean_squared_error):
-        self.coefs = coefs
+        self.coefs_ = coefs
         self.complexity = cardinality(coefs)
         self.metric = metric
         self.sym = sym
 
     def predict(self, x):
         features = self.sym.transform(x)
-        return features @ self.coefs
+        return features @ self.coefs_
 
     def score(self, x, y):
         yhat = self.predict(x)
         return self.metric(y, yhat)
 
-    def __repr__(self):
+    def pprint(self):
         fmt = "{}*{}".format
-        expr =  "+".join(fmt(c, n) for c, n in zip(self.coefs, self.sym.names) if c != 0) or "0"
+        expr =  "+".join(fmt(c, n) for c, n in zip(self.coefs_, self.sym.names) if c != 0) or "0"
         return expr
 
 
-def run_ffx(x, y, exponents, operators, **kwargs):
+def run_ffx(x, y, exponents, operators, metric=mean_squared_error, **kwargs):
     sym = sf.SymbolicFeatures(exponents=exponents, operators=operators)
     features = sym.fit_transform(x)
-    alphas, coefsT, _ = enet_path(features, y, **kwargs)
-    models = [FFXModel(coef, alpha, sym) for coef, alpha in zip(coefsT.T, alphas)]
+    alphas, coefsT, _ = enet_path(features, y, warm_start=True, fit_intercept=False, **kwargs)
+    models = [FFXModel(coef, alpha, sym, metric=metric) for coef, alpha in zip(coefsT.T, alphas)]
     for model in models:
         model.score_ = model.score(x, y)
     return pareto_front_2d(models, "complexity", "score_")

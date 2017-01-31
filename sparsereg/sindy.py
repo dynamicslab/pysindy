@@ -13,10 +13,10 @@ def _sparse_coefficients(dim, ind, coef, knob):
 
 
 class SINDy(BaseEstimator):
-    def __init__(self, knob=0.01, max_iter=100, names=None):
+    def __init__(self, knob=0.01, max_iter=100):
         self.knob = knob
         self.max_iter = max_iter
-        self.names = names or ("x_{}".format(i) for i in count())
+
 
     def fit(self, x_, y_):
         x = x_.copy()
@@ -40,9 +40,8 @@ class SINDy(BaseEstimator):
     def predict(self, x):
         return x @ self.coefs_
 
-
-    def pprint(self):
+    def pprint(self, names=None):
         fmt = "{}*{}".format
-        names = iter(self.names)
-        expr =  "+".join(fmt(c, n) for c, n in zip(self.coefs_, self.names) if c != 0) or "0"
+        names = names or ("x_{}".format(i) for i in count())
+        expr =  "+".join(fmt(c, n) for c, n in zip(self.coefs_, names) if c != 0) or "0"
         return expr

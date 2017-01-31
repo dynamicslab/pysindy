@@ -2,7 +2,7 @@ sparsereg
 =========
 
 .. image:: https://travis-ci.org/Ohjeah/sparsereg.svg?branch=master
-    :target: https://travis-ci.org/Ohjeah/symfeat
+    :target: https://travis-ci.org/Ohjeah/sparsereg
 .. image:: https://badge.fury.io/py/sparsereg.svg
     :target: https://badge.fury.io/py/sparsereg
 

@@ -3,11 +3,11 @@ import numpy as np
 
 from sparsereg.ffx import run_ffx
 
-#data = load_boston()
-#x, y = data.data, data.target
+data = load_boston()
+x, y = data.data, data.target
 
-x = np.random.normal(size=(1000, 1))*2*np.pi
-y = np.sin(x[:, 0])
+#x = np.random.normal(size=(1000, 1))*2*np.pi
+#y = np.sin(x[:, 0])
 
 
 exponents = [1, 2]

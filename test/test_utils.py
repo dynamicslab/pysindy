@@ -50,8 +50,6 @@ def test_pareto_front():
 
     front = pareto_front(models, "a", "b")
 
-    for m in front:
-        print(m.a, m.b)
     assert amin <= m.a <= amax
     assert bmin <= m.b <= bmax
 

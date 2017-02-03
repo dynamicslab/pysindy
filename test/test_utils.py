@@ -50,8 +50,9 @@ def test_pareto_front():
 
     front = pareto_front(models, "a", "b")
 
-    assert amin <= m.a <= amax
-    assert bmin <= m.b <= bmax
+    for m in front:
+        assert amin <= m.a <= amax
+        assert bmin <= m.b <= bmax
 
 
 @pytest.mark.parametrize("exp_null", range(6))

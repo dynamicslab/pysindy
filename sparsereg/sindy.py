@@ -2,7 +2,7 @@ from itertools import count
 
 import numpy as np
 from sklearn.base import BaseEstimator
-from .util import nrmse
+from sklearn.metrics import r2_score
 
 
 def _sparse_coefficients(dim, ind, coef, knob):
@@ -43,7 +43,7 @@ class SINDy(BaseEstimator):
 
     def score(self, x, y):
         yhat = self.predict(x)
-        return nrmse(y, yhat)
+        return r2_score(y, yhat)
 
     def pprint(self, names=None):
         fmt = "{}*{}".format

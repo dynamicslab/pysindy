@@ -14,11 +14,17 @@ y = x[:, 0] * x[:, 1]
 
 
 exponents = [1, 2]
-operators = {"sin": np.sin}
-max_iter = 5000
-l1_ratios = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.9, 0.95]
+#operators = {"sin": np.sin}
+operators = {}
+max_iter = 1000
+l1_ratios = [0.95]
 
 front = run_ffx(x, y, exponents, operators, max_iter=max_iter, l1_ratios=l1_ratios)
 
 for model in front:
     print(model.pprint(), model.score_, model.complexity)
+
+import ffx
+
+for model in ffx.run(x, y, x, y, "ab"):
+    print(model)

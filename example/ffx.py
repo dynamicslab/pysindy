@@ -3,19 +3,22 @@ import numpy as np
 
 from sparsereg.ffx import run_ffx
 
-data = load_boston()
-x, y = data.data, data.target
+#data = load_boston()
+#x, y = data.data, data.target
+#print(x.shape)
+np.random.seed(42)
+x = np.random.normal(size=(1000, 2))
+y = x[:, 0] * x[:, 1]
 
-#x = np.random.normal(size=(1000, 1))*2*np.pi
-#y = np.sin(x[:, 0])
+
 
 
 exponents = [1, 2]
-operators = {"sin": np.sin, "cos": np.cos}
-l1_ratio = 0.95
-eps = 1e-30
-n_alphas = 100
+operators = {"sin": np.sin}
+max_iter = 5000
+l1_ratios = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.9, 0.95]
 
-front = run_ffx(x, y, exponents, operators, l1_ratio=l1_ratio, eps=eps, n_alphas=n_alphas)
+front = run_ffx(x, y, exponents, operators, max_iter=max_iter, l1_ratios=l1_ratios)
+
 for model in front:
     print(model.pprint(), model.score_, model.complexity)

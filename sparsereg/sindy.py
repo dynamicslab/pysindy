@@ -2,6 +2,7 @@ from itertools import count
 
 import numpy as np
 from sklearn.base import BaseEstimator
+from .util import nrmse
 
 
 def _sparse_coefficients(dim, ind, coef, knob):
@@ -17,16 +18,16 @@ class SINDy(BaseEstimator):
         self.knob = knob
         self.max_iter = max_iter
 
-
     def fit(self, x_, y_):
         x = x_.copy()
         y = y_.copy()
         n_features = x.shape[1]
         ind = np.ones(n_features, dtype=bool)
         coefs = np.linalg.lstsq(x, y)[0]
+        coefs, ind = _sparse_coefficients(n_features, ind, coefs, self.knob)
 
         for _ in range(self.max_iter):
-            new_coefs = np.linalg.lstsq(x[:, ind], y)[0]
+            new_coefs, residuals, _, _ = np.linalg.lstsq(x[:, ind], y)
             new_coefs, ind = _sparse_coefficients(n_features, ind, new_coefs, self.knob)
             if np.allclose(new_coefs, coefs):
                 break
@@ -39,6 +40,10 @@ class SINDy(BaseEstimator):
 
     def predict(self, x):
         return x @ self.coefs_
+
+    def score(self, x, y):
+        yhat = self.predict(x)
+        return nrmse(y, yhat)
 
     def pprint(self, names=None):
         fmt = "{}*{}".format

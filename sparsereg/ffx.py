@@ -2,6 +2,7 @@ from operator import attrgetter
 from itertools import product
 
 from sklearn.linear_model import ElasticNet
+from joblib import Parallel, delayed
 import numpy as np
 
 import symfeat as sf
@@ -39,10 +40,15 @@ class FFXModel:
         return hash(tuple(self.coefs_))
 
 
-def enet(x, y, alphas, l1_ratios, **params):
-    for alpha, l1_ratio in product(alphas, l1_ratios):
-        net = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, fit_intercept=False, **params).fit(x, y)
-        yield alpha, l1_ratio, net.coef_.copy()
+def _fit(alpha, l1_ratio, x, y, params):
+    net = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, fit_intercept=False, **params).fit(x, y)
+    return alpha, l1_ratio, net.coef_.copy()
+
+
+def enet(x, y, alphas, l1_ratios, n_jobs, **params):
+    with Parallel(n_jobs=n_jobs) as parallel:
+        for alpha in alphas:
+            yield from parallel(delayed(_fit)(alpha, l1_ratio, x, y, params) for l1_ratio in l1_ratios)
 
 
 def _get_alphas(alpha_max, num_alphas, eps):
@@ -52,14 +58,14 @@ def _get_alphas(alpha_max, num_alphas, eps):
     return sorted(set(alphas1).union(alphas2), reverse=True)
 
 
-def run_ffx(x, y, exponents, operators, num_alphas=300, metric=nrmse, l1_ratios=(0.1, 0.3, 0.5, 0.7, 0.9, 0.95), eps=1e-70, max_complexity=100, target_score=0.01, min_models=40, alpha_max=1000, **params):
+def run_ffx(x, y, exponents, operators, num_alphas=300, metric=nrmse, l1_ratios=(0.1, 0.3, 0.5, 0.7, 0.9, 0.95), eps=1e-70, max_complexity=100, target_score=0.01, min_models=40, alpha_max=1000, n_jobs=1, **params):
 
     sym = sf.SymbolicFeatures(exponents=exponents, operators=operators)
 
     features = sym.fit_transform(x)
     alphas = _get_alphas(alpha_max, num_alphas, eps)
 
-    models = (FFXModel(coef, alpha, l1_ratio, sym, metric=metric) for alpha, l1_ratio, coef in enet(features, y, alphas, l1_ratios, **params))
+    models = (FFXModel(coef, alpha, l1_ratio, sym, metric=metric) for alpha, l1_ratio, coef in enet(features, y, alphas, l1_ratios, n_jobs=n_jobs, **params))
 
     considered = []
     for model in models:

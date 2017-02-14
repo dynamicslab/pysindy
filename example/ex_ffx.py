@@ -19,7 +19,7 @@ operators = {}
 max_iter = 1000
 l1_ratios = [0.95]
 
-front = run_ffx(x, y, exponents, operators, max_iter=max_iter, l1_ratios=l1_ratios)
+front = run_ffx(x, y, exponents, operators, max_iter=max_iter, l1_ratios=l1_ratios, n_jobs=-1)
 
 for model in front:
     print(model.pprint(), model.score_, model.complexity)

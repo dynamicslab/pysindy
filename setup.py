@@ -23,6 +23,7 @@ required = [
     "numpy",
     "scikit-learn",
     "symfeat",
+    "joblib", 
 ]
 
 setup(

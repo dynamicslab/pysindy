@@ -1,4 +1,4 @@
 scikit-learn[alldeps]
 numpy
-symfeat==0.4.2
+symfeat==0.4.3
 joblib

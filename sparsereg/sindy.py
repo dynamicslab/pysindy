@@ -4,6 +4,8 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
 
+from .util import normalize
+
 
 def _sparse_coefficients(dim, ind, coef, knob):
     c = np.zeros(dim)

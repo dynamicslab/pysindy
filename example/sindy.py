@@ -8,11 +8,11 @@ data = load_boston()
 x, y = data.data, data.target
 
 operators = {}
-exponents = [1, 2, 0.5]
+exponents = [1]
 sym = sf.SymbolicFeatures(exponents=exponents, operators=operators)
 features = sym.fit_transform(x)
 
-estimator = SINDy()
+estimator = SINDy(100)
 estimator.fit(features, y)
-print(estimator.coefs_)
+print(estimator.coef_)
 print(estimator.score(features, y))

@@ -59,3 +59,12 @@ def test_pareto_front():
 def test_cardinality(exp_null):
     coef =  [10**(-i) for i in range(7)]
     assert cardinality(coef, null=10.0**(-exp_null)) == exp_null + 1
+
+
+def test_normalize():
+    n = 10
+    order = 2
+    x = np.ones(shape=(n, 1))
+
+    x, m = normalize(x, order=order)
+    assert m[0] == 1/n**(1.0/order)

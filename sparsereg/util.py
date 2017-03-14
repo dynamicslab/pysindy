@@ -4,6 +4,7 @@ import numpy as np
 def dominates(a, b):
     return all(ai <= bi for ai, bi in zip(a, b)) and not a == b
 
+
 def pareto_front(models, *attrs):
     """Simple cull.
     """
@@ -23,11 +24,19 @@ def pareto_front(models, *attrs):
         front -= dominated
     return front
 
+
+def normalize(x, order=2):
+    m = 1.0 / np.linalg.norm(x, ord=order, axis=0)
+    return m * x, m
+
+
 def cardinality(x, null=1e-9):
     return sum(map(lambda x: abs(x) >= null, x))
 
+
 def rmse(x):
     return np.sqrt(np.mean(x**2))
+
 
 def nrmse(x, y):
     return rmse(x-y)/(max(x) - min(x))

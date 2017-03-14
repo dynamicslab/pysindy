@@ -26,7 +26,7 @@ class SINDy(BaseEstimator):
         n_samples, n_features = x_.shape
 
         if self.normalize:
-            x, m = normalize(x, order=self.normalize)
+            x, m = normalize(x_, order=self.normalize)
         else:
             x, m = x_, np.ones(n_features)
         

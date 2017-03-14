@@ -27,7 +27,7 @@ class SINDy(BaseEstimator):
         coefs, ind = _sparse_coefficients(n_features, ind, coefs, self.knob)
 
         for _ in range(self.max_iter):
-            new_coefs, residuals, _, _ = np.linalg.lstsq(x[:, ind], y)
+            new_coefs = np.linalg.lstsq(x[:, ind], y)[0]
             new_coefs, ind = _sparse_coefficients(n_features, ind, new_coefs, self.knob)
             if np.allclose(new_coefs, coefs):
                 break
@@ -35,11 +35,11 @@ class SINDy(BaseEstimator):
         else:
             pass # put warning here
 
-        self.coefs_ = new_coefs
+        self.coef_ = new_coefs
         return self
 
     def predict(self, x):
-        return x @ self.coefs_
+        return x @ self.coef_
 
     def score(self, x, y):
         yhat = self.predict(x)
@@ -48,5 +48,5 @@ class SINDy(BaseEstimator):
     def pprint(self, names=None):
         fmt = "{}*{}".format
         names = names or ("x_{}".format(i) for i in count())
-        expr =  "+".join(fmt(c, n) for c, n in zip(self.coefs_, names) if c != 0) or "0"
+        expr =  "+".join(fmt(c, n) for c, n in zip(self.coef_, names) if c != 0) or "0"
         return expr

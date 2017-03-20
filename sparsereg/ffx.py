@@ -1,6 +1,7 @@
 from operator import attrgetter
 from itertools import product
 
+from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.linear_model import ElasticNet
 from joblib import Parallel, delayed
 import numpy as np
@@ -10,7 +11,7 @@ import symfeat as sf
 from .util import pareto_front, cardinality, nrmse
 
 
-class FFXModel:
+class FFXModel(BaseEstimator):
     def __init__(self, coefs, alpha, l1_ratio, sym, precision=-6, metric=nrmse):
         self.null = 10**precision
         self.coefs_ = np.array([round(c, -precision) if abs(c) >= self.null else 0 for c in coefs])

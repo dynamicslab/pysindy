@@ -1,8 +1,10 @@
 from itertools import count
+import warnings
 
 import numpy as np
 from sklearn.base import RegressorMixin
 from sklearn.linear_model.base import LinearModel, check_X_y
+from sklearn.exceptions import ConvergenceWarning, FitFailedWarning
 
 from .util import normalize
 
@@ -46,9 +48,10 @@ class SINDy(LinearModel, RegressorMixin):
                     break
                 coefs = new_coefs
             else:
-                pass # put warning here
+                warnings.warn("SINDy did not converge after {} iterations.".format(max_iter), ConvergenceWarning)
+
         else:
-            pass # put warning here
+            raise FitFailedWarning("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.knob))
 
         self._set_intercept(X_offset, y_offset, X_scale)
 

@@ -13,10 +13,12 @@ def data():
 
 def test_sindy_normalize(data):
     x, y = data
-    s = SINDy(knob=0.5).fit(x, y)
+    knob = 0.5
+    s = SINDy(knob=knob).fit(x, y)
     np.testing.assert_allclose(s.coef_, np.array([0, 2]), atol=1e-7)
 
     np.testing.assert_allclose(s.predict(x), y)
+
 
 def test_sindy_raise(data):
     x, y = data

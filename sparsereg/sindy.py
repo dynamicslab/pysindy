@@ -35,7 +35,6 @@ class SINDy(LinearModel, RegressorMixin):
             x_, y, fit_intercept=self.fit_intercept, normalize=self.normalize,
             copy=self.copy_X, sample_weight=None)
 
-
         ind = np.ones(n_features, dtype=bool)
         coefs = np.linalg.lstsq(x, y)[0]
         new_coefs, ind = _sparse_coefficients(n_features, ind, coefs, self.knob)
@@ -55,7 +54,7 @@ class SINDy(LinearModel, RegressorMixin):
 
         self._set_intercept(X_offset, y_offset, X_scale)
 
-        self.coef_ = coefs
+        self.coef_ = new_coefs
         return self
 
     def pprint(self, names=None):

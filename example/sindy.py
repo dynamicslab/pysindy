@@ -12,7 +12,7 @@ exponents = [1]
 sym = sf.SymbolicFeatures(exponents=exponents, operators=operators)
 features = sym.fit_transform(x)
 
-estimator = SINDy(100)
+estimator = SINDy(knob=1)
 estimator.fit(features, y)
 print(estimator.coef_)
 print(estimator.score(features, y))

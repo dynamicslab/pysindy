@@ -49,18 +49,18 @@ class SINDy(LinearModel, RegressorMixin):
         coefs = _regress(x, y, l1)
         new_coefs, ind = _sparse_coefficients(n_features, ind, coefs, self.knob)
 
-        if np.count_nonzero(ind) > 0:
-            for _ in range(self.max_iter):
-                new_coefs = _regress(x[:, ind], y, l1)
-                new_coefs, ind = _sparse_coefficients(n_features, ind, new_coefs, self.knob)
-                if np.allclose(new_coefs, coefs) or np.count_nonzero(ind) == 0:
-                    break
-                coefs = new_coefs
-            else:
-                warnings.warn("SINDy did not converge after {} iterations.".format(max_iter), ConvergenceWarning)
 
+        for _ in range(self.max_iter):
+            if np.count_nonzero(ind) == 0:
+                raise FitFailedWarning("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.knob))
+
+            new_coefs = _regress(x[:, ind], y, l1)
+            new_coefs, ind = _sparse_coefficients(n_features, ind, new_coefs, self.knob)
+            if np.allclose(new_coefs, coefs) and np.count_nonzero(ind) != 0:
+                break
+            coefs = new_coefs
         else:
-            raise FitFailedWarning("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.knob))
+            warnings.warn("SINDy did not converge after {} iterations.".format(max_iter), ConvergenceWarning)
 
         coefs = _regress(x[:, ind], y, 0)  # unbias
         coefs, _ = _sparse_coefficients(n_features, ind, coefs, self.knob)

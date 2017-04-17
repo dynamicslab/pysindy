@@ -78,4 +78,3 @@ class SINDy(LinearModel, RegressorMixin):
     @property
     def complexity(self):
         return np.count_nonzero(self.coef_)
-        np.count_nonzero

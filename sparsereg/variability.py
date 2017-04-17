@@ -36,7 +36,6 @@ class ReducedLinearModel(BaseEstimator):
         self.lm = self.lm.fit(x[:, mask], y)
         self.coef_ = np.zeros(shape=mask.shape)
         self.coef_[mask] = self.lm.coef_
-
         return self
 
     def predict(self, x):

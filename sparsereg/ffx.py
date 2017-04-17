@@ -1,7 +1,7 @@
 from operator import attrgetter
 from itertools import product
 
-from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.base import BaseEstimator
 from sklearn.linear_model import ElasticNet
 from joblib import Parallel, delayed
 import numpy as np

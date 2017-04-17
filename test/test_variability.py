@@ -23,6 +23,6 @@ def test_exclude_by_variability():
 def test_fit_with_noise(data, lmc, sigma):
     x, y = data
 
-    lm = fit_with_noise(x, y, lmc(), sigma=sigma)
+    lm = fit_with_noise(x, y, lmc(), sigma=sigma, n=100)
     assert len(lm.coef_) == x.shape[1]
     assert lm.coef_[0] == 0

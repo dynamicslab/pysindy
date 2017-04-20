@@ -4,6 +4,6 @@ import numpy as np
 
 @pytest.fixture
 def data():
-    x = 2*np.random.random(size=(100, 2)) + 5
-    y = 2 * x[:, 1]
+    x = 2 * np.random.random(size=(100, 2)) + 5
+    y = 2 * x[:, 1] + 3
     return x, y

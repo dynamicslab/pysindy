@@ -3,7 +3,7 @@ import warnings
 
 import numpy as np
 from sklearn.base import RegressorMixin
-from sklearn.linear_model.base import LinearModel, check_X_y
+from sklearn.linear_model.base import LinearModel, check_X_y, _rescale_data
 from sklearn.exceptions import ConvergenceWarning, FitFailedWarning
 
 from .util import normalize, cardinality
@@ -26,16 +26,15 @@ def _regress(x, y, l1):
 
 
 class SINDy(LinearModel, RegressorMixin):
-    def __init__(self, knob=0.01, l1=0.1, max_iter=100, normalize=True, copy_x=False):
+    def __init__(self, knob=0.01, l1=0.1, max_iter=100, normalize=True, fit_intercept=True, copy_x=True):
         self.knob = knob
         self.max_iter = max_iter
-        self.fit_intercept = False
+        self.fit_intercept = fit_intercept
         self.normalize = normalize
         self.copy_X = copy_x
         self.l1 = l1
 
-    def fit(self, x_, y):
-
+    def fit(self, x_, y, sample_weight=None):
         l1 = self.l1
         n_samples, n_features = x_.shape
 
@@ -45,10 +44,13 @@ class SINDy(LinearModel, RegressorMixin):
             x_, y, fit_intercept=self.fit_intercept, normalize=self.normalize,
             copy=self.copy_X, sample_weight=None)
 
+        if sample_weight is not None:
+            # Sample weight can be implemented via a simple rescaling.
+            x, y = _rescale_data(x, y, sample_weight)
+
         ind = np.ones(n_features, dtype=bool)
         coefs = _regress(x, y, l1)
         new_coefs, ind = _sparse_coefficients(n_features, ind, coefs, self.knob)
-
 
         for _ in range(self.max_iter):
             if np.count_nonzero(ind) == 0:
@@ -66,7 +68,7 @@ class SINDy(LinearModel, RegressorMixin):
         coefs, _ = _sparse_coefficients(n_features, ind, coefs, self.knob)
         self.coef_ = coefs
         self._set_intercept(X_offset, y_offset, X_scale)
-
+        self.intercept_ = self.intercept_ if abs(self.intercept_) > self.knob else 0
         return self
 
     def pprint(self, names=None):

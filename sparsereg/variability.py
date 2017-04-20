@@ -24,7 +24,6 @@ def exclude_by_variability(coef, threshold):
 
 class ReducedLinearModel(BaseEstimator):
     def __init__(self, mask, lm):
-        print(mask)
         self.mask = mask
         self.lm = lm
 

@@ -31,7 +31,7 @@ def test_dominates(case):
     assert dominates(b, a) == result_ba
 
 
-def test_pareto_front():
+def test_pareto_front_attrs():
     amax = 1.0
     amin = 0.7
     bmax = 1.3
@@ -55,9 +55,52 @@ def test_pareto_front():
         assert bmin <= m.b <= bmax
 
 
+
+@pytest.fixture(scope="function")
+def models():
+
+    m = [  
+        (0, 0),
+        (0, 1),
+        (1, 0),
+        (0.5, 0.5),
+        (1, 1),
+    ]
+
+    return m
+
+
+def test_pareto_front_tpl(models):
+
+    fronts = pareto_front(models, all=True, id=True)
+
+    assert len(fronts) == 3
+    assert models[0] in fronts[0]
+    assert models[-1] in fronts[-1]
+
+
+def test_crowding_distance(models):
+    models = sorted(models[1:-1])
+    dist = crowding_distance(models, id=True)
+
+    assert dist[0] == dist[-1] == np.infty
+    assert dist[1] == 2
+
+
+def test_non_dominated_sorting(models):
+    ranked = sort_non_dominated(models, id=True)
+
+    assert ranked[0] == models[0]
+    assert ranked[1] == models[-2]
+    assert ranked[-1] == models[-1]
+
+    assert set(ranked[2:4]) == set(models[1:3]) 
+
+
+
 @pytest.mark.parametrize("exp_null", range(6))
 def test_cardinality(exp_null):
-    coef =  [10**(-i) for i in range(7)]
+    coef = [10**(-i) for i in range(7)]
     assert cardinality(coef, null=10.0**(-exp_null)) == exp_null + 1
 
 

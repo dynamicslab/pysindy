@@ -6,7 +6,7 @@ from sklearn.base import RegressorMixin
 from sklearn.linear_model.base import LinearModel, check_X_y, _rescale_data
 from sklearn.exceptions import ConvergenceWarning, FitFailedWarning
 
-from .util import normalize, cardinality
+from .util import cardinality
 
 
 def _sparse_coefficients(dim, ind, coef, knob):
@@ -62,7 +62,7 @@ class SINDy(LinearModel, RegressorMixin):
                 break
             coefs = new_coefs
         else:
-            warnings.warn("SINDy did not converge after {} iterations.".format(max_iter), ConvergenceWarning)
+            warnings.warn("SINDy did not converge after {} iterations.".format(self.max_iter), ConvergenceWarning)
 
         coefs = _regress(x[:, ind], y, 0)  # unbias
         coefs, _ = _sparse_coefficients(n_features, ind, coefs, self.knob)
@@ -74,7 +74,7 @@ class SINDy(LinearModel, RegressorMixin):
     def pprint(self, names=None):
         fmt = "{}*{}".format
         names = names or ("x_{}".format(i) for i in count())
-        expr =  "+".join(fmt(c, n) for c, n in zip(self.coef_, names) if c != 0) or "0"
+        expr = "+".join(fmt(c, n) for c, n in zip(self.coef_, names) if c != 0) or "0"
         return expr
 
     @property

@@ -8,9 +8,9 @@ def dominates(a, b):
     return all(ai <= bi for ai, bi in zip(a, b)) and not a == b
 
 
-def _pareto_front(models, *attrs, id=False):
+def _pareto_front(models, *attrs):
     """Helper function. Performs simple cull algorithm"""
-    if id:
+    if isinstance(next(iter(models)), tuple):
         get_fit = lambda x: x
     else:
         get_fit = attrgetter(*attrs)
@@ -32,30 +32,31 @@ def _pareto_front(models, *attrs, id=False):
     return sorted(front, key=get_fit)
 
 
-def pareto_front(models, *attrs, all=False, id=False):
+def pareto_front(models, *attrs, all=False):
     """
     Simple cull. Can recursively determine all fronts.
     """
     if not all:
-        return _pareto_front(models, *attrs, id=id)
+        return _pareto_front(models, *attrs)
     
     else:
         fronts = []
         models = set(models)
         while models:
-            fronts.append(_pareto_front(models, *attrs, id=id))
+            fronts.append(_pareto_front(models, *attrs))
             models -= set(fronts[-1])
         return fronts
 
 
-def crowding_distance(models, *attrs, id=False):
+def crowding_distance(models, *attrs):
     """
     Assumes models in lexicographical sorted.
     """
-    if id:
+
+    if isinstance(next(iter(models)), tuple):
         get_fit = lambda x: x
     else:
-        get_fit = lambda m: [getattr(m, attr) for attr in attrs]
+        get_fit = attrgetter(*attrs)
 
     f = np.array([get_fit(m) for m in sorted(models)])
     scale = np.max(f, axis=0) - np.min(f, axis=0)
@@ -67,13 +68,13 @@ def crowding_distance(models, *attrs, id=False):
     return dist
 
 
-def sort_non_dominated(models, *attrs, id=False):
+def sort_non_dominated(models, *attrs):
     """
     NSGA2 based sorting
     """
-    fronts = pareto_front(models[:], *attrs, all=True, id=id)
+    fronts = pareto_front(models[:], *attrs, all=True)
 
-    distances = [crowding_distance(front, *attrs, id=id) for front in fronts] # if len(front) > 2 else list(np.zeros_like(front))
+    distances = [crowding_distance(front, *attrs) for front in fronts] # if len(front) > 2 else list(np.zeros_like(front))
 
     # fd = (list of models, list of distances)
     # convert that into (model, distance) tuples

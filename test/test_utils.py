@@ -48,7 +48,7 @@ def test_pareto_front_attrs():
     models = [Model(a, b) for a, b in front_fitness]
     models.extend([Model(a + 0.01 * abs(random.random()) + 0.01, b + 0.01 *
                          abs(random.random()) + 0.01) for a, b in random.choices(front_fitness, k=50)])
-    models = filter(lambda m: m.b <= bmax, models)
+    models = list(filter(lambda m: m.b <= bmax, models))
 
     front = pareto_front(models, "a", "b")
 
@@ -73,7 +73,7 @@ def models():
 
 def test_pareto_front_tpl(models):
 
-    fronts = pareto_front(models, all=True, id=True)
+    fronts = pareto_front(models, all=True)
 
     assert len(fronts) == 3
     assert models[0] in fronts[0]
@@ -82,14 +82,14 @@ def test_pareto_front_tpl(models):
 
 def test_crowding_distance(models):
     models = sorted(models[1:-1])
-    dist = crowding_distance(models, id=True)
+    dist = crowding_distance(models)
 
     assert dist[0] == dist[-1] == np.infty
     assert dist[1] == 2
 
 
 def test_non_dominated_sorting(models):
-    ranked = sort_non_dominated(models, id=True)
+    ranked = sort_non_dominated(models)
 
     assert ranked[0] == models[0]
     assert ranked[1] == models[-2]

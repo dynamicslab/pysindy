@@ -24,6 +24,7 @@ dominates_cases = [
     ((1.0, 0.8, 1.2), (0.8, 1.0, 1.1), False, False),
 ]
 
+
 @pytest.mark.parametrize("case", dominates_cases)
 def test_dominates(case):
     a, b, result_ab, result_ba = case
@@ -45,7 +46,8 @@ def test_pareto_front_attrs():
             self.b = b
 
     models = [Model(a, b) for a, b in front_fitness]
-    models.extend([Model(a + 0.01*abs(random.random()) + 0.01, b + 0.01*abs(random.random()) + 0.01 ) for a, b in random.choices(front_fitness, k=50)])
+    models.extend([Model(a + 0.01 * abs(random.random()) + 0.01, b + 0.01 *
+                         abs(random.random()) + 0.01) for a, b in random.choices(front_fitness, k=50)])
     models = filter(lambda m: m.b <= bmax, models)
 
     front = pareto_front(models, "a", "b")
@@ -55,11 +57,10 @@ def test_pareto_front_attrs():
         assert bmin <= m.b <= bmax
 
 
-
 @pytest.fixture(scope="function")
 def models():
 
-    m = [  
+    m = [
         (0, 0),
         (0, 1),
         (1, 0),
@@ -94,8 +95,7 @@ def test_non_dominated_sorting(models):
     assert ranked[1] == models[-2]
     assert ranked[-1] == models[-1]
 
-    assert set(ranked[2:4]) == set(models[1:3]) 
-
+    assert set(ranked[2:4]) == set(models[1:3])
 
 
 @pytest.mark.parametrize("exp_null", range(6))
@@ -110,4 +110,4 @@ def test_normalize():
     x = np.ones(shape=(n, 1))
 
     x, m = normalize(x, order=order)
-    assert m[0] == 1/n**(1.0/order)
+    assert m[0] == 1 / n**(1.0 / order)

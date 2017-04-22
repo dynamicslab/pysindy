@@ -10,6 +10,7 @@ test_settings = (
     dict(knob=0.1, l1=0, copy_x=True, normalize=True, fit_intercept=True),
 )
 
+
 @pytest.mark.parametrize("kw", test_settings)
 def test_sindy_normalize(data, kw):
     x, y = data

@@ -79,7 +79,8 @@ def sort_non_dominated(models, *attrs):
     """
     NSGA2 based sorting
     """
-    fronts = pareto_front(models[:], *attrs, all=True)
+
+    fronts = pareto_front(list(models), *attrs, all=True)
 
     distances = [crowding_distance(front, *attrs) for front in fronts] # if len(front) > 2 else list(np.zeros_like(front))
 

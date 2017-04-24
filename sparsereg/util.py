@@ -10,10 +10,10 @@ def dominates(a, b):
 
 
 def _get_fit(m, attrs):
-    if isinstance(next(iter(m)), tuple):
-        get_fit = lambda x: x
-    elif attrs:
+    if attrs:
         get_fit = attrgetter(*attrs)
+    elif isinstance(next(iter(m)), tuple):
+        get_fit = lambda x: x
     else:
         raise ValueError("No attributes given")
 
@@ -66,6 +66,7 @@ def crowding_distance(models, *attrs):
     get_fit = _get_fit(models, attrs)
 
     f = np.array(sorted([get_fit(m) for m in models]))
+
     scale = np.max(f, axis=0) - np.min(f, axis=0)
 
     with np.errstate(invalid="ignore"):

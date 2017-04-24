@@ -8,12 +8,22 @@ def dominates(a, b):
     return all(ai <= bi for ai, bi in zip(a, b)) and not a == b
 
 
+
+def _get_fit(m, attrs):
+    if isinstance(next(iter(m)), tuple):
+        get_fit = lambda x: x
+    elif attrs:
+        get_fit = attrgetter(*attrs)
+    else:
+        raise ValueError("No attributes given")
+
+    return get_fit
+
+
 def _pareto_front(models, *attrs):
     """Helper function. Performs simple cull algorithm"""
-    if isinstance(next(iter(models)), tuple):
-        get_fit = lambda x: x
-    else:
-        get_fit = attrgetter(*attrs)
+
+    get_fit = _get_fit(models, attrs)
 
     front = set()
     for m in models:
@@ -53,12 +63,9 @@ def crowding_distance(models, *attrs):
     Assumes models in lexicographical sorted.
     """
 
-    if isinstance(next(iter(models)), tuple):
-        get_fit = lambda x: x
-    else:
-        get_fit = attrgetter(*attrs)
+    get_fit = _get_fit(models, attrs)
 
-    f = np.array([get_fit(m) for m in sorted(models)])
+    f = np.array(sorted([get_fit(m) for m in models]))
     scale = np.max(f, axis=0) - np.min(f, axis=0)
 
     with np.errstate(invalid="ignore"):

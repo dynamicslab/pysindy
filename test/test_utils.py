@@ -32,6 +32,12 @@ def test_dominates(case):
     assert dominates(b, a) == result_ba
 
 
+class Model:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+
 def test_pareto_front_attrs():
     amax = 1.0
     amin = 0.7
@@ -40,10 +46,7 @@ def test_pareto_front_attrs():
 
     front_fitness = [(1, 1), (0.9, 1.1), (0.8, 1.2), (0.7, 1.3)]
 
-    class Model:
-        def __init__(self, a, b):
-            self.a = a
-            self.b = b
+
 
     models = [Model(a, b) for a, b in front_fitness]
     models.extend([Model(a + 0.01 * abs(random.random()) + 0.01, b + 0.01 *
@@ -80,9 +83,15 @@ def test_pareto_front_tpl(models):
     assert models[-1] in fronts[-1]
 
 
-def test_crowding_distance(models):
-    models = sorted(models[1:-1])
-    dist = crowding_distance(models)
+cd_cases = (
+    (models()[1:-1], ()),
+    ([Model(a, b) for (a, b) in sorted(models()[1:-1])], ("a", "b")),
+)
+
+@pytest.mark.parametrize("cd_case", cd_cases)
+def test_crowding_distance(cd_case):
+    m, attr = cd_case
+    dist = crowding_distance(m, *attr)
 
     assert dist[0] == dist[-1] == np.infty
     assert dist[1] == 2

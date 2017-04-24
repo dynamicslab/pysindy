@@ -70,7 +70,6 @@ def models():
         (0.5, 0.5),
         (1, 1),
     ]
-
     return m
 
 
@@ -100,11 +99,15 @@ def test_crowding_distance(cd_case):
 def test_non_dominated_sorting(models):
     ranked = sort_non_dominated(models)
 
+    index = [0, 3, 1, 2, 4]
+
     assert ranked[0] == models[0]
     assert ranked[1] == models[-2]
     assert ranked[-1] == models[-1]
 
     assert set(ranked[2:4]) == set(models[1:3])
+
+    assert index == sort_non_dominated(models, index=True)
 
 
 @pytest.mark.parametrize("exp_null", range(6))

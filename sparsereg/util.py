@@ -75,13 +75,12 @@ def crowding_distance(models, *attrs):
     return dist
 
 
-def sort_non_dominated(models, *attrs):
+def sort_non_dominated(models, *attrs, index=False):
     """
     NSGA2 based sorting
     """
 
     fronts = pareto_front(list(models), *attrs, all=True)
-
     distances = [crowding_distance(front, *attrs) for front in fronts] # if len(front) > 2 else list(np.zeros_like(front))
 
     # fd = (list of models, list of distances)
@@ -90,7 +89,13 @@ def sort_non_dominated(models, *attrs):
     # resolve the nested chain
     ranked = chain.from_iterable(sorted(zip(*fd), key=lambda x: x[1]) for fd in zip(fronts, distances))
 
-    return [m for (m, d) in ranked] # discard the distance
+    ranked = [m for (m, d) in ranked] # discard the distance
+
+    if not index:
+        return ranked
+    else:
+        ind = models.index
+        return [ind(r) for r in ranked]
 
 
 def normalize(x, order=2):

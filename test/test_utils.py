@@ -80,6 +80,7 @@ def test_pareto_front_tpl(models):
     assert models[0] in fronts[0]
     assert models[-1] in fronts[-1]
 
+@pytest.mark.xfail("wip test")
 def test_pareto_front_duplicates():
     base = collections.namedtuple("base", "a b c")
 

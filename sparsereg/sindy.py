@@ -51,24 +51,27 @@ class SINDy(LinearModel, RegressorMixin):
         ind = np.ones(n_features, dtype=bool)
         coefs = _regress(x, y, l1)
         new_coefs, ind = _sparse_coefficients(n_features, ind, coefs, self.knob)
+        self.iters = 0
+        if self.knob > 0:
+            for _ in range(1, self.max_iter):
+                if np.count_nonzero(ind) == 0:
+                    raise FitFailedWarning("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.knob))
 
-        for _ in range(self.max_iter):
-            if np.count_nonzero(ind) == 0:
-                raise FitFailedWarning("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.knob))
+                new_coefs = _regress(x[:, ind], y, l1)
+                new_coefs, ind = _sparse_coefficients(n_features, ind, new_coefs, self.knob)
+                self.iters += 1
+                if np.allclose(new_coefs, coefs) and np.count_nonzero(ind) != 0:
+                    break
+                coefs = new_coefs
+            else:
+                warnings.warn("SINDy did not converge after {} iterations.".format(self.max_iter), ConvergenceWarning)
 
-            new_coefs = _regress(x[:, ind], y, l1)
-            new_coefs, ind = _sparse_coefficients(n_features, ind, new_coefs, self.knob)
-            if np.allclose(new_coefs, coefs) and np.count_nonzero(ind) != 0:
-                break
-            coefs = new_coefs
-        else:
-            warnings.warn("SINDy did not converge after {} iterations.".format(self.max_iter), ConvergenceWarning)
-
-        coefs = _regress(x[:, ind], y, 0)  # unbias
-        coefs, _ = _sparse_coefficients(n_features, ind, coefs, self.knob)
+        if self.l1 > 0:
+            coefs = _regress(x[:, ind], y, 0)  # unbias
+            coefs, _ = _sparse_coefficients(n_features, ind, coefs, self.knob)
+            self.iters += 1
         self.coef_ = coefs
         self._set_intercept(X_offset, y_offset, X_scale)
-        self.intercept_ = self.intercept_ if abs(self.intercept_) > self.knob else 0
         return self
 
     def pprint(self, names=None):

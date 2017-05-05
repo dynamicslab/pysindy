@@ -1,4 +1,5 @@
 import itertools
+import collections
 import random
 
 import pytest
@@ -46,8 +47,6 @@ def test_pareto_front_attrs():
 
     front_fitness = [(1, 1), (0.9, 1.1), (0.8, 1.2), (0.7, 1.3)]
 
-
-
     models = [Model(a, b) for a, b in front_fitness]
     models.extend([Model(a + 0.01 * abs(random.random()) + 0.01, b + 0.01 *
                          abs(random.random()) + 0.01) for a, b in random.choices(front_fitness, k=50)])
@@ -80,6 +79,15 @@ def test_pareto_front_tpl(models):
     assert len(fronts) == 3
     assert models[0] in fronts[0]
     assert models[-1] in fronts[-1]
+
+def test_pareto_front_duplicates():
+    base = collections.namedtuple("base", "a b c")
+
+    models = ("a", 0, 1), ("b", 0, 1), ("c", 1, 0), ("d", 0.5, 0.5)
+    models = [base(*m) for m in models]
+    front = pareto_front(models, "b", "c")
+    print(front)
+    assert False
 
 
 cd_cases = (

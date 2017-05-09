@@ -2,6 +2,7 @@ from itertools import chain
 from operator import attrgetter
 
 import numpy as np
+from sklearn.linear_model.base import LinearModel
 
 
 def dominates(a, b):
@@ -114,3 +115,25 @@ def rmse(x):
 
 def nrmse(x, y):
     return rmse(x-y)/(max(x) - min(x))
+
+
+class ReducedLinearModel(LinearModel):
+    def __init__(self, mask, lm):
+        self.mask = mask
+        self.lm = lm
+
+    def fit(self, x, y):
+        mask = self.mask
+        if not x.shape[1] == mask.shape[0]:
+            raise FitFailedWarning
+
+        self.lm = self.lm.fit(x[:, mask], y)
+        self.coef_ = np.zeros(shape=mask.shape)
+        self.coef_[mask] = self.lm.coef_
+        return self
+
+    def predict(self, x):
+        return self.lm.predict(x[:, self.mask])
+
+    def scores(self, x, y):
+        return self.lm.scores(x[:, self.mask], y)

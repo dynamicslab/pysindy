@@ -20,6 +20,11 @@ def test_sindy_normalize(data, kw):
     np.testing.assert_allclose(s.predict(x), y)
 
 
+def test_sindy_knob(data):
+    x, y = data
+    s = SINDy(normalize=False).fit(x, y)
+    assert all(c > s.knob or c == 0 for c in s.coef_)
+
 def test_sindy_raise(data):
     x, y = data
     with pytest.raises(FitFailedWarning):

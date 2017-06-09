@@ -72,6 +72,7 @@ class SINDy(LinearModel, RegressorMixin):
             self.iters += 1
         self.coef_ = coefs
         self._set_intercept(X_offset, y_offset, X_scale)
+        self.coef_[abs(self.coef_) < np.finfo(float).eps] = 0
         return self
 
     def pprint(self, names=None):

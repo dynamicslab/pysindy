@@ -8,7 +8,7 @@ def complexity(estimator):
     return np.count_nonzero(estimator.coef_)
 
 
-def net(estimator, x, y, attr="alpha", max_coarsity=40):
+def net(estimator, x, y, attr="alpha", max_coarsity=40, filter=True, **kw):
     r = 1e10
     n_features = x.shape[1]
 
@@ -16,7 +16,7 @@ def net(estimator, x, y, attr="alpha", max_coarsity=40):
     models = defaultdict(list)
 
     def fit_in_memory(r):
-        est = estimator(**{attr: r}).fit(x, y)
+        est = estimator(**{**kw, **{attr: r}}).fit(x, y)
         c = complexity(est)
         memory[c].append(r)
         models[c].append(est)
@@ -78,5 +78,8 @@ def net(estimator, x, y, attr="alpha", max_coarsity=40):
                 break
         else:
             break
-
-    return models
+            
+    if filter:
+        return {k: min(v, key=lambda x: getattr(x, attr)) for k, v in models.items()}
+    else:
+        return models

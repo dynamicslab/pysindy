@@ -40,8 +40,6 @@ def net(estimator, x, y, attr="alpha", max_coarsity=5, filter=True, **kw):
         elif c == 1:
             break
     
-    memory[0] = [memory[0][-1]]
-    models[0] = [models[0][-1]]
     max_complexity = max(memory)
 
     fit_in_memory(0)

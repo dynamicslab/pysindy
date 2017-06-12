@@ -32,6 +32,7 @@ def net(estimator, x, y, attr="alpha", max_coarsity=5, filter=True, **kw):
 
         except FitFailedWarning:
             c = 0
+            memory[0].append(r)
 
         if c == 0:
             r /= 2

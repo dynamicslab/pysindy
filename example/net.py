@@ -16,7 +16,7 @@ names = ["Lasso", "Ridge", "SINDy"]
 
 for i, (est, attr, name) in enumerate(zip(ests, attrs, names)):
 
-    models = net(Lasso, x, y, "alpha")
+    models = net(Lasso, x, y, "alpha", filter=True)
 
     m = sorted(models)
     scores = np.array([models[k].score(x, y) for k in m])

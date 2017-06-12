@@ -8,7 +8,7 @@ def complexity(estimator):
     return np.count_nonzero(estimator.coef_)
 
 
-def net(estimator, x, y, attr="alpha", max_coarsity=40, filter=True, **kw):
+def net(estimator, x, y, attr="alpha", max_coarsity=5, filter=True, **kw):
     r = 1e10
     n_features = x.shape[1]
 
@@ -20,19 +20,20 @@ def net(estimator, x, y, attr="alpha", max_coarsity=40, filter=True, **kw):
         c = complexity(est)
         memory[c].append(r)
         models[c].append(est)
-        return c
+        return est
     
 
     # boundaries
     # find 0 - 1 transition
     while True:
         try:
-            c = fit_in_memory(r)
+            est = fit_in_memory(r)
+            c = np.count_nonzero(est.coef_)
 
         except FitFailedWarning:
             c = 0
             memory[c].append(r)
-            models[c].append(r)
+            models[c].append(est)
 
         if c == 0:
             r /= 2

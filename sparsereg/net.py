@@ -39,7 +39,6 @@ def net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, *
     
 
     # greedy search for transitions
-    greed_forward(sorted(memory.keys())[-2], n_features, 1)
 
     coarsity = 1
     all_expected = list(range(min(memory), max(memory) + 1))

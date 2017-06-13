@@ -8,8 +8,7 @@ def complexity(estimator):
     return np.count_nonzero(estimator.coef_)
 
 
-def net(estimator, x, y, attr="alpha", max_coarsity=5, filter=True, **kw):
-    r = 1e10
+def net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, **kw):
     n_features = x.shape[1]
 
     memory = defaultdict(list)   # just a convenience list; this information is redundant
@@ -22,28 +21,13 @@ def net(estimator, x, y, attr="alpha", max_coarsity=5, filter=True, **kw):
         models[c].append(est)
         return est
     
-
-    # boundaries
-    # find 0 - 1 transition
+    fit_in_memory(0)
     while True:
         try:
-            est = fit_in_memory(r)
-            c = np.count_nonzero(est.coef_)
-
-        except FitFailedWarning:
-            c = 0
-            memory[0].append(r)
-
-        if c == 0:
-            r /= 2
-        elif c > 1:
-            r *= 1.5
-        elif c == 1:
+            fit_in_memory(r_max)
             break
-    
-    max_complexity = max(memory)
-
-    fit_in_memory(0)
+        except FitFailedWarning:
+            r_max *= 0.8
 
     # greedy forward
     def greed_forward(c_lower, c_upper, coarsity):
@@ -58,7 +42,7 @@ def net(estimator, x, y, attr="alpha", max_coarsity=5, filter=True, **kw):
     greed_forward(sorted(memory.keys())[-2], n_features, 1)
 
     coarsity = 1
-    all_expected = list(range(n_features + 1))
+    all_expected = list(range(min(memory), max(memory) + 1))
 
     while True:
         it = zip(sorted(memory.keys()), all_expected)

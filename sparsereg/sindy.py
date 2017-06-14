@@ -26,7 +26,7 @@ def _regress(x, y, l1):
 
 
 class SINDy(LinearModel, RegressorMixin):
-    def __init__(self, knob=0.01, l1=0.1, max_iter=100, normalize=True, fit_intercept=True, copy_x=True, unbias=False):
+    def __init__(self, knob=0.01, l1=0.1, max_iter=100, normalize=True, fit_intercept=True, copy_x=True, unbias=True):
         self.knob = knob
         self.max_iter = max_iter
         self.fit_intercept = fit_intercept

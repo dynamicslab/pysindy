@@ -25,7 +25,7 @@ def test_sindy_knob(data):
     s = SINDy(normalize=False).fit(x, y)
     assert all(c > s.knob or c == 0 for c in s.coef_)
 
-def test_sindy_raise(data):
+def test_all_zero(data):
     x, y = data
-    with pytest.raises(FitFailedWarning):
-        s = SINDy(knob=10000).fit(x, y)
+    s = SINDy(knob=10000).fit(x, y)
+    assert not any(s.coef_)

@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 from sklearn.base import RegressorMixin
 from sklearn.linear_model.base import LinearModel, check_X_y, _rescale_data
-from sklearn.exceptions import ConvergenceWarning, FitFailedWarning
+from sklearn.exceptions import ConvergenceWarning
 
 from .util import cardinality
 
@@ -55,7 +55,9 @@ class SINDy(LinearModel, RegressorMixin):
         if self.knob > 0:
             for _ in range(1, self.max_iter):
                 if np.count_nonzero(ind) == 0:
-                    raise FitFailedWarning("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.knob))
+                    warnings.warn("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.knob))
+                    coefs = np.zeros_like(coefs)
+                    break
 
                 new_coefs = _regress(x[:, ind], y, l1)
                 new_coefs, ind = _sparse_coefficients(n_features, ind, new_coefs, self.knob)
@@ -66,10 +68,10 @@ class SINDy(LinearModel, RegressorMixin):
             else:
                 warnings.warn("SINDy did not converge after {} iterations.".format(self.max_iter), ConvergenceWarning)
 
-        if self.l1 > 0:
-            coefs = _regress(x[:, ind], y, 0)  # unbias
-            coefs, _ = _sparse_coefficients(n_features, ind, coefs, self.knob)
-            self.iters += 1
+            if self.l1 > 0 and np.any(ind):
+                coefs = _regress(x[:, ind], y, 0)  # unbias
+                coefs, _ = _sparse_coefficients(n_features, ind, coefs, self.knob)
+                self.iters += 1
         self.coef_ = coefs
         self._set_intercept(X_offset, y_offset, X_scale)
         self.coef_[abs(self.coef_) < np.finfo(float).eps] = 0

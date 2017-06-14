@@ -1,4 +1,5 @@
 from collections import defaultdict
+import warnings
 
 import numpy as np
 from sklearn.exceptions import FitFailedWarning
@@ -9,6 +10,12 @@ def complexity(estimator):
 
 
 def net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, **kw):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        return _net(estimator, x, y, attr=attr, max_coarsity=max_coarsity, filter=filter, r_max=r_max, **kw)
+
+
+def _net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, **kw):
     n_features = x.shape[1]
 
     memory = defaultdict(list)   # just a convenience list; this information is redundant
@@ -22,7 +29,7 @@ def net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, *
             models[c].append(est)
             return c
 
-    
+
     fit_in_memory(0)
     while True:
         try:
@@ -41,7 +48,7 @@ def net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, *
         lower = max(memory[c_upper])
         for r in np.linspace(lower, upper, 2**coarsity)[::-1]:
             fit_in_memory(r)
-    
+
     # greedy search for transitions
 
     coarsity = 1

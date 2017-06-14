@@ -26,13 +26,14 @@ def _regress(x, y, l1):
 
 
 class SINDy(LinearModel, RegressorMixin):
-    def __init__(self, knob=0.01, l1=0.1, max_iter=100, normalize=True, fit_intercept=True, copy_x=True):
+    def __init__(self, knob=0.01, l1=0.1, max_iter=100, normalize=True, fit_intercept=True, copy_x=True, unbias=False):
         self.knob = knob
         self.max_iter = max_iter
         self.fit_intercept = fit_intercept
         self.normalize = normalize
         self.copy_X = copy_x
         self.l1 = l1
+        self.unbias = unbias
 
     def fit(self, x_, y, sample_weight=None):
         l1 = self.l1
@@ -68,10 +69,11 @@ class SINDy(LinearModel, RegressorMixin):
             else:
                 warnings.warn("SINDy did not converge after {} iterations.".format(self.max_iter), ConvergenceWarning)
 
-            if self.l1 > 0 and np.any(ind):
+            if self.unbias and self.l1 > 0 and np.any(ind):
                 coefs = _regress(x[:, ind], y, 0)  # unbias
                 coefs, _ = _sparse_coefficients(n_features, ind, coefs, self.knob)
                 self.iters += 1
+
         self.coef_ = coefs
         self._set_intercept(X_offset, y_offset, X_scale)
         self.coef_[abs(self.coef_) < np.finfo(float).eps] = 0

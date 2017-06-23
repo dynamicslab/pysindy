@@ -64,7 +64,7 @@ def _transform(x, names, operators):
 
 
 class EFS(BaseEstimator, TransformerMixin):
-    def __init__(self, q=3, mu=4, max_size=5, t=0.95, toursize=3, gen=20, alpha=0.1, random_state=None, time=None, operators=operators):
+    def __init__(self, q=1, mu=1, max_size=5, t=0.95, toursize=2, gen=20, alpha=0.1, random_state=None, time=None, operators=operators):
         self.q = q
         self.mu = mu
         self.max_size = max_size
@@ -98,7 +98,7 @@ class EFS(BaseEstimator, TransformerMixin):
             new_names = []
             new_data = []
 
-            while len(new_names + names) < self.mu + p + self.q:
+            while len(new_names + names) < p*(self.mu + 1 + self.q):
                 f, new_name, parents = mutate(names, importance, self.toursize, self.operators, self.rng)
                 if size(new_name) <= self.max_size and new_name not in new_names and new_name not in names:
                     with warnings.catch_warnings():

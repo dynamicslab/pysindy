@@ -5,7 +5,7 @@ import warnings
 
 import numpy as np
 
-from sklearn.base import TransformerMixin
+from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.linear_model import Lasso
 
 from sparsereg.net import net
@@ -63,7 +63,7 @@ def _transform(x, names, operators):
     return data
 
 
-class EFS(TransformerMixin):
+class EFS(BaseEstimator, TransformerMixin):
     def __init__(self, q=3, mu=4, max_size=5, t=0.95, toursize=3, gen=20, alpha=0.1, random_state=None, time=None, operators=operators):
         self.q = q
         self.mu = mu

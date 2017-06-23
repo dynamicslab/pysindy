@@ -1,10 +1,15 @@
 import numpy as np
 
+from sklearn.datasets import make_regression
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import cross_val_score
 from sparsereg.efs import EFS
 
-np.random.seed(42)
-x = np.random.normal(size=(1000, 2))
-y = x[:, 0] * x[:, 1]
+x, y = make_regression(n_samples=100, n_features=10, n_informative=3, n_targets=1)
 
-model = EFS()
-model.fit(x, y)
+steps = ("transformer", EFS()),  ("estimator", Lasso())
+model = Pipeline(steps)
+
+print(cross_val_score(model, x, y, cv=10, n_jobs=-1))
+

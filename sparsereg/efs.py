@@ -4,9 +4,8 @@ import warnings
 
 import numpy as np
 
-from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.base import TransformerMixin
 from sklearn.linear_model import Lasso
-from sklearn.preprocessing import FunctionTransformer
 
 from sparsereg.net import net
 
@@ -19,7 +18,7 @@ operators = {
     "log": np.log,
     "sqrt": np.sqrt,
     "square": np.square,
-    "cube": lambda x: np.power(x, 3),
+    #"cube": lambda x: np.power(x, 3),
     "sin": np.sin,
     "cos": np.cos
 }
@@ -29,7 +28,7 @@ def size(name):
     return len(re.findall(pattern, name)) + 1
 
 
-def mutate(names, importance, toursize, rng=random):
+def mutate(names, importance, toursize, operators, rng=random):
     f = rng.choice(list(operators))
     arity = getattr(operators[f], "nin", None) or operators[f].__code__.co_argcount
     parents = []
@@ -55,16 +54,25 @@ def _check_rng(state):
         rng.seed(state)
         return rng
     else:
-        return random
-    
-class EFS(BaseEstimator, RegressorMixin):
-    def __init__(self, q=3, mu=4, max_size=5, t=0.95, toursize=2, gen=200, random_state=None):
+        return random.Random()
+
+def _transform(x, names, operators):
+    args = ",".join("x_{}".format(i) for i in range(x.shape[1]))
+    funcs = [eval("lambda {}: {}".format(args, code), {**operators}) for code in names]
+    data = np.array([f(*x.T) for f in funcs]).T
+    return data
+
+
+class EFS(TransformerMixin):
+    def __init__(self, q=3, mu=4, max_size=5, t=0.95, toursize=3, gen=200, alpha=0.1, random_state=None, operators=operators):
         self.q = q
         self.mu = mu
         self.max_size = max_size
         self.t = t
         self.toursize = toursize
         self.gen = gen
+        self.alpha = alpha
+        self.operators = operators
         self.rng = _check_rng(random_state)
 
     def fit(self, x, y):
@@ -83,15 +91,16 @@ class EFS(BaseEstimator, RegressorMixin):
         for i in range(self.gen):
             new_names = []
             new_data = []
+
             while len(new_names + names) < self.mu + p + self.q:
-                f, new_name, parents = mutate(names, importance, self.toursize, self.rng)
+                f, new_name, parents = mutate(names, importance, self.toursize, self.operators, self.rng)
                 if size(new_name) <= self.max_size and new_name not in new_names and new_name not in names:
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         feature = f(*[data[i] for i in parents])
-                    if np.all(np.isfinite(feature)):
-                        new_names.append(new_name)
-                        new_data.append(feature)
+                        if np.all(np.isfinite(feature)) and all(abs(np.corrcoef(feature, data[i]))[1, 0] <= self.t for i in parents):
+                            new_names.append(new_name)
+                            new_data.append(feature)
             
             names.extend(new_names)
             data.extend(new_data)
@@ -110,3 +119,6 @@ class EFS(BaseEstimator, RegressorMixin):
 
         self.names = names
         return self
+    
+    def transform(self, x, y=None):
+        return _transform(x, self.names, self.operators)

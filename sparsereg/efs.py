@@ -1,4 +1,5 @@
 import re
+import time
 import random
 import warnings
 
@@ -64,7 +65,7 @@ def _transform(x, names, operators):
 
 
 class EFS(TransformerMixin):
-    def __init__(self, q=3, mu=4, max_size=5, t=0.95, toursize=3, gen=200, alpha=0.1, random_state=None, operators=operators):
+    def __init__(self, q=3, mu=4, max_size=5, t=0.95, toursize=3, gen=200, alpha=0.1, random_state=None, time=None, operators=operators):
         self.q = q
         self.mu = mu
         self.max_size = max_size
@@ -73,6 +74,7 @@ class EFS(TransformerMixin):
         self.gen = gen
         self.alpha = alpha
         self.operators = operators
+        self.time = time or np.infty
         self.rng = _check_rng(random_state)
 
     def fit(self, x, y):
@@ -88,7 +90,11 @@ class EFS(TransformerMixin):
         
         importance = get_importance(coefs, scores)
 
-        for i in range(self.gen):
+        t = time.clock()
+        gen = 0
+        
+        while gen < self.gen and time.clock() - t < self.time:
+            gen += 1
             new_names = []
             new_data = []
 

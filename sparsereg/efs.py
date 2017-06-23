@@ -65,7 +65,7 @@ def _transform(x, names, operators):
 
 
 class EFS(TransformerMixin):
-    def __init__(self, q=3, mu=4, max_size=5, t=0.95, toursize=3, gen=200, alpha=0.1, random_state=None, time=None, operators=operators):
+    def __init__(self, q=3, mu=4, max_size=5, t=0.95, toursize=3, gen=20, alpha=0.1, random_state=None, time=None, operators=operators):
         self.q = q
         self.mu = mu
         self.max_size = max_size
@@ -92,8 +92,9 @@ class EFS(TransformerMixin):
 
         t = time.clock()
         gen = 0
-        
+
         while gen < self.gen and time.clock() - t < self.time:
+            old_names = sorted(names[:])
             gen += 1
             new_names = []
             new_data = []
@@ -122,6 +123,12 @@ class EFS(TransformerMixin):
                 names.pop(i)
                 data.pop(i)
                 importance.pop(i)
+            
+            if sorted(names) == old_names:
+                gen += 1
+            else:
+                gen = 0
+
 
         self.names = names
         return self

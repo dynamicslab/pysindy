@@ -19,7 +19,6 @@ operators = {
     "log": np.log,
     "sqrt": np.sqrt,
     "square": np.square,
-    #"cube": lambda x: np.power(x, 3),
     "sin": np.sin,
     "cos": np.cos
 }
@@ -124,11 +123,8 @@ class EFS(TransformerMixin):
                 data.pop(i)
                 importance.pop(i)
             
-            if sorted(names) == old_names:
-                gen += 1
-            else:
+            if sorted(names) != old_names:
                 gen = 0
-
 
         self.names = names
         return self

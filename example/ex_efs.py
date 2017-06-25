@@ -9,15 +9,10 @@ from sparsereg.efs import EFS
 
 x, y = make_regression(n_samples=100, n_features=10, n_informative=10, n_targets=3)
 
-from benchmark.ode.simple_ode import load_lorenz
-
-data = load_lorenz()
-x, y = data.data, data.target[:, 1]
-
 steps = ("scaler", StandardScaler()), ("estimator", EFS(time=5*60, mu=1, q=4, gen=1000, alpha=0.3))
-model = Pipeline(steps)
+model = MultiOutputRegressor(Pipeline(steps))
 
 model.fit(x, y)
-print(model.score(x, y))
-#print(cross_val_score(model, x, y, cv=10, n_jobs=-1))
+
+print(cross_val_score(model, x, y, cv=10, n_jobs=-1))
 

@@ -5,7 +5,8 @@ import warnings
 
 import numpy as np
 
-from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.base import RegressorMixin, TransformerMixin, BaseEstimator
+from sklearn.pipeline import Pipeline
 from sklearn.linear_model import Lasso
 
 from sparsereg.net import net
@@ -32,8 +33,9 @@ def mutate(names, importance, toursize, operators, rng=random):
     f = rng.choice(list(operators))
     arity = getattr(operators[f], "nin", None) or operators[f].__code__.co_argcount
     parents = []
+    size = min(toursize, len(names))
     for _ in range(arity):
-        candidates = rng.sample(names, toursize)
+        candidates = rng.sample(names, size)
         parent = sorted(candidates, key=lambda i: importance[names.index(i)])[0]
         parents.append(parent)
  
@@ -63,8 +65,26 @@ def _transform(x, names, operators):
     return data
 
 
-class EFS(BaseEstimator, TransformerMixin):
-    def __init__(self, q=1, mu=1, max_size=5, t=0.95, toursize=2, gen=20, alpha=0.1, random_state=None, time=None, operators=operators):
+class LibTrafo(BaseEstimator, TransformerMixin):
+    def __init__(self, names, operators):
+        self.names = names[:]
+        self.operators = operators
+    
+    def fit(self, x, y=None):
+        return self
+
+    def transform(self, x, y=None):
+        return _transform(x, self.names, self.operators)
+
+
+def _fit_model(x, y, names, operators, **kw):
+    steps = ("trafo", LibTrafo(names, operators)), ("lasso", Lasso(**kw))
+    model = Pipeline(steps).fit(x, y)
+    return model, model.score(x, y)
+
+
+class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
+    def __init__(self, q=1, mu=1, max_size=5, t=0.95, toursize=5, gen=20, alpha=0.1, random_state=None, time=None, operators=operators, max_coarsity=2):
         self.q = q
         self.mu = mu
         self.max_size = max_size
@@ -72,6 +92,7 @@ class EFS(BaseEstimator, TransformerMixin):
         self.toursize = toursize
         self.gen = gen
         self.alpha = alpha
+        self.max_coarsity = max_coarsity
         self.operators = operators
         self.time = time or np.infty
         self.rng = _check_rng(random_state)
@@ -80,10 +101,10 @@ class EFS(BaseEstimator, TransformerMixin):
         n_samples, p = x.shape
 
         linear_names = ["x_{}".format(i) for i in range(p)]
-        names = ["x_{}".format(i) for i in range(p)]
+        names = linear_names[:]
         data = [x[:, i] for i in range(p)]
 
-        models = net(Lasso, x, y).values()
+        models = net(Lasso, x, y, max_coarsity=self.max_coarsity).values()
         scores = [model.score(x, y) for model in models]
         coefs = [model.coef_ for model in models]
         
@@ -92,6 +113,8 @@ class EFS(BaseEstimator, TransformerMixin):
         t = time.clock()
         gen = 0
 
+        best_names = linear_names[:]
+        best_model, best_score = _fit_model(x, y, best_names, self.operators, alpha=self.alpha)
         while gen < self.gen and time.clock() - t < self.time:
             old_names = sorted(names[:])
             gen += 1
@@ -107,27 +130,32 @@ class EFS(BaseEstimator, TransformerMixin):
                         if np.all(np.isfinite(feature)) and all(abs(np.corrcoef(feature, data[i]))[1, 0] <= self.t for i in parents):
                             new_names.append(new_name)
                             new_data.append(feature)
-            
+
             names.extend(new_names)
             data.extend(new_data)
-            models = net(Lasso, np.array(data).T, y).values()
+            models = net(Lasso, np.array(data).T, y, max_coarsity=self.max_coarsity).values()
             scores = [model.score(np.array(data).T, y) for model in models]
             coefs = [model.coef_ for model in models]
-
             importance = list(get_importance(coefs, scores))
-
-            names_to_discard = [n for n in sorted(names, key=lambda x: importance[names.index(x)]) if n not in linear_names][self.mu:]
+            names_to_discard = [n for n in sorted(names, key=lambda x: importance[names.index(x)], reverse=True) if n not in linear_names][-self.mu*p:]
             for n in names_to_discard:
                 i = names.index(n)
                 names.pop(i)
                 data.pop(i)
                 importance.pop(i)
-            
-            if sorted(names) != old_names:
+
+            model, score = _fit_model(x, y, names, self.operators, alpha=self.alpha)
+
+            if score > best_score:
+                best_model = model
+                best_score = score
                 gen = 0
 
-        self.names = names
+        self.model = best_model
         return self
     
+    def predict(self, x):
+        return self.model.predict(x)
+
     def transform(self, x, y=None):
-        return _transform(x, self.names, self.operators)
+        return self.model.steps[0][-1].transform(x)

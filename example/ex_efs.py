@@ -2,14 +2,22 @@ import numpy as np
 
 from sklearn.datasets import make_regression
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import Lasso
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
+from sklearn.multioutput import MultiOutputRegressor
 from sparsereg.efs import EFS
 
-x, y = make_regression(n_samples=100, n_features=10, n_informative=10, n_targets=1)
+x, y = make_regression(n_samples=100, n_features=10, n_informative=10, n_targets=3)
 
-steps = ("transformer", EFS(time=10, gen=100)),  ("estimator", Lasso())
+from benchmark.ode.simple_ode import load_lorenz
+
+data = load_lorenz()
+x, y = data.data, data.target[:, 1]
+
+steps = ("scaler", StandardScaler()), ("estimator", EFS(time=5*60, mu=1, q=4, gen=1000, alpha=0.3))
 model = Pipeline(steps)
 
-print(cross_val_score(model, x, y, cv=10, n_jobs=-1))
+model.fit(x, y)
+print(model.score(x, y))
+#print(cross_val_score(model, x, y, cv=10, n_jobs=-1))
 

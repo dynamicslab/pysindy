@@ -1,5 +1,4 @@
 import re
-import time
 import random
 import warnings
 
@@ -7,7 +6,7 @@ import numpy as np
 
 from sklearn.base import RegressorMixin, TransformerMixin, BaseEstimator
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import LassoLarsCV, Lasso
 
 from sparsereg.net import net
 
@@ -78,23 +77,23 @@ class LibTrafo(BaseEstimator, TransformerMixin):
 
 
 def _fit_model(x, y, names, operators, **kw):
-    steps = ("trafo", LibTrafo(names, operators)), ("lasso", Lasso(**kw))
+    steps = ("trafo", LibTrafo(names, operators)), ("lasso", LassoLarsCV(**kw))
     model = Pipeline(steps).fit(x, y)
     return model, model.score(x, y)
 
 
 class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
-    def __init__(self, q=1, mu=1, max_size=5, t=0.95, toursize=5, gen=20, alpha=0.1, random_state=None, time=None, operators=operators, max_coarsity=2):
+    def __init__(self, q=1, mu=1, max_size=5, t=0.95, toursize=5, max_stall_iter=20, max_iter=2000, random_state=None, operators=operators, max_coarsity=2, n_jobs=1):
         self.q = q
         self.mu = mu
         self.max_size = max_size
         self.t = t
         self.toursize = toursize
-        self.gen = gen
-        self.alpha = alpha
+        self.max_iter = max_iter
+        self.max_stall_iter = max_stall_iter
         self.max_coarsity = max_coarsity
         self.operators = operators
-        self.time = time or np.infty
+        self.n_jobs = n_jobs
         self.rng = _check_rng(random_state)
 
     def fit(self, x, y):
@@ -110,14 +109,13 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
         
         importance = get_importance(coefs, scores)
 
-        t = time.clock()
-        gen = 0
+        stall_iter = 0
 
         best_names = linear_names[:]
-        best_model, best_score = _fit_model(x, y, best_names, self.operators, alpha=self.alpha)
-        while gen < self.gen and time.clock() - t < self.time:
+        best_model, best_score = _fit_model(x, y, best_names, self.operators, n_jobs=self.n_jobs)
+        for _ in range(self.max_iter):
             old_names = sorted(names[:])
-            gen += 1
+            stall_iter += 1
             new_names = []
             new_data = []
 
@@ -144,12 +142,17 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
                 data.pop(i)
                 importance.pop(i)
 
-            model, score = _fit_model(x, y, names, self.operators, alpha=self.alpha)
-
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                model, score = _fit_model(x, y, names, self.operators, n_jobs=self.n_jobs)
+            
             if score > best_score:
                 best_model = model
                 best_score = score
-                gen = 0
+                stall_iter = 0
+
+            elif stall_iter >= self.max_stall_iter:
+                break
 
         self.model = best_model
         return self

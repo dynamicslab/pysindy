@@ -11,7 +11,7 @@ x, y = make_regression(n_samples=1000, n_features=10, n_informative=10, n_target
 
 x_train, x_test, y_train, y_test = train_test_split(x, y)
 
-steps = ("scaler", StandardScaler()), ("estimator", EFS(mu=1, q=5, max_stall_iter=100))
+steps = ("scaler", StandardScaler()), ("estimator", EFS(mu=1, q=3, max_stall_iter=50))
 model = MultiOutputRegressor(Pipeline(steps))
 
 model.fit(x_train, y_train)

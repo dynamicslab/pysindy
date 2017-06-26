@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.base import RegressorMixin, TransformerMixin, BaseEstimator
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LassoLarsCV, Lasso
+from sklearn.exceptions import ConvergenceWarning
 
 from sparsereg.net import net
 
@@ -113,13 +114,14 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
 
         best_names = linear_names[:]
         best_model, best_score = _fit_model(x, y, best_names, self.operators, n_jobs=self.n_jobs)
+        pop_size = p*(self.mu + 1 + self.q)
         for _ in range(self.max_iter):
             old_names = sorted(names[:])
             stall_iter += 1
             new_names = []
             new_data = []
 
-            while len(new_names + names) < p*(self.mu + 1 + self.q):
+            for i in range(3*pop_size):
                 f, new_name, parents = mutate(names, importance, self.toursize, self.operators, self.rng)
                 if size(new_name) <= self.max_size and new_name not in new_names and new_name not in names:
                     with warnings.catch_warnings():
@@ -128,6 +130,10 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
                         if np.all(np.isfinite(feature)) and all(abs(np.corrcoef(feature, data[i]))[1, 0] <= self.t for i in parents):
                             new_names.append(new_name)
                             new_data.append(feature)
+                if len(new_names + names) < pop_size:
+                    break
+            else:
+                warnings.warn("Failed to produce a new population given the tree-depth {} and correlation threshold {}.".format(self.max_size, self.t), ConvergenceWarning)
 
             names.extend(new_names)
             data.extend(new_data)

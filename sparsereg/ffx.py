@@ -78,3 +78,4 @@ def run_ffx(x, y, exponents, operators, num_alphas=300, metric=nrmse, l1_ratios=
             break
 
     return sorted(pareto_front(considered, "complexity", "score_"), key=attrgetter("complexity"))
+

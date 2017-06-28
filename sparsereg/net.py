@@ -72,6 +72,7 @@ def _net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, 
                 else:
                     all_expected.pop(all_expected.index(expected))
                     coarsity = 0
+
     if filter:
         return {k: min(v, key=lambda x: getattr(x, attr)) for k, v in models.items()}
     else:

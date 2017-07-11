@@ -2,12 +2,12 @@ import numpy as np
 import pytest
 from sklearn.linear_model import LinearRegression, Ridge
 
-from sparsereg.boats import *
-from sparsereg.sindy import SINDy
+from sparsereg.model.boats import *
+from sparsereg.model.stridge import STRidge
 
 np.random.seed(42)
 
-@pytest.mark.parametrize("lmc", [LinearRegression, Ridge, SINDy])
+@pytest.mark.parametrize("lmc", [LinearRegression, Ridge, STRidge])
 @pytest.mark.parametrize("sigma", [0.01, 0.05, 0.1])
 def test_fit_with_noise(data, lmc, sigma):
     x, y = data

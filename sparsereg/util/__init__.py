@@ -39,7 +39,7 @@ def _pareto_front(models, *attrs):
         else:
             front.add(m)
         front -= dominated
-    
+
     return sorted(front, key=get_fit)
 
 
@@ -49,7 +49,7 @@ def pareto_front(models, *attrs, all=False):
     """
     if not all:
         return _pareto_front(models, *attrs)
-    
+
     else:
         fronts = []
         models = set(models)

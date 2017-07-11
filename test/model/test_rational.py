@@ -1,7 +1,7 @@
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
-from sparsereg.rational import RationalFunctionMixin
+from sparsereg.model._base import RationalFunctionMixin
 
 class RLM(RationalFunctionMixin, LinearRegression):
     pass
@@ -11,7 +11,7 @@ def test_rational():
 
     def f(x):
         return 1/(1+x)
-    
+
     x = np.linspace(2, 3, 10).reshape(-1, 1)
     y = f(x).ravel()
 

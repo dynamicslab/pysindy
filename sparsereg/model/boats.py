@@ -40,10 +40,9 @@ def fit_with_noise(x, y, sigma, alpha, n, lmc=LinearRegression):
     n_samples, n_features = x.shape
     beta_0 = np.mean([lmc().fit(x, y + np.random.normal(size=size, scale=sigma)).coef_ for _ in range(n)], axis=0)
     beta_init = lmc().fit(x, y).coef_
-    
+
     beta_sel = beta_init.copy()
     mask = np.abs(beta_init) < alpha * np.abs(beta_0)
-    print(beta_0, beta_init)
     if np.all(mask):
         raise FitFailedWarning("alpha too high: {}".format(alpha))
     beta_sel[mask] = 0

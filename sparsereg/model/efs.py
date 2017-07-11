@@ -9,7 +9,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LassoLarsCV, Lasso
 from sklearn.exceptions import ConvergenceWarning
 
-from sparsereg.net import net
+from sparsereg.util.net import net
 
 operators = {
     "add": np.add,
@@ -38,7 +38,7 @@ def mutate(names, importance, toursize, operators, rng=random):
         candidates = rng.sample(names, size)
         parent = sorted(candidates, key=lambda i: importance[names.index(i)])[0]
         parents.append(parent)
- 
+
     args = ",".join(parents)
     name = f + "(" + args + ")"
     return operators[f], name, [names.index(p) for p in parents]
@@ -69,7 +69,7 @@ class LibTrafo(BaseEstimator, TransformerMixin):
     def __init__(self, names, operators):
         self.names = names[:]
         self.operators = operators
-    
+
     def fit(self, x, y=None):
         return self
 
@@ -107,7 +107,7 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
         models = net(Lasso, x, y, max_coarsity=self.max_coarsity).values()
         scores = [model.score(x, y) for model in models]
         coefs = [model.coef_ for model in models]
-        
+
         importance = get_importance(coefs, scores)
 
         stall_iter = 0
@@ -151,7 +151,7 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 model, score = _fit_model(x, y, names, self.operators, n_jobs=self.n_jobs)
-            
+
             if score > best_score:
                 best_model = model
                 best_score = score
@@ -162,7 +162,7 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
 
         self.model = best_model
         return self
-    
+
     def predict(self, x):
         return self.model.predict(x)
 

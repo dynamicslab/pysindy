@@ -8,7 +8,7 @@ import numpy as np
 
 import symfeat as sf
 
-from .util import pareto_front, cardinality, nrmse
+from sparsereg.util import pareto_front, cardinality, nrmse
 
 
 class FFXModel(BaseEstimator):
@@ -78,4 +78,3 @@ def run_ffx(x, y, exponents, operators, num_alphas=300, metric=nrmse, l1_ratios=
             break
 
     return sorted(pareto_front(considered, "complexity", "score_"), key=attrgetter("complexity"))
-

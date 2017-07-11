@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from sklearn.exceptions import FitFailedWarning
 
-from sparsereg.model.stridge import *
+from sparsereg.model import STRidge
 
 test_settings = (
     dict(threshold=0.5, copy_x=True, normalize=True, fit_intercept=True),

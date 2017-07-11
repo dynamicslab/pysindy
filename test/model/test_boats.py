@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.exceptions import FitFailedWarning
 
-from sparsereg.model.boats import *
-from sparsereg.model.stridge import STRidge
+from sparsereg.model import BoATS, STRidge, fit_with_noise
 
 np.random.seed(42)
 

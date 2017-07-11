@@ -2,3 +2,4 @@ scikit-learn[alldeps]
 numpy
 symfeat==0.4.4
 joblib
+toolz

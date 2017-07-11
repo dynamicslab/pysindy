@@ -6,8 +6,7 @@ from sklearn.linear_model import ElasticNet
 from joblib import Parallel, delayed
 import numpy as np
 
-import symfeat as sf
-
+from sparsereg.preprocessing.symfeat import SymbolicFeatures
 from sparsereg.util import pareto_front, cardinality, nrmse
 
 
@@ -62,7 +61,7 @@ def _get_alphas(alpha_max, num_alphas, eps):
 def run_ffx(x, y, exponents, operators, num_alphas=300, metric=nrmse, l1_ratios=(0.1, 0.3, 0.5, 0.7, 0.9, 0.95),
             eps=1e-70, max_complexity=100, target_score=0.01, min_models=40, alpha_max=1000, n_jobs=1, **params):
 
-    sym = sf.SymbolicFeatures(exponents=exponents, operators=operators)
+    sym = SymbolicFeatures(exponents=exponents, operators=operators)
 
     features = sym.fit_transform(x)
     alphas = _get_alphas(alpha_max, num_alphas, eps)

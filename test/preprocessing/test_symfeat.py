@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pickle
 
-import symfeat as sf
+import sparsereg.preprocessing.symfeat as sf
 
 @pytest.fixture
 def data():

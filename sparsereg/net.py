@@ -15,7 +15,7 @@ def net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, *
         return _net(estimator, x, y, attr=attr, max_coarsity=max_coarsity, filter=filter, r_max=r_max, **kw)
 
 
-def _net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, **kw):
+def _net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, return_full=False, **kw):
     n_features = x.shape[1]
 
     memory = defaultdict(list)   # just a convenience list; this information is redundant
@@ -74,6 +74,9 @@ def _net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, 
                     coarsity = 0
 
     if filter:
-        return {k: min(v, key=lambda x: getattr(x, attr)) for k, v in models.items()}
-    else:
+        models = {k: min(v, key=lambda x: getattr(x, attr)) for k, v in models.items()}
+
+    if not return_full:
         return models
+    else:
+        return models, sum(len(v) for v in memory.values())

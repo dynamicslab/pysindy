@@ -5,7 +5,7 @@ from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures, FunctionTransformer
 
-from sparsereg.model import STRidge
+from sparsereg.model._base import STRidge, equation
 
 
 def _derivative(x, dt=1.0):
@@ -42,14 +42,7 @@ class SINDy(BaseEstimator):
 
     def equations(self):
         names = self.model.estimators_[0].steps[0][1].get_feature_names(input_features=self.feature_names)
-        eqs = []
-        for est in self.model.estimators_:
-            coefs = est.steps[1][1].coef_
-            eq = " + ".join("{}*{}".format(c, n) for c, n in zip(coefs, names) if c)
-            if est.steps[1][1].intercept_:
-                eq += " + {}".format(est.steps[1][1].intercept_)
-            eqs.append(eq)
-        return eqs
+        return [equation(est, names) for est in self.model.estimators_]
 
     def score(self, x, y=None):
         xdot = self.derivative.transform(x)

@@ -154,3 +154,12 @@ def fit_with_noise(x, y, sigma, alpha, n, lmc=LinearRegression):
     beta_sel[~mask] = model.coef_
 
     return beta_sel, model.intercept_
+
+
+def equation(pipeline, names=None):
+    names = names or pipeline.steps[0][1].get_feature_names()
+    coefs = pipeline.steps[-1][1].coef_
+    eq = " + ".join("{}*{}".format(c, n) for c, n in zip(coefs, names) if c)
+    if pipeline.steps[-1][1].intercept_:
+        eq += " + {}".format(pipeline.steps[-1][1].intercept_)
+    return eq

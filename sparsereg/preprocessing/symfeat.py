@@ -145,14 +145,12 @@ class SymbolicFeatures(Base):
             features = [c.transform(x) for c in self.feat_cls]
             return np.array(list(features)).T
 
-    @property
-    def names(self):
+    def get_feature_names(self):
         """Get all the feature names. Only Available after fitting."""
         if self._names is None:
             self._names = [f.name for f in self.feat_cls]
         return self._names
 
-    name = names
 
     def __getstate__(self):
         state = self.__dict__.copy()

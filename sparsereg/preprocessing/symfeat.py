@@ -19,15 +19,6 @@ class Base(BaseEstimator, TransformerMixin):
         return self.name_cache
 
 
-class ConstantFeature(Base):
-    def transform(self, x):
-        return np.ones_like(x[:, 0])
-
-    @property
-    def name(self):
-        return "1"
-
-
 class SimpleFeature(Base):
     """Base to create polynomial features.
     """
@@ -86,8 +77,10 @@ def _allfinite(tpl):
 def _take_finite(x):
     return list(filter(_allfinite, x))
 
+
 def _hash(array):
     return hash(str(array))
+
 
 def hashed_hash_():
     cache = {}
@@ -115,18 +108,15 @@ get_valid = compose(_remove_id, _take_finite)
 
 class SymbolicFeatures(Base):
     """Main class"""
-    def __init__(self, exponents, operators, const=True):
+    def __init__(self, exponents, operators):
         self.exponents = exponents
         self.operators = operators
-        self.const = const
         self._precompute_hash = None
         self._names = None
 
     def fit(self, x, y=None):
         x = np.asfortranarray(x)
         _, n_features = x.shape
-        # 0) Get constant feature
-        const = [(ConstantFeature(), ConstantFeature().transform(x))] if self.const else []
         # 1) Get all simple features
         simple = (SimpleFeature(e, index=i) for e, i in product(self.exponents, range(n_features)))
         simple = get_valid((s, s.transform(x)) for s in simple)
@@ -138,7 +128,7 @@ class SymbolicFeatures(Base):
         prod = [ProductFeature(feat1, feat2) for (feat1, _) , (feat2, _) in combs]
         prod = get_valid((p, p.transform(x)) for p in prod)
 
-        all_ = const + simple + operator + prod
+        all_ = simple + operator + prod
         all_ = get_valid(all_)
         feat_cls, features = zip(*[(c, np.array(f)) for c, f in all_])
 

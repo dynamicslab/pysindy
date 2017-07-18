@@ -12,12 +12,6 @@ def data():
     return d
 
 
-def test_ConstantFeature(data):
-    const = sf.ConstantFeature()
-    assert const.name == "1"
-    np.testing.assert_allclose(data[:, 0]**0, const.transform(data))
-
-
 @pytest.mark.parametrize("index", range(2))
 @pytest.mark.parametrize("exponent", [1, 2, -1, -2])
 def test_SimpleFeature(exponent, data, index):
@@ -72,7 +66,6 @@ def test_SymbolicFeatures(data):
 
     assert len(names) == features.shape[1]
     assert features.shape[0] == data.shape[0]
-    np.testing.assert_allclose(features[:, 0], np.ones_like(data[:,0]))
 
 
 def test_SymbolicFeatures_remove_id(data):
@@ -81,24 +74,16 @@ def test_SymbolicFeatures_remove_id(data):
     operators = {}
     exponents = [1, 2, 3]
     sym = sf.SymbolicFeatures(exponents, operators).fit(data)
-    # const + simple * 2 + products - excluded
-    assert len(sym.names) == 1 + 2*3 + 15 - 2
+    # simple * 2 + products - excluded
+    assert len(sym.names) == 2*3 + 15 - 2
 
 
 def test_SymbolicFeatures_redundant_data():
     data = np.ones(shape=(10, 10))
-    exponents = [1]
+    exponents = [1, 2]
     operators = {}
     sym = sf.SymbolicFeatures(exponents, operators).fit(data)
     assert len(sym.names) == 1
-
-
-def test_SymbolicFeatures_no_const():
-    data = np.ones(shape=(10, 10))
-    exponents = [1]
-    operators = {}
-    sym = sf.SymbolicFeatures(exponents, operators, const=False).fit(data)
-    assert sym.names[0] == "x_0"
 
 
 def test_SymbolicFeatures_pickle(data):

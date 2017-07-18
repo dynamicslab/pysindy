@@ -62,7 +62,7 @@ def test_SymbolicFeatures(data):
     sym = sf.SymbolicFeatures(exponents, operators)
     features = sym.fit_transform(data)
 
-    names = sym.names
+    names = sym.get_feature_names()
 
     assert len(names) == features.shape[1]
     assert features.shape[0] == data.shape[0]
@@ -75,7 +75,7 @@ def test_SymbolicFeatures_remove_id(data):
     exponents = [1, 2, 3]
     sym = sf.SymbolicFeatures(exponents, operators).fit(data)
     # simple * 2 + products - excluded
-    assert len(sym.names) == 2*3 + 15 - 2
+    assert len(sym.get_feature_names()) == 2*3 + 15 - 2
 
 
 def test_SymbolicFeatures_redundant_data():
@@ -83,7 +83,7 @@ def test_SymbolicFeatures_redundant_data():
     exponents = [1, 2]
     operators = {}
     sym = sf.SymbolicFeatures(exponents, operators).fit(data)
-    assert len(sym.names) == 1
+    assert len(sym.get_feature_names()) == 1
 
 
 def test_SymbolicFeatures_pickle(data):
@@ -92,4 +92,4 @@ def test_SymbolicFeatures_pickle(data):
     sym = sf.SymbolicFeatures(exponents, operators)
     assert pickle.loads(pickle.dumps(sym)).__dict__ == sym.__dict__
     sym.fit(data)
-    assert pickle.loads(pickle.dumps(sym)).names == sym.names
+    assert pickle.loads(pickle.dumps(sym)).get_feature_names() == sym.get_feature_names()

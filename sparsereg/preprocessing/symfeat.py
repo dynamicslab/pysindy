@@ -108,9 +108,10 @@ get_valid = compose(_remove_id, _take_finite)
 
 class SymbolicFeatures(Base):
     """Main class"""
-    def __init__(self, exponents, operators):
+    def __init__(self, exponents, operators, consider_products=True):
         self.exponents = exponents
         self.operators = operators
+        self.consider_products = consider_products
         self._precompute_hash = None
         self._names = None
 
@@ -124,11 +125,13 @@ class SymbolicFeatures(Base):
         operator = (OperatorFeature(s, op, operator_name=op_name) for (s, _), (op_name, op) in product(simple, self.operators.items()))
         operator = get_valid((o, o.transform(x)) for o in operator)
         # 3) Get all product features
-        combs = chain(product(operator, simple), combinations(simple, 2))
-        prod = [ProductFeature(feat1, feat2) for (feat1, _) , (feat2, _) in combs]
-        prod = get_valid((p, p.transform(x)) for p in prod)
+        all_ = simple + operator
 
-        all_ = simple + operator + prod
+        if self.consider_products:
+            combs = chain(product(operator, simple), combinations(simple, 2))
+            prod = [ProductFeature(feat1, feat2) for (feat1, _) , (feat2, _) in combs] 
+            all_ += get_valid((p, p.transform(x)) for p in prod)
+
         all_ = get_valid(all_)
         feat_cls, features = zip(*[(c, np.array(f)) for c, f in all_])
 

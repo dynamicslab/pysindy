@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.base import BaseEstimator
+from sklearn.metrics import r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures, FunctionTransformer
@@ -49,3 +50,7 @@ class SINDy(BaseEstimator):
                 eq += " + {}".format(est.steps[1][1].intercept_)
             eqs.append(eq)
         return eqs
+
+    def score(self, x, y=None):
+        xdot = self.derivative.transform(x)
+        return r2_score(self.model.predict(x), xdot)

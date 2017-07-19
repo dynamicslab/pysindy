@@ -7,14 +7,13 @@ from sparsereg.model._base import equation
 
 np.random.seed(42)
 x = np.random.normal(size=(1000, 2))
-y = x[:, 0] * x[:, 1]
-
+y = x[:, 0] / ( 1 + x[:, 1] )
 
 exponents = [1, 2]
 operators = {}
-max_iter = 1000
-l1_ratios = [0.95, 0.8]
+max_iter = 10000
+l1_ratios = [0.95, 0.8, 0.5, 0.2]
 
-front = run_ffx(x, y, exponents, operators, max_iter=max_iter, l1_ratios=l1_ratios, n_jobs=-1, num_alphas=30)
+front = run_ffx(x, y, exponents, operators, max_iter=max_iter, l1_ratios=l1_ratios, n_jobs=-1, num_alphas=30, eps=1e-20)
 for model in front:
-    print(model.test_score_, model.complexity_, equation(model))
+    print(model.test_score_, model.complexity_, model.print_model())

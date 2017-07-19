@@ -10,6 +10,21 @@ from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 from sparsereg.util import cardinality
 
+
+def _print_model(coef, names, intercept=None):
+    model = "+".join("{}*{}".format(c, n) for c, n in zip(coef, names) if c)
+    if intercept:
+        model += " + {}".format(intercept)
+    return model
+
+
+def equation(pipeline, names=None):
+    names = names or pipeline.steps[0][1].get_feature_names()
+    coef = pipeline.steps[-1][1].coef_
+    intercept = pipeline.steps[-1][1].intercept_
+    return _print_model(coef, names, intercept)
+
+
 class RationalFunctionMixin():
     def _transform(self, x, y):
         return np.hstack((x, y.reshape(-1, 1) * x))
@@ -26,6 +41,24 @@ class RationalFunctionMixin():
         check_is_fitted(self, "coef_")
         x = check_array(x)
         return (self.intercept_ + x @ self.coef_nominator_) / (1 + x @ self.coef_denominator_)
+
+    def print_model(self, names=None):
+        names = names or ["x_{}".format(i) for i in range(len(self.coef_nominator_))]
+        nominator = _print_model(self.coef_nominator_, names)
+        if self.intercept_:
+            nominator += "+ {}".format(self.intercept_)
+        if np.any(self.coef_denominator_):
+            denominator = _print_model(self.coef_denominator_, names, 1)
+            model = "(" + nominator + ") / (" + denominator + ")"
+        else:
+            model = nominator
+        return model
+
+
+class PrintMixin:
+    def print_model(self, names=None):
+        names = names or ["x_{}".format(i) for i in range(len(self.coef_))]
+        return _print_model(self.coef_, names, self.intercept_)
 
 
 def _sparse_coefficients(dim, ind, coef, threshold):
@@ -154,12 +187,3 @@ def fit_with_noise(x, y, sigma, alpha, n, lmc=LinearRegression):
     beta_sel[~mask] = model.coef_
 
     return beta_sel, model.intercept_
-
-
-def equation(pipeline, names=None):
-    names = names or pipeline.steps[0][1].get_feature_names()
-    coefs = pipeline.steps[-1][1].coef_
-    eq = " + ".join("{}*{}".format(c, n) for c, n in zip(coefs, names) if c)
-    if pipeline.steps[-1][1].intercept_:
-        eq += " + {}".format(pipeline.steps[-1][1].intercept_)
-    return eq

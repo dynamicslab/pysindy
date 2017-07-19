@@ -12,11 +12,11 @@ from joblib import Parallel, delayed
 import numpy as np
 
 from sparsereg.preprocessing.symfeat import SymbolicFeatures
-from sparsereg.model._base import RationalFunctionMixin
+from sparsereg.model._base import RationalFunctionMixin, PrintMixin
 from sparsereg.util import pareto_front, rmse
 
 
-class MyPipeline(Pipeline):
+class FFXModel(Pipeline):
     def __hash__(self):
         return hash(joblib.hash((self._final_estimator.coef_, self._final_estimator.intercept_)))
 
@@ -27,9 +27,14 @@ class MyPipeline(Pipeline):
         return np.allclose(self._final_estimator.coef_, other._final_estimator.coef_) and \
                np.allclose(self._final_estimator.intercept_, other._final_estimator.intercept_)
 
-class FFXElasticNet(ElasticNet):
+    def print_model(self):
+        return self._final_estimator.print_model(names=self.steps[0][1].get_feature_names())
+
+
+class FFXElasticNet(PrintMixin, ElasticNet):
     def score(self, x, y):
         return rmse(self.predict(x) - y)
+
 
 class FFXRationalElasticNet(RationalFunctionMixin, FFXElasticNet):
     pass
@@ -38,13 +43,22 @@ class FFXRationalElasticNet(RationalFunctionMixin, FFXElasticNet):
 Strategy = namedtuple("Strategy", "exponents operators consider_products base")
 
 def build_strategies(exponents, operators):
+    strategies = []
     linear = Strategy(exponents=[1], operators={}, consider_products=False, base=FFXElasticNet)
     rational = Strategy(exponents=[1], operators={}, consider_products=False, base=FFXRationalElasticNet)
-    full_exponents = Strategy(exponents=exponents, operators={}, consider_products=True, base=FFXElasticNet)
-    full_exponents_rational = Strategy(exponents=exponents, operators={}, consider_products=True, base=FFXRationalElasticNet)
-    full_operators = Strategy(exponents=exponents, operators=operators, consider_products=True, base=FFXElasticNet)
+    strategies.append(linear)
+    strategies.append(rational)
+    if sorted(exponents) != [1]:
+        full_exponents = Strategy(exponents=exponents, operators={}, consider_products=True, base=FFXElasticNet)
+        full_exponents_rational = Strategy(exponents=exponents, operators={}, consider_products=True, base=FFXRationalElasticNet)
+        strategies.append(full_exponents)
+        strategies.append(full_exponents_rational)
+
+    if operators:
+        full_operators = Strategy(exponents=exponents, operators=operators, consider_products=True, base=FFXElasticNet)
+        strategies.append(full_operators)
     #full_operators_rational = Strategy(exponents=exponents, operators=operators, consider_products=True, base=FFXRationalElasticNet)
-    return [linear, rational, full_exponents, full_exponents_rational, full_operators]
+    return strategies
 
 def _get_alphas(alpha_max, num_alphas, eps):
     st, fin = np.log10(alpha_max*eps), np.log10(alpha_max)
@@ -54,10 +68,10 @@ def _get_alphas(alpha_max, num_alphas, eps):
 
 
 def run_strategy(strategy, x_train, x_test, y_train, y_test, alphas, l1_ratios, target_score, **kw):
-    est = MyPipeline((("features", SymbolicFeatures(exponents=strategy.exponents,
+    est = FFXModel((("features", SymbolicFeatures(exponents=strategy.exponents,
                                                     operators=strategy.operators,
                                                     consider_products=strategy.consider_products)),
-                      ("regression", strategy.base(warm_start=True, **kw))))
+                    ("regression", strategy.base(warm_start=True, **kw))))
 
     models = []
     for alpha, l1_ratio in product(alphas, l1_ratios):
@@ -78,8 +92,6 @@ def run_ffx(x, y, exponents, operators, num_alphas=100, l1_ratios=(0.1, 0.3, 0.5
             eps=1e-30, target_score=0.01, alpha_max=100, n_jobs=1, random_state=None, strategies=None, **kw):
 
     x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=random_state)
-
-
     strategies = strategies or build_strategies(exponents, operators)
     alphas = _get_alphas(alpha_max, num_alphas, eps)
 

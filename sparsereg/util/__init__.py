@@ -4,11 +4,9 @@ from operator import attrgetter
 import numpy as np
 from sklearn.linear_model.base import LinearModel
 
-from sparsereg.util.timeout import timeout
 
 def dominates(a, b):
     return all(ai <= bi for ai, bi in zip(a, b)) and not a == b
-
 
 
 def _get_fit(m, attrs):

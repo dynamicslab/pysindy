@@ -10,7 +10,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_X_y, check_random_state
 import joblib
-from joblib import Parallel, delayed
 import numpy as np
 
 from sparsereg.preprocessing.symfeat import SymbolicFeatures
@@ -86,12 +85,14 @@ def build_strategies(exponents, operators):
         full_exponents_rational = Strategy(exponents=exponents, operators={}, consider_products=True, index=slice(None), base=FFXRationalElasticNet)
         strategies.append(full_exponents)
         strategies.append(full_exponents_rational)
-
     if operators:
         full_operators = Strategy(exponents=exponents, operators=operators, consider_products=True, index=slice(None), base=FFXElasticNet)
         strategies.append(full_operators)
     #full_operators_rational = Strategy(exponents=exponents, operators=operators, consider_products=True, base=FFXRationalElasticNet)
-    return strategies
+    def strategy_generator(front):
+        yield from strategies
+    return strategy_generator
+
 
 def _get_alphas(alpha_max, num_alphas, eps):
     st, fin = np.log10(alpha_max*eps), np.log10(alpha_max)
@@ -116,13 +117,13 @@ def run_strategy(strategy, x_train, x_test, y_train, y_test, alphas, l1_ratios, 
 
 
 def run_ffx(x_train, x_test, y_train, y_test, exponents, operators, num_alphas=100, l1_ratios=(0.1, 0.3, 0.5, 0.7, 0.9, 0.95),
-            eps=1e-30, target_score=0.01, alpha_max=100, n_jobs=1, random_state=None, strategies=None, **kw):
+            eps=1e-30, target_score=0.01, alpha_max=100, random_state=None, strategies=None, **kw):
     strategies = strategies or build_strategies(exponents, operators)
     alphas = _get_alphas(alpha_max, num_alphas, eps)
 
     non_dominated_models = []
 
-    for strategy in strategies:
+    for strategy in strategies(non_dominated_models):
         models = run_strategy(strategy, x_train, x_test, y_train, y_test, alphas, l1_ratios, target_score, **kw)
         front = pareto_front(models, "complexity_", "test_score_")
         non_dominated_models.extend(front)
@@ -151,7 +152,7 @@ class WeightedEnsembleEstimator(BaseEstimator, TransformerMixin):
 class FFX(BaseEstimator, RegressorMixin):
     def __init__(self, l1_ratios=(0.2, 0.4, 0.6, 0.8, 0.95), num_alphas=100, alpha_max=100,
                  eps=1e-30, random_state=None, strategies=None, target_score=0.01, decision="min",
-                 exponents=[1, 2], operators={}, n_jobs=1, kw={}):
+                 exponents=[1, 2], operators={}, kw={}):
 
         self.l1_ratios = l1_ratios
         self.num_alphas = num_alphas
@@ -164,14 +165,13 @@ class FFX(BaseEstimator, RegressorMixin):
         self.operators = operators
         self.kw = kw
         self.decision = decision
-        self.n_jobs = n_jobs
 
     def fit(self, x, y=None):
         x, y = check_X_y(x, y)
         x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=self.random_state)
         self.front = run_ffx(x_train, x_test, y_train, y_test,
                              self.exponents, self.operators, self.num_alphas, self.l1_ratios,
-                             self.eps, self.target_score, self.alpha_max, self.n_jobs, self.random_state,
+                             self.eps, self.target_score, self.alpha_max, self.random_state,
                              self.strategies, **self.kw)
         self.make_model(x_test, y_test)
         return self

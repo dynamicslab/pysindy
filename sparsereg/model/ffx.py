@@ -151,7 +151,7 @@ class WeightedEnsembleEstimator(BaseEstimator, TransformerMixin):
 class FFX(BaseEstimator, RegressorMixin):
     def __init__(self, l1_ratios=(0.2, 0.4, 0.6, 0.8, 0.95), num_alphas=100, alpha_max=100,
                  eps=1e-30, random_state=None, strategies=None, target_score=0.01, decision="min",
-                 exponents=[1, 2], operators={}, max_fit_time=10, n_jobs=1, kw={}):
+                 exponents=[1, 2], operators={}, n_jobs=1, kw={}):
 
         self.l1_ratios = l1_ratios
         self.num_alphas = num_alphas
@@ -162,7 +162,6 @@ class FFX(BaseEstimator, RegressorMixin):
         self.target_score = target_score
         self.exponents = exponents
         self.operators = operators
-        self.max_fit_time = max_fit_time
         self.kw = kw
         self.decision = decision
         self.n_jobs = n_jobs
@@ -173,7 +172,7 @@ class FFX(BaseEstimator, RegressorMixin):
         self.front = run_ffx(x_train, x_test, y_train, y_test,
                              self.exponents, self.operators, self.num_alphas, self.l1_ratios,
                              self.eps, self.target_score, self.alpha_max, self.n_jobs, self.random_state,
-                             self.strategies, max_fit_time=self.max_fit_time, **self.kw)
+                             self.strategies, **self.kw)
         self.make_model(x_test, y_test)
         return self
 

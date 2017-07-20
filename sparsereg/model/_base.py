@@ -11,18 +11,18 @@ from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sparsereg.util import cardinality
 
 
-def _print_model(coef, names, intercept=None):
-    model = "+".join("{}*{}".format(c, n) for c, n in zip(coef, names) if c)
+def _print_model(coef, input_features, intercept=None):
+    model = "+".join("{}*{}".format(c, n) for c, n in zip(coef, input_features) if c)
     if intercept:
         model += " + {}".format(intercept)
     return model
 
 
-def equation(pipeline, names=None):
-    names = names or pipeline.steps[0][1].get_feature_names()
+def equation(pipeline, input_features=None):
+    input_features = input_features or pipeline.steps[0][1].get_feature_names()
     coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
-    return _print_model(coef, names, intercept)
+    return _print_model(coef, input_features, intercept)
 
 
 class RationalFunctionMixin():
@@ -42,13 +42,13 @@ class RationalFunctionMixin():
         x = check_array(x)
         return (self.intercept_ + x @ self.coef_nominator_) / (1 + x @ self.coef_denominator_)
 
-    def print_model(self, names=None):
-        names = names or ["x_{}".format(i) for i in range(len(self.coef_nominator_))]
-        nominator = _print_model(self.coef_nominator_, names)
+    def print_model(self, input_features=None):
+        input_features = input_features or ["x_{}".format(i) for i in range(len(self.coef_nominator_))]
+        nominator = _print_model(self.coef_nominator_, input_features)
         if self.intercept_:
             nominator += "+ {}".format(self.intercept_)
         if np.any(self.coef_denominator_):
-            denominator = _print_model(self.coef_denominator_, names, 1)
+            denominator = _print_model(self.coef_denominator_, input_features, 1)
             model = "(" + nominator + ") / (" + denominator + ")"
         else:
             model = nominator
@@ -56,9 +56,9 @@ class RationalFunctionMixin():
 
 
 class PrintMixin:
-    def print_model(self, names=None):
-        names = names or ["x_{}".format(i) for i in range(len(self.coef_))]
-        return _print_model(self.coef_, names, self.intercept_)
+    def print_model(self, input_features=None):
+        input_features = input_features or ["x_{}".format(i) for i in range(len(self.coef_))]
+        return _print_model(self.coef_, input_features, self.intercept_)
 
 
 def _sparse_coefficients(dim, ind, coef, threshold):

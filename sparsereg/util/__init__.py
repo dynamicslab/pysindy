@@ -4,6 +4,7 @@ from operator import attrgetter
 import numpy as np
 from sklearn.linear_model.base import LinearModel
 
+from sparsereg.util.timeout import timeout
 
 def dominates(a, b):
     return all(ai <= bi for ai, bi in zip(a, b)) and not a == b
@@ -137,3 +138,8 @@ class ReducedLinearModel(LinearModel):
 
     def scores(self, x, y):
         return self.lm.scores(x[:, self.mask], y)
+
+def aic(residuals, k, correct=False):
+    n = len(residuals)
+    correction = 2 * (k + 1) * k / (n - k - 1) if correct else 0
+    return n * np.log(np.var(residuals)) + 2*k + correction

@@ -114,12 +114,13 @@ class SymbolicFeatures(Base):
         self.consider_products = consider_products
         self._precompute_hash = None
         self._names = None
+        self.n_features = None
 
     def fit(self, x, y=None):
         x = np.asfortranarray(x)
-        _, n_features = x.shape
+        _, self.n_features = x.shape
         # 1) Get all simple features
-        simple = (SimpleFeature(e, index=i) for e, i in product(self.exponents, range(n_features)))
+        simple = (SimpleFeature(e, index=i) for e, i in product(self.exponents, range(self.n_features)))
         simple = get_valid((s, s.transform(x)) for s in simple)
         # 2) Get all operator features
         operator = (OperatorFeature(s, op, operator_name=op_name) for (s, _), (op_name, op) in product(simple, self.operators.items()))
@@ -129,7 +130,7 @@ class SymbolicFeatures(Base):
 
         if self.consider_products:
             combs = chain(product(operator, simple), combinations(simple, 2))
-            prod = [ProductFeature(feat1, feat2) for (feat1, _) , (feat2, _) in combs] 
+            prod = [ProductFeature(feat1, feat2) for (feat1, _) , (feat2, _) in combs]
             all_ += get_valid((p, p.transform(x)) for p in prod)
 
         all_ = get_valid(all_)
@@ -148,10 +149,13 @@ class SymbolicFeatures(Base):
             features = [c.transform(x) for c in self.feat_cls]
             return np.array(list(features)).T
 
-    def get_feature_names(self):
+    def get_feature_names(self, input_features=None):
         """Get all the feature names. Only Available after fitting."""
         if self._names is None:
             self._names = [f.name for f in self.feat_cls]
+        if input_features:
+            for i, input_feature in enumerate(input_features):
+                self._names = [n.replace("x_{}".format(i), input_feature) for n in self._names]
         return self._names
 
 

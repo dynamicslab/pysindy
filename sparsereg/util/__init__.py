@@ -9,7 +9,6 @@ def dominates(a, b):
     return all(ai <= bi for ai, bi in zip(a, b)) and not a == b
 
 
-
 def _get_fit(m, attrs):
     if attrs:
         get_fit = attrgetter(*attrs)
@@ -39,7 +38,7 @@ def _pareto_front(models, *attrs):
         else:
             front.add(m)
         front -= dominated
-    
+
     return sorted(front, key=get_fit)
 
 
@@ -49,7 +48,7 @@ def pareto_front(models, *attrs, all=False):
     """
     if not all:
         return _pareto_front(models, *attrs)
-    
+
     else:
         fronts = []
         models = set(models)
@@ -137,3 +136,8 @@ class ReducedLinearModel(LinearModel):
 
     def scores(self, x, y):
         return self.lm.scores(x[:, self.mask], y)
+
+def aic(residuals, k, correct=False):
+    n = len(residuals)
+    correction = 2 * (k + 1) * k / (n - k - 1) if correct else 0
+    return n * np.log(np.var(residuals)) + 2*k + correction

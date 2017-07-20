@@ -1,6 +1,6 @@
 import pytest
 
-from sparsereg.efs import *
+from sparsereg.model.efs import *
 
 size_cases = (
     ("x_1", 1),

@@ -2,10 +2,11 @@ from sklearn.datasets import load_boston
 from sklearn.linear_model import Lasso
 import matplotlib.pyplot as plt
 import numpy as np
-import symfeat as sf
-from sparsereg.sindy import SINDy
+import sparsereg.preprocessing.symfeat as sf
 
-from sparsereg.net import net
+from sparsereg.model import STRidge
+from sparsereg.util.net import net
+
 data = load_boston()
 x, y = data.data, data.target
 
@@ -16,9 +17,9 @@ operators = {}
 sym = sf.SymbolicFeatures(exponents=exponents, operators=operators)
 features = sym.fit_transform(x)
 
-ests = [Lasso, SINDy]
-attrs = ["alpha", "knob"]
-names = ["Lasso", "SINDy"]
+ests = [Lasso, STRidge]
+attrs = ["alpha", "threshold"]
+names = ["Lasso", "STRidge"]
 
 
 for est, attr, name in zip(ests, attrs, names):

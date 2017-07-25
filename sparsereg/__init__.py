@@ -1,3 +1,3 @@
-from .model import *
-from .preprocessing import *
-from .util import *
+from sparsereg.model import *
+from sparsereg.preprocessing import *
+from sparsereg.util import *

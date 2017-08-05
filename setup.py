@@ -2,7 +2,7 @@ import os
 import sys
 from os.path import dirname
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 here = os.path.abspath(dirname(__file__))
 
@@ -15,16 +15,12 @@ about = {}
 with open(os.path.join(base_dir, "sparsereg", "__version__.py")) as f:
     exec(f.read(), about)
 
+with open("requirements.txt", "r") as f:
+    required = f.readlines()
+
 if sys.argv[-1] == "publish":
     os.system("python setup.py sdist bdist_wheel upload")
     sys.exit()
-
-required = [
-    "numpy",
-    "scikit-learn",
-    "symfeat",
-    "joblib", 
-]
 
 setup(
     name='sparsereg',
@@ -34,7 +30,7 @@ setup(
     author='Markus Quade',
     author_email='info@markusqua.de',
     url='https://github.com/ohjeah/sparsereg',
-    packages=['sparsereg'],
+    packages=find_packages(exclude=["test", "example"]),
     install_requires=required,
     license='MIT',
     classifiers=[

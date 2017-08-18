@@ -12,7 +12,7 @@ allow_failures:
 
 install:
   - pip install -r requirements.txt
-  - pip install -e .
+  - pip install .
   - pip install pytest
 script:
   - py.test

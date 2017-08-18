@@ -31,8 +31,8 @@ class SINDy(BaseEstimator):
     def fit(self, x, y=None):
         xdot = self.derivative.transform(x)
 
-        steps = (("features", PolynomialFeatures(degree=self.degree, include_bias=False)),
-                 ("model", STRidge(alpha=self.alpha, threshold=self.threshold, **self.kw)))
+        steps = [("features", PolynomialFeatures(degree=self.degree, include_bias=False)),
+                 ("model", STRidge(alpha=self.alpha, threshold=self.threshold, **self.kw))]
         self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
         self.model.fit(x, xdot)
         return self

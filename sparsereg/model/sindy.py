@@ -44,6 +44,6 @@ class SINDy(BaseEstimator):
         names = self.model.estimators_[0].steps[0][1].get_feature_names(input_features=self.feature_names)
         return [equation(est, names) for est in self.model.estimators_]
 
-    def score(self, x, y=None):
+    def score(self, x, y=None, multioutput="uniform_average"):
         xdot = self.derivative.transform(x)
-        return r2_score(self.model.predict(x), xdot)
+        return r2_score(self.model.predict(x), xdot, multioutput=multioutput)

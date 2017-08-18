@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.integrate import odeint
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 
 from sparsereg.model import SINDy
 

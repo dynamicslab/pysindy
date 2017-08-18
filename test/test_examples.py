@@ -6,7 +6,6 @@ import inspect
 import pytest
 
 THIS_FILES_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"), reason="need --runslow option to run")
 
 @pytest.mark.parametrize("file", glob.glob(THIS_FILES_DIR + "/../example/sindy.py"))
 #@slow

@@ -42,12 +42,12 @@ class FFXModel(Pipeline):
     def __init__(self, strategy, **kw):
         self.strategy = strategy
         self.kw = kw
-        super().__init__(steps=(
+        super().__init__(steps=[
                ("selection", ColumnSelector(index=self.strategy.index)),
                ("features", SymbolicFeatures(exponents=self.strategy.exponents,
                                              operators=self.strategy.operators,
                                              consider_products=self.strategy.consider_products)),
-               ("regression", strategy.base(warm_start=False, **self.kw))))
+               ("regression", strategy.base(warm_start=False, **self.kw))])
 
     def __hash__(self):
         return hash(joblib.hash((self._final_estimator.coef_, self._final_estimator.intercept_)))
@@ -129,7 +129,7 @@ def run_strategy(strategy, x_train, x_test, y_train, y_test, alphas, l1_ratios, 
     with joblib.Parallel(n_jobs=n_jobs) as parallel:
         paths = parallel(joblib.delayed(enet_path)(est, x_train, x_test, y_train, y_test, alphas, l1_ratio, target_score)
                                                    for l1_ratio in l1_ratios)
-    
+
     return [model for path in paths for model in path]
 
 

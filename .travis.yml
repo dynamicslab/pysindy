@@ -13,6 +13,6 @@ allow_failures:
 install:
   - pip install -r requirements.txt
   - pip install .
-  - pip install pytest
+  - pip install pytest matplotlib
 script:
   - py.test

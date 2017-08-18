@@ -78,13 +78,14 @@ class LibTrafo(BaseEstimator, TransformerMixin):
 
 
 def _fit_model(x, y, names, operators, **kw):
-    steps = ("trafo", LibTrafo(names, operators)), ("lasso", LassoLarsCV(**kw))
+    steps = [("trafo", LibTrafo(names, operators)), ("lasso", LassoLarsCV(**kw))]
     model = Pipeline(steps).fit(x, y)
     return model, model.score(x, y)
 
 
 class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
-    def __init__(self, q=1, mu=1, max_size=5, t=0.95, toursize=5, max_stall_iter=20, max_iter=2000, random_state=None, operators=operators, max_coarsity=2, n_jobs=1):
+    def __init__(self, q=1, mu=1, max_size=5, t=0.95, toursize=5, max_stall_iter=20, max_iter=2000,
+                 random_state=None, operators=operators, max_coarsity=2, n_jobs=1):
         self.q = q
         self.mu = mu
         self.max_size = max_size

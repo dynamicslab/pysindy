@@ -10,7 +10,6 @@ from sparsereg.util.net import net
 data = load_boston()
 x, y = data.data, data.target
 
-
 exponents = [1]
 operators = {}
 

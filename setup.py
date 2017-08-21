@@ -9,10 +9,8 @@ here = os.path.abspath(dirname(__file__))
 with open(os.path.join(here, 'README.rst')) as f:
     long_description = '\n' + f.read()
 
-base_dir = os.path.dirname(__file__)
-
 about = {}
-with open(os.path.join(base_dir, "sparsereg", "__version__.py")) as f:
+with open(os.path.join(here, "sparsereg", "__version__.py")) as f:
     exec(f.read(), about)
 
 with open("requirements.txt", "r") as f:

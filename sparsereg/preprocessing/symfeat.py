@@ -107,7 +107,6 @@ def _remove_id(tpl):
 get_valid = compose(_remove_id, _take_finite)
 
 class SymbolicFeatures(Base):
-    """Main class"""
     def __init__(self, exponents=[1], operators={}, consider_products=True):
         self.exponents = exponents
         self.operators = operators

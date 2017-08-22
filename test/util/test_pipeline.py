@@ -5,8 +5,8 @@ import pytest
 from sparsereg.util.pipeline import ColumnSelector
 
 cases = ((np.random.random(10), 0),
-         (np.random.random((10, 2)), 1),
-         (np.random.random((10, 2), slice(None)))
+         (np.random.random(size=(10, 2)), 1),
+         (np.random.random(size=(10, 2)), slice(None))
         )
 
 @pytest.mark.parametrize("case", cases)

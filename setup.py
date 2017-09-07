@@ -1,4 +1,4 @@
-"""                                                 
+"""
    _________  ____ ______________  ________  ____ _
   / ___/ __ \/ __ `/ ___/ ___/ _ \/ ___/ _ \/ __ `/
  (__  ) /_/ / /_/ / /  (__  )  __/ /  /  __/ /_/ /
@@ -27,7 +27,7 @@ with open(os.path.join(here, "requirements.txt"), "r") as f:
 # Import the README and use it as the long-description.
 # Note: this will only work if 'README.rst' is present in your MANIFEST.in file!
 with io.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
-    long_description = '\n' + f.read()
+    LONG_DESCRIPTION = '\n' + f.read()
 
 # Load the package's __version__.py module as a dictionary.
 about = {}
@@ -71,8 +71,8 @@ class PublishCommand(Command):
 setup(
     name=NAME,
     version=about['__version__'],
-    description=__doc__,
-    long_description=DESCRIPTION,
+    description=DESCRIPTION,
+    long_description=LONG_DESCRIPTION,
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,

@@ -25,7 +25,7 @@ def equation(pipeline, input_features=None):
     return _print_model(coef, input_features, intercept)
 
 
-class RationalFunctionMixin():
+class RationalFunctionMixin:
     def _transform(self, x, y):
         return np.hstack((x, y.reshape(-1, 1) * x))
 
@@ -61,22 +61,6 @@ class PrintMixin:
         return _print_model(self.coef_, input_features, self.intercept_)
 
 
-def _sparse_coefficients(dim, ind, coef, threshold):
-    c = np.zeros(dim)
-    c[ind] = coef
-    big_ind = abs(c) > threshold
-    c[~big_ind] = 0
-    return c, big_ind
-
-
-def _regress(x, y, alpha):
-    if alpha != 0:
-        coefs = np.linalg.lstsq(x.T @ x + alpha * np.eye(x.shape[1]), x.T @ y)[0]
-    else:
-        coefs = np.linalg.lstsq(x, y)[0]
-    return coefs
-
-
 class STRidge(LinearModel, RegressorMixin):
     def __init__(self, threshold=0.01, alpha=0.1, max_iter=100, normalize=True, fit_intercept=True, copy_x=True, unbias=True):
         self.threshold = threshold
@@ -87,10 +71,62 @@ class STRidge(LinearModel, RegressorMixin):
         self.alpha = alpha
         self.unbias = unbias
 
-    def fit(self, x_, y, sample_weight=None):
-        alpha = self.alpha
-        n_samples, n_features = x_.shape
+        self.history_ = []
 
+    def _sparse_coefficients(self, dim, ind, coef):
+        c = np.zeros(dim)
+        c[ind] = coef
+        big_ind = np.abs(c) >= self.threshold
+        c[~big_ind] = 0
+        self.history_.append(c)
+        return c, big_ind
+
+    def _regress(self, x, y, alpha):
+        if alpha != 0:
+            coefs = np.linalg.lstsq(x.T @ x + alpha * np.eye(x.shape[1]), x.T @ y)[0]
+        else:
+            coefs = np.linalg.lstsq(x, y)[0]
+        self.iters += 1
+        return coefs
+
+    def _no_change(self):
+        this_coef = self.history_[-1]
+        if len(self.history_) > 1:
+            last_coef = self.history_[-2]
+        else:
+            last_coef = np.zeros_like(this_coef)
+        return all(bool(i) == bool(j) for i,j in zip(this_coef, last_coef))
+
+    def _reduce(self, x, y):
+        """Iterates the thresholding. Assumes an initial guess is saved in self.coef_ and self.ind_"""
+        ind = self.ind_
+        n_samples, n_features = x.shape
+
+        for _ in range(self.iters, self.max_iter):
+
+
+            coef = self._regress(x[:, ind], y, self.alpha)
+            coef, ind = self._sparse_coefficients(n_features, ind, coef)
+
+            if np.count_nonzero(ind) == 0:
+                warnings.warn("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.threshold))
+                coef = np.zeros_like(coef)
+                break
+
+            if sum(ind) == n_features or self._no_change():
+                # could not (further) select important features
+                break
+        else:
+            warnings.warn("STRidge._reduce did not converge after {} iterations.".format(self.max_iter), ConvergenceWarning)
+        self.coef_ = coef
+        self.ind_ = ind
+
+    def _unbias(self, x, y):
+        if np.any(self.ind_):
+            coef = self._regress(x[:, self.ind_], y, 0)
+            self.coef_, self.ind_ = self._sparse_coefficients(x.shape[1], self.ind_, coef)
+
+    def fit(self, x_, y, sample_weight=None):
         X, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
@@ -98,37 +134,19 @@ class STRidge(LinearModel, RegressorMixin):
             copy=self.copy_X, sample_weight=None)
 
         if sample_weight is not None:
-            # Sample weight can be implemented via a simple rescaling.
             x, y = _rescale_data(x, y, sample_weight)
 
-        ind = np.ones(n_features, dtype=bool)
-        coefs = _regress(x, y, alpha)
-        new_coefs, ind = _sparse_coefficients(n_features, ind, coefs, self.threshold)
         self.iters = 0
+        self.ind_ = np.ones(x.shape[1], dtype=bool) # initial guess
         if self.threshold > 0:
-            for _ in range(1, self.max_iter):
-                if np.count_nonzero(ind) == 0:
-                    warnings.warn("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.threshold))
-                    coefs = np.zeros_like(coefs)
-                    break
+            self._reduce(x, y)
+        else:
+            self.coef_ = self._regress(x[:, ind], y, self.alpha)
 
-                new_coefs = _regress(x[:, ind], y, alpha)
-                new_coefs, ind = _sparse_coefficients(n_features, ind, new_coefs, self.threshold)
-                self.iters += 1
-                if np.allclose(new_coefs, coefs) and np.count_nonzero(ind) != 0:
-                    break
-                coefs = new_coefs
-            else:
-                warnings.warn("SINDy did not converge after {} iterations.".format(self.max_iter), ConvergenceWarning)
+        if self.unbias and self.alpha >= 0:
+            self._unbias(x, y)
 
-            if self.unbias and self.alpha > 0 and np.any(ind):
-                coefs = _regress(x[:, ind], y, 0)  # unbias
-                coefs, _ = _sparse_coefficients(n_features, ind, coefs, self.threshold)
-                self.iters += 1
-
-        self.coef_ = coefs
         self._set_intercept(X_offset, y_offset, X_scale)
-        self.coef_[abs(self.coef_) < np.finfo(float).eps] = 0
         return self
 
     def pprint(self, names=None):
@@ -139,7 +157,8 @@ class STRidge(LinearModel, RegressorMixin):
 
     @property
     def complexity(self):
-        return np.count_nonzero(self.coef_)
+        intercept_comp = 1 if self.fit_intercept else 0
+        return np.count_nonzero(self.coef_) + intercept_comp
 
 
 class BoATS(LinearModel, RegressorMixin):
@@ -165,7 +184,7 @@ class BoATS(LinearModel, RegressorMixin):
             # Sample weight can be implemented via a simple rescaling.
             x, y = _rescale_data(x, y, sample_weight)
 
-        coefs, intercept = fit_with_noise(x, y, self.sigma, self.alpha, self.n,)
+        coefs, intercept = fit_with_noise(x, y, self.sigma, self.alpha, self.n)
         self.intercept_ = intercept
         self.coef_ = coefs
         self._set_intercept(X_offset, y_offset, X_scale)

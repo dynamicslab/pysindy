@@ -14,7 +14,7 @@ import joblib
 import numpy as np
 
 from sparsereg.preprocessing.symfeat import SymbolicFeatures
-from sparsereg.model._base import RationalFunctionMixin, PrintMixin
+from sparsereg.model.base import RationalFunctionMixin, PrintMixin
 from sparsereg.util import pareto_front, rmse, aic
 from sparsereg.util.pipeline import ColumnSelector
 

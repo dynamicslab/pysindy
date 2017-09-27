@@ -5,7 +5,7 @@ from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures, FunctionTransformer
 
-from sparsereg.model._base import STRidge, equation
+from sparsereg.model.base import STRidge, equation
 
 
 def _derivative(x, dt=1.0):

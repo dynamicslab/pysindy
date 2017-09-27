@@ -1,7 +1,8 @@
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
-from sparsereg.model._base import RationalFunctionMixin
+from sparsereg.model.base import RationalFunctionMixin
+
 
 class RLM(RationalFunctionMixin, LinearRegression):
     pass

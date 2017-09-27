@@ -87,9 +87,7 @@ def test_pareto_front_duplicates():
     models = ("a", 0, 1), ("b", 0, 1), ("c", 1, 0), ("d", 0.5, 0.5)
     models = [base(*m) for m in models]
     front = pareto_front(models, "b", "c")
-    print(front)
     assert False
-
 
 cd_cases = (
     (models()[1:-1], ()),

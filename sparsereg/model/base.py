@@ -108,7 +108,7 @@ class STRidge(LinearModel, RegressorMixin):
                 warnings.warn("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.threshold))
                 coef = np.zeros_like(ind, dtype=float)
                 break
-            print(sum(ind))
+                
             coef = self._regress(x[:, ind], y, self.alpha)
             coef, ind = self._sparse_coefficients(n_features, ind, coef)
 

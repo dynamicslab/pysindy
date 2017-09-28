@@ -83,11 +83,11 @@ class STRidge(LinearModel, RegressorMixin):
 
     def _regress(self, x, y, alpha):
         if alpha != 0:
-            coefs = np.linalg.lstsq(x.T @ x + alpha * np.eye(x.shape[1]), x.T @ y)[0]
+            coef = np.linalg.lstsq(x.T @ x + alpha * np.eye(x.shape[1]), x.T @ y)[0]
         else:
-            coefs = np.linalg.lstsq(x, y)[0]
+            coef = np.linalg.lstsq(x, y)[0]
         self.iters += 1
-        return coefs
+        return coef
 
     def _no_change(self):
         this_coef = self.history_[-1]
@@ -101,19 +101,18 @@ class STRidge(LinearModel, RegressorMixin):
         """Iterates the thresholding. Assumes an initial guess is saved in self.coef_ and self.ind_"""
         ind = self.ind_
         n_samples, n_features = x.shape
+        n_features_selected = sum(ind)
 
         for _ in range(self.iters, self.max_iter):
-
-
+            if np.count_nonzero(ind) == 0:
+                warnings.warn("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.threshold))
+                coef = np.zeros_like(ind, dtype=float)
+                break
+            print(sum(ind))
             coef = self._regress(x[:, ind], y, self.alpha)
             coef, ind = self._sparse_coefficients(n_features, ind, coef)
 
-            if np.count_nonzero(ind) == 0:
-                warnings.warn("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.threshold))
-                coef = np.zeros_like(coef)
-                break
-
-            if sum(ind) == n_features or self._no_change():
+            if sum(ind) == n_features_selected or self._no_change():
                 # could not (further) select important features
                 break
         else:

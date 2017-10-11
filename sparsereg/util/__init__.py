@@ -113,7 +113,8 @@ def rmse(x):
 
 
 def nrmse(x, y):
-    return rmse(x-y)/(max(x) - min(x))
+    scale = max(y) - min(y) or 1.0
+    return rmse(x-y)/scale
 
 
 class ReducedLinearModel(LinearModel):

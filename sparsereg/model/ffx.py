@@ -112,7 +112,6 @@ def enet_path(est, x_train, x_test, y_train, y_test, alphas, l1_ratio, target_sc
             models[-1].train_score_ = est.score(x_train, y_train)
             models[-1].test_score_ = est.score(x_test, y_test)
             models[-1].complexity_ = np.count_nonzero(est._final_estimator.coef_)
-            print(models[-1].train_score_, models[-1].test_score_)
             if models[-1].train_score_ <= target_score or \
                models[-1].complexity_ >= max_complexity or \
                _path_is_saturated(models, n_tail=n_tail):
@@ -145,7 +144,6 @@ def run_ffx(x_train, x_test, y_train, y_test, exponents, operators, num_alphas=1
     non_dominated_models = []
 
     for strategy in strategies(non_dominated_models):
-        print(strategy)
         models = run_strategy(strategy, x_train, x_test, y_train, y_test, alphas,
                               l1_ratios, target_score, n_tail, max_complexity, n_jobs, **kw)
         front = pareto_front(models, "complexity_", "test_score_")

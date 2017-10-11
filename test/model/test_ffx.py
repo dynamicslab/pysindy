@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from sparsereg.model.ffx import _path_is_saturated, _path_is_overfit
+from sparsereg.model.ffx import _path_is_saturated #, _path_is_overfit
 
 
 def test__path_is_saturated():

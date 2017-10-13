@@ -101,7 +101,8 @@ def _path_is_saturated(models, n_tail=15, digits=4):
         return round(models[-1].train_score_, digits) == round(models[-n_tail].train_score_, digits)
 
 
-def enet_path(est, x_train, x_test, y_train, y_test, alphas, l1_ratio, target_score, n_tail, max_complexity):
+def enet_path(est, x_train, x_test, y_train, y_test, num_alphas, eps,
+              l1_ratio, target_score, n_tail, max_complexity):
     models = []
 
     trafo = Pipeline(steps=est.steps[:-1])
@@ -117,13 +118,18 @@ def enet_path(est, x_train, x_test, y_train, y_test, alphas, l1_ratio, target_sc
 
     X, y, X_offset, y_offset, X_scale, precompute, Xy = _pre_fit(features, y_train, None, True, normalize=normalize,
                                                                 fit_intercept=fit_intercept, copy=True)
+
+
+    n_samples = X.shape[0]
+    alpha_max = numpy.abs(np.nanmax(X.T @ y) / (n_samples * l1_ratio))
+
     est.set_params(regression__precompute=precompute, regression__fit_intercept=False,
                    regression__normalize=False, regression__warm_start=True)
 
     est_ = FFXElasticNet()
     est_.set_params(**final.get_params())
 
-    for alpha in alphas:
+    for alpha in _get_alphas(alpha_max, num_alphas, eps):
         est_.set_params(l1_ratio=l1_ratio, alpha=alpha)
 
         with warnings.catch_warnings():
@@ -158,13 +164,13 @@ def enet_path(est, x_train, x_test, y_train, y_test, alphas, l1_ratio, target_sc
     return models
 
 
-def run_strategy(strategy, x_train, x_test, y_train, y_test, alphas, l1_ratios,
+def run_strategy(strategy, x_train, x_test, y_train, y_test, num_alphas, eps, l1_ratios,
                  target_score, n_tail, max_complexity, n_jobs, **kw):
 
     est = FFXModel(strategy, **kw)
     with joblib.Parallel(n_jobs=n_jobs) as parallel:
         paths = parallel(joblib.delayed(enet_path)(est, x_train, x_test, y_train, y_test,
-                                                   alphas, l1_ratio, target_score, n_tail,
+                                                   num_alphas, eps, l1_ratio, target_score, n_tail,
                                                    max_complexity)
                                                    for l1_ratio in l1_ratios)
     return [model for path in paths for model in path]
@@ -172,16 +178,15 @@ def run_strategy(strategy, x_train, x_test, y_train, y_test, alphas, l1_ratios,
 
 def run_ffx(x_train, x_test, y_train, y_test, exponents, operators, num_alphas=100,
             l1_ratios=(0.1, 0.3, 0.5, 0.7, 0.9, 0.95), eps=1e-30, target_score=0.01,
-            max_complexity=50, n_tail=15, alpha_max=100, random_state=None, strategies=None, n_jobs=1,
+            max_complexity=50, n_tail=15, random_state=None, strategies=None, n_jobs=1,
             rational=True, **kw):
 
     strategies = strategies or build_strategies(exponents, operators, rational=rational)
-    alphas = _get_alphas(alpha_max, num_alphas, eps)
 
     non_dominated_models = []
 
     for strategy in strategies(non_dominated_models):
-        models = run_strategy(strategy, x_train, x_test, y_train, y_test, alphas,
+        models = run_strategy(strategy, x_train, x_test, y_train, y_test, num_alphas, eps,
                               l1_ratios, target_score, n_tail, max_complexity, n_jobs, **kw)
         front = pareto_front(models, "complexity_", "test_score_")
         non_dominated_models.extend(front)
@@ -208,14 +213,13 @@ class WeightedEnsembleEstimator(BaseEstimator, TransformerMixin):
 
 
 class FFX(BaseEstimator, RegressorMixin):
-    def __init__(self, l1_ratios=(0.4, 0.8, 0.95), num_alphas=30, alpha_max=30,
+    def __init__(self, l1_ratios=(0.4, 0.8, 0.95), num_alphas=30,
                  eps=1e-5, random_state=None, strategies=None, target_score=0.01,
                  n_tail=5, decision="min", max_complexity=50,
                  exponents=[1, 2], operators={}, n_jobs=1, rational=True, **kw):
 
         self.l1_ratios = l1_ratios
         self.num_alphas = num_alphas
-        self.alpha_max = alpha_max
         self.eps = eps
         self.random_state = check_random_state(random_state)
         self.strategies = strategies
@@ -233,11 +237,10 @@ class FFX(BaseEstimator, RegressorMixin):
         x, y = check_X_y(x, y)
         x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=self.random_state)
         self.front = run_ffx(x_train, x_test, y_train, y_test,
-                             self.exponents, self.operators, num_alphas=self.num_alphas,
-                             alpha_max=self.alpha_max, l1_ratios=self.l1_ratios, eps=self.eps,
+                             self.exponents, self.operators, num_alphas=self.num_alphas, l1_ratios=self.l1_ratios,
                              target_score=self.target_score, n_tail=self.n_tail, random_state=self.random_state,
                              strategies=self.strategies, n_jobs=self.n_jobs, max_complexity=self.max_complexity,
-                             rational=self.rational, *self.kw)
+                             rational=self.rational, eps=self.eps, **self.kw)
         self.make_model(x_test, y_test)
         return self
 

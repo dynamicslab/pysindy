@@ -32,7 +32,7 @@ class RationalFunctionMixin:
     def fit(self, x, y, **kwargs):
         #x, y = check_X_y(x, y, multi_output=False)
         super().fit(self._transform(x, y), y, **kwargs)
-        self._arrange_coef(self)
+        self._arrange_coef()
         return self
 
     def _arrange_coef(self):

@@ -5,7 +5,7 @@ from copy import deepcopy
 import warnings
 
 from sklearn.base import TransformerMixin, BaseEstimator, RegressorMixin, clone
-from sklearn.linear_model import ElasticNet
+from sklearn.linear_model.coordinate_descent import ElasticNet, _pre_fit
 from sklearn.metrics import make_scorer
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -28,7 +28,7 @@ class FFXModel(Pipeline):
                ("features", SymbolicFeatures(exponents=self.strategy.exponents,
                                              operators=self.strategy.operators,
                                              consider_products=self.strategy.consider_products)),
-               ("regression", strategy.base(warm_start=False, **self.kw))])
+               ("regression", strategy.base(warm_start=True, **self.kw))])
 
     def __hash__(self):
         return hash(joblib.hash((self._final_estimator.coef_, self._final_estimator.intercept_)))
@@ -45,6 +45,9 @@ class FFXModel(Pipeline):
             input_features = step[1].get_feature_names(input_features)
         return self._final_estimator.print_model(input_features)
 
+    def pre_compute(self, x, y):
+        pass
+
 
 class FFXElasticNet(PrintMixin, ElasticNet):
     def score(self, x, y):
@@ -58,22 +61,27 @@ class FFXRationalElasticNet(RationalFunctionMixin, FFXElasticNet):
 Strategy = namedtuple("Strategy", "exponents operators consider_products index base")
 
 
-def build_strategies(exponents, operators):
+def build_strategies(exponents, operators, rational=True):
     strategies = []
     linear = Strategy(exponents=[1], operators={}, consider_products=False, index=slice(None), base=FFXElasticNet)
-    rational = Strategy(exponents=[1], operators={}, consider_products=False, index=slice(None), base=FFXRationalElasticNet)
     strategies.append(linear)
-    strategies.append(rational)
+    if rational:
+        rational = Strategy(exponents=[1], operators={}, consider_products=False, index=slice(None), base=FFXRationalElasticNet)
+        strategies.append(rational)
     if sorted(exponents) != [1]:
        full_exponents = Strategy(exponents=exponents, operators={}, consider_products=True, index=slice(None), base=FFXElasticNet)
-       full_exponents_rational = Strategy(exponents=exponents, operators={}, consider_products=True, index=slice(None), base=FFXRationalElasticNet)
        strategies.insert(1, full_exponents)
-       strategies.append(full_exponents_rational)
+       if rational:
+           full_exponents_rational = Strategy(exponents=exponents, operators={}, consider_products=True, index=slice(None), base=FFXRationalElasticNet)
+           strategies.append(full_exponents_rational)
 
     if operators:
-       full_operators = Strategy(exponents=exponents, operators=operators, consider_products=True, index=slice(None), base=FFXElasticNet)
-       strategies.append(full_operators)
-    #full_operators_rational = Strategy(exponents=exponents, operators=operators, consider_products=True, base=FFXRationalElasticNet)
+        if exponents != [1]:
+            simple_operators = Strategy(exponents=[1], operators=operators, consider_products=True, index=slice(None), base=FFXElasticNet)
+            strategies.append(simple_operators)
+        full_operators = Strategy(exponents=exponents, operators=operators, consider_products=True, index=slice(None), base=FFXElasticNet)
+        strategies.append(full_operators)
+
     def strategy_generator(front):
         yield from strategies
     return strategy_generator
@@ -93,32 +101,60 @@ def _path_is_saturated(models, n_tail=15, digits=4):
         return round(models[-1].train_score_, digits) == round(models[-n_tail].train_score_, digits)
 
 
-# def _path_is_overfit(models, digits=2):
-#     if len(models) < 2:
-#         return False
-#     else:
-#         return round(models[-1].test_score_, digits) > round(models[-2].test_score_, digits)
-
-
 def enet_path(est, x_train, x_test, y_train, y_test, alphas, l1_ratio, target_score, n_tail, max_complexity):
     models = []
+
+    trafo = Pipeline(steps=est.steps[:-1])
+    final = est._final_estimator
+    fit_intercept = final.fit_intercept
+    normalize = final.normalize
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        features = trafo.fit_transform(x_train)
+
+    if isinstance(final, RationalFunctionMixin):
+        features = est._final_estimator._transform(features, y_train)
+
+    X, y, X_offset, y_offset, X_scale, precompute, Xy = _pre_fit(features, y_train, None, True, normalize=normalize,
+                                                                fit_intercept=fit_intercept, copy=True)
+    est.set_params(regression__precompute=precompute, regression__fit_intercept=False,
+                   regression__normalize=False, regression__warm_start=True)
+
+    est_ = FFXElasticNet()
+    est_.set_params(**final.get_params())
+
     for alpha in alphas:
-        est.set_params(regression__l1_ratio=l1_ratio, regression__alpha=alpha)
+        est_.set_params(l1_ratio=l1_ratio, alpha=alpha)
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
-            est = est.fit(x_train, y_train)
-        if not est._final_estimator.n_iter_ == est._final_estimator.max_iter:
-            models.append(deepcopy(est))
-            models[-1].train_score_ = est.score(x_train, y_train)
-            models[-1].test_score_ = est.score(x_test, y_test)
-            models[-1].complexity_ = np.count_nonzero(est._final_estimator.coef_)
-            if models[-1].train_score_ <= target_score or \
-               models[-1].complexity_ >= max_complexity or \
-               _path_is_saturated(models, n_tail=n_tail):
-                break
+            est_.fit(X, y, check_input=False)
 
-        else: # refresh estimator
-            est = clone(est)
+        model = deepcopy(est)
+        model.set_params(regression__fit_intercept=fit_intercept, regression__normalize=normalize,
+                         regression__l1_ratio=l1_ratio, regression__alpha=alpha)
+
+        for attr in ["coef_", "intercept_", "n_iter_"]:
+            setattr(model._final_estimator, attr, getattr(est_, attr))
+
+        model._final_estimator._set_intercept(X_offset, y_offset, X_scale)
+        if isinstance(model._final_estimator, RationalFunctionMixin):
+            model._final_estimator._arrange_coef()
+
+        model.train_score_ = model.score(x_train, y_train)
+        model.test_score_ = model.score(x_test, y_test)
+        model.complexity_ = np.count_nonzero(model._final_estimator.coef_)
+        models.append(model)
+
+        if model.train_score_ <= target_score:
+            # print("Reached target score")
+            break
+        elif model.complexity_ >= max_complexity:
+            # print("Reached target complexity")
+            break
+        elif _path_is_saturated(models, n_tail=n_tail):
+            # print("Stagnation in train score")
+            break
     return models
 
 
@@ -136,9 +172,10 @@ def run_strategy(strategy, x_train, x_test, y_train, y_test, alphas, l1_ratios,
 
 def run_ffx(x_train, x_test, y_train, y_test, exponents, operators, num_alphas=100,
             l1_ratios=(0.1, 0.3, 0.5, 0.7, 0.9, 0.95), eps=1e-30, target_score=0.01,
-            max_complexity=50, n_tail=15, alpha_max=100, random_state=None, strategies=None, n_jobs=1, **kw):
+            max_complexity=50, n_tail=15, alpha_max=100, random_state=None, strategies=None, n_jobs=1,
+            rational=True, **kw):
 
-    strategies = strategies or build_strategies(exponents, operators)
+    strategies = strategies or build_strategies(exponents, operators, rational=rational)
     alphas = _get_alphas(alpha_max, num_alphas, eps)
 
     non_dominated_models = []
@@ -174,7 +211,7 @@ class FFX(BaseEstimator, RegressorMixin):
     def __init__(self, l1_ratios=(0.4, 0.8, 0.95), num_alphas=30, alpha_max=30,
                  eps=1e-5, random_state=None, strategies=None, target_score=0.01,
                  n_tail=5, decision="min", max_complexity=50,
-                 exponents=[1, 2], operators={}, kw={}, n_jobs=1):
+                 exponents=[1, 2], operators={}, n_jobs=1, rational=True, **kw):
 
         self.l1_ratios = l1_ratios
         self.num_alphas = num_alphas
@@ -190,6 +227,7 @@ class FFX(BaseEstimator, RegressorMixin):
         self.decision = decision
         self.max_complexity = max_complexity
         self.n_jobs = n_jobs
+        self.rational = rational
 
     def fit(self, x, y=None):
         x, y = check_X_y(x, y)
@@ -198,12 +236,16 @@ class FFX(BaseEstimator, RegressorMixin):
                              self.exponents, self.operators, num_alphas=self.num_alphas,
                              alpha_max=self.alpha_max, l1_ratios=self.l1_ratios, eps=self.eps,
                              target_score=self.target_score, n_tail=self.n_tail, random_state=self.random_state,
-                             strategies=self.strategies, n_jobs=self.n_jobs, max_complexity=self.max_complexity, **self.kw)
+                             strategies=self.strategies, n_jobs=self.n_jobs, max_complexity=self.max_complexity,
+                             rational=self.rational, *self.kw)
         self.make_model(x_test, y_test)
         return self
 
     def predict(self, x):
         return self._model.predict(x)
+
+    def score(self, x, y):
+        return self._model.score(x, y)
 
     def make_model(self, x_test, y_test):
         residuals = [y_test - est.predict(x_test) for est in self.front]

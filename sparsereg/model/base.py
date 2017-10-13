@@ -29,13 +29,16 @@ class RationalFunctionMixin:
     def _transform(self, x, y):
         return np.hstack((x, y.reshape(-1, 1) * x))
 
-    def fit(self, x, y):
-        x, y = check_X_y(x, y, multi_output=False)
-        super().fit(self._transform(x, y), y)
+    def fit(self, x, y, **kwargs):
+        #x, y = check_X_y(x, y, multi_output=False)
+        super().fit(self._transform(x, y), y, **kwargs)
+        self._arrange_coef(self)
+        return self
+
+    def _arrange_coef(self):
         l = len(self.coef_)//2
         self.coef_nominator_ = self.coef_[:l]
         self.coef_denominator_ = -self.coef_[l:]
-        return self
 
     def predict(self, x):
         check_is_fitted(self, "coef_")
@@ -108,7 +111,7 @@ class STRidge(LinearModel, RegressorMixin):
                 warnings.warn("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.threshold))
                 coef = np.zeros_like(ind, dtype=float)
                 break
-                
+
             coef = self._regress(x[:, ind], y, self.alpha)
             coef, ind = self._sparse_coefficients(n_features, ind, coef)
 

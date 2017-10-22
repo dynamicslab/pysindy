@@ -120,6 +120,11 @@ class STRidge(LinearModel, RegressorMixin):
                 break
         else:
             warnings.warn("STRidge._reduce did not converge after {} iterations.".format(self.max_iter), ConvergenceWarning)
+            try:
+                coef
+            except NameError:
+                coef = self.coef_
+                warnings.warn("STRidge._reduce has no iterations left to determine coef", ConvergenceWarning)
         self.coef_ = coef
         self.ind_ = ind
 

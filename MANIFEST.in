@@ -1,3 +1,5 @@
 include README.rst
 include LICENCE
 include requirements.txt
+include versioneer.py
+include sparsereg/_version.py

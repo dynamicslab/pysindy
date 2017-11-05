@@ -2,9 +2,11 @@ sparsereg
 =========
 
 .. image:: https://travis-ci.org/Ohjeah/sparsereg.svg?branch=master
-    :target: https://travis-ci.org/Ohjeah/sparsereg
+   :target: https://travis-ci.org/Ohjeah/sparsereg
 .. image:: https://badge.fury.io/py/sparsereg.svg
-    :target: https://badge.fury.io/py/sparsereg
+   :target: https://badge.fury.io/py/sparsereg
+.. image:: https://zenodo.org/badge/80389199.svg
+   :target: https://zenodo.org/badge/latestdoi/80389199
 
 **sparsereg** is a collection of modern sparse (regularized) linear regression algorithms.
 

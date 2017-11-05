@@ -8,67 +8,39 @@
 
 import io
 import os
-import sys
-from shutil import rmtree
 
-from setuptools import find_packages, setup, Command
+import versioneer
+from setuptools import find_packages, setup
 
 NAME = "sparsereg"
-DESCRIPTION = 'Modern sparse linear regression'
-URL = 'https://github.com/ohjeah/sparsereg'
-EMAIL = 'info@markusqua.de'
-AUTHOR = 'Markus Quade'
+DESCRIPTION = "Modern sparse linear regression"
+URL = "https://github.com/ohjeah/sparsereg"
+EMAIL = "info@markusqua.de"
+AUTHOR = "Markus Quade"
 PYTHON = ">=3.5"
+LICENSE = "LGPL"
+CLASSIFIERS = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Topic :: Scientific/Engineering :: Mathematics",    
+]
 
 here = os.path.abspath(os.path.dirname(__file__))
 
 with open(os.path.join(here, "requirements.txt"), "r") as f:
     REQUIRED = f.readlines()
 
-with io.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
-    LONG_DESCRIPTION = '\n' + f.read()
-
-about = {}
-with open(os.path.join(here, NAME, '__version__.py')) as f:
-    exec(f.read(), about)
-
-
-class PublishCommand(Command):
-    """Support setup.py publish."""
-
-    description = 'Build and publish the package.'
-    user_options = []
-
-    @staticmethod
-    def status(s):
-        """Prints things in bold."""
-        print('\033[1m{0}\033[0m'.format(s))
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        try:
-            self.status('Removing previous builds ...')
-            rmtree(os.path.join(here, 'dist'))
-        except FileNotFoundError:
-            pass
-
-        self.status('Building Source and Wheel (universal) distribution...')
-        os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
-
-        self.status('Uploading the package to PyPi via Twine...')
-        os.system('twine upload dist/*')
-
-        sys.exit()
+with io.open(os.path.join(here, "README.rst"), encoding="utf-8") as f:
+    LONG_DESCRIPTION = "\n" + f.read()
 
 
 setup(
     name=NAME,
-    version=about['__version__'],
+    version=versioneer.get_version(),
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     author=AUTHOR,
@@ -77,13 +49,7 @@ setup(
     packages=find_packages(exclude=["test", "example"]),
     install_requires=REQUIRED,
     python_requires=PYTHON,
-    license='MIT',
-    classifiers=[
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-    ],
-    cmdclass={
-        'publish': PublishCommand,
-    },
+    license=LICENSE,
+    classifiers=CLASSIFIERS,
+    cmdclass=versioneer.get_cmdclass(),
 )

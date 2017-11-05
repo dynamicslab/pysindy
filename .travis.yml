@@ -4,25 +4,20 @@ python:
   - "3.6"
   #- "3.7-dev"
   #- "pypy-5.3.1"
-
-
 allow_failures:
   #- python: "3.7-dev"
   #- python: "pypy-5.3.1"
-
-
 install:
   - pip install -r requirements.txt
   - pip install .
   - pip install pytest matplotlib
 script:
   - py.test
-
-
 deploy:
   provider: pypi
   user: ohjeah
   password: $PYPI_PW
   on:
     tags: true
+    python: "3.6"
     all_branches: true

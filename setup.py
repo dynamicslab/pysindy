@@ -18,6 +18,7 @@ DESCRIPTION = 'Modern sparse linear regression'
 URL = 'https://github.com/ohjeah/sparsereg'
 EMAIL = 'info@markusqua.de'
 AUTHOR = 'Markus Quade'
+PYTHON = ">=3.5"
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -75,6 +76,7 @@ setup(
     url=URL,
     packages=find_packages(exclude=["test", "example"]),
     install_requires=REQUIRED,
+    python_requires=PYTHON,
     license='MIT',
     classifiers=[
         'Programming Language :: Python',

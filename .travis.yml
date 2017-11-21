@@ -14,7 +14,7 @@ install:
 script:
   - py.test --cov=sparsereg
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - codecov
 deploy:
   provider: pypi
   user: ohjeah

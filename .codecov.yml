@@ -1,0 +1,7 @@
+codecov:
+  branch: master
+
+coverage:
+  ignore:
+    - "tests/*"
+    - "cartesian/_version.py"

@@ -5,6 +5,8 @@ sparsereg
    :target: https://travis-ci.org/Ohjeah/sparsereg
 .. image:: https://badge.fury.io/py/sparsereg.svg
    :target: https://badge.fury.io/py/sparsereg
+.. image::  https://codecov.io/gh/Ohjeah/sparsereg/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/Ohjeah/sparsereg
 .. image:: https://zenodo.org/badge/80389199.svg
    :target: https://zenodo.org/badge/latestdoi/80389199
 

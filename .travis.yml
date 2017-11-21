@@ -9,10 +9,12 @@ allow_failures:
   #- python: "pypy-5.3.1"
 install:
   - pip install -r requirements.txt
-  - pip install .
-  - pip install pytest matplotlib
+  - pip install -r requirements-dev.txt
+  - pip install -e .
 script:
-  - py.test
+  - py.test --cov=sparsereg
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
 deploy:
   provider: pypi
   user: ohjeah

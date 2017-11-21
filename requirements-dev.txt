@@ -1,0 +1,7 @@
+pytest
+pytest-cov
+flake8
+pytest-flake8
+pep8-naming
+flake8-builtins-unleashed
+flake8_module_name

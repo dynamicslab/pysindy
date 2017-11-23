@@ -19,7 +19,7 @@ def _print_model(coef, input_features, intercept=None):
 
 
 def equation(pipeline, input_features=None):
-    input_features = input_features or pipeline.steps[0][1].get_feature_names()
+    input_features = pipeline.steps[0][1].get_feature_names(input_features)
     coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
     return _print_model(coef, input_features, intercept)

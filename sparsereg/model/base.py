@@ -18,10 +18,10 @@ def _print_model(coef, input_features, intercept=None):
     return model
 
 
-def equation(pipeline, input_features=None):
+def equation(pipeline, input_features=None, precision=3):
     input_features = pipeline.steps[0][1].get_feature_names(input_features)
-    coef = pipeline.steps[-1][1].coef_
-    intercept = pipeline.steps[-1][1].intercept_
+    coef = np.round(pipeline.steps[-1][1].coef_, precision)
+    intercept = np.round(pipeline.steps[-1][1].intercept_, precision)
     return _print_model(coef, input_features, intercept)
 
 

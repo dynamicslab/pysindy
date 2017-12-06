@@ -13,7 +13,7 @@ from sparsereg.util import cardinality
 
 def _print_model(coef, input_features, intercept=None):
     model = "+".join("{}*{}".format(c, n) for c, n in zip(coef, input_features) if c)
-    if intercept:
+    if intercept or not model:
         model += " + {}".format(intercept)
     return model
 

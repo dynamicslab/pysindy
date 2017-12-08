@@ -10,7 +10,9 @@ from sparsereg.model.base import STRidge, equation
 
 
 def _derivative(x, dt=1.0):
-    if type(dt) in (list, np.ndarray) and len(dt) >= 3:
+    if isinstance(dt, (list, np.ndarray)):
+        if len(dt) < 3:
+            raise ValueError("dt has too few elements")
         dx = np.zeros_like(x)
         dx[1:-1, :] = (x[2:, :] - x[:-2, :]) / (dt[2:] - dt[:-2])
 

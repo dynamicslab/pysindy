@@ -148,7 +148,7 @@ class STRidge(LinearModel, RegressorMixin):
         if self.threshold > 0:
             self._reduce(x, y)
         else:
-            self.coef_ = self._regress(x[:, ind], y, self.alpha)
+            self.coef_ = self._regress(x[:, self.ind_], y, self.alpha)
 
         if self.unbias and self.alpha >= 0:
             self._unbias(x, y)

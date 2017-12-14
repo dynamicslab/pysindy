@@ -113,13 +113,12 @@ class SymbolicFeatures(Base):
         self.consider_products = consider_products
         self._precompute_hash = None
         self._names = None
-        self.n_features = None
 
     def fit(self, x, y=None):
         x = np.asfortranarray(x)
-        _, self.n_features = x.shape
+        n_samples, n_features = x.shape
         # 1) Get all simple features
-        simple = (SimpleFeature(e, index=i) for e, i in product(self.exponents, range(self.n_features)))
+        simple = (SimpleFeature(e, index=i) for e, i in product(self.exponents, range(n_features)))
         simple = get_valid((s, s.transform(x)) for s in simple)
         # 2) Get all operator features
         operator = (OperatorFeature(s, op, operator_name=op_name) for (s, _), (op_name, op) in product(simple, self.operators.items()))
@@ -139,6 +138,9 @@ class SymbolicFeatures(Base):
         self._precompute_hash = _hash(x)
 
         self.feat_cls = list(feat_cls)
+
+        self.n_input_features_ = n_features
+        self.n_output_features_ = sum(1 for _ in self.feat_cls)
         return self
 
     def transform(self, x):

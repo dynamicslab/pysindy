@@ -54,6 +54,9 @@ class SINDy(BaseEstimator):
                  ("model", STRidge(alpha=self.alpha, threshold=self.threshold, **self.kw))]
         self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
         self.model.fit(x, xdot)
+
+        self.n_input_features_ = self.model.estimators_[0].steps[0][1].n_input_features_
+        self.n_output_features_ = self.model.estimators_[0].steps[0][1].n_output_features_
         return self
 
     def predict(self, x):
@@ -64,5 +67,8 @@ class SINDy(BaseEstimator):
         return [equation(est, names) for est in self.model.estimators_]
 
     def score(self, x, y=None, multioutput="uniform_average"):
-        xdot = self.derivative.transform(x)
+        if y is not None:
+            xdot = y
+        else:
+            xdot = self.derivative.transform(x)
         return r2_score(self.model.predict(x), xdot, multioutput=multioutput)

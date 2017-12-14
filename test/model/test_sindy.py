@@ -13,3 +13,15 @@ def test_sindy_derivative(data_linear):
     x, xdot = data_linear
     s = SINDy(dt=1.0).fit(x)
     np.testing.assert_allclose(s.predict(x), xdot)
+
+def test_sindy_score(data_linear):
+    x, xdot = data_linear
+    s = SINDy().fit(x, xdot)
+    assert s.score(x, xdot) == 1.0
+
+def test_sindy_n_features(data_linear):
+    x, xdot = data_linear
+    s = SINDy(degree=2, operators={"sin": np.sin, "cos": np.cos})
+    s.fit(x)
+    assert s.n_input_features_ == 1
+    assert s.n_output_features_ == 15

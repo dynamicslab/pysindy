@@ -19,6 +19,7 @@ deploy:
   provider: pypi
   user: ohjeah
   password: $PYPI_PW
+  distributions: "sdist bdist_wheel"
   on:
     tags: true
     python: "3.6"

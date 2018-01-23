@@ -13,7 +13,7 @@ class SparseGroupLasso(LinearModel, RegressorMixin):
         self.rho = rho
         self.groups = groups
         self.max_iter = max_iter
-        self.rtol = tol
+        self.tol = tol
         self.normalize = normalize
         self.fit_intercept = fit_intercept
         self.copy_X = copy_X
@@ -30,7 +30,7 @@ class SparseGroupLasso(LinearModel, RegressorMixin):
             x, y = _rescale_data(x, y, sample_weight)
 
         self.coef_ = sparse_group_lasso(x, y, self.alpha, self.rho, self.groups,
-                                        max_iter=self.max_iter, rtol=self.rtol)
+                                        max_iter=self.max_iter, rtol=self.tol)
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self

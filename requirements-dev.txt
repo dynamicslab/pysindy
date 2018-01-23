@@ -6,3 +6,5 @@ pep8-naming
 flake8-builtins-unleashed
 flake8_module_name
 codecov
+-e .
+-r requirements.txt

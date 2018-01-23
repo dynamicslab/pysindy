@@ -11,9 +11,7 @@ cache:
   directories:
     - $HOME/.cache/pip
 install:
-  - pip install -r requirements.txt
   - pip install -r requirements-dev.txt
-  - pip install -e .
 script:
   - py.test --cov=sparsereg
 after_success:

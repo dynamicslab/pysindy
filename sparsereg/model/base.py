@@ -134,7 +134,7 @@ class STRidge(LinearModel, RegressorMixin):
             self.coef_, self.ind_ = self._sparse_coefficients(x.shape[1], self.ind_, coef)
 
     def fit(self, x_, y, sample_weight=None):
-        X, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
+        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
             x_, y, fit_intercept=self.fit_intercept, normalize=self.normalize,

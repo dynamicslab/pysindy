@@ -24,7 +24,7 @@ class SparseGroupLasso(LinearModel, RegressorMixin):
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
             x, y, fit_intercept=self.fit_intercept, normalize=self.normalize,
-            copy=self.copy_X, sample_weight=None)
+            copy=self.copy_X, sample_weight=sample_weight)
 
         if sample_weight is not None:
             x, y = _rescale_data(x, y, sample_weight)

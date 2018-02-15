@@ -84,11 +84,11 @@ class STRidge(LinearModel, RegressorMixin):
         self.history_.append(c)
         return c, big_ind
 
-    def _regress(self, x, y, alpha):
+    def _regress(self, x, y, alpha, rcond=None):
         if alpha != 0:
-            coef = np.linalg.lstsq(x.T @ x + alpha * np.eye(x.shape[1]), x.T @ y)[0]
+            coef = np.linalg.lstsq(x.T @ x + alpha * np.eye(x.shape[1]), x.T @ y, rcond=rcond)[0]
         else:
-            coef = np.linalg.lstsq(x, y)[0]
+            coef = np.linalg.lstsq(x, y, rcond=rcond)[0]
         self.iters += 1
         return coef
 

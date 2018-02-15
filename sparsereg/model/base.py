@@ -65,7 +65,7 @@ class PrintMixin:
 
 
 class STRidge(LinearModel, RegressorMixin):
-    def __init__(self, threshold=0.01, alpha=0.1, max_iter=100, normalize=True, fit_intercept=True, copy_x=True, unbias=True):
+    def __init__(self, threshold=0.01, alpha=0.1, max_iter=100, normalize=True, fit_intercept=True, copy_x=True, unbias=True, _cond=-1):
         self.threshold = threshold
         self.max_iter = max_iter
         self.fit_intercept = fit_intercept
@@ -73,6 +73,7 @@ class STRidge(LinearModel, RegressorMixin):
         self.copy_X = copy_x
         self.alpha = alpha
         self.unbias = unbias
+        self._rcond=_rcond
 
         self.history_ = []
 
@@ -84,11 +85,11 @@ class STRidge(LinearModel, RegressorMixin):
         self.history_.append(c)
         return c, big_ind
 
-    def _regress(self, x, y, alpha, rcond=None):
+    def _regress(self, x, y, alpha):
         if alpha != 0:
-            coef = np.linalg.lstsq(x.T @ x + alpha * np.eye(x.shape[1]), x.T @ y, rcond=rcond)[0]
+            coef = np.linalg.lstsq(x.T @ x + alpha * np.eye(x.shape[1]), x.T @ y, rcond=self._rcond)[0]
         else:
-            coef = np.linalg.lstsq(x, y, rcond=rcond)[0]
+            coef = np.linalg.lstsq(x, y, rcond=self._rcond)[0]
         self.iters += 1
         return coef
 

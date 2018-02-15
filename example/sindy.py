@@ -22,3 +22,5 @@ print("Score on test data ", model.score(x_test))
 
 for i, eq in enumerate(model.equations()):
     print("dx_{} / dt = ".format(i), eq)
+
+print("Complexity of the model (sum of coefficients and intercetps bigger than the threshold): ", model.complexity)

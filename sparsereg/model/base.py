@@ -156,16 +156,9 @@ class STRidge(LinearModel, RegressorMixin):
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
 
-    def pprint(self, names=None):
-        fmt = "{}*{}".format
-        names = names or ("x_{}".format(i) for i in count())
-        expr = "+".join(fmt(c, n) for c, n in zip(self.coef_, names) if c != 0) or "0"
-        return expr
-
     @property
     def complexity(self):
-        intercept_comp = 1 if self.fit_intercept else 0
-        return np.count_nonzero(self.coef_) + intercept_comp
+        return np.count_nonzero(self.coef_) + np.count_nonzero([abs(self.intercept_) >= self.threshold])
 
 
 class BoATS(LinearModel, RegressorMixin):

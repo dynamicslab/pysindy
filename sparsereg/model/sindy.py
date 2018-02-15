@@ -62,9 +62,9 @@ class SINDy(BaseEstimator):
     def predict(self, x):
         return self.model.predict(x)
 
-    def equations(self):
+    def equations(self, precision=3):
         names = self.model.estimators_[0].steps[0][1].get_feature_names(input_features=self.feature_names)
-        return [equation(est, names) for est in self.model.estimators_]
+        return [equation(est, names, precision=precision) for est in self.model.estimators_]
 
     def score(self, x, y=None, multioutput="uniform_average"):
         if y is not None:
@@ -72,3 +72,7 @@ class SINDy(BaseEstimator):
         else:
             xdot = self.derivative.transform(x)
         return r2_score(self.model.predict(x), xdot, multioutput=multioutput)
+
+    @property
+    def complexity(self):
+        return sum(est.steps[1][1].complexity for est in self.model.estimators_)

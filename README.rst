@@ -24,15 +24,16 @@ Citation
 
 If you use sparsereg please consider a citation:
 
+.. code-block::
 
-|  @misc{markus_quade_sparsereg
-|    author       = {Markus Quade},
-|    title        = {sparsereg - collection of modern sparse regression algorithms},
-|    month        = feb,
-|    year         = 2018,
-|    doi          = {10.5281/zenodo.1173754},
-|    url          = {https://doi.org/10.5281/zenodo.1173754}
-|  }
+    @misc{markus_quade_sparsereg
+      author       = {Markus Quade},
+      title        = {sparsereg - collection of modern sparse regression algorithms},
+      month        = feb,
+      year         = 2018,
+      doi          = {10.5281/zenodo.1173754},
+      url          = {https://github.com/ohjeah/sparsereg}
+    }
 
 
 

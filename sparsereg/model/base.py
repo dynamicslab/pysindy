@@ -65,10 +65,12 @@ class PrintMixin:
 
 
 class STRidge(LinearModel, RegressorMixin):
-    def __init__(self, threshold=0.01, alpha=0.1, max_iter=100, normalize=True, fit_intercept=True, copy_x=True, unbias=True, _rcond=-1):
+    def __init__(self, threshold=0.01, alpha=0.1, max_iter=100, normalize=True,
+                fit_intercept=True, threshold_intercept=False, copy_x=True, unbias=True, _rcond=-1):
         self.threshold = threshold
         self.max_iter = max_iter
         self.fit_intercept = fit_intercept
+        self.threshold_intercept = threshold_intercept
         self.normalize = normalize
         self.copy_X = copy_x
         self.alpha = alpha
@@ -155,6 +157,8 @@ class STRidge(LinearModel, RegressorMixin):
             self._unbias(x, y)
 
         self._set_intercept(X_offset, y_offset, X_scale)
+        if self.threshold_intercept and abs(self.intercept_) < self.threshold:
+            self.intercept_ = 0
         return self
 
     @property

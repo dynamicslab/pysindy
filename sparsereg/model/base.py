@@ -75,7 +75,7 @@ class STRidge(LinearModel, RegressorMixin):
         self.copy_X = copy_X
         self.alpha = alpha
         self.unbias = unbias
-        self.ridge_kw = ridge_kw or {}
+        self.ridge_kw = ridge_kw
 
         self.history_ = []
 
@@ -88,7 +88,8 @@ class STRidge(LinearModel, RegressorMixin):
         return c, big_ind
 
     def _regress(self, x, y, alpha):
-        coef = ridge_regression(x, y, alpha, **self.ridge_kw)
+        kw = self.ridge_kw or {}
+        coef = ridge_regression(x, y, alpha, **kw)
         self.iters += 1
         return coef
 

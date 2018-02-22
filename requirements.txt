@@ -1,5 +1,4 @@
 scikit-learn[alldeps]>=0.19
-scipy
 numpy
 joblib
 toolz

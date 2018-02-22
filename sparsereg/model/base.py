@@ -2,10 +2,9 @@ import numpy as np
 from itertools import count
 import warnings
 
-from scipy.sparse.linalg import lsqr
 from sklearn.base import RegressorMixin
 from sklearn.exceptions import FitFailedWarning, ConvergenceWarning
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, ridge_regression
 from sklearn.linear_model.base import LinearModel, _rescale_data
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
@@ -67,7 +66,7 @@ class PrintMixin:
 
 class STRidge(LinearModel, RegressorMixin):
     def __init__(self, threshold=0.01, alpha=0.1, max_iter=100, normalize=True,
-                fit_intercept=True, threshold_intercept=False, copy_X=True, unbias=True):
+                fit_intercept=True, threshold_intercept=False, copy_X=True, unbias=True, ridge_kw=None):
         self.threshold = threshold
         self.max_iter = max_iter
         self.fit_intercept = fit_intercept
@@ -76,6 +75,7 @@ class STRidge(LinearModel, RegressorMixin):
         self.copy_X = copy_X
         self.alpha = alpha
         self.unbias = unbias
+        self.ridge_kw = ridge_kw or {}
 
         self.history_ = []
 
@@ -88,9 +88,9 @@ class STRidge(LinearModel, RegressorMixin):
         return c, big_ind
 
     def _regress(self, x, y, alpha):
-        info = lsqr(x, y, damp=np.sqrt(alpha))
+        coef = ridge_regression(x, y, alpha, **self.ridge_kw)
         self.iters += 1
-        return info[0]
+        return coef
 
     def _no_change(self):
         this_coef = self.history_[-1]

@@ -6,7 +6,7 @@ from sparsereg.model import STRidge
 test_settings = (
     dict(threshold=0.5, copy_x=True, normalize=True, fit_intercept=True),
     dict(threshold=0.1, copy_x=True, normalize=False, fit_intercept=True),
-    dict(threshold=0.1, alpha=0, copy_x=True, normalize=True, fit_intercept=True),
+    dict(threshold=0.1, alpha=0, copy_X=True, normalize=True, fit_intercept=True),
 )
 
 

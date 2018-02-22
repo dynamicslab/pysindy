@@ -2,6 +2,7 @@ import numpy as np
 from itertools import count
 import warnings
 
+from scipy.sparse.linalg import lsqr
 from sklearn.base import RegressorMixin
 from sklearn.exceptions import FitFailedWarning, ConvergenceWarning
 from sklearn.linear_model import LinearRegression
@@ -66,7 +67,7 @@ class PrintMixin:
 
 class STRidge(LinearModel, RegressorMixin):
     def __init__(self, threshold=0.01, alpha=0.1, max_iter=100, normalize=True,
-                fit_intercept=True, threshold_intercept=False, copy_X=True, unbias=True, _rcond=-1):
+                fit_intercept=True, threshold_intercept=False, copy_X=True, unbias=True):
         self.threshold = threshold
         self.max_iter = max_iter
         self.fit_intercept = fit_intercept
@@ -75,25 +76,21 @@ class STRidge(LinearModel, RegressorMixin):
         self.copy_X = copy_X
         self.alpha = alpha
         self.unbias = unbias
-        self._rcond= _rcond
 
         self.history_ = []
 
-    def _sparse_coefficients(self, dim, ind, coef):
+    def _sparse_coefficients(self, dim, ind, coef, threshold):
         c = np.zeros(dim)
         c[ind] = coef
-        big_ind = np.abs(c) >= self.threshold
+        big_ind = np.abs(c) >= threshold
         c[~big_ind] = 0
         self.history_.append(c)
         return c, big_ind
 
     def _regress(self, x, y, alpha):
-        if alpha != 0:
-            coef = np.linalg.lstsq(x.T @ x + alpha * np.eye(x.shape[1]), x.T @ y, rcond=self._rcond)[0]
-        else:
-            coef = np.linalg.lstsq(x, y, rcond=self._rcond)[0]
+        info = lsqr(x, y, damp=np.sqrt(alpha))
         self.iters += 1
-        return coef
+        return info[0]
 
     def _no_change(self):
         this_coef = self.history_[-1]
@@ -116,7 +113,7 @@ class STRidge(LinearModel, RegressorMixin):
                 break
 
             coef = self._regress(x[:, ind], y, self.alpha)
-            coef, ind = self._sparse_coefficients(n_features, ind, coef)
+            coef, ind = self._sparse_coefficients(n_features, ind, coef, self.threshold)
 
             if sum(ind) == n_features_selected or self._no_change():
                 # could not (further) select important features
@@ -134,7 +131,7 @@ class STRidge(LinearModel, RegressorMixin):
     def _unbias(self, x, y):
         if np.any(self.ind_):
             coef = self._regress(x[:, self.ind_], y, 0)
-            self.coef_, self.ind_ = self._sparse_coefficients(x.shape[1], self.ind_, coef)
+            self.coef_, self.ind_ = self._sparse_coefficients(x.shape[1], self.ind_, coef, self.threshold)
 
     def fit(self, x_, y, sample_weight=None):
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)

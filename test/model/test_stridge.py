@@ -37,8 +37,7 @@ def test_all_zero(data):
     assert not any(s.coef_)
     assert len(s.history_) == 1 # initial guess wipes everything
 
-def test_all_nonzero(data):
-    x, y = data
-    s = STRidge(threshold=0).fit(x, y)
+def test_all_nonzero(data_full_rank):
+    x, y = data_full_rank
+    s = STRidge(threshold=0, alpha=0).fit(x, y)
     assert s.complexity == 3
-    assert len(s.history_) == 1 # initial guess is final guess

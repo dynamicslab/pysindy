@@ -121,7 +121,7 @@ def enet_path(est, x_train, x_test, y_train, y_test, num_alphas, eps,
 
 
     n_samples = X.shape[0]
-    alpha_max = numpy.abs(np.nanmax(X.T @ y) / (n_samples * l1_ratio))
+    alpha_max = np.abs(np.nanmax(X.T @ y) / (n_samples * l1_ratio))
 
     est.set_params(regression__precompute=precompute, regression__fit_intercept=False,
                    regression__normalize=False, regression__warm_start=True)

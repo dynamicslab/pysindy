@@ -11,8 +11,8 @@ from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sparsereg.util import cardinality
 
 
-def _print_model(coef, input_features, intercept=None):
-    model = "+".join("{}*{}".format(c, n) for c, n in zip(coef, input_features) if c)
+def _print_model(coef, input_features, intercept=None, precision=3):
+    model = "+".join(f"{c:.precision f}*{n}" for c, n in zip(coef, input_features) if c)
     if intercept or not model:
         model += " + {}".format(intercept)
     return model

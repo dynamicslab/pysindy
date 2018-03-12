@@ -26,7 +26,7 @@ If you use sparsereg please consider a citation:
 
 .. code-block::
 
-    @misc{markus_quade_sparsereg
+    @misc{markus_quade_sparsereg,
       author       = {Markus Quade},
       title        = {sparsereg - collection of modern sparse regression algorithms},
       month        = feb,

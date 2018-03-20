@@ -21,21 +21,24 @@ x = odeint(rhs_harmonic_oscillator, x0, t)
 x_train, x_test = x[:750], x[750:]
 
 kw = dict(fit_intercept=True, normalize=False)
-model = SINDy(dt=t[1] - t[0], degree=2, threshold=0.1, alpha=0.3, kw=kw)
+model = SINDy(dt=t[1] - t[0], degree=2, alpha=0.3, kw=kw)
 
 rng = check_random_state(42)
 cv = KFold(n_splits=5, random_state=rng, shuffle=False)
-params = {"alpha": [0.1, 0.2, 0.3, 0.4, 0.5]}
+params = {"alpha": [0.1, 0.2, 0.3, 0.4, 0.5],
+          "threshold": [0.1, 0.3, 0.5],
+          }
 
 grid = GridSearchCV(model, params, cv=cv)
 with warnings.catch_warnings():  # suppress matrix illconditioned warning
-    warnings.filterwarnings("ignore", category=RuntimeWarning)
+    warnings.filterwarnings("ignore")
     grid.fit(x_train)
 
 selected_model = grid.best_estimator_
 
 print("Score on test data ", selected_model.score(x_test))
-print("Selected hyperparameter: ", selected_model.alpha)
+print("Selected hyperparameter (alpha, threshold): ",
+      selected_model.alpha, selected_model.threshold)
 for i, eq in enumerate(selected_model.equations()):
     print("dx_{} / dt = ".format(i), eq)
 

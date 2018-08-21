@@ -139,6 +139,7 @@ class ReducedLinearModel(LinearModel):
         return self.lm.scores(x[:, self.mask], y)
 
 def aic(residuals, k, correct=False):
+    """Akaike information criterion"""
     n = len(residuals)
     correction = 2 * (k + 1) * k / (n - k - 1) if correct else 0
     return n * np.log(np.var(residuals)) + 2*k + correction

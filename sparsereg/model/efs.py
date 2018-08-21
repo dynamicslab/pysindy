@@ -86,6 +86,7 @@ def _fit_model(x, y, names, operators, **kw):
 class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
     def __init__(self, q=1, mu=1, max_size=5, t=0.95, toursize=5, max_stall_iter=20, max_iter=2000,
                  random_state=None, operators=operators, max_coarsity=2, n_jobs=1):
+        """Evolutionary feature synthesis."""
         self.q = q
         self.mu = mu
         self.max_size = max_size

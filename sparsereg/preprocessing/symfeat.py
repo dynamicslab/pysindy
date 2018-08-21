@@ -70,7 +70,7 @@ class ProductFeature(Base):
 
 
 def _allfinite(tpl):
-    b, x = tpl
+    _, x = tpl
     return np.all(np.isfinite(x))
 
 

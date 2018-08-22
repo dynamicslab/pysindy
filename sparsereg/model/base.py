@@ -12,9 +12,9 @@ from sparsereg.util import cardinality
 
 
 def _print_model(coef, input_features, intercept=None, precision=3):
-    model = "+".join("{}*{}".format(c, n) for c, n in zip(coef, input_features) if c)
+    model = ' + '.join(f"{c:.2e} {n}" for c, n in zip(coef, input_features) if c)
     if intercept or not model:
-        model += " + {}".format(intercept)
+        model += f" + {intercept:.2e}"
     return model
 
 

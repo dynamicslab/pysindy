@@ -10,9 +10,9 @@ cache:
   directories:
     - $HOME/.cache/pip
 install:
-  - pip install -r requirements-dev.txt
+  - pip install --upgrade -r requirements-dev.txt
 script:
-  - py.test --cov=sparsereg
+  - py.test test --cov=sparsereg
 after_success:
   - codecov
 deploy:

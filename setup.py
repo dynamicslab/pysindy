@@ -27,7 +27,7 @@ here = pathlib.Path(__file__).parent
 with open(here / "requirements.txt", "r") as f:
     REQUIRED = f.readlines()
 
-with open(here / "README.md", "r") as f:
+with open(here / "README.rst", "r") as f:
     LONG_DESCRIPTION = f.read()
 
 
@@ -36,7 +36,6 @@ setup(
     version=versioneer.get_version(),
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
-    long_description_content_type="text/markdown",
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,

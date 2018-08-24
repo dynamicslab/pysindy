@@ -21,8 +21,9 @@ operators = {
     "sqrt": np.sqrt,
     "square": np.square,
     "sin": np.sin,
-    "cos": np.cos
+    "cos": np.cos,
 }
+
 
 def size(name):
     pattern = r"[\(,]"
@@ -58,6 +59,7 @@ def _check_rng(state):
     else:
         return random.Random()
 
+
 def _transform(x, names, operators):
     args = ",".join("x_{}".format(i) for i in range(x.shape[1]))
     funcs = [eval("lambda {}: {}".format(args, code), {**operators}) for code in names]
@@ -84,8 +86,20 @@ def _fit_model(x, y, names, operators, **kw):
 
 
 class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
-    def __init__(self, q=1, mu=1, max_size=5, t=0.95, toursize=5, max_stall_iter=20, max_iter=2000,
-                 random_state=None, operators=operators, max_coarsity=2, n_jobs=1):
+    def __init__(
+        self,
+        q=1,
+        mu=1,
+        max_size=5,
+        t=0.95,
+        toursize=5,
+        max_stall_iter=20,
+        max_iter=2000,
+        random_state=None,
+        operators=operators,
+        max_coarsity=2,
+        n_jobs=1,
+    ):
         """Evolutionary feature synthesis."""
         self.q = q
         self.mu = mu
@@ -116,26 +130,33 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
 
         best_names = linear_names[:]
         best_model, best_score = _fit_model(x, y, best_names, self.operators, n_jobs=self.n_jobs)
-        pop_size = p*(self.mu + 1 + self.q)
+        pop_size = p * (self.mu + 1 + self.q)
         for _ in range(self.max_iter):
             old_names = sorted(names[:])
             stall_iter += 1
             new_names = []
             new_data = []
 
-            for i in range(3*pop_size):
+            for i in range(3 * pop_size):
                 f, new_name, parents = mutate(names, importance, self.toursize, self.operators, self.rng)
                 if size(new_name) <= self.max_size and new_name not in new_names and new_name not in names:
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         feature = f(*[data[i] for i in parents])
-                        if np.all(np.isfinite(feature)) and all(abs(np.corrcoef(feature, data[i]))[1, 0] <= self.t for i in parents):
+                        if np.all(np.isfinite(feature)) and all(
+                            abs(np.corrcoef(feature, data[i]))[1, 0] <= self.t for i in parents
+                        ):
                             new_names.append(new_name)
                             new_data.append(feature)
                 if len(new_names + names) < pop_size:
                     break
             else:
-                warnings.warn("Failed to produce a new population given the tree-depth {} and correlation threshold {}.".format(self.max_size, self.t), ConvergenceWarning)
+                warnings.warn(
+                    "Failed to produce a new population given the tree-depth {} and correlation threshold {}.".format(
+                        self.max_size, self.t
+                    ),
+                    ConvergenceWarning,
+                )
 
             names.extend(new_names)
             data.extend(new_data)
@@ -143,7 +164,11 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
             scores = [model.score(np.array(data).T, y) for model in models]
             coefs = [model.coef_ for model in models]
             importance = list(get_importance(coefs, scores))
-            names_to_discard = [n for n in sorted(names, key=lambda x: importance[names.index(x)], reverse=True) if n not in linear_names][-self.mu*p:]
+            names_to_discard = [
+                n
+                for n in sorted(names, key=lambda x: importance[names.index(x)], reverse=True)
+                if n not in linear_names
+            ][-self.mu * p :]
             for n in names_to_discard:
                 i = names.index(n)
                 names.pop(i)

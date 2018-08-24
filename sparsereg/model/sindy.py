@@ -20,7 +20,7 @@ def _derivative(x, dt=1.0):
         dx[-1, :] = (x[-1, :] - x[-2, :]) / (dt[-1] - dt[-2])
     else:
         dx = np.zeros_like(x)
-        dx[1:-1, :] = (x[2:, :] - x[:-2, :]) / (2.*dt)
+        dx[1:-1, :] = (x[2:, :] - x[:-2, :]) / (2. * dt)
 
         dx[0, :] = (x[1, :] - x[0, :]) / dt
         dx[-1, :] = (x[-1, :] - x[-2, :]) / dt
@@ -29,7 +29,18 @@ def _derivative(x, dt=1.0):
 
 
 class SINDy(BaseEstimator):
-    def __init__(self, alpha=1.0, threshold=0.1, degree=3, operators=None, dt=1.0, n_jobs=1, derivative=None, feature_names=None, kw={}):
+    def __init__(
+        self,
+        alpha=1.0,
+        threshold=0.1,
+        degree=3,
+        operators=None,
+        dt=1.0,
+        n_jobs=1,
+        derivative=None,
+        feature_names=None,
+        kw={},
+    ):
         self.alpha = alpha
         self.threshold = threshold
         self.degree = degree
@@ -46,12 +57,16 @@ class SINDy(BaseEstimator):
             xdot = self.derivative.transform(x)
 
         if self.operators is not None:
-            feature_transformer = SymbolicFeatures(exponents=np.linspace(1, self.degree, self.degree), operators=self.operators)
+            feature_transformer = SymbolicFeatures(
+                exponents=np.linspace(1, self.degree, self.degree), operators=self.operators
+            )
         else:
             feature_transformer = PolynomialFeatures(degree=self.degree, include_bias=False)
 
-        steps = [("features", feature_transformer),
-                 ("model", STRidge(alpha=self.alpha, threshold=self.threshold, **self.kw))]
+        steps = [
+            ("features", feature_transformer),
+            ("model", STRidge(alpha=self.alpha, threshold=self.threshold, **self.kw)),
+        ]
         self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
         self.model.fit(x, xdot)
 

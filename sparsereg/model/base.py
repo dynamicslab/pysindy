@@ -32,13 +32,13 @@ class RationalFunctionMixin:
         return np.hstack((x, y.reshape(-1, 1) * x))
 
     def fit(self, x, y, **kwargs):
-        #x, y = check_X_y(x, y, multi_output=False)
+        # x, y = check_X_y(x, y, multi_output=False)
         super().fit(self._transform(x, y), y, **kwargs)
         self._arrange_coef()
         return self
 
     def _arrange_coef(self):
-        l = len(self.coef_)//2
+        l = len(self.coef_) // 2
         self.coef_nominator_ = self.coef_[:l]
         self.coef_denominator_ = -self.coef_[l:]
 
@@ -67,8 +67,18 @@ class PrintMixin:
 
 
 class STRidge(LinearModel, RegressorMixin):
-    def __init__(self, threshold=0.01, alpha=0.1, max_iter=100, normalize=True,
-                fit_intercept=True, threshold_intercept=False, copy_X=True, unbias=True, ridge_kw=None):
+    def __init__(
+        self,
+        threshold=0.01,
+        alpha=0.1,
+        max_iter=100,
+        normalize=True,
+        fit_intercept=True,
+        threshold_intercept=False,
+        copy_X=True,
+        unbias=True,
+        ridge_kw=None,
+    ):
         self.threshold = threshold
         self.max_iter = max_iter
         self.fit_intercept = fit_intercept
@@ -101,7 +111,7 @@ class STRidge(LinearModel, RegressorMixin):
             last_coef = self.history_[-2]
         else:
             last_coef = np.zeros_like(this_coef)
-        return all(bool(i) == bool(j) for i,j in zip(this_coef, last_coef))
+        return all(bool(i) == bool(j) for i, j in zip(this_coef, last_coef))
 
     def _reduce(self, x, y):
         """Iterates the thresholding. Assumes an initial guess is saved in self.coef_ and self.ind_"""
@@ -111,7 +121,9 @@ class STRidge(LinearModel, RegressorMixin):
 
         for _ in range(self.iters, self.max_iter):
             if np.count_nonzero(ind) == 0:
-                warnings.warn("Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.threshold))
+                warnings.warn(
+                    "Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.threshold)
+                )
                 coef = np.zeros_like(ind, dtype=float)
                 break
 
@@ -122,7 +134,10 @@ class STRidge(LinearModel, RegressorMixin):
                 # could not (further) select important features
                 break
         else:
-            warnings.warn("STRidge._reduce did not converge after {} iterations.".format(self.max_iter), ConvergenceWarning)
+            warnings.warn(
+                "STRidge._reduce did not converge after {} iterations.".format(self.max_iter),
+                ConvergenceWarning,
+            )
             try:
                 coef
             except NameError:
@@ -140,14 +155,19 @@ class STRidge(LinearModel, RegressorMixin):
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
-            x_, y, fit_intercept=self.fit_intercept, normalize=self.normalize,
-            copy=self.copy_X, sample_weight=sample_weight)
+            x_,
+            y,
+            fit_intercept=self.fit_intercept,
+            normalize=self.normalize,
+            copy=self.copy_X,
+            sample_weight=sample_weight,
+        )
 
         if sample_weight is not None:
             x, y = _rescale_data(x, y, sample_weight)
 
         self.iters = 0
-        self.ind_ = np.ones(x.shape[1], dtype=bool) # initial guess
+        self.ind_ = np.ones(x.shape[1], dtype=bool)  # initial guess
         if self.threshold > 0:
             self._reduce(x, y)
         else:
@@ -175,15 +195,19 @@ class BoATS(LinearModel, RegressorMixin):
         self.fit_intercept = fit_intercept
         self.normalize = normalize
 
-
     def fit(self, x_, y, sample_weight=None):
         n_samples, n_features = x_.shape
 
         X, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
-            x_, y, fit_intercept=self.fit_intercept, normalize=self.normalize,
-            copy=self.copy_X, sample_weight=None)
+            x_,
+            y,
+            fit_intercept=self.fit_intercept,
+            normalize=self.normalize,
+            copy=self.copy_X,
+            sample_weight=None,
+        )
 
         if sample_weight is not None:
             # Sample weight can be implemented via a simple rescaling.
@@ -199,7 +223,9 @@ class BoATS(LinearModel, RegressorMixin):
 def fit_with_noise(x, y, sigma, alpha, n, lmc=LinearRegression):
     size = y.shape
     n_samples, n_features = x.shape
-    beta_0 = np.mean([lmc().fit(x, y + np.random.normal(size=size, scale=sigma)).coef_ for _ in range(n)], axis=0)
+    beta_0 = np.mean(
+        [lmc().fit(x, y + np.random.normal(size=size, scale=sigma)).coef_ for _ in range(n)], axis=0
+    )
     beta_init = lmc().fit(x, y).coef_
 
     beta_sel = beta_init.copy()

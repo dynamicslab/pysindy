@@ -1,3 +1,5 @@
+-e .
+-r requirements.txt
 pytest
 pytest-cov
 flake8
@@ -6,5 +8,8 @@ pep8-naming
 flake8-builtins-unleashed
 flake8_module_name
 codecov
--e .
--r requirements.txt
+sphinx
+alabaster
+recommonmark
+# sphinx_rtd_theme
+sphinxcontrib-apidoc

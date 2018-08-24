@@ -18,7 +18,7 @@ def net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, *
 def _net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, return_full=False, **kw):
     n_features = x.shape[1]
 
-    memory = defaultdict(list)   # just a convenience list; this information is redundant
+    memory = defaultdict(list)  # just a convenience list; this information is redundant
     models = defaultdict(list)
 
     def fit_in_memory(r):
@@ -28,7 +28,6 @@ def _net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, 
             memory[c].append(r)
             models[c].append(est)
             return c
-
 
     fit_in_memory(0)
     while True:
@@ -41,12 +40,11 @@ def _net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, 
         except FitFailedWarning:
             r_max *= 0.8
 
-
     # greedy forward
     def greed_forward(c_lower, c_upper, coarsity):
         upper = min(memory[c_lower])
         lower = max(memory[c_upper])
-        for r in np.linspace(lower, upper, 2**coarsity)[::-1]:
+        for r in np.linspace(lower, upper, 2 ** coarsity)[::-1]:
             fit_in_memory(r)
 
     # greedy search for transitions

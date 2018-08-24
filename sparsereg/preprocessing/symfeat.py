@@ -22,6 +22,7 @@ class Base(BaseEstimator, TransformerMixin):
 class SimpleFeature(Base):
     """Base to create polynomial features.
     """
+
     def __init__(self, exponent, index=0):
         super().__init__()
         if exponent == 0:
@@ -30,7 +31,7 @@ class SimpleFeature(Base):
         self.index = index
 
     def transform(self, x):
-        return x[:, self.index]**self.exponent
+        return x[:, self.index] ** self.exponent
 
     @property
     def _name(self):
@@ -84,14 +85,18 @@ def _hash(array):
 
 def hashed_hash_():
     cache = {}
+
     def inner(x):
         key = _hash(x)
         if key not in cache:
             cache[key] = _hash(x)
         return cache[key]
+
     return inner
 
+
 hashed_hash = hashed_hash_()
+
 
 def _remove_id(tpl):
     expr = OrderedDict()
@@ -104,7 +109,9 @@ def _remove_id(tpl):
             redundant.append(vhash)
     return list(expr.values())
 
+
 get_valid = compose(_remove_id, _take_finite)
+
 
 class SymbolicFeatures(Base):
     def __init__(self, exponents=[1], operators={}, consider_products=True):
@@ -121,14 +128,17 @@ class SymbolicFeatures(Base):
         simple = (SimpleFeature(e, index=i) for e, i in product(self.exponents, range(n_features)))
         simple = get_valid((s, s.transform(x)) for s in simple)
         # 2) Get all operator features
-        operator = (OperatorFeature(s, op, operator_name=op_name) for (s, _), (op_name, op) in product(simple, self.operators.items()))
+        operator = (
+            OperatorFeature(s, op, operator_name=op_name)
+            for (s, _), (op_name, op) in product(simple, self.operators.items())
+        )
         operator = get_valid((o, o.transform(x)) for o in operator)
         # 3) Get all product features
         all_ = simple + operator
 
         if self.consider_products:
             combs = chain(product(operator, simple), combinations(simple, 2))
-            prod = [ProductFeature(feat1, feat2) for (feat1, _) , (feat2, _) in combs]
+            prod = [ProductFeature(feat1, feat2) for (feat1, _), (feat2, _) in combs]
             all_ += get_valid((p, p.transform(x)) for p in prod)
 
         all_ = get_valid(all_)
@@ -158,7 +168,6 @@ class SymbolicFeatures(Base):
             for i, input_feature in enumerate(input_features):
                 self._names = [n.replace("x_{}".format(i), input_feature) for n in self._names]
         return self._names
-
 
     def __getstate__(self):
         state = self.__dict__.copy()

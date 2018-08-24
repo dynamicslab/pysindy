@@ -70,7 +70,7 @@ def crowding_distance(models, *attrs):
     scale = np.max(f, axis=0) - np.min(f, axis=0)
 
     with np.errstate(invalid="ignore"):
-        dist = np.sum(abs(np.roll(f, 1, axis=0) - np.roll(f, -1, axis=0) ) / scale, axis=1)
+        dist = np.sum(abs(np.roll(f, 1, axis=0) - np.roll(f, -1, axis=0)) / scale, axis=1)
     dist[0] = np.infty
     dist[-1] = np.infty
     return dist
@@ -83,7 +83,9 @@ def sort_non_dominated(models, *attrs, index=False):
 
     fronts = pareto_front(list(models), *attrs, all=True)
 
-    distances = [crowding_distance(front, *attrs) for front in fronts] # if len(front) > 2 else list(np.zeros_like(front))
+    distances = [
+        crowding_distance(front, *attrs) for front in fronts
+    ]  # if len(front) > 2 else list(np.zeros_like(front))
 
     # fd = (list of models, list of distances)
     # convert that into (model, distance) tuples
@@ -91,7 +93,7 @@ def sort_non_dominated(models, *attrs, index=False):
     # resolve the nested chain
     ranked = chain.from_iterable(sorted(zip(*fd), key=lambda x: x[1]) for fd in zip(fronts, distances))
 
-    ranked = [m for (m, d) in ranked] # discard the distance
+    ranked = [m for (m, d) in ranked]  # discard the distance
     if not index:
         return ranked
     else:
@@ -109,12 +111,12 @@ def cardinality(x, null=1e-9):
 
 
 def rmse(x):
-    return np.sqrt(np.mean(x**2))
+    return np.sqrt(np.mean(x ** 2))
 
 
 def nrmse(x, y):
     scale = max(y) - min(y) or 1.0
-    return rmse(x-y)/scale
+    return rmse(x - y) / scale
 
 
 class ReducedLinearModel(LinearModel):
@@ -138,8 +140,9 @@ class ReducedLinearModel(LinearModel):
     def scores(self, x, y):
         return self.lm.scores(x[:, self.mask], y)
 
+
 def aic(residuals, k, correct=False):
     """Akaike information criterion"""
     n = len(residuals)
     correction = 2 * (k + 1) * k / (n - k - 1) if correct else 0
-    return n * np.log(np.var(residuals)) + 2*k + correction
+    return n * np.log(np.var(residuals)) + 2 * k + correction

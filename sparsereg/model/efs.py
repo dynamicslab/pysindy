@@ -170,8 +170,8 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
                 n
                 for n in sorted(names, key=lambda x: importance[names.index(x)], reverse=True)
                 if n not in linear_names
-            ][-self.mu * p :]
-            for n in names_to_discard:
+            ]
+            for n in names_to_discard[-self.mu * p :]:  # noqa
                 i = names.index(n)
                 names.pop(i)
                 data.pop(i)

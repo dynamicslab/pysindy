@@ -9,7 +9,7 @@ cache:
 install:
   - pip install --upgrade -r requirements-dev.txt
 script:
-  - py.test --flake8 sparsereg
+  - flake8 sparsereg
   - py.test test --cov=sparsereg
 after_success:
   - codecov

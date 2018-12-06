@@ -1,5 +1,4 @@
 import warnings
-from itertools import count
 
 import numpy as np
 from sklearn.base import RegressorMixin
@@ -13,13 +12,11 @@ from sklearn.utils.validation import check_array
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
-from sparsereg.util import cardinality
-
 
 def _print_model(coef, input_features, intercept=None, precision=3):
-    model = " + ".join(f"{c:.{precision}e} {n}" for c, n in zip(coef, input_features) if c)
+    model = " + ".join(f"{c:.{precision}f} {n}" for c, n in zip(coef, input_features) if c)
     if intercept or not model:
-        model += f" + {intercept:.{precision}e}"
+        model += f" + {intercept:.{precision}f}"
     return model
 
 
@@ -27,9 +24,9 @@ def equation(pipeline, input_features=None, precision=3, input_fmt=None):
     input_features = pipeline.steps[0][1].get_feature_names(input_features)
     if input_fmt:
         input_features = [input_fmt(i) for i in input_features]
-    coef = np.round(pipeline.steps[-1][1].coef_, precision)
-    intercept = np.round(pipeline.steps[-1][1].intercept_, precision)
-    return _print_model(coef, input_features, intercept)
+    coef = pipeline.steps[-1][1].coef_
+    intercept = pipeline.steps[-1][1].intercept_
+    return _print_model(coef, input_features, intercept, precision=precision)
 
 
 class RationalFunctionMixin:
@@ -68,7 +65,7 @@ class RationalFunctionMixin:
 class PrintMixin:
     def print_model(self, input_features=None, precision=3):
         input_features = input_features or ["x_{}".format(i) for i in range(len(self.coef_))]
-        return _print_model(self.coef_, input_features, self.intercept_, precesion=precision)
+        return _print_model(self.coef_, input_features, self.intercept_, precision=precision)
 
 
 class STRidge(LinearModel, RegressorMixin):

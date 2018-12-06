@@ -12,9 +12,9 @@ from sparsereg.util import cardinality
 
 
 def _print_model(coef, input_features, intercept=None, precision=3):
-    model = ' + '.join(f"{c:.2e} {n}" for c, n in zip(coef, input_features) if c)
+    model = " + ".join(f"{c:.{precision}e} {n}" for c, n in zip(coef, input_features) if c)
     if intercept or not model:
-        model += f" + {intercept:.2e}"
+        model += f" + {intercept:.{precision}e}"
     return model
 
 
@@ -61,9 +61,9 @@ class RationalFunctionMixin:
 
 
 class PrintMixin:
-    def print_model(self, input_features=None):
+    def print_model(self, input_features=None, precision=3):
         input_features = input_features or ["x_{}".format(i) for i in range(len(self.coef_))]
-        return _print_model(self.coef_, input_features, self.intercept_)
+        return _print_model(self.coef_, input_features, self.intercept_, precesion=precision)
 
 
 class STRidge(LinearModel, RegressorMixin):

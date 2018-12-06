@@ -1,13 +1,15 @@
-import re
 import random
+import re
 import warnings
 
 import numpy as np
-
-from sklearn.base import RegressorMixin, TransformerMixin, BaseEstimator
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LassoLarsCV, Lasso
+from sklearn.base import BaseEstimator
+from sklearn.base import RegressorMixin
+from sklearn.base import TransformerMixin
 from sklearn.exceptions import ConvergenceWarning
+from sklearn.linear_model import Lasso
+from sklearn.linear_model import LassoLarsCV
+from sklearn.pipeline import Pipeline
 
 from sparsereg.util.net import net
 
@@ -132,7 +134,7 @@ class EFS(BaseEstimator, RegressorMixin, TransformerMixin):
         best_model, best_score = _fit_model(x, y, best_names, self.operators, n_jobs=self.n_jobs)
         pop_size = p * (self.mu + 1 + self.q)
         for _ in range(self.max_iter):
-            old_names = sorted(names[:])
+            # old_names = sorted(names[:])
             stall_iter += 1
             new_names = []
             new_data = []

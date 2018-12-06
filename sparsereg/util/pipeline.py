@@ -1,4 +1,5 @@
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator
+from sklearn.base import TransformerMixin
 
 
 class ColumnSelector(TransformerMixin, BaseEstimator):
@@ -25,4 +26,4 @@ class ColumnSelector(TransformerMixin, BaseEstimator):
         if self.index == slice(None):
             return input_features
         else:
-            return [n for i, n in zip(index, input_features) if i]
+            return [n for i, n in zip(self.index, input_features) if i]

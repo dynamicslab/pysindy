@@ -1,0 +1,17 @@
+fail_fast: false
+repos:
+- repo: git://github.com/pre-commit/pre-commit-hooks
+  rev: master
+  hooks:
+    - id: check-added-large-files
+      args: ["--maxkb=775"]
+    - id: check-merge-conflict
+- repo: https://github.com/asottile/reorder_python_imports
+  rev: v1.0.1
+  hooks:
+    - id: reorder-python-imports
+- repo: https://github.com/ambv/black
+  rev: stable
+  hooks:
+    - id: black
+      language_version: python3.6

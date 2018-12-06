@@ -1,12 +1,17 @@
-import numpy as np
-from itertools import count
 import warnings
+from itertools import count
 
+import numpy as np
 from sklearn.base import RegressorMixin
-from sklearn.exceptions import FitFailedWarning, ConvergenceWarning
-from sklearn.linear_model import LinearRegression, ridge_regression
-from sklearn.linear_model.base import LinearModel, _rescale_data
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+from sklearn.exceptions import ConvergenceWarning
+from sklearn.exceptions import FitFailedWarning
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import ridge_regression
+from sklearn.linear_model.base import _rescale_data
+from sklearn.linear_model.base import LinearModel
+from sklearn.utils.validation import check_array
+from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_X_y
 
 from sparsereg.util import cardinality
 
@@ -38,9 +43,9 @@ class RationalFunctionMixin:
         return self
 
     def _arrange_coef(self):
-        l = len(self.coef_) // 2
-        self.coef_nominator_ = self.coef_[:l]
-        self.coef_denominator_ = -self.coef_[l:]
+        nom = len(self.coef_) // 2
+        self.coef_nominator_ = self.coef_[:nom]
+        self.coef_denominator_ = -self.coef_[nom:]
 
     def predict(self, x):
         check_is_fitted(self, "coef_")

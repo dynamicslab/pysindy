@@ -3,10 +3,12 @@ from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PolynomialFeatures, FunctionTransformer
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.preprocessing import PolynomialFeatures
 
+from sparsereg.model.base import equation
+from sparsereg.model.base import STRidge
 from sparsereg.preprocessing.symfeat import SymbolicFeatures
-from sparsereg.model.base import STRidge, equation
 
 
 def _derivative(x, dt=1.0):
@@ -20,7 +22,7 @@ def _derivative(x, dt=1.0):
         dx[-1, :] = (x[-1, :] - x[-2, :]) / (dt[-1] - dt[-2])
     else:
         dx = np.zeros_like(x)
-        dx[1:-1, :] = (x[2:, :] - x[:-2, :]) / (2. * dt)
+        dx[1:-1, :] = (x[2:, :] - x[:-2, :]) / (2.0 * dt)
 
         dx[0, :] = (x[1, :] - x[0, :]) / dt
         dx[-1, :] = (x[-1, :] - x[-2, :]) / dt

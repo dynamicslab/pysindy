@@ -1,11 +1,13 @@
-from itertools import product, chain, combinations
 from collections import OrderedDict
+from itertools import chain
+from itertools import combinations
+from itertools import product
 
 import numpy as np
-from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.base import BaseEstimator
+from sklearn.base import TransformerMixin
 from sympy import simplify
 from toolz import compose
-from joblib import hash as _hash
 
 
 class Base(BaseEstimator, TransformerMixin):
@@ -14,7 +16,7 @@ class Base(BaseEstimator, TransformerMixin):
 
     @property
     def name(self):
-        if self.name_cache == None:
+        if self.name_cache is None:
             self.name_cache = str(simplify(self._name))
         return self.name_cache
 

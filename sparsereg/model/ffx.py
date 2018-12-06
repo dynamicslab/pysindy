@@ -1,21 +1,29 @@
-from operator import attrgetter
-from itertools import product
+import warnings
 from collections import namedtuple
 from copy import deepcopy
-import warnings
+from itertools import product
+from operator import attrgetter
 
-from sklearn.base import TransformerMixin, BaseEstimator, RegressorMixin, clone
-from sklearn.linear_model.coordinate_descent import ElasticNet, _pre_fit
+import joblib
+import numpy as np
+from sklearn.base import BaseEstimator
+from sklearn.base import clone
+from sklearn.base import RegressorMixin
+from sklearn.base import TransformerMixin
+from sklearn.linear_model.coordinate_descent import _pre_fit
+from sklearn.linear_model.coordinate_descent import ElasticNet
 from sklearn.metrics import make_scorer
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.utils.validation import check_X_y, check_random_state
-import joblib
-import numpy as np
+from sklearn.utils.validation import check_random_state
+from sklearn.utils.validation import check_X_y
 
+from sparsereg.model.base import PrintMixin
+from sparsereg.model.base import RationalFunctionMixin
 from sparsereg.preprocessing.symfeat import SymbolicFeatures
-from sparsereg.model.base import RationalFunctionMixin, PrintMixin
-from sparsereg.util import pareto_front, nrmse, aic
+from sparsereg.util import aic
+from sparsereg.util import nrmse
+from sparsereg.util import pareto_front
 from sparsereg.util.pipeline import ColumnSelector
 
 
@@ -380,19 +388,22 @@ class FFX(BaseEstimator, RegressorMixin):
 
         `exponents`:
             Orders of the monomials to consider for each single feature. (No products between features here).
-            `exponents` is an iterable of numbers (floats and negative values are possible, 1 will always automatically be included.)
+            `exponents` is an iterable of numbers (floats and negative values are possible,
+            1 will always automatically be included.)
             The first step in strategy generation is calculating all monomials.
         `operators`:
             mapping of str to callable taking one parameter.
             All callables in `operators` will be evaluated on all monomials from the first step
 
         products
-            Not configurable. Always consider all products of each operator feature from the second step with each monomial feature from the first.
+            Not configurable. Always consider all products of each operator feature
+            from the second step with each monomial feature from the first.
             And all products of monomial features with all monomial features based on a different feature
             (thus generating mixed products up to order `2*max(exponents)`).
         `rational`
             If true, do not only consider generalized linear models from all basis functions
-            but consider also rational functions using the rational function trick described `here <`http://dx.doi.org/10.1007/978-1-4614-1770-5_13>`_
+            but consider also rational functions using the rational function trick
+            described `here <`http://dx.doi.org/10.1007/978-1-4614-1770-5_13>`_
 
         For each `Strategy`, an elastic net optimizer will be run with many combinations of l1_ratio and alpha.
         A `l1_ratio` of 0 corresponds to ridge regression (only l2 penalty), a `l1_ratio` of 1 corresponds to

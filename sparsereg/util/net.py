@@ -1,5 +1,5 @@
-from collections import defaultdict
 import warnings
+from collections import defaultdict
 
 import numpy as np
 from sklearn.exceptions import FitFailedWarning
@@ -16,7 +16,6 @@ def net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, *
 
 
 def _net(estimator, x, y, attr="alpha", max_coarsity=2, filter=True, r_max=1e3, return_full=False, **kw):
-    n_features = x.shape[1]
 
     memory = defaultdict(list)  # just a convenience list; this information is redundant
     models = defaultdict(list)

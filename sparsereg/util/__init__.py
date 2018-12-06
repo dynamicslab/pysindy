@@ -2,6 +2,7 @@ from itertools import chain
 from operator import attrgetter
 
 import numpy as np
+from sklearn.exceptions import FitFailedWarning
 from sklearn.linear_model.base import LinearModel
 
 

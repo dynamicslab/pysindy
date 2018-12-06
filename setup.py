@@ -1,4 +1,5 @@
 import sys
+
 assert sys.version_info >= (3, 6, 0), "sparsereg requires Python 3.6+"
 import pathlib
 
@@ -14,7 +15,6 @@ PYTHON = ">=3.6"
 LICENSE = "MIT"
 CLASSIFIERS = [
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",

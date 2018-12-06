@@ -17,13 +17,14 @@ def test_stridge_normalize(data, kw):
     np.testing.assert_allclose(s.coef_, np.array([0, 2]), atol=1e-7)
     np.testing.assert_allclose(s.predict(x), y)
     assert s.complexity == 2
-    assert len(s.history_) == 3 # 1 initial guess, 1 saturation, 1 unbias
+    assert len(s.history_) == 3  # 1 initial guess, 1 saturation, 1 unbias
 
 
 def test_stridge_iterations_on_full_rank_data(data_full_rank):
     x, y = data_full_rank
     s = STRidge().fit(x, y)
     assert len(s.history_) == 2
+
 
 def test_stridge_knob(data):
     x, y = data
@@ -35,7 +36,8 @@ def test_all_zero(data):
     x, y = data
     s = STRidge(threshold=10000).fit(x, y)
     assert not any(s.coef_)
-    assert len(s.history_) == 1 # initial guess wipes everything
+    assert len(s.history_) == 1  # initial guess wipes everything
+
 
 def test_all_nonzero(data_full_rank):
     x, y = data_full_rank

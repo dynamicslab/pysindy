@@ -7,6 +7,7 @@ from sparsereg.model import BoATS, STRidge, fit_with_noise
 
 np.random.seed(42)
 
+
 @pytest.mark.parametrize("lmc", [LinearRegression, Ridge, STRidge])
 @pytest.mark.parametrize("sigma", [0.01, 0.05, 0.1])
 def test_fit_with_noise(data, lmc, sigma):

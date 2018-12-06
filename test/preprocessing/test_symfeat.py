@@ -4,6 +4,7 @@ import pickle
 
 import sparsereg.preprocessing.symfeat as sf
 
+
 @pytest.fixture
 def data():
     np.random.seed(42)
@@ -16,7 +17,7 @@ def data():
 @pytest.mark.parametrize("exponent", [1, 2, -1, -2])
 def test_SimpleFeature(exponent, data, index):
     simple = sf.SimpleFeature(exponent, index=index)
-    np.testing.assert_allclose(data[:, index]**exponent, simple.transform(data))
+    np.testing.assert_allclose(data[:, index] ** exponent, simple.transform(data))
 
 
 def test_SimpleFeature_raise():
@@ -52,7 +53,7 @@ def test_ProductFeature(data):
 
     assert prod.name == "x_0*x_1"
 
-    np.testing.assert_allclose(data[:, 0]*data[:, 1], prod.transform(data))
+    np.testing.assert_allclose(data[:, 0] * data[:, 1], prod.transform(data))
 
 
 def test_SymbolicFeatures(data):
@@ -75,7 +76,7 @@ def test_SymbolicFeatures_remove_id(data):
     exponents = [1, 2, 3]
     sym = sf.SymbolicFeatures(exponents, operators).fit(data)
     # simple * 2 + products - excluded
-    assert len(sym.get_feature_names()) == 2*3 + 15 - 2
+    assert len(sym.get_feature_names()) == 2 * 3 + 15 - 2
 
 
 def test_SymbolicFeatures_redundant_data():

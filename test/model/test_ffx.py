@@ -3,7 +3,8 @@ from collections import namedtuple
 import numpy as np
 
 from sparsereg.model.ffx import *
-from sparsereg.model.ffx import _path_is_saturated #, _path_is_overfit
+from sparsereg.model.ffx import _path_is_saturated  # , _path_is_overfit
+
 
 def test_build_strategies():
     strats = list(build_strategies([1, 2], {})([]))
@@ -24,6 +25,7 @@ def test_build_strategies():
     strats = list(build_strategies([1, 2], {"sin": np.sin}, rational=False)([]))
     assert len(strats) == 4
 
+
 def test__path_is_saturated():
     model = namedtuple("Model", ["train_score_"])
     models = [model(1) for _ in range(10)]
@@ -31,6 +33,7 @@ def test__path_is_saturated():
     assert not _path_is_saturated(models, n_tail=len(models) + 1)
     assert _path_is_saturated(models, n_tail=1)
     assert _path_is_saturated(models, n_tail=5)
+
 
 # def test__path_is_overfit():
 #     model = namedtuple("Model", ["test_score_"])

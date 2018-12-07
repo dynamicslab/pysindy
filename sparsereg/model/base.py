@@ -1,4 +1,5 @@
 import warnings
+from itertools import repeat
 
 import numpy as np
 from sklearn.base import RegressorMixin
@@ -13,11 +14,44 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 
-def _print_model(coef, input_features, intercept=None, precision=3):
-    model = " + ".join(f"{c:.{precision}f} {n}" for c, n in zip(coef, input_features) if c)
-    if intercept or not model:
-        model += f" + {intercept:.{precision}f}"
-    return model
+def print_model(coef, input_features, errors=None, intercept=None, sigma_intercept=None, precision=3, pm="±"):
+    """
+
+    Args:
+        coef:
+        input_features:
+        errors:
+        intercept:
+        sigma_intercept:
+        precision:
+        pm:
+
+    Returns:
+
+    """
+
+    def term(coef, sigma, name):
+        rounded_coef = np.round(coef, precision)
+        if rounded_coef == 0 and sigma is None:
+            return ""
+        elif sigma is None:
+            return f"{coef:.{precision}f} {name}"
+        elif rounded_coef == 0 and np.round(sigma, precision) == 0:
+            return ""
+        else:
+            return f"({coef:.{precision}f} {pm} {sigma:.{precision}f}) {name}"
+
+    errors = errors or repeat(None)
+    components = map(term, coef, errors, input_features)
+    eq = " + ".join(filter(bool, components))
+
+    if not eq or intercept or sigma_intercept is not None:
+        intercept = intercept or 0
+        if eq:
+            eq += " + "
+        eq += term(intercept, sigma_intercept, "").strip() or f"{intercept:.{precision}f}"
+
+    return eq
 
 
 def equation(pipeline, input_features=None, precision=3, input_fmt=None):
@@ -26,7 +60,7 @@ def equation(pipeline, input_features=None, precision=3, input_fmt=None):
         input_features = [input_fmt(i) for i in input_features]
     coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
-    return _print_model(coef, input_features, intercept, precision=precision)
+    return print_model(coef, input_features, intercept, precision=precision)
 
 
 class RationalFunctionMixin:
@@ -51,11 +85,11 @@ class RationalFunctionMixin:
 
     def print_model(self, input_features=None):
         input_features = input_features or ["x_{}".format(i) for i in range(len(self.coef_nominator_))]
-        nominator = _print_model(self.coef_nominator_, input_features)
+        nominator = print_model(self.coef_nominator_, input_features)
         if self.intercept_:
             nominator += "+ {}".format(self.intercept_)
         if np.any(self.coef_denominator_):
-            denominator = _print_model(self.coef_denominator_, input_features, 1)
+            denominator = print_model(self.coef_denominator_, input_features, 1)
             model = "(" + nominator + ") / (" + denominator + ")"
         else:
             model = nominator
@@ -65,7 +99,7 @@ class RationalFunctionMixin:
 class PrintMixin:
     def print_model(self, input_features=None, precision=3):
         input_features = input_features or ["x_{}".format(i) for i in range(len(self.coef_))]
-        return _print_model(self.coef_, input_features, self.intercept_, precision=precision)
+        return print_model(self.coef_, input_features, self.intercept_, precision=precision)
 
 
 class STRidge(LinearModel, RegressorMixin):

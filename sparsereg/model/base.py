@@ -41,7 +41,7 @@ def print_model(coef, input_features, errors=None, intercept=None, sigma_interce
         else:
             return f"({coef:.{precision}f} {pm} {sigma:.{precision}f}) {name}"
 
-    errors = errors or repeat(None)
+    errors = errors if errors is not None else repeat(None)
     components = map(term, coef, errors, input_features)
     eq = " + ".join(filter(bool, components))
 

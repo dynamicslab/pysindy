@@ -23,7 +23,7 @@ from sparsereg.model.base import print_model
                 coef=[1, 2, 0.001],
                 input_features=["x0", "x1", "x2"],
                 intercept=0.1,
-                sigma_intercept=0.1,
+                error_intercept=0.1,
                 precision=2,
             ),
             "1.00 x0 + 2.00 x1 + (0.10 ± 0.10)",

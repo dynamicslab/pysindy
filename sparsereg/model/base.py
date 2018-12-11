@@ -99,7 +99,7 @@ class RationalFunctionMixin:
 class PrintMixin:
     def print_model(self, input_features=None, precision=3):
         input_features = input_features or ["x_{}".format(i) for i in range(len(self.coef_))]
-        return print_model(self.coef_, input_features, self.intercept_, precision=precision)
+        return print_model(self.coef_, input_features, intercept=self.intercept_, precision=precision)
 
 
 class STRidge(LinearModel, RegressorMixin):

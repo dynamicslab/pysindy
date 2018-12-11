@@ -45,11 +45,11 @@ def print_model(coef, input_features, errors=None, intercept=None, error_interce
     components = map(term, coef, errors, input_features)
     eq = " + ".join(filter(bool, components))
 
-    if not eq or intercept or sigma_intercept is not None:
+    if not eq or intercept or error_intercept is not None:
         intercept = intercept or 0
         if eq:
             eq += " + "
-        eq += term(intercept, sigma_intercept, "").strip() or f"{intercept:.{precision}f}"
+        eq += term(intercept, error_intercept, "").strip() or f"{intercept:.{precision}f}"
 
     return eq
 

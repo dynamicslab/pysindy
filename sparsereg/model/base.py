@@ -14,7 +14,7 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 
-def print_model(coef, input_features, errors=None, intercept=None, sigma_intercept=None, precision=3, pm="±"):
+def print_model(coef, input_features, errors=None, intercept=None, error_intercept=None, precision=3, pm="±"):
     """
 
     Args:

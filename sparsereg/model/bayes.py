@@ -13,13 +13,13 @@ eps = np.finfo(np.float64).eps
 
 def scale_sigma(est, X_offset, X_scale):
     if est.fit_intercept:
-        std_intercept = np.sqrt(np.abs(X_offset @ est.sigma_.T))
+        std_intercept = np.sqrt(np.abs(X_offset @ np.diag(est.sigma_).T))
     else:
         std_intercept = 0
-    sigma = est.sigma_ / (X_scale + eps)
+    sigma = np.diag(est.sigma_) / (X_scale + eps)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        std_coef = np.diag(np.sqrt(sigma))
+        std_coef = np.sqrt(sigma)
     return std_intercept, std_coef
 
 

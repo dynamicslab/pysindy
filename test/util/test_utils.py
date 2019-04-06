@@ -1,5 +1,5 @@
-import itertools
 import collections
+import itertools
 import random
 
 import pytest
@@ -53,11 +53,13 @@ def test_pareto_front_attrs():
         assert bmin <= m.b <= bmax
 
 
+def _models():
+    return [(0, 0), (0, 1), (1, 0), (0.5, 0.5), (1, 1)]
+
+
 @pytest.fixture(scope="function")
 def models():
-
-    m = [(0, 0), (0, 1), (1, 0), (0.5, 0.5), (1, 1)]
-    return m
+    return _models()
 
 
 def test_pareto_front_tpl(models):
@@ -79,7 +81,7 @@ def test_pareto_front_duplicates():
     assert False
 
 
-cd_cases = ((models()[1:-1], ()), ([Model(a, b) for (a, b) in sorted(models()[1:-1])], ("a", "b")))
+cd_cases = ((_models()[1:-1], ()), ([Model(a, b) for (a, b) in sorted(_models()[1:-1])], ("a", "b")))
 
 
 @pytest.mark.parametrize("cd_case", cd_cases)

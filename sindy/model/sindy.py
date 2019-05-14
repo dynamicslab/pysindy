@@ -6,11 +6,13 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.preprocessing import PolynomialFeatures
 
-from sparsereg.model.base import equation
-from sparsereg.model.base import STRidge
-from sparsereg.preprocessing.symfeat import SymbolicFeatures
+from sindy.model.base import equation
+from sindy.model.base import STRidge
+from sindy.preprocessing.symfeat import SymbolicFeatures
 
 
+# TODO: expand differentiation functionality
+# Possibly introduce a separate differential operator class
 def _derivative(x, dt=1.0):
     if isinstance(dt, (list, np.ndarray)):
         if len(dt) < 3:

@@ -1,0 +1,26 @@
+{
+	"folders":
+	[
+		{
+			"path": "."
+		},
+		{
+			"path": "test"
+		},
+		{
+			"path": "sindy"
+		},
+		{
+			"path": "example"
+		},
+		{
+			"path": "docs"
+		},
+		{
+			"path": "sindy/util"
+		},
+		{
+			"path": "sindy/model"
+		}
+	]
+}

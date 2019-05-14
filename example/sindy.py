@@ -5,7 +5,7 @@ from scipy.integrate import odeint
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.utils import check_random_state
 
-from sparsereg.model import SINDy
+from sindy.model import SINDy
 
 
 def rhs_harmonic_oscillator(y, t):

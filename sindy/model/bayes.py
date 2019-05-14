@@ -6,7 +6,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model.base import LinearModel
 from sklearn.utils.validation import check_X_y
 
-from sparsereg.model.base import PrintMixin
+from sindy.model.base import PrintMixin
 
 eps = np.finfo(np.float64).eps
 

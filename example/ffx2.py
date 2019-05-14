@@ -1,6 +1,8 @@
+# Can likely be deleted
+
 import numpy as np
 
-from sparsereg.model.ffx import FFX
+from sindy.model.ffx import FFX
 import datetime
 
 np.random.seed(42)

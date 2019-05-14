@@ -1,3 +1,4 @@
+# Can likely be deleted
 from collections import defaultdict
 
 import numpy as np
@@ -9,9 +10,9 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.utils.validation import check_random_state
 
-from sparsereg.model.base import print_model
-from sparsereg.model.group_lasso import SparseGroupLasso
-from sparsereg.preprocessing.symfeat import SymbolicFeatures
+from sindy.model.base import print_model
+from sindy.model.group_lasso import SparseGroupLasso
+from sindy.preprocessing.symfeat import SymbolicFeatures
 
 rng = check_random_state(42)
 x = rng.normal(size=(10000, 1))

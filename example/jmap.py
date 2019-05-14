@@ -1,8 +1,9 @@
+# Can probably delete
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 
-from sparsereg.model.bayes import JMAP
-from sparsereg.model.bayes import scale_sigma
+from sindy.model.bayes import JMAP
+from sindy.model.bayes import scale_sigma
 
 size = 10000
 scale = 0.1

@@ -1,11 +1,12 @@
+# Unclear whether we should keep this example around
 from sklearn.datasets import load_boston
 from sklearn.linear_model import Lasso
 import matplotlib.pyplot as plt
 import numpy as np
-import sparsereg.preprocessing.symfeat as sf
+import sindy.preprocessing.symfeat as sf
 
-from sparsereg.model import STRidge
-from sparsereg.util.net import net
+from sindy.model import STRidge
+from sindy.util.net import net
 
 data = load_boston()
 x, y = data.data, data.target

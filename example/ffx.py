@@ -1,6 +1,8 @@
+# Can likely be deleted
+
 import numpy as np
 
-from sparsereg.model.ffx import FFX
+from sindy.model.ffx import FFX
 
 np.random.seed(42)
 x = np.random.normal(size=(33333, 2))

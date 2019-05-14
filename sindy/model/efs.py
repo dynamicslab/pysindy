@@ -11,7 +11,7 @@ from sklearn.linear_model import Lasso
 from sklearn.linear_model import LassoLarsCV
 from sklearn.pipeline import Pipeline
 
-from sparsereg.util.net import net
+from sindy.util.net import net
 
 operators = {
     "add": np.add,

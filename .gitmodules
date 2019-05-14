@@ -1,3 +1,0 @@
-[submodule "sparsereg/vendor/group_lasso"]
-	path = sparsereg/vendor/group_lasso
-	url = https://github.com/fabianp/group_lasso.git

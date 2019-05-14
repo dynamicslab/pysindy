@@ -18,13 +18,13 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_random_state
 from sklearn.utils.validation import check_X_y
 
-from sparsereg.model.base import PrintMixin
-from sparsereg.model.base import RationalFunctionMixin
-from sparsereg.preprocessing.symfeat import SymbolicFeatures
-from sparsereg.util import aic
-from sparsereg.util import nrmse
-from sparsereg.util import pareto_front
-from sparsereg.util.pipeline import ColumnSelector
+from sindy.model.base import PrintMixin
+from sindy.model.base import RationalFunctionMixin
+from sindy.preprocessing.symfeat import SymbolicFeatures
+from sindy.util import aic
+from sindy.util import nrmse
+from sindy.util import pareto_front
+from sindy.util.pipeline import ColumnSelector
 
 
 class FFXModel(Pipeline):

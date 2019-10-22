@@ -42,9 +42,7 @@ def print_model(coef, input_features, errors=None, intercept=None, error_interce
         else:
             return f"({coef:.{precision}f} {pm} {sigma:.{precision}f}) {name}"
 
-    set_trace()
     errors = errors if errors is not None else repeat(None)
-    set_trace()
     components = map(term, coef, errors, input_features)
     eq = " + ".join(filter(bool, components))
 
@@ -63,7 +61,7 @@ def equation(pipeline, input_features=None, precision=3, input_fmt=None):
         input_features = [input_fmt(i) for i in input_features]
     coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
-    return print_model(coef, input_features, intercept, precision=precision)
+    return print_model(coef, input_features, intercept=intercept, precision=precision)
 
 
 class RationalFunctionMixin:

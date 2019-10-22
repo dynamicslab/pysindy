@@ -16,21 +16,23 @@ class SINDy(BaseEstimator):
             self,
             threshold=0.1,
             feature_library=PolynomialFeatures(),
+            differentiation_method=differentiation_methods.centered_difference,
             feature_names=None,
             n_jobs=1,
             kw={}
-    ):
-        self.threshold       = threshold
-        self.feature_library = feature_library
-        self.feature_names   = feature_names
-        self.n_jobs          = n_jobs
-        self.kw              = kw
+        ):
+        self.threshold              = threshold
+        self.feature_library        = feature_library
+        self.differentiation_method = differentiation_method
+        self.feature_names          = feature_names
+        self.n_jobs                 = n_jobs
+        self.kw                     = kw
 
     # For now just write this how we want it to look and then write simplest
     # version of the supporting code possible
     def fit(self, x, t=1, x_dot=None):
         if x_dot is None:
-            x_dot = differentiation_methods.centered_difference(x, t)
+            x_dot = self.differentiation_method(x, t)
 
         # TODO: check this line
         # feature_transformer = PolynomialLibrary.get_transformer()
@@ -69,3 +71,5 @@ class SINDy(BaseEstimator):
     def complexity(self):
         return sum(est.steps[1][1].complexity for est in self.model.estimators_)
 
+    def differentiate(self, x, t=1):
+        return self.differentiation_method(x, t)

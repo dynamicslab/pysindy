@@ -4,6 +4,238 @@
 		"selected_items":
 		[
 			[
+				"fea",
+				"feature_names"
+			],
+			[
+				"f",
+				"feature_names"
+			],
+			[
+				"PO",
+				"PolynomialFeatures"
+			],
+			[
+				"Polynom",
+				"PolynomialFeatures"
+			],
+			[
+				"featu",
+				"feature_transformer"
+			],
+			[
+				"feat",
+				"feature_transformer"
+			],
+			[
+				"diff",
+				"differentiation_methods"
+			],
+			[
+				"for",
+				"forward"
+			],
+			[
+				"gam",
+				"game_state"
+			],
+			[
+				"att",
+				"attempt_remove"
+			],
+			[
+				"we",
+				"weak_spot"
+			],
+			[
+				"de",
+				"detect_weak_spots"
+			],
+			[
+				"righ",
+				"right_attack"
+			],
+			[
+				"encr",
+				"encryptor_locations"
+			],
+			[
+				"num",
+				"num_scramblers"
+			],
+			[
+				"left",
+				"left_attack"
+			],
+			[
+				"core",
+				"cores_to_reserve"
+			],
+			[
+				"buil",
+				"build_order"
+			],
+			[
+				"unit",
+				"unit_type"
+			],
+			[
+				"build",
+				"build_stage"
+			],
+			[
+				"E",
+				"ENCRYPTOR"
+			],
+			[
+				"oppo",
+				"opponent_ping_cannon"
+			],
+			[
+				"ping",
+				"ping_threat_level"
+			],
+			[
+				"dete",
+				"detect_ping_rush"
+			],
+			[
+				"det",
+				"detect_ping_rush"
+			],
+			[
+				"bit",
+				"bit_threshold"
+			],
+			[
+				"right",
+				"right_count"
+			],
+			[
+				"th",
+				"threshold"
+			],
+			[
+				"le",
+				"left_count"
+			],
+			[
+				"defend",
+				"defend_ping_cannon"
+			],
+			[
+				"loc",
+				"locations_to_repair"
+			],
+			[
+				"lco",
+				"locations_to_repair"
+			],
+			[
+				"dam",
+				"damage_thresh"
+			],
+			[
+				"existing",
+				"existing_units"
+			],
+			[
+				"stat",
+				"stationary_units"
+			],
+			[
+				"turn",
+				"turn_number"
+			],
+			[
+				"dep",
+				"deploy_locations"
+			],
+			[
+				"game",
+				"game_state"
+			],
+			[
+				"uni",
+				"unit_type"
+			],
+			[
+				"Build",
+				"BuildStage"
+			],
+			[
+				"b",
+				"build_stages"
+			],
+			[
+				"bui",
+				"build_order"
+			],
+			[
+				"model",
+				"model42_df"
+			],
+			[
+				"t_in",
+				"t_inds_tslow"
+			],
+			[
+				"test",
+				"test_inds"
+			],
+			[
+				"learne",
+				"learned_equation"
+			],
+			[
+				"times",
+				"timesteps"
+			],
+			[
+				"feature",
+				"feature_y"
+			],
+			[
+				"sub",
+				"subtract_known_model"
+			],
+			[
+				"model_",
+				"model_to_subtract"
+			],
+			[
+				"drag",
+				"drag_coeff"
+			],
+			[
+				"mod",
+				"model_to_subtract"
+			],
+			[
+				"mode",
+				"model_type"
+			],
+			[
+				"diff_",
+				"diff_kws"
+			],
+			[
+				"remo",
+				"remove_const_model"
+			],
+			[
+				"differe",
+				"differentiate"
+			],
+			[
+				"grou",
+				"group_sindy"
+			],
+			[
+				"moe",
+				"model_guess"
+			],
+			[
 				"tab",
 				"tab\tlatex-table"
 			],
@@ -14,10 +246,6 @@
 			[
 				"lib",
 				"library_2"
-			],
-			[
-				"grou",
-				"group_sparse_method"
 			],
 			[
 				"group_",
@@ -78,10 +306,6 @@
 			[
 				"Xdot",
 				"Xdotdot"
-			],
-			[
-				"mode",
-				"model_order"
 			],
 			[
 				"initi",
@@ -152,14 +376,6 @@
 				"end_idx"
 			],
 			[
-				"diff",
-				"diff_10306"
-			],
-			[
-				"test",
-				"test_features"
-			],
-			[
 				"con",
 				"concatenate"
 			],
@@ -168,16 +384,8 @@
 				"importance"
 			],
 			[
-				"feat",
-				"feature_importances"
-			],
-			[
 				"data",
 				"dataset"
-			],
-			[
-				"fea",
-				"feature_id"
 			],
 			[
 				"col",
@@ -206,10 +414,6 @@
 			[
 				"coef",
 				"coef_to_save"
-			],
-			[
-				"drag",
-				"drag_coef"
 			],
 			[
 				"window",
@@ -310,282 +514,79 @@
 			[
 				"cho",
 				"cholesky_solve"
-			],
-			[
-				"p",
-				"p_vals"
-			],
-			[
-				"legen",
-				"legend_items"
-			],
-			[
-				"num",
-				"num_ps"
-			],
-			[
-				"p_",
-				"p_max"
-			],
-			[
-				"p_m",
-				"p_min"
-			],
-			[
-				"edge",
-				"edge_nodes"
-			],
-			[
-				"node",
-				"node_counter"
-			],
-			[
-				"title",
-				"title_text"
-			],
-			[
-				"centere",
-				"centered_difference"
-			],
-			[
-				"for",
-				"forward_difference"
-			],
-			[
-				"cente",
-				"centered_difference"
-			],
-			[
-				"backwar",
-				"backward_diff"
-			],
-			[
-				"back",
-				"backward_diff"
-			],
-			[
-				"A_",
-				"A_transpose_b"
-			],
-			[
-				"u_e",
-				"u_exact"
-			],
-			[
-				"re",
-				"rel_err"
-			],
-			[
-				"x_fin",
-				"x_fine_mapped"
-			],
-			[
-				"lin",
-				"linspace"
-			],
-			[
-				"u_ex",
-				"u_ex_eval"
-			],
-			[
-				"samp",
-				"sample_1"
-			],
-			[
-				"fun",
-				"function"
-			],
-			[
-				"func",
-				"functions"
-			],
-			[
-				"ran",
-				"randSparseMat"
-			],
-			[
-				"matri",
-				"matrix_list"
-			],
-			[
-				"grid",
-				"grid_size"
-			],
-			[
-				"matr",
-				"matrix_list"
-			],
-			[
-				"num_",
-				"num_succeeded"
-			],
-			[
-				"f",
-				"f_norm"
-			],
-			[
-				"f_",
-				"f_cheb_coeffs"
-			],
-			[
-				"de",
-				"degrees"
-			],
-			[
-				"proj_",
-				"proj_str"
-			],
-			[
-				"ini",
-				"initial_eta"
-			],
-			[
-				"label",
-				"labelMultiplier"
-			],
-			[
-				"else",
-				"elseif\telseif"
-			],
-			[
-				"str",
-				"strcat"
-			],
-			[
-				"strc",
-				"strcmp"
-			],
-			[
-				"et",
-				"eta_str"
-			],
-			[
-				"ma",
-				"max_eta_decays"
-			],
-			[
-				"eta",
-				"eta_decay_str"
-			],
-			[
-				"max",
-				"max_restarts"
-			],
-			[
-				"rest",
-				"restart_str"
-			],
-			[
-				"max_",
-				"max_restarts"
-			],
-			[
-				"proj",
-				"proj_str"
-			],
-			[
-				"e",
-				"elseif\telseif"
-			],
-			[
-				"orgi",
-				"original_max_it"
-			],
-			[
-				"ori",
-				"original_max_restarts"
-			],
-			[
-				"obe",
-				"objective_values"
-			],
-			[
-				"obj",
-				"objective_values"
-			],
-			[
-				"del",
-				"delta_F"
-			],
-			[
-				"F1-",
-				"F1-F1P"
-			],
-			[
-				"gen_",
-				"gen_eta_plots"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "/home/brian/Documents/Dropbox (uwamath)/BallDrop/Code/Python/utils.py",
+			"file": "example/sindy.py",
 			"settings":
 			{
-				"buffer_size": 45074,
+				"buffer_size": 1307,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "sindy/preprocessing/symfeat.py",
+			"settings":
+			{
+				"buffer_size": 5161,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "sindy/sindy.py",
+			"settings":
+			{
+				"buffer_size": 2410,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "setup.py",
+			"file": "sindy/differentiation/differentiation_methods.py",
 			"settings":
 			{
-				"buffer_size": 1261,
+				"buffer_size": 3914,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/my_sindy.py",
+			"file": "example/my_sindy.py",
 			"settings":
 			{
-				"buffer_size": 1613,
+				"buffer_size": 2052,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
+			"file": "sindy/model/sindy_old.py",
 			"settings":
 			{
-				"buffer_size": 58135,
+				"buffer_size": 3274,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "sindy/feature_library/polynomial_library.py",
+			"settings":
+			{
+				"buffer_size": 254,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/references.bib",
+			"contents": "\"\"\"\nBase class for feature library classes.\n\"\"\"\nimport abc\n\nclass BaseFeatureLibrary():\n    \"\"\"\n    Functions that should eventually be implemented:\n        -print/get names of features\n        -evaluate all features (and store in member variable)\n        -addition (concatenate lists of features)\n    -TODO: clean up by adding decorators property, abc.abstractmethod, ...\n    \"\"\"\n    def __init__(self, features={}):\n        self.features = features\n        \n    def size(self):\n        return len(self.features)\n\n    # Some kind of function that applies the library\n    @abc.abstractmethod\n    def fit_transform(self, x):\n        pass\n\n    # TODO\n    def __add__(self, other):\n        pass\n\n\n\n    \n\n",
+			"file": "sindy/feature_library/feature_library.py",
+			"file_size": 515,
+			"file_write_time": 132158129127340432,
 			"settings":
 			{
-				"buffer_size": 61771,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "/home/brian/Documents/Dropbox (uwamath)/Brian/Research/FlightTest/Writing/decision_tree_presentation.tex",
-			"settings":
-			{
-				"buffer_size": 6830,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/files_to_check.txt",
-			"settings":
-			{
-				"buffer_size": 1278,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "sindy/model/base.py",
-			"settings":
-			{
-				"buffer_size": 9314,
+				"buffer_size": 701,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -707,16 +708,28 @@
 		"selected_items":
 		[
 			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
 				"ssn py",
 				"Set Syntax: Python"
 			],
 			[
-				"ssn text",
-				"Set Syntax: Plain Text"
+				"ssn late",
+				"Set Syntax: LaTeX"
 			],
 			[
 				"ssn lat",
 				"Set Syntax: LaTeX"
+			],
+			[
+				"ssn mark",
+				"Set Syntax: Markdown"
+			],
+			[
+				"ssn text",
+				"Set Syntax: Plain Text"
 			],
 			[
 				"ssn pyh",
@@ -839,10 +852,6 @@
 				"Snippet: struct"
 			],
 			[
-				"ssn late",
-				"Set Syntax: LaTeX"
-			],
-			[
 				"ssn r",
 				"Set Syntax: R"
 			],
@@ -946,10 +955,118 @@
 	},
 	"expanded_folders":
 	[
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy"
 	],
 	"file_history":
 	[
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/SINDy.sublime-project",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/setup.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/setup.cfg",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/sindy.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/_version.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/feature_library/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Reviewer_materials/Code/helpers/differentiation.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/differentiation/finite_difference.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/differentiation/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/preprocessing/__init__.py",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/Least squares/utils.py",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/Least squares/optimizers.py",
+		"/home/brian/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/gamelib/__init__.py",
+		"/home/brian/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/algo_strategy.py",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Reviewer_materials/Code/helpers/SINDyBall.py",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Code/Python/utils.py",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Reviewer_materials/Code/helpers/utils.py",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Reviewer_materials/Code/helpers/tests.py",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Reviewer_materials/Code/helpers/library.py",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Reviewer_materials/Code/helpers/plots.py",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Reviewer_materials/Code/utils.py",
+		"/home/brian/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/gamelib/util.py",
+		"/home/brian/Documents/MATLAB/startup.m",
+		"/home/brian/Documents/MATLAB/linspecer.m",
+		"/home/brian/Documents/MATLAB/vec.m",
+		"/home/brian/Documents/MATLAB/factory_setting.txt",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiers_submission/body.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiers_submission/discovery_of_physics_from_data.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/discovery_of_physics_from_data.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiers_submission/body.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Ball_drop_data/balls.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/old-balls.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/balls.txt",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/test.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/bibliography.bib",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/discovery_of_physics_from_data.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiers_submission/bibliography.bib",
+		"/media/brian/TBdrive/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/gamelib/build.py",
+		"/media/brian/TBdrive/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/old_build.txt",
+		"/media/brian/TBdrive/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/gamelib/game_state.py",
+		"/home/brian/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/gamelib/attack.py",
+		"/media/brian/TBdrive/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/algo_strategy.py",
+		"/home/brian/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/gamelib/game_map.py",
+		"/home/brian/Downloads/C1GamesStarterKit-master/python-algo/gamelib/__init__.py",
+		"/home/brian/Documents/Extracurriculars/terminal/C1GamesStarterKit-master/python-algo/run.sh",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/gamelib/unit.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/gamelib/game_state.py",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/Frontiers_LaTex_Templates/frontiers.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/build_1.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/gamelib/build.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/gamelib/game_map.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/algo_strategy.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/gamelib/attack.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/run.ps1",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/run.sh",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/gamelib/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/gamelib/navigation.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Terminal/C1GamesStarterKit-master/python-algo/gamelib/util.py",
+		"/home/brian/Documents/CV/ML/BrianDesilvaCV.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/template/example.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/brian_todos.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/arxiv/discovery_of_physics_from_data.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/arxiv/bibliography.bib",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/Frontiers_LaTex_Templates/stfloats.sty",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/Frontiers_LaTex_Templates/test.bib",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/references.bib",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiersSCNS.cls",
+		"/home/brian/Documents/Dropbox (uwamath)/template/siamltexmm.cls",
+		"/home/brian/Documents/Dropbox (uwamath)/template/siam.bst",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/arxiv/discovery_of_physics_from_data.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/arxiv/siamltexmm.cls",
+		"/home/brian/Documents/Dropbox (uwamath)/template/z_packagedef.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiersFPHY.cls",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/paper.tex",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiersSCNS.cls",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/paper.tex",
+		"/home/brian/Documents/Research/Nathan/Writing/SNN/SR3_SNN_notes.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/figures/drag_coefficient_on_sphere.pdf",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/sindy.py",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/files_to_check.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/look.r",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/Mail Attachment.eml",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/NTS2014/clean.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/Frontiers_LaTex_Templates/frontiersinSCNS_ENG_HUMS.bst",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/paper.bbl",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/test.bib",
+		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiers.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/references.bib",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/FlightTest/Writing/decision_tree_presentation.tex",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/efs.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/ffx.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/ffx2.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/group_lasso.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/jmap.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/my_sindy.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/net.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/stridge.py",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/my_sindy.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/group_lasso.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/ffx.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/efs.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/bayes.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/base.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/preprocessing/symfeat.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/util/pipeline.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/util/net.py",
 		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sparsereg/model/base.py",
 		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sparsereg/model/sindy.py",
 		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/.gitignore",
@@ -964,120 +1081,11 @@
 		"/Users/saravkin11/Dropbox (uwamath)/1Students/Brian/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
 		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/ar-1col.cls",
 		"/Users/jcallaham/Dropbox/shared/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
 		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Template/main.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Code/Python/utils.py",
 		"/home/brian/Downloads/cone-chuck/cone_models.py",
 		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/flight_test_code/flight_test_code/DMDc/cone_dmd.py",
 		"/home/brian/Documents/Research/Nathan/Writing/Optimization/method_cheatsheet.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/flight_test_code/flight_test_code/DMDc/cone_utils.py",
-		"/media/brian/TBdrive/Documents/Research/Nathan/Code/ROM/Nathan_initial_ROM_code/cqgle_ROM.m",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Writing/SR3_SNN_notes.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/Least squares/optimizers.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/MNIST/utils.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/Least squares/utils.py",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/early_results.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/descriptions.txt",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/flight_test_code/flight_test_code/DMDc/param_sweep.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Code/DMDc/cone_dmd.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Code/DMDc/cone_utils.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Data/descriptions.txt",
-		"/home/brian/Downloads/teatime.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/FlightTest/Writing/decision_tree_presentation.tex",
-		"/home/brian/Documents/Research/General_exam/presentation/general_exam_presentation.tex",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/FlightTest/Writing/decision_tree_presentation.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Data/labels.txt",
-		"/home/brian/Documents/Research/Nathan/Writing/Annual_reports/annual_report19.tex",
-		"/home/brian/Documents/CV/bdesilvacv.tex",
-		"/home/brian/Documents/Research/Ulrich/Weekly_reports/Annual_reports/annual_report18.tex",
-		"/home/brian/Documents/CV/ML/BrianDesilvaCV.tex",
-		"/home/brian/Documents/Website/academic_site/config.toml",
-		"/media/brian/TBdrive/Documents/Website/academic_site/deploy.sh",
-		"/home/brian/Documents/Website/academic_site/content/post/managing-content.md",
-		"/home/brian/Documents/Website/academic_site/content/home/contact.md",
-		"/home/brian/Documents/Website/academic_site/content/home/about.md",
-		"/home/brian/Documents/Website/academic_site/content/home/teaching.md",
-		"/home/brian/Documents/Website/academic_site/content/home/projects.md",
-		"/home/brian/Documents/Website/academic_site/public/README.md",
-		"/home/brian/Documents/Website/academic_site/content/project/deep-learning.md",
-		"/home/brian/Documents/Website/academic_site/content/home/coursework.md",
-		"/home/brian/Downloads/cone-chuck/cone_tools.py",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Boeing_flight_test/Data/test.txt",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/README.txt",
-		"/home/brian/Documents/Teaching/Amath352/Summer2016/Scores/convert_scorelator.py",
-		"/home/brian/Documents/Teaching/Amath352/Winter2017/Scores/convert_scorelator.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/MNIST/MNIST.ipynb",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/MNIST/train_logs/2019-04-09 16:59:01/params_settings",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/FlightTest/decision_tree.txt",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/snn.sublime-project",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/utils.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/optimizers.py",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/balls.txt",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/NTS2014/clean.txt",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/Mail Attachment.eml",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/FlightTest/plot_FTdataset-TrailingCone.py",
-		"/media/brian/TBdrive/Documents/Extracurriculars/NARC/Software/narcpack/narcpack/diff/smoothed_fd_diff.py",
-		"/media/brian/TBdrive/Documents/Extracurriculars/NARC/Software/narcpack/narcpack/diff/finite_difference.py",
-		"/media/brian/TBdrive/Documents/Extracurriculars/NARC/Software/narcpack/narcpack/interp/Rbf.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/CG.m",
-		"/home/brian/Documents/Research/Nathan/Writing/SNN/SR3_SNN_notes.tex",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Code/Python/utils.py",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw8_1.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/CG.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/pois2Dper.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw7_3.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw7_2.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw6_2.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw7_1_test.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw7_1.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/FS_1DBVP.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/pois_FD_FFT_2D.m",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw7_1_test.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw5_1.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw5_2.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/cholesky_pois2d.m",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw6_2.m",
-		"/media/brian/TBdrive/Documents/Extracurriculars/NARC/Software/narcpack/narcpack/interp/Rational.py",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw6_1.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/cheb.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/p13.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/p33.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/p11.m",
-		"/media/brian/TBdrive/Documents/Extracurriculars/NARC/Software/narcpack/narcpack/interp/Template.py",
-		"/home/brian/Documents/Extracurriculars/NARC/Software/narcpack/narcpack/approx/Cheb.py",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/pendulum_shoot.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/pendulum_shoot2.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/pendulum_shooterr.m",
-		"/home/brian/Documents/Dropbox (uwamath)/fftOpt/code/matlab/plot_matrix_list.m",
-		"/home/brian/Documents/Dropbox (uwamath)/fftOpt/code/matlab/find_good_init.m",
-		"/home/brian/Documents/Dropbox (uwamath)/fftOpt/code/matlab/randSparseMat.m",
-		"/home/brian/Documents/Dropbox (uwamath)/fftOpt/code/matlab/get_init_FFT_factors.m",
-		"/home/brian/Documents/Dropbox (uwamath)/fftOpt/code/matlab/factorDiagnostics.m",
-		"/home/brian/.cache/.fr-PF481a/sparsedynamics/utils/poolData.m",
-		"/home/brian/Documents/Research/Nathan/Code/ROM/Nathan_initial_ROM_code/cqgle_ROM.m",
-		"/media/brian/TBdrive/Documents/Extracurriculars/NARC/Software/narcpack/narcpack/approx/Rational.py",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw5.1.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/burger_dydt.m",
-		"/home/brian/Documents/Dropbox (uwamath)/amath585_silva/amath585_lectures_matlab/pendulum_dydt.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/hw5.m",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Tutoring/Amath585/Homeworks/burger_dydy.m",
-		"/home/brian/.bashrc",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/fftOpt/code/matlab/palmFFTRelaxedVariables.m",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/bibliography.bib",
-		"/media/brian/TBdrive/Documents/Extracurriculars/NARC/Software/pade/pade.py",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SNN/Writing/SR3_SNN_notes.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SNN/Writing/SR3_SNN_notes.log",
-		"/media/brian/TBdrive/Documents/Extracurriculars/NARC/Software/narcpack/narcpack/approx/Poly.py",
-		"/media/brian/TBdrive/Documents/Research/Nathan/Writing/SNN/SR3_SNN_notes.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/look.r",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/old-balls.txt",
-		"/home/brian/Documents/Dropbox (uwamath)/fftOpt/code/matlab/save_fft_test_summary_plot.m",
-		"/home/brian/Documents/Dropbox (uwamath)/fftOpt/tex/sparse_decomposition_notes.tex",
-		"/home/brian/.cache/.fr-mnlllS/OEBPS/xhtml/11_Preface_A_Few_Words_A.xhtml",
-		"/home/brian/Documents/MATLAB/startup.m",
-		"/home/brian/Documents/Ma",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/fftOpt/code/matlab/doubleProjFFT.m",
-		"/home/brian/Documents/Dropbox (uwamath)/fftOpt/code/matlab/runner.m"
+		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/flight_test_code/flight_test_code/DMDc/cone_utils.py"
 	],
 	"find":
 	{
@@ -1097,133 +1105,133 @@
 		"find_history":
 		[
 			"sparsereg",
-			"STRidge",
-			" ",
-			"\"",
-			"as follows.",
-			"as follows",
-			"sec:combin",
-			"Extensions",
-			"fig:dt_features_timeseries",
-			"ZA",
-			"np.",
-			"given extra w",
-			"labels",
-			"logsp",
-			"10 per",
-			"2019",
-			"Q1",
-			"\t\t    .",
-			"\t",
-			"linewidth",
-			"10306",
-			"7414539",
-			"filename",
-			"The features we",
-			"\t",
-			". ",
-			".",
-			"\t",
-			".\t ",
-			"\t",
-			"DECISI",
-			", ",
-			"^T",
-			"../Figures",
-			"\\R",
-			"tikz",
-			"library_type",
-			"group_sparse_penalty",
-			"'l1",
-			"group_sparse_penalty",
-			"other_",
-			"other",
-			"10",
-			"iterations",
-			"Xi",
-			"sparse_pena",
-			"sparse_penl",
-			"cum",
 			"=",
-			"figure(",
-			"x1",
-			"mag_form",
-			"x(2)",
-			"x(4)",
-			"x(3)",
-			"x(2)",
-			";",
-			"x",
-			"quad_form",
+			"feature_names",
+			"OrderedDict",
+			"arg",
+			"library",
+			"operators",
+			"X",
+			"pd.",
+			"np.",
+			"multiple_runs",
+			"differentiate",
+			"smooth_data",
+			"plt",
+			"'''",
+			"def",
+			", ",
 			",",
-			" ",
-			"abs(x1)",
-			"1",
-			"2.*x1",
-			" abs'",
-			" ",
-			"abs",
-			" ",
-			"abs",
-			"x",
-			" ",
-			"x1",
-			":",
-			"try",
-			"path",
-			"TestFlight",
-			"\t",
-			"Data",
-			"section",
-			"random_uniform",
-			"random_uniform([n, 1], -1.0, 1.0)",
-			"\\\\",
-			"s:",
-			"1.1\\linewidth",
-			"ZA001",
-			"TODO",
-			"textit",
-			"blue",
-			"8",
-			"4",
-			"8",
-			"test_",
-			"vspace",
-			"\\bf",
-			"image",
-			"cropp",
-			"Summer 2012",
-			"Algorithms",
-			"ZA001",
-			"-",
-			"ZA001",
-			".csv",
-			".csv\n",
-			"  ",
-			":.",
-			"2d",
-			"get_coefficients",
-			"get_labels",
-			"t,",
-			"h",
-			"group_list",
-			"ball",
-			"axs",
-			"self.v0",
-			"v0",
-			"self.h",
-			"predict",
-			"concat",
-			"concatentate",
-			"h = np.concatentate((h1,h2))\n",
-			"ax",
-			"h",
-			"ball1",
-			"need_to",
-			" ",
-			"reset",
-			"keep_pr",
-			" rate=dropout_rate"
+			"library_fcn",
+			"library_fcn_3d",
+			"library_fcn_2d",
+			"print_equation",
+			"print_coefficients",
+			"plot_prediction",
+			"plot_feature_comparison",
+			"subtract_known_model",
+			"predict_with_model",
+			"times_are_increasing",
+			"plot_prediction",
+			"            ",
+			"plot_prediction",
+			"test_all_balls",
+			"plot_prediction",
+			",",
+			"_1",
+			"_2",
+			"v3",
+			"v2",
+			"t2",
+			"drop-1",
+			"h2",
+			"= ball_df['Height (m)'].values",
+			"err_dict2",
+			"err_dict1",
+			"gs_error11",
+			"gs_error12",
+			"err_df3",
+			"err_df2",
+			"error3",
+			"error2",
+			"sb3",
+			"sb2",
+			"h3_pred",
+			"h2_pred",
+			"err_dict3",
+			"err_dict2",
+			"gs_error23",
+			"t2",
+			"h2",
+			"err_dict3",
+			"err_dict2",
+			"gs_error32",
+			"gs_error23",
+			"gs_df3",
+			"gs_df2",
+			"2",
+			"all_coefficient_dict3",
+			"all_coefficient_dict2",
+			"h_off3",
+			"h_off2",
+			"v_off3",
+			"h_off3",
+			"h_off2",
+			"v_off2",
+			"h3",
+			"v3",
+			"h2",
+			"v2",
+			"scale3h",
+			"scale2h",
+			"scale3v",
+			"scale2v",
+			"df3",
+			"df2",
+			"df3",
+			"df2",
+			"need_to_c",
+			"\n\n\n\n\n",
+			"\\color{red",
+			"without overfitting",
+			"Mang",
+			"man",
+			"attempt_remove",
+			"attempt_spawn",
+			"unit_type",
+			"gamelib.BITS",
+			"gamelib",
+			"153",
+			"BITS",
+			"defend_ping_rush",
+			"detect_ping_cannon",
+			"bit_thresh",
+			"turn",
+			"opponent_ping_cannon",
+			"defend_ping_rush",
+			"cores_to",
+			"cores",
+			"core_reserve",
+			"SCRAMBLER",
+			"FILTER",
+			"DESTRUCTOR",
+			"upgrade_destructors",
+			"build_defences",
+			"defense",
+			"attack",
+			"opponent_ping_cannon",
+			"self.",
+			"build",
+			"detect_ping_cannon",
+			"opponent_ping_cannon",
+			"defend_ping_cannon",
+			"BITS",
+			"bits",
+			"left",
+			"on_action_frame",
+			"scored_on_locations",
+			"on_action_frame",
+			"scored_on_locations"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -1231,6 +1239,14 @@
 		"regex": false,
 		"replace_history":
 		[
+			".tiff",
+			"\\cite",
+			"e.g.",
+			"i.e.",
+			"g(x",
+			"\\dot x",
+			"\\mathbf{x}",
+			"x(t)",
 			"'",
 			"thresh",
 			"    ",
@@ -1254,284 +1270,24 @@
 	"groups":
 	[
 		{
-			"selected": 2,
+			"selected": 0,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "/home/brian/Documents/Dropbox (uwamath)/BallDrop/Code/Python/utils.py",
+					"file": "example/sindy.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 45074,
+						"buffer_size": 1307,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								5964,
-								5964
-							]
-						],
-						"settings":
-						{
-							"SL.13.region_keys":
-							[
-							],
-							"SL.14.region_keys":
-							[
-							],
-							"SL.26.region_keys":
-							[
-							],
-							"SL.27.region_keys":
-							[
-							],
-							"SL.28.region_keys":
-							[
-							],
-							"SL.30.region_keys":
-							[
-							],
-							"SL.35.region_keys":
-							[
-							],
-							"git_gutter_is_enabled": false,
-							"history_list_is_closing": true,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true,
-							"word_wrap": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 3470.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 4,
-					"type": "text"
-				},
-				{
-					"buffer": 1,
-					"file": "setup.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1261,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								357,
-								357
-							]
-						],
-						"settings":
-						{
-							"git_gutter_is_enabled": true,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 3,
-					"type": "text"
-				},
-				{
-					"buffer": 2,
-					"file": "/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/my_sindy.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1613,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								131,
-								131
-							]
-						],
-						"settings":
-						{
-							"git_gutter_is_enabled": true,
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 2,
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 58135,
-						"regions":
-						{
-							"mark":
-							{
-								"flags": 144,
-								"icon": "Packages/Theme - Default/common/dot.png",
-								"regions":
-								[
-									[
-										28310,
-										28310
-									]
-								],
-								"scope": "mark"
-							}
-						},
-						"selection":
-						[
-							[
-								57046,
-								57046
-							]
-						],
-						"settings":
-						{
-							"SL.14.region_keys":
-							[
-							],
-							"SL.19.region_keys":
-							[
-							],
-							"git_gutter_is_enabled": false,
-							"syntax": "Packages/LaTeX/LaTeX.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 14975.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 5,
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/references.bib",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 61771,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								61771,
-								61771
-							]
-						],
-						"settings":
-						{
-							"git_gutter_is_enabled": false,
-							"syntax": "Packages/LaTeXTools/BibLaTeX.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 30795.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 7,
-					"type": "text"
-				},
-				{
-					"buffer": 5,
-					"file": "/home/brian/Documents/Dropbox (uwamath)/Brian/Research/FlightTest/Writing/decision_tree_presentation.tex",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 6830,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								4626,
-								4626
-							]
-						],
-						"settings":
-						{
-							"git_gutter_is_enabled": false,
-							"syntax": "Packages/LaTeX/LaTeX.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 2876.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 6,
-					"type": "text"
-				}
-			]
-		},
-		{
-			"selected": 1,
-			"sheets":
-			[
-				{
-					"buffer": 6,
-					"file": "/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/files_to_check.txt",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1278,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								183,
-								183
-							]
-						],
-						"settings":
-						{
-							"git_gutter_is_enabled": true,
-							"syntax": "Packages/Text/Plain text.tmLanguage",
-							"tab_size": 2,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 1,
-					"type": "text"
-				},
-				{
-					"buffer": 7,
-					"file": "sindy/model/base.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 9314,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								802,
-								802
+								312,
+								312
 							]
 						],
 						"settings":
@@ -1547,17 +1303,239 @@
 					},
 					"stack_index": 0,
 					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "sindy/preprocessing/symfeat.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 5161,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								953,
+								953
+							]
+						],
+						"settings":
+						{
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 228.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "sindy/sindy.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2410,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								999,
+								999
+							]
+						],
+						"settings":
+						{
+							"SL.94.region_keys":
+							[
+							],
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 228.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "sindy/differentiation/differentiation_methods.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3914,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								171,
+								171
+							]
+						],
+						"settings":
+						{
+							"SL.101.region_keys":
+							[
+							],
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 513.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 4,
+					"file": "example/my_sindy.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2052,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								242,
+								242
+							]
+						],
+						"settings":
+						{
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "sindy/model/sindy_old.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3274,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "sindy/feature_library/polynomial_library.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 254,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								76,
+								76
+							]
+						],
+						"settings":
+						{
+							"auto_name": "",
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "sindy/feature_library/feature_library.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 701,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								636,
+								636
+							]
+						],
+						"settings":
+						{
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
 				}
 			]
 		}
 	],
 	"incremental_find":
 	{
-		"height": 40.0
+		"height": 28.0
 	},
 	"input":
 	{
-		"height": 0.0
+		"height": 40.0
 	},
 	"layout":
 	{
@@ -1579,7 +1557,7 @@
 		"cols":
 		[
 			0.0,
-			0.488173327999,
+			0.591803718834,
 			1.0
 		],
 		"rows":
@@ -1592,6 +1570,10 @@
 	"output.SublimeLinter":
 	{
 		"height": 0.0
+	},
+	"output.exec":
+	{
+		"height": 132.0
 	},
 	"output.find_results":
 	{
@@ -1610,7 +1592,7 @@
 		"height": 0.0
 	},
 	"pinned_build_system": "",
-	"project": "SINDy.sublime-project",
+	"project": "sindy.sublime-project",
 	"replace":
 	{
 		"height": 72.0
@@ -1622,6 +1604,30 @@
 		"last_filter": "",
 		"selected_items":
 		[
+			[
+				"sindy_o",
+				"model/sindy_old.py"
+			],
+			[
+				"sym",
+				"preprocessing/symfeat.py"
+			],
+			[
+				"my_",
+				"example/my_sindy.py"
+			],
+			[
+				"sind",
+				"model/sindy.py"
+			],
+			[
+				"sindy",
+				"example/sindy.py"
+			],
+			[
+				"bib",
+				"~/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/bibliography.bib"
+			],
 			[
 				"base",
 				"SINDy/sindy/model/base.py"
@@ -2109,30 +2115,6 @@
 			[
 				"generate",
 				"generate_logpts.py"
-			],
-			[
-				"sqgetbou",
-				"sq_get_boundary_contribution.cpp"
-			],
-			[
-				"od",
-				"POD.m"
-			],
-			[
-				"precompo",
-				"precompute_b_ROM_matrices.m"
-			],
-			[
-				"sq_get_bounda",
-				"sq_get_boundary_contribution.cpp"
-			],
-			[
-				"pod.",
-				"POD.m"
-			],
-			[
-				"b_hat",
-				"b_hat_POD.m"
 			]
 		],
 		"width": 0.0
@@ -2145,7 +2127,7 @@
 		[
 			[
 				"",
-				"~/Documents/Dropbox (uwamath)/Brian/Research/SNN/Nonsmooth_regularization/snn.sublime-project"
+				"~/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/SINDy.sublime-project"
 			],
 			[
 				"gen",

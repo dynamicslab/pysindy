@@ -8,8 +8,6 @@ from sklearn.preprocessing import PolynomialFeatures
 from sindy.differentiation import differentiation_methods
 from sindy.feature_library import PolynomialLibrary
 from sindy.model.base import STRidge
-from sindy.model.base import equation
-
 
 class SINDy(BaseEstimator):
     def __init__(

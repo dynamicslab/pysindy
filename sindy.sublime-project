@@ -21,6 +21,9 @@
 		},
 		{
 			"path": "sindy/model"
+		},
+		{
+			"path": "sindy/preprocessing"
 		}
 	]
 }

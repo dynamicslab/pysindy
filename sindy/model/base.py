@@ -12,6 +12,7 @@ from sklearn.linear_model.base import LinearModel
 from sklearn.utils.validation import check_array
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
+from pdb import set_trace
 
 
 def print_model(coef, input_features, errors=None, intercept=None, error_intercept=None, precision=3, pm="±"):
@@ -22,7 +23,7 @@ def print_model(coef, input_features, errors=None, intercept=None, error_interce
         input_features:
         errors:
         intercept:
-        sigma_intercept:
+        error_intercept:
         precision:
         pm:
 
@@ -41,7 +42,9 @@ def print_model(coef, input_features, errors=None, intercept=None, error_interce
         else:
             return f"({coef:.{precision}f} {pm} {sigma:.{precision}f}) {name}"
 
+    set_trace()
     errors = errors if errors is not None else repeat(None)
+    set_trace()
     components = map(term, coef, errors, input_features)
     eq = " + ".join(filter(bool, components))
 

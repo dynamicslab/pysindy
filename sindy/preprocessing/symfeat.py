@@ -18,6 +18,7 @@ class Base(BaseEstimator, TransformerMixin):
     def name(self):
         if self.name_cache is None:
             self.name_cache = str(simplify(self._name))
+            self.name_cache = str(self._name)
         return self.name_cache
 
 

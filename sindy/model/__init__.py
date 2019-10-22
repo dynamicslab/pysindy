@@ -1,6 +1,6 @@
-from sparsereg.model.base import BoATS
-from sparsereg.model.base import fit_with_noise
-from sparsereg.model.base import RationalFunctionMixin
-from sparsereg.model.base import STRidge
-from sparsereg.model.bayes import JMAP
-from sparsereg.model.sindy import SINDy
+# from sindy.model.base import BoATS
+# from sindy.model.base import fit_with_noise
+# from sindy.model.base import RationalFunctionMixin
+# from sindy.model.base import STRidge
+# from sindy.model.bayes import JMAP
+from sindy.model.sindy import SINDy

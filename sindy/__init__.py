@@ -1,6 +1,6 @@
-from sparsereg.model import *
-from sparsereg.preprocessing import *
-from sparsereg.util import *
+from sindy.model import *
+# from sindy.preprocessing import *
+# from sindy.util import *
 
 from ._version import get_versions
 

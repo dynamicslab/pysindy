@@ -7,8 +7,8 @@ import versioneer
 from setuptools import find_packages, setup
 
 NAME = 'sindy'
-DESCRIPTION = 'Modern sparse linear regression'
-URL = 'https://github.com/briandesilva/SINDy'
+DESCRIPTION = 'Sparse Identification of Nonlinear Dynamics'
+URL = 'https://github.com/briandesilva/sindy'
 EMAIL = 'bdesilva@uw.edu'
 AUTHOR = 'Brian de Silva'
 PYTHON = '>=3.6'

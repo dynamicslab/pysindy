@@ -51,8 +51,6 @@ class SINDy(BaseEstimator):
 
         return self
 
-    # TODO modify to include initial and end times?
-    # Should take initial conditions and predict into future, right?
     def predict(self, x):
         return self.model.predict(x)
 
@@ -73,3 +71,11 @@ class SINDy(BaseEstimator):
 
     def differentiate(self, x, t=1):
         return self.differentiation_method(x, t)
+
+    # TODO
+    def coefficients(self):
+        pass
+
+    # TODO
+    def get_feature_names(self):
+        pass

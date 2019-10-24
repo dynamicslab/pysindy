@@ -1,5 +1,3 @@
 scikit-learn[alldeps]>=0.19
 numpy
-joblib
-toolz
-sympy
+matplotlib

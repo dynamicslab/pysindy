@@ -6,8 +6,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
 from sindy.differentiation import differentiation_methods
-from sindy.model.optimizers import STLSQ
-from sindy.model.base import equation
+from sindy.optimizers import STLSQ
+from sindy.utils.base import equation
 
 
 class SINDy(BaseEstimator):

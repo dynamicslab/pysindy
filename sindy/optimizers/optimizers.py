@@ -12,7 +12,6 @@ from sklearn.linear_model.base import LinearModel
 from sklearn.utils.validation import check_array
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
-from pdb import set_trace
 
 
 class STLSQ(LinearModel, RegressorMixin):

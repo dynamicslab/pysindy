@@ -53,7 +53,7 @@ def forward_difference(x, t=1):
 # Second order centered difference
 # with third order forward/backward difference at endpoints.
 # Warning: Sometimes has trouble with nonuniform grid spacing near boundaries
-def centered_difference(x, t):
+def centered_difference(x, t=1):
     
     # Check whether data is 1D
     if np.ndim(x) == 1:

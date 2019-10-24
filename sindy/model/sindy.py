@@ -6,7 +6,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
 from sindy.differentiation import differentiation_methods
-from sindy.feature_library import PolynomialLibrary
 from sindy.model.base import STRidge
 from sindy.model.base import equation
 
@@ -34,8 +33,6 @@ class SINDy(BaseEstimator):
         if x_dot is None:
             x_dot = self.differentiation_method(x, t)
 
-        # TODO: check this line
-        # feature_transformer = PolynomialLibrary.get_transformer()
         feature_transformer = PolynomialFeatures()
 
         steps = [

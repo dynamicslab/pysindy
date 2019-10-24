@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from sparsereg.model.sindy import *
+from sindy.model.sindy import *
 
 
 @pytest.fixture

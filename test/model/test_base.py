@@ -1,6 +1,6 @@
 import pytest
 
-from sparsereg.model.base import print_model
+from sindy.model.base import print_model
 
 
 @pytest.mark.parametrize(

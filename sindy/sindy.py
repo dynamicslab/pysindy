@@ -47,8 +47,8 @@ class SINDy(BaseEstimator):
         return self.model.predict(x)
 
     def equations(self, precision=3):
-        names = self.model.estimators_[0].steps[0][1].get_feature_names(input_features=self.feature_names)
-        return [equation(est, names, precision=precision) for est in self.model.estimators_]
+        # names = self.model.estimators_[0].steps[0][1].get_feature_names(input_features=self.feature_names)
+        return [equation(est, None, precision=precision) for est in self.model.estimators_]
 
     def score(self, x, y=None, multioutput="uniform_average"):
         if y is not None:

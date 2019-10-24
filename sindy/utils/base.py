@@ -32,6 +32,8 @@ def print_model(coef, input_features, errors=None, intercept=None, error_interce
 
     def term(coef, sigma, name):
         rounded_coef = np.round(coef, precision)
+        if name == "1":
+            name = ""
         if rounded_coef == 0 and sigma is None:
             return ""
         elif sigma is None:

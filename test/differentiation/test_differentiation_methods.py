@@ -3,16 +3,19 @@ import os
 import pytest
 import numpy as np
 
-import context
+my_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, my_path + '/../../')
 from sindy.differentiation import differentiation_methods
-
 
 # Note: all tests should be encapsulated in functions whose
 # names start with "test_"
 
 # To run tests, navigate to this directory in the terminal
 # and run the command
-# $ pytest
+# python3 -m pytest
+
+# (normally you should just be able to run 'pytest' but
+# there's something fishy going on with the imports)
 
 # Simplest example: just use an assert statement
 # This example should be removed eventually so that
@@ -34,10 +37,11 @@ def data_1d_linear():
 def data_2d_linear():
     x = np.zeros((100, 2))
     x[:, 0] = 2 * np.linspace(1, 100, 100)
-    x[:, 1] = np.ones(100)
+    x[:, 1] = -10 * np.linspace(1, 100, 100)
 
-    x_dot = np.zeros((100, 2))
-    x_dot[:, 0] = 2 * np.ones(100)
+    x_dot = np.ones((100, 2))
+    x_dot[:, 0] *= 2
+    x_dot[:, 1] *= -10
     return x, x_dot
 
 
@@ -77,8 +81,8 @@ def test_centered_difference_2d(data_2d_linear):
 @pytest.mark.parametrize(
     'data',
     [
-        (data_1d_linear),
-        (data_2d_linear)
+        (data_1d_linear()),
+        (data_2d_linear())
     ]
 )
 def test_forward_difference(data):
@@ -91,8 +95,8 @@ def test_forward_difference(data):
 @pytest.mark.parametrize(
     'data',
     [
-        (data_1d_linear),
-        (data_2d_linear)
+        (data_1d_linear()),
+        (data_2d_linear())
     ]
 )
 def test_centered_difference(data):

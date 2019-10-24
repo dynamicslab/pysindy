@@ -1,4 +1,3 @@
-
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.multioutput import MultiOutputRegressor
@@ -13,13 +12,13 @@ from sindy.utils.base import equation
 class SINDy(BaseEstimator):
     def __init__(
             self,
-            threshold=0.1,
+            optimizer=STLSQ(),
             feature_library=PolynomialFeatures(),
             differentiation_method=differentiation_methods.centered_difference,
             feature_names=None,
             n_jobs=1
         ):
-        self.threshold              = threshold
+        self.optimizer              = optimizer
         self.feature_library        = feature_library
         self.differentiation_method = differentiation_method
         self.feature_names          = feature_names
@@ -31,11 +30,9 @@ class SINDy(BaseEstimator):
         if x_dot is None:
             x_dot = self.differentiation_method(x, t)
 
-        feature_transformer = PolynomialFeatures()
-
         steps = [
-            ("features", feature_transformer),
-            ("model", STLSQ(threshold=self.threshold)),
+            ("features", self.feature_library),
+            ("model", self.optimizer),
         ]
         self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
 

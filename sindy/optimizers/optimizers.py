@@ -20,8 +20,8 @@ class STLSQ(LinearModel, RegressorMixin):
         threshold=0.1,
         max_iter=100,
         normalize=False,
-        fit_intercept=True,
-        threshold_intercept=True,
+        fit_intercept=False,
+        threshold_intercept=False,
         copy_X=True
     ):
         self.threshold = threshold
@@ -126,8 +126,8 @@ class SR3(LinearModel, RegressorMixin):
         nu=1.0,
         max_iter=100,
         normalize=False,
-        fit_intercept=True,
-        threshold_intercept=True,
+        fit_intercept=False,
+        threshold_intercept=False,
         copy_X=True
     ):
         self.threshold = threshold
@@ -223,7 +223,7 @@ class STRidge(LinearModel, RegressorMixin):
         alpha=0.1,
         max_iter=100,
         normalize=True,
-        fit_intercept=True,
+        fit_intercept=False,
         threshold_intercept=False,
         copy_X=True,
         unbias=True,
@@ -334,40 +334,6 @@ class STRidge(LinearModel, RegressorMixin):
     @property
     def complexity(self):
         return np.count_nonzero(self.coef_) + np.count_nonzero([abs(self.intercept_) >= self.threshold])
-
-
-class BoATS(LinearModel, RegressorMixin):
-    def __init__(self, alpha=0.01, sigma=0.01, n=10, copy_X=True, fit_intercept=True, normalize=True):
-        self.alpha = alpha
-        self.sigma = sigma
-        self.n = n
-        self.copy_X = copy_X
-        self.fit_intercept = fit_intercept
-        self.normalize = normalize
-
-    def fit(self, x_, y, sample_weight=None):
-        n_samples, n_features = x_.shape
-
-        X, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
-
-        x, y, X_offset, y_offset, X_scale = self._preprocess_data(
-            x_,
-            y,
-            fit_intercept=self.fit_intercept,
-            normalize=self.normalize,
-            copy=self.copy_X,
-            sample_weight=None,
-        )
-
-        if sample_weight is not None:
-            # Sample weight can be implemented via a simple rescaling.
-            x, y = _rescale_data(x, y, sample_weight)
-
-        coefs, intercept = fit_with_noise(x, y, self.sigma, self.alpha, self.n)
-        self.intercept_ = intercept
-        self.coef_ = coefs
-        self._set_intercept(X_offset, y_offset, X_scale)
-        return self
 
 
 def fit_with_noise(x, y, sigma, alpha, n, lmc=LinearRegression):

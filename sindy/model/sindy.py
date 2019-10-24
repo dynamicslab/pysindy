@@ -6,7 +6,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
 from sindy.differentiation import differentiation_methods
-from sindy.model.base import STRidge
+from sindy.model.optimizers import STLSQ
 from sindy.model.base import equation
 
 
@@ -17,15 +17,13 @@ class SINDy(BaseEstimator):
             feature_library=PolynomialFeatures(),
             differentiation_method=differentiation_methods.centered_difference,
             feature_names=None,
-            n_jobs=1,
-            kw={}
+            n_jobs=1
         ):
         self.threshold              = threshold
         self.feature_library        = feature_library
         self.differentiation_method = differentiation_method
         self.feature_names          = feature_names
         self.n_jobs                 = n_jobs
-        self.kw                     = kw
 
     # For now just write this how we want it to look and then write simplest
     # version of the supporting code possible
@@ -37,7 +35,7 @@ class SINDy(BaseEstimator):
 
         steps = [
             ("features", feature_transformer),
-            ("model", STRidge(threshold=self.threshold, **self.kw)),
+            ("model", STLSQ(threshold=self.threshold)),
         ]
         self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
 

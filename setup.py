@@ -3,7 +3,6 @@ import sys
 assert sys.version_info >= (3, 6, 0), 'sindy requires Python 3.6+'
 import pathlib
 
-import versioneer
 from setuptools import find_packages, setup
 
 NAME = 'sindy'
@@ -33,7 +32,7 @@ with open(here / 'README.rst', 'r') as f:
 
 setup(
     name=NAME,
-    version=versioneer.get_version(),
+    version=0.0.1,
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     author=AUTHOR,
@@ -44,5 +43,4 @@ setup(
     python_requires=PYTHON,
     license=LICENSE,
     classifiers=CLASSIFIERS,
-    cmdclass=versioneer.get_cmdclass(),
 )

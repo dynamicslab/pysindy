@@ -120,6 +120,103 @@ class STLSQ(LinearModel, RegressorMixin):
         return np.count_nonzero(self.coef_) + np.count_nonzero([abs(self.intercept_) >= self.threshold])
 
 
+class SR3(LinearModel, RegressorMixin):
+    def __init__(
+        self,
+        threshold=0.1,
+        nu=1.0,
+        max_iter=100,
+        normalize=False,
+        fit_intercept=True,
+        threshold_intercept=True,
+        copy_X=True
+    ):
+        self.threshold = threshold
+        self.nu = nu
+        self.max_iter = max_iter
+        self.fit_intercept = fit_intercept
+        self.threshold_intercept = threshold_intercept
+        self.normalize = normalize
+        self.copy_X = copy_X
+
+        self.history_ = []
+
+    def _update_unrelaxed_coef(self, x, y, coef_relaxed, nu):
+        A = np.dot(x.T, x) + np.eye(x.shape[1])/nu
+        b = np.dot(x.T, y) + coef_relaxed/nu
+        coef_unrelaxed = np.linalg.solve(A, b)
+        self.iters += 1
+        return coef_unrelaxed
+
+    def _update_relaxed_coef(self, coef_unrelaxed, threshold):
+        coef_relaxed = coef_unrelaxed*(np.abs(coef_unrelaxed) > threshold)
+        self.history_.append(coef_relaxed)
+        return coef_relaxed
+
+    def _convergence_criterion(self):
+        this_coef = self.history_[-1]
+        if len(self.history_) > 1:
+            last_coef = self.history_[-2]
+        else:
+            last_coef = np.zeros_like(this_coef)
+        return np.sum((this_coef - last_coef)**2)
+
+    def _reduce(self, x, y, tol):
+        """Iterates the thresholding. Assumes an initial guess is saved in self.coef_ and self.ind_"""
+        coef_relaxed = self.coef_
+        n_samples, n_features = x.shape
+
+        for _ in range(self.iters, self.max_iter):
+            coef_unrelaxed = self._update_unrelaxed_coef(x, y, coef_relaxed, self.nu)
+            coef_relaxed = self._update_relaxed_coef(coef_unrelaxed, self.threshold)
+
+            if self._convergence_criterion() < tol:
+                # could not (further) select important features
+                break
+        else:
+            warnings.warn(
+                "SR3._reduce did not converge after {} iterations.".format(self.max_iter),
+                ConvergenceWarning,
+            )
+            try:
+                coef
+            except NameError:
+                coef = self.coef_
+                warnings.warn("SR3._reduce has no iterations left to determine coef", ConvergenceWarning)
+        self.coef_ = coef_relaxed
+        self.coef_unrelaxed_ = coef_unrelaxed
+
+    def fit(self, x_, y, sample_weight=None, convergence_tolerance=1e-5):
+        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
+
+        x, y, X_offset, y_offset, X_scale = self._preprocess_data(
+            x_,
+            y,
+            fit_intercept=self.fit_intercept,
+            normalize=self.normalize,
+            copy=self.copy_X,
+            sample_weight=sample_weight,
+        )
+
+        if sample_weight is not None:
+            x, y = _rescale_data(x, y, sample_weight)
+
+        self.iters = 0
+        self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0]  # initial guess
+        self.history_.append(self.coef_)
+        self._reduce(x, y, tol=convergence_tolerance)
+
+        self._set_intercept(X_offset, y_offset, X_scale)
+        if self.threshold_intercept and abs(self.intercept_) < self.threshold:
+            self.intercept_ = 0
+        return self
+
+    @property
+    def complexity(self):
+        return np.count_nonzero(self.coef_) + np.count_nonzero([abs(self.intercept_) >= self.threshold])
+
+
+
 class STRidge(LinearModel, RegressorMixin):
     def __init__(
         self,

@@ -7,19 +7,26 @@ my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, my_path + '/../../')
 from sindy.differentiation import differentiation_methods
 
-# Note: all tests should be encapsulated in functions whose
-# names start with "test_"
+"""
+Note: all tests should be encapsulated in functions whose
+names start with "test_"
 
-# To run tests, navigate to this directory in the terminal
-# and run the command
-# python3 -m pytest
+To run tests, navigate to this directory in the terminal
+and run the command
+python3 -m pytest
 
-# (normally you should just be able to run 'pytest' but
-# there's something fishy going on with the imports)
+To run tests for just one file, run
+python3 -m pytest file_to_test.py
 
-# Simplest example: just use an assert statement
-# This example should be removed eventually so that
-# differentiators don't need to keep the endpoints
+(normally you should just be able to run 'pytest' but
+there's something fishy going on with the imports)
+
+Simplest example: just use an assert statement
+This example should be removed eventually so that
+differentiators don't need to keep the endpoints
+"""
+
+
 def test_forward_difference_length():
     x = 2 * np.linspace(1, 100, 100)
     assert len(differentiation_methods.forward_difference(x)) == len(x)
@@ -92,6 +99,7 @@ def test_forward_difference(data):
         x_dot
     )
 
+
 @pytest.mark.parametrize(
     'data',
     [
@@ -109,11 +117,12 @@ def test_centered_difference(data):
 
 # pytest can also check that methods throw errors when appropriate
 def test_forward_difference_dim():
-    x = np.ones((5,5,5))
+    x = np.ones((5, 5, 5))
     with pytest.raises(ValueError):
         differentiation_methods.forward_difference(x)
 
+
 def test_forward_difference_dim():
-    x = np.ones((5,5,5))
+    x = np.ones((5, 5, 5))
     with pytest.raises(ValueError):
         differentiation_methods.centered_difference(x)

@@ -27,13 +27,11 @@ class BaseOptimizer(LinearModel, RegressorMixin):
 
         self.history_ = []
 
-
     # Force subclasses to implement this
     @abc.abstractmethod
     def _reduce(self):
         '''Carry out the bulk of the work of the fit function'''
         return
-
 
     def fit(self, x_, y, sample_weight=None, **reduce_kws):
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
@@ -59,7 +57,6 @@ class BaseOptimizer(LinearModel, RegressorMixin):
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
-
 
     @property
     def complexity(self):
@@ -152,7 +149,7 @@ class SR3(BaseOptimizer):
         threshold=0.1,
         nu=1.0,
         tol=1e-5,
-        **kwargs,
+        **kwargs
     ):
         super(SR3, self).__init__(**kwargs)
         self.threshold = threshold

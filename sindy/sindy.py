@@ -5,10 +5,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_array, check_is_fitted
 from sklearn.exceptions import NotFittedError
+from scipy.integrate import odeint
 
 from sindy.differentiation import differentiation_methods
 from sindy.optimizers import STLSQ
 from sindy.utils.base import equation
+import pdb
 
 
 class SINDy(BaseEstimator):
@@ -26,8 +28,6 @@ class SINDy(BaseEstimator):
         self.feature_names = feature_names
         self.n_jobs = n_jobs
 
-    # For now just write this how we want it to look and then write simplest
-    # version of the supporting code possible
     def fit(self, x, t=1, x_dot=None):
 
         # Perform checks on input
@@ -59,12 +59,10 @@ class SINDy(BaseEstimator):
         return self
 
     def predict(self, x):
+        if x.ndim == 1:
+            x = x.reshape(1, -1)
         check_array(x)
         if hasattr(self, 'model'):
-            check_is_fitted(
-                self.model.estimators_[0].steps[-1][1],
-                'coef_'
-            )
             return self.model.predict(x)
         else:
             raise NotFittedError(
@@ -95,17 +93,22 @@ class SINDy(BaseEstimator):
             )
 
     def score(self, x, y=None, multioutput="uniform_average"):
+        """
+        Have model predict derivative and get score.
+        x can be a list whose first entry is state values and second is times
+        """
+        if isinstance(x, list):
+            x, t = x[0], x[1]
+        else:
+            t = 1
+        if x.ndim == 1:
+            x = x.reshape(1, -1)
+        check_array(x)
         if y is not None:
             x_dot = y
         else:
-            x_dot = self.derivative.transform(x)
+            x_dot = self.differentiation_method(x, t)
         return r2_score(self.model.predict(x), x_dot, multioutput=multioutput)
-
-    @property
-    def complexity(self):
-        return sum(
-            est.steps[1][1].complexity for est in self.model.estimators_
-        )
 
     def differentiate(self, x, t=1):
         return self.differentiation_method(x, t)
@@ -120,7 +123,7 @@ class SINDy(BaseEstimator):
             return self.model.estimators_[0].steps[-1][1].coef_
         else:
             raise NotFittedError(
-                "SINDy model must be fit before coefficients can be called"
+                "SINDy model must be fit before coefficients is called"
             )
 
     def get_feature_names(self):
@@ -131,11 +134,23 @@ class SINDy(BaseEstimator):
             )
         else:
             raise NotFittedError(
-                "SINDy model must be fit before get_feature_names can be called"
+                "SINDy model must be fit before get_feature_names is called"
             )
 
-    # TODO
-    def simulate(self, x0, t0, t):
+    def simulate(self, x0, t, integrator=None, **kwargs):
         """
         Simulate forward in time from given initial conditions
         """
+        if integrator is None:
+            integrator = odeint
+
+        def rhs(x, t):
+            return self.predict(x).flatten()
+
+        return integrator(rhs, x0, t, **kwargs)
+
+    @property
+    def complexity(self):
+        return sum(
+            est.steps[1][1].complexity for est in self.model.estimators_
+        )

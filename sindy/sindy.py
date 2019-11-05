@@ -7,7 +7,7 @@ from sklearn.utils.validation import check_array, check_is_fitted
 from sklearn.exceptions import NotFittedError
 from scipy.integrate import odeint
 
-from sindy.differentiation import differentiation_methods
+from sindy.differentiation import FiniteDifference
 from sindy.optimizers import STLSQ
 from sindy.utils.base import equation
 import pdb
@@ -18,7 +18,7 @@ class SINDy(BaseEstimator):
             self,
             optimizer=STLSQ(),
             feature_library=PolynomialFeatures(),
-            differentiation_method=differentiation_methods.centered_difference,
+            differentiation_method=FiniteDifference(),
             feature_names=None,
             n_jobs=1
     ):
@@ -31,9 +31,9 @@ class SINDy(BaseEstimator):
     def fit(self, x, t=1, x_dot=None):
 
         # Perform checks on input
-        check_array(x, ensure_2d=False)
         if x.ndim == 1:
             x = x.reshape(-1, 1)
+        check_array(x)
         # TODO: check t
 
         if x_dot is None:

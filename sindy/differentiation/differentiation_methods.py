@@ -1,103 +1,123 @@
 import numpy as np
+from sklearn.utils.validation import check_array
 
 
-# TODO: implement smoothing
-# TODO: consider allowing endpoints to be deleted.
-#   This would require differentiation method to communicate with SINDy
+# TODO: add smoothing
+class FiniteDifference:
 
-def finite_difference(x, t=1, method='forward difference'):
-    if method == 'forward difference':
-        return forward_difference(x, t)
-    else:
-        return centered_difference(x, t)
+    def __init__(self, order=0, drop_endpoints=False):
+        if order < 0 or not isinstance(order, int):
+            raise ValueError("order must be a positive int")
+        elif order > 2:
+            raise NotImplementedError()
 
+        self.order = order
+        self.drop_endpoints = drop_endpoints
 
-# First order forward difference
-# (and 2nd order backward difference for final point)
-def forward_difference(x, t=1):
+    def _differentiate(self, x, t):
+        if self.order == 1:
+            return self._forward_difference(x, t)
+        else:
+            return self._centered_difference(x, t)
 
-    # Check whether data is 1D
-    if np.ndim(x) == 1:
+    def __call__(self, x, t=1):
+        # Validate input
+        if np.ndim(x) == 1:
+            x = x.reshape(-1, 1)
+        check_array(x)
 
-        # Uniform timestep
+        return self._differentiate(x, t)
+
+    # First order forward difference
+    # (and 2nd order backward difference for final point)
+    def _forward_difference(self, x, t=1):
+        x_dot = np.full_like(x, fill_value=np.nan)
+
+        # Uniform timestep (assume t contains dt)
         if np.isscalar(t):
-            x_diff = (x[1:] - x[:-1]) / t
-            backward_diff = np.array([(3*x[-1]/2 - 2*x[-2] + x[-3]/2) / t])
-            return np.concatenate((x_diff, backward_diff))
+            x_dot[:-1, :] = (x[1:, :] - x[:-1, :]) / t
+            if not self.drop_endpoints:
+                x_dot[-1, :] = (
+                    (
+                        3 * x[-1, :] / 2
+                        - 2 * x[-2, :]
+                        + x[-3, :] / 2
+                    )
+                    / t
+                )
+            return x_dot
 
         # Variable timestep
         else:
             t_diff = t[1:] - t[:-1]
-            x_diff = (x[1:] - x[:-1]) / t_diff
-            backward_diff = np.array([(3*x[-1]/2 - 2*x[-2] + x[-3]/2) / t_diff[-1]])
-            return np.concatenate((x_diff, backward_diff))
+            x_dot[:-1, :] = (x[1:, :] - x[:-1, :]) / t_diff[
+                :, None
+            ]
+            if not self.drop_endpoints:
+                x_dot[-1, :] = (
+                    (
+                        3 * x[-1, :] / 2
+                        - 2 * x[-2, :]
+                        + x[-3, :] / 2
+                    )
+                    / t_diff[-1]
+                )
+            return x_dot
 
-    # Otherwise assume data is 2D
-    elif np.ndim(x) == 2:
-        # Uniform timestep
+    # Second order centered difference
+    # with third order forward/backward difference at endpoints.
+    # Warning: Sometimes has trouble with nonuniform grid spacing
+    # near boundaries
+    def _centered_difference(self, x, t=1):
+        x_dot = np.full_like(x, fill_value=np.nan)
+
+        # Uniform timestep (assume t contains dt)
         if np.isscalar(t):
-            x_diff = (x[1:,:] - x[:-1,:]) / t
-            backward_diff = ((3*x[-1,:]/2 - 2*x[-2,:] + x[-3,:]/2) / t).reshape(1, x.shape[1])
-            return np.concatenate((x_diff, backward_diff), axis=0)
-
-        # Variable timestep
-        else:
-            t_diff = t[1:] - t[:-1]
-            x_diff = (x[1:,:] - x[:-1,:]) / t_diff[:, None]
-            backward_diff = ((3*x[-1,:]/2 - 2*x[-2,:] + x[-3,:]/2) / t_diff[-1]).reshape(1, x.shape[1])
-            return np.concatenate((x_diff, backward_diff), axis=0)
-
-    else:
-        raise ValueError('x should be either 1-D or 2-D')
-
-# Second order centered difference
-# with third order forward/backward difference at endpoints.
-# Warning: Sometimes has trouble with nonuniform grid spacing near boundaries
-def centered_difference(x, t=1):
-    
-    # Check whether data is 1D
-    if np.ndim(x) == 1:
-
-        # Uniform timestep
-        if np.isscalar(t):
-            x_diff = (x[2:] - x[:-2]) / (2 * t)
-            forward_diff = np.array([(-11/6 * x[0] + 3 * x[1] \
-                - 3/2 * x[2] + x[3] / 3) / t])
-            backward_diff = np.array([(11/6 * x[-1]-3 * x[-2] \
-                + 3/2 * x[-3]-x[-4]/3) / t])
-            return np.concatenate((forward_diff, x_diff, backward_diff))
-
-        # Variable timestep
-        else:
-            t_diff = t[2:] - t[:-2]
-            x_diff = (x[2:] - x[:-2]) / (t_diff)
-            forward_diff = np.array([(-11/6 * x[0] + 3 * x[1] \
-                - 3/2 * x[2] + x[3] / 3) / (t[1]-t[0])])
-            backward_diff = np.array([(11/6 * x[-1]-3 * x[-2] \
-                + 3/2 * x[-3]-x[-4]/3) / (t[-1]-t[-2])])
-            return np.concatenate((forward_diff, x_diff, backward_diff))
-
-    # Otherwise assume data is 2D
-    elif np.ndim(x) == 2:
-
-        # Uniform timestep
-        if np.isscalar(t):
-            x_diff = (x[2:,:] - x[:-2,:]) / (2 * t)
-            forward_diff = ((-11/6 * x[0,:] + 3 * x[1,:] \
-                - 3/2 * x[2,:] + x[3,:] / 3) / t).reshape(1, x.shape[1])
-            backward_diff = ((11/6 * x[-1,:]-3 * x[-2,:] \
-                + 3/2 * x[-3,:]-x[-4,:]/3) / t).reshape(1, x.shape[1])
-            return np.concatenate((forward_diff, x_diff, backward_diff), axis=0)
+            x_dot[1:-1, :] = (x[2:, :] - x[:-2, :]) / (2 * t)
+            if not self.drop_endpoints:
+                x_dot[0, :] = (
+                    (
+                        -11 / 6 * x[0, :]
+                        + 3 * x[1, :]
+                        - 3 / 2 * x[2, :]
+                        + x[3, :] / 3
+                    )
+                    / t
+                )
+                x_dot[-1, :] = (
+                    (
+                        11 / 6 * x[-1, :]
+                        - 3 * x[-2, :]
+                        + 3 / 2 * x[-3, :]
+                        - x[-4, :] / 3
+                    )
+                    / t
+                )
+            return x_dot
 
         # Variable timestep
         else:
             t_diff = t[2:] - t[:-2]
-            x_diff = (x[2:,:] - x[:-2,:]) / t_diff[:, None]
-            forward_diff = ((-11/6 * x[0,:] + 3 * x[1,:] \
-                - 3/2 * x[2,:] + x[3,:] / 3) / (t_diff[0]/2)).reshape(1, x.shape[1])
-            backward_diff = ((11/6 * x[-1,:]-3 * x[-2,:] \
-                + 3/2 * x[-3,:]-x[-4,:]/3) / (t_diff[-1]/2)).reshape(1, x.shape[1])
-            return np.concatenate((forward_diff, x_diff, backward_diff), axis=0)
-    
-    else:
-        raise ValueError('x should be either 1-D or 2-D')
+            x_dot[1:-1, :] = (x[2:, :] - x[:-2, :]) / t_diff[
+                :, None
+            ]
+            if not self.drop_endpoints:
+                x_dot[0, :] = (
+                    (
+                        -11 / 6 * x[0, :]
+                        + 3 * x[1, :]
+                        - 3 / 2 * x[2, :]
+                        + x[3, :] / 3
+                    )
+                    / (t_diff[0] / 2)
+                )
+                x_dot[-1, :] = (
+                    (
+                        11 / 6 * x[-1, :]
+                        - 3 * x[-2, :]
+                        + 3 / 2 * x[-3, :]
+                        - x[-4, :] / 3
+                    )
+                    / (t_diff[-1] / 2)
+                )
+            return x_dot

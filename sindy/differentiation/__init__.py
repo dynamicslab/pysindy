@@ -1,1 +1,1 @@
-from .differentiation_methods import *
+from .differentiation_methods import FiniteDifference

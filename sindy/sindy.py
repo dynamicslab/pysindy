@@ -92,15 +92,10 @@ class SINDy(BaseEstimator):
                 "SINDy model must be fit before equations can be called"
             )
 
-    def score(self, x, y=None, multioutput="uniform_average"):
+    def score(self, x, t=1, y=None, metric=r2_score, **metric_kws):
         """
         Have model predict derivative and get score.
-        x can be a list whose first entry is state values and second is times
         """
-        if isinstance(x, list):
-            x, t = x[0], x[1]
-        else:
-            t = 1
         if x.ndim == 1:
             x = x.reshape(1, -1)
         check_array(x)
@@ -108,7 +103,7 @@ class SINDy(BaseEstimator):
             x_dot = y
         else:
             x_dot = self.differentiation_method(x, t)
-        return r2_score(self.model.predict(x), x_dot, multioutput=multioutput)
+        return metric(self.model.predict(x), x_dot, **metric_kws)
 
     def differentiate(self, x, t=1):
         return self.differentiation_method(x, t)
@@ -137,7 +132,7 @@ class SINDy(BaseEstimator):
                 "SINDy model must be fit before get_feature_names is called"
             )
 
-    def simulate(self, x0, t, integrator=None, **kwargs):
+    def simulate(self, x0, t, integrator=None, **integrator_kws):
         """
         Simulate forward in time from given initial conditions
         """
@@ -147,7 +142,7 @@ class SINDy(BaseEstimator):
         def rhs(x, t):
             return self.predict(x).flatten()
 
-        return integrator(rhs, x0, t, **kwargs)
+        return integrator(rhs, x0, t, **integrator_kws)
 
     @property
     def complexity(self):

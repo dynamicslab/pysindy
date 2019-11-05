@@ -29,11 +29,7 @@ class SINDy(BaseEstimator):
         self.n_jobs = n_jobs
 
     def fit(self, x, t=1, x_dot=None):
-
-        # Perform checks on input
-        if x.ndim == 1:
-            x = x.reshape(-1, 1)
-        check_array(x)
+        x = self._validate_input(x)
         # TODO: check t
 
         if x_dot is None:
@@ -59,9 +55,7 @@ class SINDy(BaseEstimator):
         return self
 
     def predict(self, x):
-        if x.ndim == 1:
-            x = x.reshape(1, -1)
-        check_array(x)
+        x = self._validate_input(x)
         if hasattr(self, 'model'):
             return self.model.predict(x)
         else:
@@ -96,9 +90,7 @@ class SINDy(BaseEstimator):
         """
         Have model predict derivative and get score.
         """
-        if x.ndim == 1:
-            x = x.reshape(1, -1)
-        check_array(x)
+        x = self._validate_input(x)
         if y is not None:
             x_dot = y
         else:
@@ -106,6 +98,7 @@ class SINDy(BaseEstimator):
         return metric(self.model.predict(x), x_dot, **metric_kws)
 
     def differentiate(self, x, t=1):
+        x = self._validate_input(x)
         return self.differentiation_method(x, t)
 
     def coefficients(self):
@@ -143,6 +136,12 @@ class SINDy(BaseEstimator):
             return self.predict(x).flatten()
 
         return integrator(rhs, x0, t, **integrator_kws)
+
+    def _validate_input(self, x):
+        if x.ndim == 1:
+            x = x.reshape(1, -1)
+        check_array(x)
+        return x
 
     @property
     def complexity(self):

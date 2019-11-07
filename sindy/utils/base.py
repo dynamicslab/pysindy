@@ -14,6 +14,13 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 
+def validate_input(x):
+    if x.ndim == 1:
+        x = x.reshape(1, -1)
+    check_array(x)
+    return x
+
+
 def print_model(coef, input_features, errors=None, intercept=None, error_intercept=None, precision=3, pm="±"):
     """
 

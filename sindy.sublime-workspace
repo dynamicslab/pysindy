@@ -4,6 +4,66 @@
 		"selected_items":
 		[
 			[
+				"coef",
+				"coefficients"
+			],
+			[
+				"No",
+				"NotFittedError"
+			],
+			[
+				"check",
+				"check_is_fitted"
+			],
+			[
+				"featu",
+				"feature_names"
+			],
+			[
+				"lass",
+				"lasso_model"
+			],
+			[
+				"la",
+				"lasso_model"
+			],
+			[
+				"lasso",
+				"lasso_model"
+			],
+			[
+				"__",
+				"__init__"
+			],
+			[
+				"cop",
+				"copy_X"
+			],
+			[
+				"thr",
+				"threshold_intercept"
+			],
+			[
+				"feat",
+				"feature_library"
+			],
+			[
+				"for",
+				"forward_difference"
+			],
+			[
+				"diff",
+				"differentiation_method"
+			],
+			[
+				"diffe",
+				"differentiation_method"
+			],
+			[
+				"differ",
+				"differentiation_methods"
+			],
+			[
 				"fea",
 				"feature_names"
 			],
@@ -18,22 +78,6 @@
 			[
 				"Polynom",
 				"PolynomialFeatures"
-			],
-			[
-				"featu",
-				"feature_transformer"
-			],
-			[
-				"feat",
-				"feature_transformer"
-			],
-			[
-				"diff",
-				"differentiation_methods"
-			],
-			[
-				"for",
-				"forward"
 			],
 			[
 				"gam",
@@ -260,10 +304,6 @@
 				"set_coefficients"
 			],
 			[
-				"differ",
-				"differentiate"
-			],
-			[
 				"ball",
 				"ball_df"
 			],
@@ -412,10 +452,6 @@
 				"values"
 			],
 			[
-				"coef",
-				"coef_to_save"
-			],
-			[
 				"window",
 				"window_length"
 			],
@@ -478,60 +514,26 @@
 			[
 				"grad",
 				"gradients"
-			],
-			[
-				"var",
-				"var_name"
-			],
-			[
-				"wind",
-				"window_length"
-			],
-			[
-				"smoot",
-				"smoother"
-			],
-			[
-				"sav",
-				"savgol_filter"
-			],
-			[
-				"smoo",
-				"smoother"
-			],
-			[
-				"x_",
-				"x_w_plus"
-			],
-			[
-				"step",
-				"stepsize"
-			],
-			[
-				"chole",
-				"cholesky_solve"
-			],
-			[
-				"cho",
-				"cholesky_solve"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "example/sindy.py",
+			"file": "sindy/optimizers/optimizers.py",
 			"settings":
 			{
-				"buffer_size": 1307,
+				"buffer_size": 7493,
+				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "sindy/preprocessing/symfeat.py",
+			"file": "sindy/utils/base.py",
 			"settings":
 			{
-				"buffer_size": 5161,
+				"buffer_size": 3612,
+				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
@@ -539,55 +541,34 @@
 			"file": "sindy/sindy.py",
 			"settings":
 			{
-				"buffer_size": 2410,
+				"buffer_size": 4538,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "sindy/differentiation/differentiation_methods.py",
+			"file": "test/differentiation/test_differentiation_methods.py",
 			"settings":
 			{
-				"buffer_size": 3914,
+				"buffer_size": 3074,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "example/my_sindy.py",
+			"file": "test/test_sindy.py",
 			"settings":
 			{
-				"buffer_size": 2052,
+				"buffer_size": 1432,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "sindy/model/sindy_old.py",
+			"file": "test/test_examples.py",
 			"settings":
 			{
-				"buffer_size": 3274,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "sindy/feature_library/polynomial_library.py",
-			"settings":
-			{
-				"buffer_size": 254,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"contents": "\"\"\"\nBase class for feature library classes.\n\"\"\"\nimport abc\n\nclass BaseFeatureLibrary():\n    \"\"\"\n    Functions that should eventually be implemented:\n        -print/get names of features\n        -evaluate all features (and store in member variable)\n        -addition (concatenate lists of features)\n    -TODO: clean up by adding decorators property, abc.abstractmethod, ...\n    \"\"\"\n    def __init__(self, features={}):\n        self.features = features\n        \n    def size(self):\n        return len(self.features)\n\n    # Some kind of function that applies the library\n    @abc.abstractmethod\n    def fit_transform(self, x):\n        pass\n\n    # TODO\n    def __add__(self, other):\n        pass\n\n\n\n    \n\n",
-			"file": "sindy/feature_library/feature_library.py",
-			"file_size": 515,
-			"file_write_time": 132158129127340432,
-			"settings":
-			{
-				"buffer_size": 701,
-				"encoding": "UTF-8",
+				"buffer_size": 379,
 				"line_ending": "Unix"
 			}
 		}
@@ -712,8 +693,20 @@
 				"Package Control: Install Package"
 			],
 			[
+				"linter",
+				"SublimeLinter: Show All Errors"
+			],
+			[
 				"ssn py",
 				"Set Syntax: Python"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"lint",
+				"SublimeLinter: Reload SublimeLinter and its Plugins"
 			],
 			[
 				"ssn late",
@@ -958,6 +951,62 @@
 	],
 	"file_history":
 	[
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/test/model/test_sindy.py",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/example/sindy.ipynb",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/optimizers/optimizers.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/requirements-dev.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/LICENSE",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/README.rst",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/requirements.txt",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/utils/base.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/MANIFEST.in",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/docs/conf.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/pyproject.toml",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/example/sindy.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/example/stridge.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/setup.cfg",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/versioneer.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/setup.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/test/preprocessing/test_symfeat.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/optimizers/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/model/sindy.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/utils/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/differentiation/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/utils/Untitled Document",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/model/base.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/model/__init__.py",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/.gitignore",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/_version.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/test/differentiation/test_differentiation_methods.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/model/group_lasso.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/util/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/util/net.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/util/pipeline.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/differentiation/differentiation_methods.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/feature_library/feature_library.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/feature_library/polynomial_library.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/example/my_sindy.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/preprocessing/__init__.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/example/context.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/model/optimizers.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/model/sindy_old.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/test/differentiation/context.py",
+		"/home/brian/.bashrc",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/test/util/test_utils.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/test/model/test_base.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/test/test_examples.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/differentiation/finite_difference.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/test/model/test_efs.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/test/conftest.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/sindy.py",
+		"/home/brian/Documents/Extracurriculars/Diversity/Flyers/mail_merge_script/docs_mail_merge.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/preprocessing/symfeat.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/model/bayes.py",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy/feature_library/__init__.py",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/setup.py",
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/setup.",
+		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/sindy/sindy.sublime-project",
 		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/SINDy.sublime-project",
 		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/setup.py",
 		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/setup.cfg",
@@ -1029,63 +1078,7 @@
 		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiersSCNS.cls",
 		"/home/brian/Documents/Dropbox (uwamath)/template/siamltexmm.cls",
 		"/home/brian/Documents/Dropbox (uwamath)/template/siam.bst",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/arxiv/discovery_of_physics_from_data.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/arxiv/siamltexmm.cls",
-		"/home/brian/Documents/Dropbox (uwamath)/template/z_packagedef.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiersFPHY.cls",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/paper.tex",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiersSCNS.cls",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/paper.tex",
-		"/home/brian/Documents/Research/Nathan/Writing/SNN/SR3_SNN_notes.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/figures/drag_coefficient_on_sphere.pdf",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/sindy.py",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/files_to_check.txt",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/look.r",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/BallDropDataBridge/Mail Attachment.eml",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/NTS2014/clean.txt",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/Frontiers_LaTex_Templates/frontiersinSCNS_ENG_HUMS.bst",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/paper.bbl",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/test.bib",
-		"/home/brian/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/frontiers.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/references.bib",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/FlightTest/Writing/decision_tree_presentation.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/efs.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/ffx.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/ffx2.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/group_lasso.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/jmap.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/my_sindy.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/net.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/stridge.py",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/example/my_sindy.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/group_lasso.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/ffx.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/efs.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/bayes.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/model/base.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/preprocessing/symfeat.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/util/pipeline.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sindy/util/net.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sparsereg/model/base.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sparsereg/model/sindy.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/.gitignore",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/sparsereg/vendor/__init__.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/README.rst",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/docs/conf.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/MANIFEST.in",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/pyproject.toml",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/versioneer.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Brian/Research/SINDy/SINDy/requirements-dev.txt",
-		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
-		"/Users/saravkin11/Dropbox (uwamath)/1Students/Brian/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Report/ar-1col.cls",
-		"/Users/jcallaham/Dropbox/shared/Boeing_flight_test/Writing/Cone_chuck/Report/main.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/Writing/Cone_chuck/Template/main.tex",
-		"/home/brian/Downloads/cone-chuck/cone_models.py",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/flight_test_code/flight_test_code/DMDc/cone_dmd.py",
-		"/home/brian/Documents/Research/Nathan/Writing/Optimization/method_cheatsheet.tex",
-		"/home/brian/Documents/Dropbox (uwamath)/Boeing_flight_test/flight_test_code/flight_test_code/DMDc/cone_utils.py"
+		"/media/brian/TBdrive/Documents/Dropbox (uwamath)/BallDrop/Writing/Paper/arxiv/discovery_of_physics_from_data.tex"
 	],
 	"find":
 	{
@@ -1104,6 +1097,71 @@
 		"case_sensitive": true,
 		"find_history":
 		[
+			"check_is",
+			"check_is_fitted(self.model)",
+			", ",
+			"names",
+			"ind_",
+			"self.ind_",
+			"LinearRegression",
+			"intercept_",
+			"threshold_intercept",
+			"thresh",
+			"nu",
+			"_set_intercept",
+			"ind_",
+			"tolerance",
+			"LinearModel, RegressorMixin",
+			"tol",
+			"unbias",
+			"_reduce",
+			"kw",
+			"STRidge",
+			"_sparse_coefficients",
+			"check_array",
+			"check_is_fitted",
+			"check_X_y",
+			"threshold",
+			"ConvergenceWarning",
+			"FitFailedWarning",
+			"LinearRegression",
+			"ridge_regression",
+			"check_array",
+			"check_X_y",
+			"check_is_fitted",
+			"threshold_intercept=True",
+			"fit_intercept=True",
+			"BoATS",
+			"fit_intercept=True",
+			"fit_intercept=",
+			"threshold_intercept",
+			"thresh",
+			"threshold",
+			"ridge_regression",
+			"_rescale_data",
+			"check_array",
+			"check_is_fitted",
+			"check_X_y",
+			"ConvergenceWarning",
+			"repeat",
+			"warnings",
+			"repeat",
+			"set_trace",
+			"=",
+			"forward",
+			"zeros",
+			"forward_difference",
+			"xdot",
+			"errors",
+			"errors=",
+			"errors",
+			"print_model",
+			"intercept_",
+			"x[:,",
+			"ridge_regression",
+			"check_X_y",
+			"compose",
+			"simplify",
 			"sparsereg",
 			"=",
 			"feature_names",
@@ -1166,72 +1224,7 @@
 			"err_dict3",
 			"err_dict2",
 			"gs_error32",
-			"gs_error23",
-			"gs_df3",
-			"gs_df2",
-			"2",
-			"all_coefficient_dict3",
-			"all_coefficient_dict2",
-			"h_off3",
-			"h_off2",
-			"v_off3",
-			"h_off3",
-			"h_off2",
-			"v_off2",
-			"h3",
-			"v3",
-			"h2",
-			"v2",
-			"scale3h",
-			"scale2h",
-			"scale3v",
-			"scale2v",
-			"df3",
-			"df2",
-			"df3",
-			"df2",
-			"need_to_c",
-			"\n\n\n\n\n",
-			"\\color{red",
-			"without overfitting",
-			"Mang",
-			"man",
-			"attempt_remove",
-			"attempt_spawn",
-			"unit_type",
-			"gamelib.BITS",
-			"gamelib",
-			"153",
-			"BITS",
-			"defend_ping_rush",
-			"detect_ping_cannon",
-			"bit_thresh",
-			"turn",
-			"opponent_ping_cannon",
-			"defend_ping_rush",
-			"cores_to",
-			"cores",
-			"core_reserve",
-			"SCRAMBLER",
-			"FILTER",
-			"DESTRUCTOR",
-			"upgrade_destructors",
-			"build_defences",
-			"defense",
-			"attack",
-			"opponent_ping_cannon",
-			"self.",
-			"build",
-			"detect_ping_cannon",
-			"opponent_ping_cannon",
-			"defend_ping_cannon",
-			"BITS",
-			"bits",
-			"left",
-			"on_action_frame",
-			"scored_on_locations",
-			"on_action_frame",
-			"scored_on_locations"
+			"gs_error23"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -1239,6 +1232,8 @@
 		"regex": false,
 		"replace_history":
 		[
+			"threshold_intercept=False",
+			"fit_intercept=False",
 			".tiff",
 			"\\cite",
 			"e.g.",
@@ -1270,28 +1265,53 @@
 	"groups":
 	[
 		{
-			"selected": 0,
+			"selected": 2,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "example/sindy.py",
+					"file": "sindy/optimizers/optimizers.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1307,
+						"buffer_size": 7493,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								312,
-								312
+								4705,
+								4705
 							]
 						],
 						"settings":
 						{
+							"SL.14.region_keys":
+							[
+								"SL.flake8.Highlights.|c64a316740c7fe0f8682c94611301e7cacfda44c248c3c68eae958517c40328e|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|3033ee20c6cb4a01b48c17d6bee8f01f0f804fb4488c7d70fb83f7b1190397a0|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|a7ffdd74504c3698d3c285e00ea336fe9614a86a1d04ef9f28479c56c2eba5bf|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|0f51e992d987b5ebcd34f6539b6584ca4e262d1ea92bd5b28d56919b35294bca|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|cedcd058b5f6a70567c576215cff55b2c17ac9b514f99b1f64f4ce14b236089b|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|a8ce7b30f651a01e3f9475e73fe4ca90120a2cfba050053087df42ba7f68c6c7|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|2b36c339806539add465fa9368eacb38bf10e63c9ecb082ec49ae0a8f6e7f539|region.yellowish markup.warning.sublime_linter|32",
+								"sublime_linter.protected_regions",
+								"SL.flake8.Highlights.|cefd3ba41d647d85d4ab32a0cd009e55ff04ace7dea09c68be23c8ac4b94a9c5|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Gutter.|region.yellowish markup.warning.sublime_linter|dot",
+								"SL.flake8.Highlights.|bdb73a34bea7491dac9651324a12d1aaa753cffd9776e404e14d61bbc258c462|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|3429c882cb311f50d3d2628c55e61a4bf538f808c59c2a03a72656c1db46d0fc|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|ef06e99d024eab1a5da879cd77cd6533d5331868161c65c9aa31943cd144920b|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|d305bbcd14e69acd7bb9150679569e7813f8dcb01d70476cac977705800edd99|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|f9a02d80ddd279ca53490ba79300d52b19ae4245bbb3cc105f699e47c7935740|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|16ab7ee1f1a1971c88208f5abb76b3be5de9336187ee44d52986e76b2899dbbc|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|f8369d519ee330f68789c41e6285f95c06a6bf76b2bbdf8befa3b1307a38f532|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|55b89c4cca1d58b68671e0e111f4b5682217f605722cda65016fb8590c05bc69|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|2c3ffaed8311dfc2f4c1e085d6aa321b48cbbb5b6aa60179a105b0d0c827f8fe|region.yellowish markup.warning.sublime_linter|32"
+							],
+							"SL.73.region_keys":
+							[
+							],
 							"git_gutter_is_enabled": true,
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
@@ -1301,132 +1321,46 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
+					"stack_index": 4,
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "sindy/preprocessing/symfeat.py",
+					"file": "sindy/utils/base.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 5161,
+						"buffer_size": 3612,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								953,
-								953
+								1940,
+								1940
 							]
 						],
 						"settings":
 						{
+							"SL.38.region_keys":
+							[
+								"SL.flake8.Highlights.|e610e83c3e6969515d1d0d8b0bddd76ddcf9b12ae1e365d1cad01f09a45e6000|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|b2b26ebfd464f093fc12a2ec506ad0a415681f59329b8a70dcfcfc0f36332216|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|a17d2391fd188df61e86dcfff099578da010ce9078ddef969d1161fbd2e6220e|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|04b39f92bde024d7dfba641484f4fc9db9b776e01309d461513277c58261a53d|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Gutter.|region.redish markup.error.sublime_linter|dot",
+								"SL.flake8.Highlights.|7b9a665790663e43e778ad19780630fdd7070367d40a45114ee6021a457c34b1|region.redish markup.error.sublime_linter|32",
+								"SL.flake8.Highlights.|a4389faef960494e0c5ebca36808758df774906827e95547a004af5736ea27ff|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|e71351bed2cf921a018952bb0e2bf4f341488715ea374c512e1663ec8b2b3353|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Gutter.|region.yellowish markup.warning.sublime_linter|dot",
+								"SL.flake8.Highlights.|a1951582e6dc0f587011e69455aae645f85b286dfa08dddb5d3857222552f2da|region.yellowish markup.warning.sublime_linter|32",
+								"sublime_linter.protected_regions",
+								"SL.flake8.Highlights.|4c474de401810f587e10b163ba31db5fe6f155c63cc98dde3270023255ebf043|region.yellowish markup.warning.sublime_linter|32"
+							],
 							"git_gutter_is_enabled": true,
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 228.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 5,
-					"type": "text"
-				},
-				{
-					"buffer": 2,
-					"file": "sindy/sindy.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 2410,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								999,
-								999
-							]
-						],
-						"settings":
-						{
-							"SL.94.region_keys":
-							[
-							],
-							"git_gutter_is_enabled": true,
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 228.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 1,
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "sindy/differentiation/differentiation_methods.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 3914,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								171,
-								171
-							]
-						],
-						"settings":
-						{
-							"SL.101.region_keys":
-							[
-							],
-							"git_gutter_is_enabled": true,
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 513.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 7,
-					"type": "text"
-				}
-			]
-		},
-		{
-			"selected": 1,
-			"sheets":
-			[
-				{
-					"buffer": 4,
-					"file": "example/my_sindy.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 2052,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								242,
-								242
-							]
-						],
-						"settings":
-						{
-							"git_gutter_is_enabled": true,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 2,
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
@@ -1437,56 +1371,202 @@
 					"type": "text"
 				},
 				{
-					"buffer": 5,
-					"file": "sindy/model/sindy_old.py",
+					"buffer": 2,
+					"file": "sindy/sindy.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 3274,
+						"buffer_size": 4538,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								1163,
+								1163
 							]
 						],
 						"settings":
 						{
+							"SL.16.region_keys":
+							[
+								"SL.flake8.Gutter.|region.yellowish markup.warning.sublime_linter|dot",
+								"SL.flake8.Highlights.|d0c20ff3e1b7952f7e9bb2be43fb3c01ac0bb24aee55b3876ecdce11ef7f3821|region.yellowish markup.warning.sublime_linter|32",
+								"sublime_linter.protected_regions"
+							],
 							"git_gutter_is_enabled": true,
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 506.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 0,
 					"type": "text"
 				},
 				{
-					"buffer": 6,
-					"file": "sindy/feature_library/polynomial_library.py",
+					"buffer": 3,
+					"file": "test/differentiation/test_differentiation_methods.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 254,
+						"buffer_size": 3074,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								76,
-								76
+								3074,
+								3074
 							]
 						],
 						"settings":
 						{
-							"auto_name": "",
+							"SL.40.region_keys":
+							[
+								"SL.flake8.Gutter.|region.yellowish markup.warning.sublime_linter|dot",
+								"SL.flake8.Highlights.|72b64f03a17c246d27a45649100d9c573a399c53c9f5d58d5f84be28fde55595|region.yellowish markup.warning.sublime_linter|32",
+								"sublime_linter.protected_regions",
+								"SL.flake8.Highlights.|9e19aa7ba8828b380ece2adaad891366d3e519437c5e3ef28f88d9bc66d41e3c|region.yellowish markup.warning.sublime_linter|32"
+							],
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1881.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "sindy/optimizers/optimizers.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 7493,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1804,
+								1804
+							]
+						],
+						"settings":
+						{
+							"SL.15.region_keys":
+							[
+								"SL.flake8.Highlights.|c64a316740c7fe0f8682c94611301e7cacfda44c248c3c68eae958517c40328e|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|3033ee20c6cb4a01b48c17d6bee8f01f0f804fb4488c7d70fb83f7b1190397a0|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|a7ffdd74504c3698d3c285e00ea336fe9614a86a1d04ef9f28479c56c2eba5bf|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|0f51e992d987b5ebcd34f6539b6584ca4e262d1ea92bd5b28d56919b35294bca|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|cedcd058b5f6a70567c576215cff55b2c17ac9b514f99b1f64f4ce14b236089b|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|a8ce7b30f651a01e3f9475e73fe4ca90120a2cfba050053087df42ba7f68c6c7|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|2b36c339806539add465fa9368eacb38bf10e63c9ecb082ec49ae0a8f6e7f539|region.yellowish markup.warning.sublime_linter|32",
+								"sublime_linter.protected_regions",
+								"SL.flake8.Highlights.|cefd3ba41d647d85d4ab32a0cd009e55ff04ace7dea09c68be23c8ac4b94a9c5|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Gutter.|region.yellowish markup.warning.sublime_linter|dot",
+								"SL.flake8.Highlights.|bdb73a34bea7491dac9651324a12d1aaa753cffd9776e404e14d61bbc258c462|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|3429c882cb311f50d3d2628c55e61a4bf538f808c59c2a03a72656c1db46d0fc|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|ef06e99d024eab1a5da879cd77cd6533d5331868161c65c9aa31943cd144920b|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|d305bbcd14e69acd7bb9150679569e7813f8dcb01d70476cac977705800edd99|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|f9a02d80ddd279ca53490ba79300d52b19ae4245bbb3cc105f699e47c7935740|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|16ab7ee1f1a1971c88208f5abb76b3be5de9336187ee44d52986e76b2899dbbc|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|f8369d519ee330f68789c41e6285f95c06a6bf76b2bbdf8befa3b1307a38f532|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|55b89c4cca1d58b68671e0e111f4b5682217f605722cda65016fb8590c05bc69|region.yellowish markup.warning.sublime_linter|32",
+								"SL.flake8.Highlights.|2c3ffaed8311dfc2f4c1e085d6aa321b48cbbb5b6aa60179a105b0d0c827f8fe|region.yellowish markup.warning.sublime_linter|32"
+							],
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 171.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "test/test_sindy.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1432,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								718,
+								718
+							]
+						],
+						"settings":
+						{
+							"SL.19.region_keys":
+							[
+								"SL.flake8.Gutter.|region.yellowish markup.warning.sublime_linter|dot",
+								"SL.flake8.Highlights.|fe18a2aa0b44c2ce3cf881d57d890889013f25d781b447352484b83a7b2f71a7|region.yellowish markup.warning.sublime_linter|32",
+								"sublime_linter.protected_regions"
+							],
+							"SL.41.region_keys":
+							[
+								"SL.flake8.Gutter.|region.yellowish markup.warning.sublime_linter|dot",
+								"SL.flake8.Highlights.|fe18a2aa0b44c2ce3cf881d57d890889013f25d781b447352484b83a7b2f71a7|region.yellowish markup.warning.sublime_linter|32",
+								"sublime_linter.protected_regions"
+							],
+							"git_gutter_is_enabled": true,
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 570.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "test/test_examples.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 379,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								78,
+								78
+							]
+						],
+						"settings":
+						{
+							"SL.42.region_keys":
+							[
+							],
 							"git_gutter_is_enabled": true,
 							"syntax": "Packages/Python/Python.sublime-syntax"
 						},
@@ -1496,42 +1576,13 @@
 					},
 					"stack_index": 6,
 					"type": "text"
-				},
-				{
-					"buffer": 7,
-					"file": "sindy/feature_library/feature_library.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 701,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								636,
-								636
-							]
-						],
-						"settings":
-						{
-							"git_gutter_is_enabled": true,
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 4,
-					"type": "text"
 				}
 			]
 		}
 	],
 	"incremental_find":
 	{
-		"height": 28.0
+		"height": 31.0
 	},
 	"input":
 	{
@@ -1557,7 +1608,7 @@
 		"cols":
 		[
 			0.0,
-			0.591803718834,
+			0.540369705241,
 			1.0
 		],
 		"rows":
@@ -1569,7 +1620,7 @@
 	"menu_visible": true,
 	"output.SublimeLinter":
 	{
-		"height": 0.0
+		"height": 132.0
 	},
 	"output.exec":
 	{
@@ -1595,7 +1646,7 @@
 	"project": "sindy.sublime-project",
 	"replace":
 	{
-		"height": 72.0
+		"height": 78.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -1604,6 +1655,50 @@
 		"last_filter": "",
 		"selected_items":
 		[
+			[
+				"optimi",
+				"sindy/optimizers/optimizers.py"
+			],
+			[
+				"diff",
+				"sindy/differentiation/differentiation_methods.py"
+			],
+			[
+				"setup",
+				"sindy/setup.py"
+			],
+			[
+				"test_b",
+				"test/model/test_base.py"
+			],
+			[
+				"test",
+				"test/model/test_sindy.py"
+			],
+			[
+				"poly",
+				"sindy/feature_library/polynomial_library.py"
+			],
+			[
+				"sindy",
+				"model/sindy.py"
+			],
+			[
+				"conte",
+				"example/context.py"
+			],
+			[
+				"sindy model base",
+				"sindy/model/base.py"
+			],
+			[
+				"examples",
+				"example/my_sindy.py"
+			],
+			[
+				"feature",
+				"sindy/feature_library/feature_library.py"
+			],
 			[
 				"sindy_o",
 				"model/sindy_old.py"
@@ -1619,10 +1714,6 @@
 			[
 				"sind",
 				"model/sindy.py"
-			],
-			[
-				"sindy",
-				"example/sindy.py"
 			],
 			[
 				"bib",
@@ -1687,10 +1778,6 @@
 			[
 				"grad",
 				"matlab/gradRelaxed.m"
-			],
-			[
-				"diff",
-				"matlab/diffFact.m"
 			],
 			[
 				"runn",
@@ -2057,10 +2144,6 @@
 				"sq_global_7cpt.cpp"
 			],
 			[
-				"test",
-				"test2D.cpp"
-			],
-			[
 				"sq_lif",
 				"sq_lift.cpp"
 			],
@@ -2083,38 +2166,6 @@
 			[
 				"sqgetb",
 				"sq_get_b.cpp"
-			],
-			[
-				"sqgetmatr",
-				"sq_get_matrices.cpp"
-			],
-			[
-				"sqgetbounda",
-				"sq_get_boundary_contribution.cpp"
-			],
-			[
-				"sqgetmat",
-				"sq_get_matrices.cpp"
-			],
-			[
-				"getb",
-				"sq_get_b.cpp"
-			],
-			[
-				"sqlift",
-				"sq_lift.cpp"
-			],
-			[
-				"ninesqcptmy",
-				"nine_sq_cpt_test_mypolys.m"
-			],
-			[
-				"sqloopmul",
-				"sq_loop_multi_mu.cpp"
-			],
-			[
-				"generate",
-				"generate_logpts.py"
 			]
 		],
 		"width": 0.0

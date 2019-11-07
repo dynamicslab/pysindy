@@ -17,13 +17,19 @@
 			"path": "docs"
 		},
 		{
-			"path": "sindy/util"
+			"path": "sindy/utils"
 		},
 		{
-			"path": "sindy/model"
+			"path": "sindy/differentiation"
 		},
 		{
-			"path": "sindy/preprocessing"
+			"path": "sindy/optimizers"
+		},
+		{
+			"path": "sindy/feature_library"
+		},
+		{
+			"path": "test"
 		}
 	]
 }

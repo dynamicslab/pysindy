@@ -4,7 +4,6 @@ import abc
 import numpy as np
 from sklearn.base import RegressorMixin
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.exceptions import FitFailedWarning
 from sklearn.linear_model import ridge_regression
 from sklearn.linear_model import Lasso
 from sklearn.linear_model.base import _rescale_data
@@ -27,16 +26,20 @@ class BaseOptimizer(LinearModel, RegressorMixin):
 
         self.history_ = []
 
-
     # Force subclasses to implement this
     @abc.abstractmethod
     def _reduce(self):
         '''Carry out the bulk of the work of the fit function'''
-        return
-
+        raise NotImplementedError
 
     def fit(self, x_, y, sample_weight=None, **reduce_kws):
-        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
+        x_, y = check_X_y(
+            x_,
+            y,
+            accept_sparse=[],
+            y_numeric=True,
+            multi_output=False
+        )
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
             x_,
@@ -60,10 +63,12 @@ class BaseOptimizer(LinearModel, RegressorMixin):
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
 
-
     @property
     def complexity(self):
-        return np.count_nonzero(self.coef_) + np.count_nonzero([abs(self.intercept_) >= self.threshold])
+        return (
+            np.count_nonzero(self.coef_)
+            + np.count_nonzero([abs(self.intercept_) >= self.threshold])
+        )
 
 
 class STLSQ(BaseOptimizer):
@@ -107,7 +112,10 @@ class STLSQ(BaseOptimizer):
         return all(bool(i) == bool(j) for i, j in zip(this_coef, last_coef))
 
     def _reduce(self, x, y):
-        """Iterates the thresholding. Assumes an initial guess is saved in self.coef_ and self.ind_"""
+        """
+        Iterates the thresholding. Assumes an initial guess is saved in
+        self.coef_ and self.ind_
+        """
         ind = self.ind_
         n_samples, n_features = x.shape
         n_features_selected = sum(ind)
@@ -115,27 +123,38 @@ class STLSQ(BaseOptimizer):
         for _ in range(self.iters, self.max_iter):
             if np.count_nonzero(ind) == 0:
                 warnings.warn(
-                    "Sparsity parameter is too big ({}) and eliminated all coeficients".format(self.threshold)
+                    """Sparsity parameter is too big ({}) and eliminated all
+                    coeficients""".format(self.threshold)
                 )
                 coef = np.zeros_like(ind, dtype=float)
                 break
 
             coef = self._regress(x[:, ind], y)
-            coef, ind = self._sparse_coefficients(n_features, ind, coef, self.threshold)
+            coef, ind = self._sparse_coefficients(
+                n_features,
+                ind,
+                coef,
+                self.threshold
+            )
 
             if sum(ind) == n_features_selected or self._no_change():
                 # could not (further) select important features
                 break
         else:
             warnings.warn(
-                "STLSQ._reduce did not converge after {} iterations.".format(self.max_iter),
+                "STLSQ._reduce did not converge after {} iterations.".format(
+                    self.max_iter
+                ),
                 ConvergenceWarning,
             )
             try:
                 coef
             except NameError:
                 coef = self.coef_
-                warnings.warn("STLSQ._reduce has no iterations left to determine coef", ConvergenceWarning)
+                warnings.warn(
+                    "STLSQ._reduce has no iterations left to determine coef",
+                    ConvergenceWarning
+                )
         self.coef_ = coef
         self.ind_ = ind
 
@@ -145,14 +164,13 @@ class STLSQ(BaseOptimizer):
     #         self.coef_, self.ind_ = self._sparse_coefficients(x.shape[1], self.ind_, coef, self.threshold)
 
 
-
 class SR3(BaseOptimizer):
     def __init__(
         self,
         threshold=0.1,
         nu=1.0,
         tol=1e-5,
-        **kwargs,
+        **kwargs
     ):
         super(SR3, self).__init__(**kwargs)
         self.threshold = threshold
@@ -187,7 +205,10 @@ class SR3(BaseOptimizer):
         return np.sum((this_coef - last_coef)**2)
 
     def _reduce(self, x, y):
-        """Iterates the thresholding. Assumes an initial guess is saved in self.coef_ and self.ind_"""
+        """
+        Iterates the thresholding. Assumes an initial guess
+        is saved in self.coef_ and self.ind_
+        """
         coef_relaxed = self.coef_
         n_samples, n_features = x.shape
 
@@ -200,17 +221,19 @@ class SR3(BaseOptimizer):
                 break
         else:
             warnings.warn(
-                "SR3._reduce did not converge after {} iterations.".format(self.max_iter),
+                "SR3._reduce did not converge after {} iterations.".format(
+                    self.max_iter
+                ),
                 ConvergenceWarning,
             )
-            try:
-                coef
-            except NameError:
-                coef = self.coef_
-                warnings.warn("SR3._reduce has no iterations left to determine coef", ConvergenceWarning)
+            # I think we can remove this
+            # try:
+            #     coef
+            # except NameError:
+            #     coef = self.coef_
+            #     warnings.warn("SR3._reduce has no iterations left to determine coef", ConvergenceWarning)
         self.coef_ = coef_relaxed
         self.coef_unrelaxed_ = coef_unrelaxed
-
 
 
 class LASSO(BaseOptimizer):
@@ -226,7 +249,6 @@ class LASSO(BaseOptimizer):
 
         if alpha < 0:
             raise ValueError('alpha must be nonnegative')
-
 
     def _reduce(self, x, y):
         kw = self.lasso_kw or {}

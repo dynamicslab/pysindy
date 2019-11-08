@@ -1,5 +1,6 @@
 import warnings
 from itertools import repeat
+from functools import wraps
 
 import numpy as np
 from sklearn.base import RegressorMixin
@@ -19,6 +20,22 @@ def validate_input(x):
         x = x.reshape(1, -1)
     check_array(x)
     return x
+
+
+def debug(func):
+    """Print the function signature and return value"""
+    @wraps(func)
+    def wrapper_debug(*args, **kwargs):
+        args_repr = [repr(a) for a in args]
+        kwargs_repr = ["{}={}".format(k, v) for k, v in kwargs.items()]
+        signature = ", ".join(args_repr + kwargs_repr)
+        print(
+            "Calling {}({})".format(func.__name__, signature)
+        )
+        value = func(*args, **kwargs)
+        print("{} returned {}".format(func.__name__, value))
+        return value
+    return wrapper_debug
 
 
 def print_model(coef, input_features, errors=None, intercept=None, error_intercept=None, precision=3, pm="±"):

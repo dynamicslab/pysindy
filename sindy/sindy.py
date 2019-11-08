@@ -34,6 +34,8 @@ class SINDy(BaseEstimator):
         if x_dot is None:
             x_dot = self.differentiation_method(x, t)
         else:
+            # TODO: change to ensure x_dot has correct shape
+            # e.g. test this functionality
             check_array(x_dot, ensure_2d=False)
 
         steps = [

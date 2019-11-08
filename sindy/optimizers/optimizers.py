@@ -6,9 +6,12 @@ from sklearn.base import RegressorMixin
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ridge_regression
 from sklearn.linear_model import Lasso
+from sklearn.linear_model import ElasticNet as SKElasticNet
 from sklearn.linear_model.base import _rescale_data
 from sklearn.linear_model.base import LinearModel
 from sklearn.utils.validation import check_X_y
+
+# from sindy.utils.base import debug
 
 
 class BaseOptimizer(LinearModel, RegressorMixin):
@@ -23,6 +26,9 @@ class BaseOptimizer(LinearModel, RegressorMixin):
         self.fit_intercept = fit_intercept
         self.normalize = normalize
         self.copy_X = copy_X
+        self.iters = 0
+        self.coef_ = []
+        self.ind_ = []
 
         self.history_ = []
 
@@ -120,7 +126,7 @@ class STLSQ(BaseOptimizer):
         n_samples, n_features = x.shape
         n_features_selected = sum(ind)
 
-        for _ in range(self.iters, self.max_iter):
+        for _ in range(self.max_iter):
             if np.count_nonzero(ind) == 0:
                 warnings.warn(
                     """Sparsity parameter is too big ({}) and eliminated all
@@ -241,14 +247,17 @@ class LASSO(BaseOptimizer):
         self,
         alpha=1.0,
         lasso_kw=None,
+        max_iter=1000,
         **kwargs
     ):
         super(LASSO, self).__init__(**kwargs)
-        self.lasso_kw = lasso_kw
-        self.alpha = alpha
 
         if alpha < 0:
             raise ValueError('alpha must be nonnegative')
+
+        self.lasso_kw = lasso_kw
+        self.alpha = alpha
+        self.max_iter = max_iter
 
     def _reduce(self, x, y):
         kw = self.lasso_kw or {}
@@ -261,5 +270,42 @@ class LASSO(BaseOptimizer):
 
         lasso_model.fit(x, y)
 
-        self.coef = lasso_model.coef_
+        self.coef_ = lasso_model.coef_
         self.iters = lasso_model.n_iter_
+
+
+class ElasticNet(BaseOptimizer):
+    def __init__(
+        self,
+        alpha=1.0,
+        l1_ratio=0.5,
+        max_iter=1000,
+        elastic_net_kw={},
+        **kwargs
+    ):
+        super(ElasticNet, self).__init__(**kwargs)
+
+        if alpha < 0:
+            raise ValueError('alpha must be nonnegative')
+        if l1_ratio < 0:
+            raise ValueError('l1_ratio must be nonnegative')
+
+        self.alpha = alpha
+        self.l1_ratio = l1_ratio
+        self.max_iter = max_iter
+        self.elastic_net_kw = elastic_net_kw
+
+    def _reduce(self, x, y):
+        kw = self.elastic_net_kw or {}
+        elastic_net_model = SKElasticNet(
+            alpha=self.alpha,
+            l1_ratio=self.l1_ratio,
+            max_iter=self.max_iter,
+            fit_intercept=False,
+            **kw
+        )
+
+        elastic_net_model.fit(x, y)
+
+        self.coef_ = elastic_net_model.coef_
+        self.iters = elastic_net_model.n_iter_

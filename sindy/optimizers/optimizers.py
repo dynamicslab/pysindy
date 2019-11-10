@@ -12,6 +12,7 @@ from sklearn.linear_model.base import LinearModel
 from sklearn.utils.validation import check_X_y
 
 # from sindy.utils.base import debug
+from sindy.utils.base import get_prox
 
 
 class BaseOptimizer(LinearModel, RegressorMixin):
@@ -176,12 +177,10 @@ class SR3(BaseOptimizer):
         threshold=0.1,
         nu=1.0,
         tol=1e-5,
+        thresholder='l0',
         **kwargs
     ):
         super(SR3, self).__init__(**kwargs)
-        self.threshold = threshold
-        self.nu = nu
-        self.tol = tol
 
         if threshold < 0:
             raise ValueError('threshold must be nonnegative')
@@ -190,6 +189,14 @@ class SR3(BaseOptimizer):
         if tol <= 0:
             raise ValueError('tol must be positive')
 
+        self.threshold = threshold
+        self.nu = nu
+        self.tol = tol
+        self.thresholder = thresholder
+        self.prox = get_prox(thresholder)
+
+
+    # TODO: use cholesky factorization to speed this up
     def _update_unrelaxed_coef(self, x, y, coef_relaxed):
         A = np.dot(x.T, x) + np.eye(x.shape[1]) / self.nu
         b = np.dot(x.T, y) + coef_relaxed / self.nu
@@ -198,7 +205,8 @@ class SR3(BaseOptimizer):
         return coef_unrelaxed
 
     def _update_relaxed_coef(self, coef_unrelaxed):
-        coef_relaxed = coef_unrelaxed*(np.abs(coef_unrelaxed) > self.threshold)
+        coef_relaxed = self.prox(coef_unrelaxed, self.threshold)
+        # coef_relaxed = coef_unrelaxed*(np.abs(coef_unrelaxed) > self.threshold)
         self.history_.append(coef_relaxed)
         return coef_relaxed
 

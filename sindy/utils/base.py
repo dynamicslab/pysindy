@@ -38,6 +38,53 @@ def debug(func):
     return wrapper_debug
 
 
+def prox_l0(x, threshold):
+    """Proximal operator for l0 regularization
+    """
+    return x * (np.abs(x) > threshold)
+
+
+def prox_l1(x, threshold):
+    """Proximal operator for l1 regularization
+    """
+    return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
+
+
+def prox_cad(x, lower_threshold):
+    """
+    Proximal operator for CAD regularization
+    prox_cad(z, a, b) = 
+        0                  if |z| < a
+        sign(z)(|z| - a)   if a < |z| <= b
+        z                  if |z| > b
+
+    Entries of x smaller than a in magnitude are set to 0,
+    entries with magnitudes larger than b are untouched,
+    and entries in between have soft-thresholding applied.
+
+    For simplicity we set b = 5*a in this implementation.
+    """
+    upper_threshold = 5 * lower_threshold
+    return (
+        prox_l0(x, upper_threshold)
+        + prox_l1(x, lower_threshold)
+        * (np.abs(x) < upper_threshold)
+    )
+
+
+def get_prox(regularization):
+    if regularization.lower() == 'l0':
+        return prox_l0
+    elif regularization.lower() == 'l1':
+        return prox_l1
+    elif regularization.lower() == 'cad':
+        return prox_cad
+    else:
+        raise NotImplementedError(
+            '{} has not been implemented'.format(regularization)
+        )
+
+
 def print_model(coef, input_features, errors=None, intercept=None, error_intercept=None, precision=3, pm="±"):
     """
 

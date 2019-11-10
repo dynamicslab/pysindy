@@ -2,6 +2,7 @@ import warnings
 import abc
 
 import numpy as np
+from scipy.linalg import cho_factor, cho_solve
 from sklearn.base import RegressorMixin
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ridge_regression
@@ -12,6 +13,7 @@ from sklearn.linear_model.base import LinearModel
 from sklearn.utils.validation import check_X_y
 
 # from sindy.utils.base import debug
+from pdb import set_trace
 from sindy.utils.base import get_prox
 
 
@@ -196,17 +198,14 @@ class SR3(BaseOptimizer):
         self.prox = get_prox(thresholder)
 
 
-    # TODO: use cholesky factorization to speed this up
-    def _update_unrelaxed_coef(self, x, y, coef_relaxed):
-        A = np.dot(x.T, x) + np.eye(x.shape[1]) / self.nu
-        b = np.dot(x.T, y) + coef_relaxed / self.nu
-        coef_unrelaxed = np.linalg.solve(A, b)
+    def _update_unrelaxed_coef(self, cho, x_transpose_y, coef_relaxed):
+        b = x_transpose_y + coef_relaxed / self.nu
+        coef_unrelaxed = cho_solve(cho, b)
         self.iters += 1
         return coef_unrelaxed
 
     def _update_relaxed_coef(self, coef_unrelaxed):
         coef_relaxed = self.prox(coef_unrelaxed, self.threshold)
-        # coef_relaxed = coef_unrelaxed*(np.abs(coef_unrelaxed) > self.threshold)
         self.history_.append(coef_relaxed)
         return coef_relaxed
 
@@ -226,12 +225,23 @@ class SR3(BaseOptimizer):
         coef_relaxed = self.coef_
         n_samples, n_features = x.shape
 
+        # Precompute some objects for upcoming least-squares solves.
+        # Assumes that self.nu is fixed throughout optimization procedure.
+        cho = cho_factor(
+            np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
+        )
+        x_transpose_y = np.dot(x.T, y)
+
         for _ in range(self.iters, self.max_iter):
-            coef_unrelaxed = self._update_unrelaxed_coef(x, y, coef_relaxed)
+            coef_unrelaxed = self._update_unrelaxed_coef(
+                cho,
+                x_transpose_y,
+                coef_relaxed
+            )
             coef_relaxed = self._update_relaxed_coef(coef_unrelaxed)
 
             if self._convergence_criterion() < self.tol:
-                # could not (further) select important features
+                # Could not (further) select important features
                 break
         else:
             warnings.warn(

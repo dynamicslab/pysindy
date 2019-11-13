@@ -36,7 +36,8 @@ class SINDy(BaseEstimator):
         else:
             # TODO: change to ensure x_dot has correct shape
             # e.g. test this functionality
-            check_array(x_dot, ensure_2d=False)
+            x_dot = validate_input(x_dot)
+            # check_array(x_dot, ensure_2d=False)
 
         steps = [
             ("features", self.feature_library),

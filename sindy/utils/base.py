@@ -17,7 +17,7 @@ from sklearn.utils.validation import check_X_y
 
 def validate_input(x):
     if x.ndim == 1:
-        x = x.reshape(1, -1)
+        x = x.reshape(-1, 1)
     check_array(x)
     return x
 

@@ -36,6 +36,12 @@ def data_1d():
     return x, t
 
 
+@pytest.fixture
+def data_1d_bad_shape():
+    x = np.linspace(0, 5, 100)
+    return x
+
+
 def test_get_feature_names_len(data_lorenz):
     x, t = data_lorenz
 
@@ -65,9 +71,15 @@ def test_equation_not_fitted():
         model.equations()
 
 
-def test_predict_bad_input(data_1d):
+def test_improper_shape_input(data_1d):
     x, t = data_1d
     model = SINDy()
-    model.fit(x, t)
-    with pytest.raises(ValueError):
-        model.predict(x.flatten())
+    model.fit(x.flatten(), t)
+    model.fit(x, t, x_dot=x.flatten())
+    model.fit(x.flatten(), t, x_dot=x.flatten())
+
+
+def test_xdot_input(data_1d):
+    x, t = data_1d
+    model = SINDy()
+    model.fit(x, t, x_dot=x)

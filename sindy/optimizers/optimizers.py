@@ -13,19 +13,16 @@ from sklearn.linear_model.base import LinearModel
 from sklearn.utils.validation import check_X_y
 
 # from sindy.utils.base import debug
-from pdb import set_trace
 from sindy.utils.base import get_prox
 
 
 class BaseOptimizer(LinearModel, RegressorMixin):
     def __init__(
         self,
-        max_iter=100,
         normalize=False,
         fit_intercept=False,
         copy_X=True
     ):
-        self.max_iter = max_iter
         self.fit_intercept = fit_intercept
         self.normalize = normalize
         self.copy_X = copy_X
@@ -38,7 +35,7 @@ class BaseOptimizer(LinearModel, RegressorMixin):
     # Force subclasses to implement this
     @abc.abstractmethod
     def _reduce(self):
-        '''Carry out the bulk of the work of the fit function'''
+        """Carry out the bulk of the work of the fit function"""
         raise NotImplementedError
 
     def fit(self, x_, y, sample_weight=None, **reduce_kws):
@@ -85,18 +82,23 @@ class STLSQ(BaseOptimizer):
         self,
         threshold=0.1,
         alpha=0.0,
+        max_iter=20,
         ridge_kw=None,
         **kwargs
     ):
         super(STLSQ, self).__init__(**kwargs)
-        self.threshold = threshold
-        self.alpha = alpha
-        self.ridge_kw = ridge_kw
 
         if threshold < 0:
-            raise ValueError('threshold must be nonnegative')
+            raise ValueError('threshold cannot be negative')
         if alpha < 0:
-            raise ValueError('alpha must be nonnegative')
+            raise ValueError('alpha cannot be negative')
+        if max_iter <= 0:
+            raise ValueError('max_iter must be positive')
+
+        self.threshold = threshold
+        self.alpha = alpha
+        self.max_iter = max_iter
+        self.ridge_kw = ridge_kw
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):
         c = np.zeros(dim)
@@ -180,23 +182,26 @@ class SR3(BaseOptimizer):
         nu=1.0,
         tol=1e-5,
         thresholder='l0',
+        max_iter=30,
         **kwargs
     ):
         super(SR3, self).__init__(**kwargs)
 
         if threshold < 0:
-            raise ValueError('threshold must be nonnegative')
+            raise ValueError('threshold cannot be negative')
         if nu <= 0:
             raise ValueError('nu must be positive')
         if tol <= 0:
             raise ValueError('tol must be positive')
+        if max_iter <= 0:
+            raise ValueError('max_iter must be positive')
 
         self.threshold = threshold
         self.nu = nu
         self.tol = tol
         self.thresholder = thresholder
         self.prox = get_prox(thresholder)
-
+        self.max_iter = max_iter
 
     def _update_unrelaxed_coef(self, cho, x_transpose_y, coef_relaxed):
         b = x_transpose_y + coef_relaxed / self.nu
@@ -232,7 +237,7 @@ class SR3(BaseOptimizer):
         )
         x_transpose_y = np.dot(x.T, y)
 
-        for _ in range(self.iters, self.max_iter):
+        for _ in range(self.max_iter):
             coef_unrelaxed = self._update_unrelaxed_coef(
                 cho,
                 x_transpose_y,
@@ -250,12 +255,7 @@ class SR3(BaseOptimizer):
                 ),
                 ConvergenceWarning,
             )
-            # I think we can remove this
-            # try:
-            #     coef
-            # except NameError:
-            #     coef = self.coef_
-            #     warnings.warn("SR3._reduce has no iterations left to determine coef", ConvergenceWarning)
+
         self.coef_ = coef_relaxed
         self.coef_unrelaxed_ = coef_unrelaxed
 
@@ -271,7 +271,9 @@ class LASSO(BaseOptimizer):
         super(LASSO, self).__init__(**kwargs)
 
         if alpha < 0:
-            raise ValueError('alpha must be nonnegative')
+            raise ValueError('alpha cannot be negative')
+        if max_iter <= 0:
+            raise ValueError('max_iter must be positive')
 
         self.lasso_kw = lasso_kw
         self.alpha = alpha
@@ -307,6 +309,8 @@ class ElasticNet(BaseOptimizer):
             raise ValueError('alpha must be nonnegative')
         if l1_ratio < 0:
             raise ValueError('l1_ratio must be nonnegative')
+        if max_iter <= 0:
+            raise ValueError('max_iter must be positive')
 
         self.alpha = alpha
         self.l1_ratio = l1_ratio

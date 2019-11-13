@@ -10,6 +10,7 @@ my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, my_path + '/../')
 
 from sindy import SINDy
+from sindy.differentiation.differentiation_methods import FiniteDifference
 
 
 @pytest.fixture
@@ -83,3 +84,12 @@ def test_xdot_input(data_1d):
     x, t = data_1d
     model = SINDy()
     model.fit(x, t, x_dot=x)
+
+
+def test_nan_derivatives(data_lorenz):
+    x, t = data_lorenz
+
+    model = SINDy(
+        differentiation_method=FiniteDifference(drop_endpoints=True)
+    )
+    model.fit(x, t)

@@ -22,6 +22,12 @@ def validate_input(x):
     return x
 
 
+def drop_nan_rows(x, x_dot):
+    x = x[~np.isnan(x_dot).any(axis=1)]
+    x_dot = x_dot[~np.isnan(x_dot).any(axis=1)]
+    return x, x_dot
+
+
 def debug(func):
     """Print the function signature and return value"""
     @wraps(func)

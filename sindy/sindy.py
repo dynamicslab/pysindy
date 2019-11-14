@@ -6,7 +6,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_array, check_is_fitted
 from sklearn.exceptions import NotFittedError
 from scipy.integrate import odeint
-from numpy import vstack
+from numpy import vstack, newaxis
 
 from sindy.differentiation import FiniteDifference
 from sindy.optimizers import STLSQ
@@ -172,8 +172,8 @@ class SINDy(BaseEstimator):
             integrator = odeint
 
         def rhs(x, t):
-            return self.predict(x).flatten()
-
+            return self.predict(x[newaxis,:])[0]
+            
         return integrator(rhs, x0, t, **integrator_kws)
 
     @property

@@ -9,7 +9,7 @@ from scipy.integrate import odeint
 
 from sindy.differentiation import FiniteDifference
 from sindy.optimizers import STLSQ
-from sindy.utils.base import equation, validate_input
+from sindy.utils.base import equation, validate_input, drop_nan_rows
 
 
 class SINDy(BaseEstimator):
@@ -34,7 +34,10 @@ class SINDy(BaseEstimator):
         if x_dot is None:
             x_dot = self.differentiation_method(x, t)
         else:
-            check_array(x_dot, ensure_2d=False)
+            x_dot = validate_input(x_dot)
+
+        # Drop rows where derivative isn't known
+        x, x_dot = drop_nan_rows(x, x_dot)
 
         steps = [
             ("features", self.feature_library),

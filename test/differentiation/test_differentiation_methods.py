@@ -153,8 +153,13 @@ def test_forward_difference_dim():
         forward_difference(x)
 
 
-def test_forward_difference_dim():
+def test_centered_difference_dim():
     x = np.ones((5, 5, 5))
     centered_difference = FiniteDifference(order=2)
     with pytest.raises(ValueError):
         centered_difference(x)
+
+
+def test_higher_order_error():
+    with pytest.raises(NotImplementedError):
+        third_order = FiniteDifference(order=3)

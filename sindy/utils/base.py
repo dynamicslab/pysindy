@@ -1,5 +1,6 @@
 import warnings
 from itertools import repeat
+from functools import wraps
 
 import numpy as np
 from sklearn.base import RegressorMixin
@@ -16,9 +17,78 @@ from sklearn.utils.validation import check_X_y
 
 def validate_input(x):
     if x.ndim == 1:
-        x = x.reshape(1, -1)
+        x = x.reshape(-1, 1)
     check_array(x)
     return x
+
+
+def drop_nan_rows(x, x_dot):
+    x = x[~np.isnan(x_dot).any(axis=1)]
+    x_dot = x_dot[~np.isnan(x_dot).any(axis=1)]
+    return x, x_dot
+
+
+def debug(func):
+    """Print the function signature and return value"""
+    @wraps(func)
+    def wrapper_debug(*args, **kwargs):
+        args_repr = [repr(a) for a in args]
+        kwargs_repr = ["{}={}".format(k, v) for k, v in kwargs.items()]
+        signature = ", ".join(args_repr + kwargs_repr)
+        print(
+            "Calling {}({})".format(func.__name__, signature)
+        )
+        value = func(*args, **kwargs)
+        print("{} returned {}".format(func.__name__, value))
+        return value
+    return wrapper_debug
+
+
+def prox_l0(x, threshold):
+    """Proximal operator for l0 regularization
+    """
+    return x * (np.abs(x) > threshold)
+
+
+def prox_l1(x, threshold):
+    """Proximal operator for l1 regularization
+    """
+    return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
+
+
+def prox_cad(x, lower_threshold):
+    """
+    Proximal operator for CAD regularization
+    prox_cad(z, a, b) = 
+        0                  if |z| < a
+        sign(z)(|z| - a)   if a < |z| <= b
+        z                  if |z| > b
+
+    Entries of x smaller than a in magnitude are set to 0,
+    entries with magnitudes larger than b are untouched,
+    and entries in between have soft-thresholding applied.
+
+    For simplicity we set b = 5*a in this implementation.
+    """
+    upper_threshold = 5 * lower_threshold
+    return (
+        prox_l0(x, upper_threshold)
+        + prox_l1(x, lower_threshold)
+        * (np.abs(x) < upper_threshold)
+    )
+
+
+def get_prox(regularization):
+    if regularization.lower() == 'l0':
+        return prox_l0
+    elif regularization.lower() == 'l1':
+        return prox_l1
+    elif regularization.lower() == 'cad':
+        return prox_cad
+    else:
+        raise NotImplementedError(
+            '{} has not been implemented'.format(regularization)
+        )
 
 
 def print_model(coef, input_features, errors=None, intercept=None, error_intercept=None, precision=3, pm="±"):

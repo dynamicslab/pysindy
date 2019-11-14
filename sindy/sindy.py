@@ -6,6 +6,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_array, check_is_fitted
 from sklearn.exceptions import NotFittedError
 from scipy.integrate import odeint
+from numpy import vstack
 
 from sindy.differentiation import FiniteDifference
 from sindy.optimizers import STLSQ
@@ -27,14 +28,17 @@ class SINDy(BaseEstimator):
         self.feature_names = feature_names
         self.n_jobs = n_jobs
 
-    def fit(self, x, t=1, x_dot=None):
-        x = validate_input(x)
-        # TODO: check t
-
-        if x_dot is None:
-            x_dot = self.differentiation_method(x, t)
+    def fit(self, x, t=1, x_dot=None, multiple_trajectories=False):
+        if multiple_trajectories:
+            x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
         else:
-            x_dot = validate_input(x_dot)
+            x = validate_input(x)
+            # TODO: check t
+
+            if x_dot is None:
+                x_dot = self.differentiation_method(x, t)
+            else:
+                x_dot = validate_input(x_dot)
 
         # Drop rows where derivative isn't known
         x, x_dot = drop_nan_rows(x, x_dot)
@@ -56,14 +60,19 @@ class SINDy(BaseEstimator):
 
         return self
 
-    def predict(self, x):
-        x = validate_input(x)
-        if hasattr(self, 'model'):
-            return self.model.predict(x)
+    def predict(self, x, multiple_trajectories=False):
+        if multiple_trajectories:
+            for i in range(len(x)):
+                x[i] = validate_input(x[i])
+            return [self.model.predict(xi) for xi in x]
         else:
-            raise NotFittedError(
-                "SINDy model must be fit before predict can be called"
-            )
+            x = validate_input(x)
+            if hasattr(self, 'model'):
+                return self.model.predict(x)
+            else:
+                raise NotFittedError(
+                    "SINDy model must be fit before predict can be called"
+                )
 
     def equations(self, precision=3):
         if hasattr(self, 'model'):
@@ -99,9 +108,37 @@ class SINDy(BaseEstimator):
             x_dot = self.differentiation_method(x, t)
         return metric(self.model.predict(x), x_dot, **metric_kws)
 
-    def differentiate(self, x, t=1):
-        x = validate_input(x)
-        return self.differentiation_method(x, t)
+    def process_multiple_trajectories(self, x, t, x_dot, return_array=True):
+        if not type(x)==list:
+            raise TypeError(
+                "Input x must be a list"
+            )
+    
+        if x_dot is None:
+            if type(t)==list:
+                x_dot = []
+                for i in range(len(x)):
+                    x[i] = validate_input(x[i])
+                    x_dot.append(self.differentiation_method(x[i], t[i]))
+            else:
+                x_dot = []
+                for i in range(len(x)):
+                    x[i] = validate_input(x[i])
+                    x_dot.append(self.differentiation_method(x[i], t))
+        else:
+            for i in range(len(x_dot)):
+                x_dot[i] = validate_input(x_dot[i])
+        if return_array:
+            return vstack(x), vstack(x_dot)
+        else:
+            return x, x_dot
+    
+    def differentiate(self, x, t=1, multiple_trajectories=False):
+        if multiple_trajectories:
+            return self.process_multiple_trajectories(x, t, None, return_array=False)[1]
+        else:
+            x = validate_input(x)
+            return self.differentiation_method(x, t)
 
     def coefficients(self):
         """Return a list of the coefficients learned by SINDy model"""

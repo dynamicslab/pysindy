@@ -64,7 +64,6 @@ def print_model(coef, input_features, errors=None, intercept=None, error_interce
 
 
 def equation(pipeline, input_features=None, precision=3, input_fmt=None):
-    input_features = pipeline.steps[0][1].get_feature_names(input_features)
     if input_fmt:
         input_features = [input_fmt(i) for i in input_features]
     coef = pipeline.steps[-1][1].coef_

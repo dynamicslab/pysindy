@@ -29,7 +29,9 @@ def drop_nan_rows(x, x_dot):
 
 
 def debug(func):
-    """Print the function signature and return value"""
+    """Decorator which prints function signature and return value
+    whenever it is called
+    """
     @wraps(func)
     def wrapper_debug(*args, **kwargs):
         args_repr = [repr(a) for a in args]

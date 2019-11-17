@@ -61,18 +61,20 @@ class SINDy(BaseEstimator):
         return self
 
     def predict(self, x, multiple_trajectories=False):
-        if multiple_trajectories:
-            for i in range(len(x)):
-                x[i] = validate_input(x[i])
-            return [self.model.predict(xi) for xi in x]
-        else:
-            x = validate_input(x)
-            if hasattr(self, 'model'):
-                return self.model.predict(x)
+        if hasattr(self, 'model'):
+            if multiple_trajectories:
+                for i in range(len(x)):
+                    x[i] = validate_input(x[i])
+                return [self.model.predict(xi) for xi in x]
             else:
-                raise NotFittedError(
-                    "SINDy model must be fit before predict can be called"
-                )
+                x = validate_input(x)
+                if hasattr(self, 'model'):
+                    return self.model.predict(x)
+        else:
+            raise NotFittedError(
+                "SINDy model must be fit before predict can be called"
+            )
+                
 
     def equations(self, precision=3):
         if hasattr(self, 'model'):
@@ -98,8 +100,7 @@ class SINDy(BaseEstimator):
             )
 
     def score(self, x, t=1, y=None, metric=r2_score, **metric_kws):
-        """
-        Have model predict derivative and get score.
+        """Have model predict derivative and compute score
         """
         x = validate_input(x)
         if y is not None:
@@ -109,13 +110,13 @@ class SINDy(BaseEstimator):
         return metric(self.model.predict(x), x_dot, **metric_kws)
 
     def process_multiple_trajectories(self, x, t, x_dot, return_array=True):
-        if not type(x)==list:
+        if not isinstance(x, list):
             raise TypeError(
                 "Input x must be a list"
             )
     
         if x_dot is None:
-            if type(t)==list:
+            if isinstance(t, list):
                 x_dot = []
                 for i in range(len(x)):
                     x[i] = validate_input(x[i])
@@ -141,7 +142,8 @@ class SINDy(BaseEstimator):
             return self.differentiation_method(x, t)
 
     def coefficients(self):
-        """Return a list of the coefficients learned by SINDy model"""
+        """Return a list of the coefficients learned by SINDy model
+        """
         if hasattr(self, 'model'):
             check_is_fitted(
                 self.model.estimators_[0].steps[-1][1],
@@ -154,7 +156,8 @@ class SINDy(BaseEstimator):
             )
 
     def get_feature_names(self):
-        """Return a list of names of features used by SINDy model"""
+        """Return a list of names of features used by SINDy model
+        """
         if hasattr(self, 'model'):
             return self.model.estimators_[0].steps[0][1].get_feature_names(
                 input_features=self.feature_names
@@ -165,8 +168,7 @@ class SINDy(BaseEstimator):
             )
 
     def simulate(self, x0, t, integrator=None, **integrator_kws):
-        """
-        Simulate forward in time from given initial conditions
+        """Simulate forward in time from given initial conditions
         """
         if integrator is None:
             integrator = odeint

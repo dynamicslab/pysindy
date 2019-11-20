@@ -203,16 +203,16 @@ class SR3(BaseOptimizer):
         self.prox = get_prox(thresholder)
         self.max_iter = max_iter
 
-    def _update_unrelaxed_coef(self, cho, x_transpose_y, coef_relaxed):
-        b = x_transpose_y + coef_relaxed / self.nu
-        coef_unrelaxed = cho_solve(cho, b)
+    def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
+        b = x_transpose_y + coef_sparse / self.nu
+        coef_full = cho_solve(cho, b)
         self.iters += 1
-        return coef_unrelaxed
+        return coef_full
 
-    def _update_relaxed_coef(self, coef_unrelaxed):
-        coef_relaxed = self.prox(coef_unrelaxed, self.threshold)
-        self.history_.append(coef_relaxed)
-        return coef_relaxed
+    def _update_sparse_coef(self, coef_full):
+        coef_sparse = self.prox(coef_full, self.threshold)
+        self.history_.append(coef_sparse)
+        return coef_sparse
 
     def _convergence_criterion(self):
         this_coef = self.history_[-1]
@@ -227,7 +227,7 @@ class SR3(BaseOptimizer):
         Iterates the thresholding. Assumes an initial guess
         is saved in self.coef_ and self.ind_
         """
-        coef_relaxed = self.coef_
+        coef_sparse = self.coef_
         n_samples, n_features = x.shape
 
         # Precompute some objects for upcoming least-squares solves.
@@ -238,12 +238,12 @@ class SR3(BaseOptimizer):
         x_transpose_y = np.dot(x.T, y)
 
         for _ in range(self.max_iter):
-            coef_unrelaxed = self._update_unrelaxed_coef(
+            coef_full = self._update_full_coef(
                 cho,
                 x_transpose_y,
-                coef_relaxed
+                coef_sparse
             )
-            coef_relaxed = self._update_relaxed_coef(coef_unrelaxed)
+            coef_sparse = self._update_sparse_coef(coef_full)
 
             if self._convergence_criterion() < self.tol:
                 # Could not (further) select important features
@@ -256,8 +256,8 @@ class SR3(BaseOptimizer):
                 ConvergenceWarning,
             )
 
-        self.coef_ = coef_relaxed
-        self.coef_unrelaxed_ = coef_unrelaxed
+        self.coef_ = coef_sparse
+        self.coef_full_ = coef_full
 
 
 class LASSO(BaseOptimizer):

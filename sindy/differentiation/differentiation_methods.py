@@ -4,7 +4,18 @@ from scipy.signal import savgol_filter
 from sindy.utils.base import validate_input
 
 
-class FiniteDifference:
+class BaseDifferentiation:
+    def __init__(self):
+        pass
+
+    # Force subclasses to implement this
+    @abc.abstractmethod
+    def _differentiate(self, x, t):
+        """Differentiate the data"""
+        raise NotImplementedError
+
+
+class FiniteDifference(BaseDifferentiation):
 
     def __init__(self, order=2, drop_endpoints=False):
         if order <= 0 or not isinstance(order, int):

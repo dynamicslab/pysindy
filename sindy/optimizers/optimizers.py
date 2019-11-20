@@ -12,7 +12,6 @@ from sklearn.linear_model.base import _rescale_data
 from sklearn.linear_model.base import LinearModel
 from sklearn.utils.validation import check_X_y
 
-# from sindy.utils.base import debug
 from sindy.utils.base import get_prox
 
 
@@ -35,7 +34,8 @@ class BaseOptimizer(LinearModel, RegressorMixin):
     # Force subclasses to implement this
     @abc.abstractmethod
     def _reduce(self):
-        """Carry out the bulk of the work of the fit function"""
+        """Carry out the bulk of the work of the fit function
+        """
         raise NotImplementedError
 
     def fit(self, x_, y, sample_weight=None, **reduce_kws):

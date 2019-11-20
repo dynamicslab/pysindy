@@ -6,13 +6,16 @@ from sindy.utils.base import validate_input
 
 
 class BaseDifferentiation:
+    """Base class for differentiation methods
+    """
     def __init__(self):
         pass
 
     # Force subclasses to implement this
     @abc.abstractmethod
     def _differentiate(self, x, t):
-        """Differentiate the data"""
+        """Differentiate the data
+        """
         raise NotImplementedError
 
 
@@ -37,9 +40,12 @@ class FiniteDifference(BaseDifferentiation):
         x = validate_input(x)
         return self._differentiate(x, t)
 
-    # First order forward difference
-    # (and 2nd order backward difference for final point)
     def _forward_difference(self, x, t=1):
+        """
+        First order forward difference
+        (and 2nd order backward difference for final point)
+        """
+
         x_dot = np.full_like(x, fill_value=np.nan)
 
         # Uniform timestep (assume t contains dt)
@@ -73,11 +79,13 @@ class FiniteDifference(BaseDifferentiation):
                 )
             return x_dot
 
-    # Second order centered difference
-    # with third order forward/backward difference at endpoints.
-    # Warning: Sometimes has trouble with nonuniform grid spacing
-    # near boundaries
     def _centered_difference(self, x, t=1):
+        """
+        Second order centered difference
+        with third order forward/backward difference at endpoints.
+        Warning: Sometimes has trouble with nonuniform grid spacing
+        near boundaries
+        """
         x_dot = np.full_like(x, fill_value=np.nan)
 
         # Uniform timestep (assume t contains dt)
@@ -133,6 +141,10 @@ class FiniteDifference(BaseDifferentiation):
 
 
 class SmoothedFiniteDifference(FiniteDifference):
+    """
+    Class which performs differentiation by smoothing input
+    data then applying a finite difference method.
+    """
     def __init__(
         self,
         smoother=savgol_filter,

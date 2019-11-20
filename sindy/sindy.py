@@ -3,7 +3,7 @@ from sklearn.metrics import r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
-from sklearn.utils.validation import check_array, check_is_fitted
+from sklearn.utils.validation import check_is_fitted
 from sklearn.exceptions import NotFittedError
 from scipy.integrate import odeint
 from numpy import vstack, newaxis
@@ -37,7 +37,8 @@ class SINDy(BaseEstimator):
         Names for the input features. If None, will use ['x0','x1',...].
 
     n_jobs : int, optional, default 1
-        The number of jobs to use for the computation.
+        The number of parallel jobs to use when fitting, predicting with, and
+        scoring the model.
 
     Attributes
     ----------
@@ -46,12 +47,12 @@ class SINDy(BaseEstimator):
     """
 
     def __init__(
-            self,
-            optimizer=STLSQ(),
-            feature_library=PolynomialFeatures(),
-            differentiation_method=FiniteDifference(),
-            feature_names=None,
-            n_jobs=1
+        self,
+        optimizer=STLSQ(),
+        feature_library=PolynomialFeatures(),
+        differentiation_method=FiniteDifference(),
+        feature_names=None,
+        n_jobs=1,
     ):
         self.optimizer = optimizer
         self.feature_library = feature_library
@@ -70,8 +71,8 @@ class SINDy(BaseEstimator):
             x should be a list containing data for each trajectory. Individual
             trajectories may contain different numbers of samples.
 
-        t: int, numpy array of shape [n_samples], or list of numpy arrays, optional
-            If t is an int, it specifies the timestep between each sample. If
+        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional
+            If t is a float, it specifies the timestep between each sample. If
             array-like, it specifies the time at which each sample was collected.
             In the case of multi-trajectory training data, t may also be a list of
             arrays containing the collection times for each individual trajectory.
@@ -142,20 +143,19 @@ class SINDy(BaseEstimator):
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
             Predicted time derivatives
         """
-        if hasattr(self, 'model'):
+        if hasattr(self, "model"):
             if multiple_trajectories:
                 for i in range(len(x)):
                     x[i] = validate_input(x[i])
                 return [self.model.predict(xi) for xi in x]
             else:
                 x = validate_input(x)
-                if hasattr(self, 'model'):
+                if hasattr(self, "model"):
                     return self.model.predict(x)
         else:
             raise NotFittedError(
                 "SINDy model must be fit before predict can be called"
             )
-                
 
     def equations(self, precision=3):
         """
@@ -171,30 +171,35 @@ class SINDy(BaseEstimator):
         equations: list of strings
             Strings containing the SINDy model equation for each input feature.
         """
-        if hasattr(self, 'model'):
-            check_is_fitted(
-                self.model.estimators_[0].steps[-1][1],
-                'coef_'
-            )
+        if hasattr(self, "model"):
+            check_is_fitted(self.model.estimators_[0].steps[-1][1], "coef_")
             feature_names = (
-                self.model.estimators_[0].steps[0][1].get_feature_names(
-                    input_features=self.feature_names
-                )
+                self.model.estimators_[0]
+                .steps[0][1]
+                .get_feature_names(input_features=self.feature_names)
             )
             return [
                 equation(
                     est,
                     input_features=feature_names,
                     precision=precision
-                ) for est in self.model.estimators_
+                )
+                for est in self.model.estimators_
             ]
         else:
             raise NotFittedError(
                 "SINDy model must be fit before equations can be called"
             )
 
-    def score(self, x, t=1, x_dot=None, multiple_trajectories=False,
-              metric=r2_score, **metric_kws):
+    def score(
+        self,
+        x,
+        t=1,
+        x_dot=None,
+        multiple_trajectories=False,
+        metric=r2_score,
+        **metric_kws
+    ):
         """
         Returns a score for the time derivative prediction.
 
@@ -203,7 +208,7 @@ class SINDy(BaseEstimator):
         x: array-like or list of array-like, shape (n_samples, n_input_features)
             Samples
 
-        t: int, numpy array of shape [n_samples], or list of numpy arrays, optional
+        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional
             Time step between samples or array of collection times. Optional,
             used to compute the time derivatives of the samples if x_dot is not
             provided.
@@ -231,7 +236,9 @@ class SINDy(BaseEstimator):
             Metric function value for the model prediction of x_dot
         """
         if multiple_trajectories:
-            x, x_dot = self.process_multiple_trajectories(x, t, x_dot, return_array=True)
+            x, x_dot = self.process_multiple_trajectories(
+                x, t, x_dot, return_array=True
+            )
         else:
             x = validate_input(x)
             if x_dot is None:
@@ -244,14 +251,13 @@ class SINDy(BaseEstimator):
         return metric(x_dot_predict, x_dot, **metric_kws)
 
     def process_multiple_trajectories(self, x, t, x_dot, return_array=True):
-        """Handle input data that contains multiple trajectories by doing the
+        """
+        Handle input data that contains multiple trajectories by doing the
         necessary validation, reshaping, and computation of derivatives.
         """
         if not isinstance(x, list):
-            raise TypeError(
-                "Input x must be a list"
-            )
-    
+            raise TypeError("Input x must be a list")
+
         if x_dot is None:
             if isinstance(t, list):
                 x_dot = []
@@ -264,13 +270,12 @@ class SINDy(BaseEstimator):
                     x[i] = validate_input(x[i])
                     x_dot.append(self.differentiation_method(x[i], t))
         else:
-            for i in range(len(x_dot)):
-                x_dot[i] = validate_input(x_dot[i])
+            x_dot = [validate_input[xd] for xd in x_dot]
         if return_array:
             return vstack(x), vstack(x_dot)
         else:
             return x, x_dot
-    
+
     def differentiate(self, x, t=1, multiple_trajectories=False):
         """
         Apply the model's differentiation method to data
@@ -294,7 +299,12 @@ class SINDy(BaseEstimator):
             Time derivatives computed by using the model's differentiation method
         """
         if multiple_trajectories:
-            return self.process_multiple_trajectories(x, t, None, return_array=False)[1]
+            return self.process_multiple_trajectories(
+                x,
+                t,
+                None,
+                return_array=False
+            )[1]
         else:
             x = validate_input(x)
             return self.differentiation_method(x, t)
@@ -302,11 +312,8 @@ class SINDy(BaseEstimator):
     def coefficients(self):
         """Return a list of the coefficients learned by SINDy model
         """
-        if hasattr(self, 'model'):
-            check_is_fitted(
-                self.model.estimators_[0].steps[-1][1],
-                'coef_'
-            )
+        if hasattr(self, "model"):
+            check_is_fitted(self.model.estimators_[0].steps[-1][1], "coef_")
             return self.model.estimators_[0].steps[-1][1].coef_
         else:
             raise NotFittedError(
@@ -316,16 +323,18 @@ class SINDy(BaseEstimator):
     def get_feature_names(self):
         """Return a list of names of features used by SINDy model
         """
-        if hasattr(self, 'model'):
-            return self.model.estimators_[0].steps[0][1].get_feature_names(
-                input_features=self.feature_names
+        if hasattr(self, "model"):
+            return (
+                self.model.estimators_[0]
+                .steps[0][1]
+                .get_feature_names(input_features=self.feature_names)
             )
         else:
             raise NotFittedError(
                 "SINDy model must be fit before get_feature_names is called"
             )
 
-    def simulate(self, x0, t, integrator=None, **integrator_kws):
+    def simulate(self, x0, t, integrator=odeint, **integrator_kws):
         """
         Simulate the SINDy model forward in time.
 
@@ -348,12 +357,10 @@ class SINDy(BaseEstimator):
         x: numpy array, size (n_samples, n_features)
             Simulation results
         """
-        if integrator is None:
-            integrator = odeint
 
         def rhs(x, t):
-            return self.predict(x[newaxis,:])[0]
-            
+            return self.predict(x[newaxis, :])[0]
+
         return integrator(rhs, x0, t, **integrator_kws)
 
     @property

@@ -9,6 +9,49 @@ from sindy.utils import get_prox
 
 
 class SR3(BaseOptimizer):
+    """
+    Sparse relaxed regularized regression.
+
+    Attempts to minimize the objective function
+    0.5 * ||y-Xw||^2_2 + lambda * R(v) + (0.5 / nu) * ||w-v||^2_2
+    where R(v) is a regularization function.
+
+    Parameters
+    ----------
+    threshold : float, optional, default 0.1
+        Determines the strength of the regularization. When the
+        regularization function R is the l0 norm, the regularization
+        is equivalent to performing hard thresholding, and lambda
+        is chosen to threshold at the value given by this parameter.
+        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
+
+    nu : float, optional, default 1
+        Determines the level of relaxation. Decreasing nu encourages
+        w and v to be close, whereas increasing nu allows the
+        regularized coefficients v to be farther from w.
+
+    tol : float, optional, default 1e-5
+        Tolerance used for determining convergence of the optimization
+        algorithm.
+
+    thresholder : string, optional, default 'l0'
+        Regularization function to use. Currently implemented options
+        are 'l0' (l0 norm), 'l1' (l1 norm), and 'cad' (clipped
+        absolute deviation).
+
+    max_iter : int, optional, default 30
+        Maximum iterations of the optimization algorithm.
+
+    Attributes
+    ----------
+    coef_ : array, shape (n_features,) or (n_targets, n_features)
+        Regularized weight vector(s). This is the v in the objective
+        function.
+
+    coef_full_ : array, shape (n_features,) or (n_targets, n_features)
+        Weight vector(s) that are not subjected to the regularization.
+        This is the w in the objective function.
+    """
     def __init__(
         self,
         threshold=0.1,
@@ -37,17 +80,23 @@ class SR3(BaseOptimizer):
         self.max_iter = max_iter
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
+        """Update the unregularized weight vector
+        """
         b = x_transpose_y + coef_sparse / self.nu
         coef_full = cho_solve(cho, b)
         self.iters += 1
         return coef_full
 
     def _update_sparse_coef(self, coef_full):
+        """Update the regularized weight vector
+        """
         coef_sparse = self.prox(coef_full, self.threshold)
         self.history_.append(coef_sparse)
         return coef_sparse
 
     def _convergence_criterion(self):
+        """Calculate the convergence criterion for the optimization
+        """
         this_coef = self.history_[-1]
         if len(self.history_) > 1:
             last_coef = self.history_[-2]

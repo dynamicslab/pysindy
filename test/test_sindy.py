@@ -10,7 +10,7 @@ my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, my_path + '/../')
 
 from sindy import SINDy
-from sindy.differentiation.differentiation_methods import FiniteDifference
+from sindy.differentiation import FiniteDifference
 
 
 @pytest.fixture

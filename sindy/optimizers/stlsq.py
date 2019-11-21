@@ -8,6 +8,39 @@ from sindy.optimizers import BaseOptimizer
 
 
 class STLSQ(BaseOptimizer):
+    """
+    Sequentially thresholded least squares algorithm.
+
+    Attempts to minimize the objective function
+    ||y - Xw||^2_2 + alpha * ||w||^2_2 by iteratively performing
+    least squares and masking out elements of the weight that are
+    below a given threshold.
+
+    Parameters
+    ----------
+    threshold : float, optional, default 0.1
+        Minimum magnitude for a coefficient in the weight vector.
+        Coefficients with magnitude below the threshold are set
+        to zero.
+
+    alpha : float, optional, default 0
+        Optional L2 (ridge) regularization on the weight vector.
+
+    max_iter : int, optional, default 20
+        Maximum iterations of the optimization algorithm.
+
+    ridge_kw : dict, optional
+        Optional keyword arguments to pass to the ridge regression.
+
+    Attributes
+    ----------
+    coef_ : array, shape (n_features,) or (n_targets, n_features)
+        Weight vector(s)
+
+    ind_ : array, shape (n_features,) or (n_targets, n_features)
+        Array of 0s and 1s indicating which coefficients of the
+        weight vector have not been masked out.
+    """
     def __init__(
         self,
         threshold=0.1,
@@ -31,6 +64,8 @@ class STLSQ(BaseOptimizer):
         self.ridge_kw = ridge_kw
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):
+        """Perform thresholding of the weight vector(s)
+        """
         c = np.zeros(dim)
         c[ind] = coef
         big_ind = np.abs(c) >= threshold
@@ -39,12 +74,16 @@ class STLSQ(BaseOptimizer):
         return c, big_ind
 
     def _regress(self, x, y):
+        """Perform the ridge regression
+        """
         kw = self.ridge_kw or {}
         coef = ridge_regression(x, y, self.alpha, **kw)
         self.iters += 1
         return coef
 
     def _no_change(self):
+        """Check if the coefficient mask has changed after thresholding
+        """
         this_coef = self.history_[-1]
         if len(self.history_) > 1:
             last_coef = self.history_[-2]

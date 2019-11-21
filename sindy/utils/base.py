@@ -26,9 +26,8 @@ def validate_input(x, t=None):
         if np.ndim(t) == 0:
             if t <= 0:
                 raise ValueError('t must be positive')
-
         # Only apply these tests if t is array-like
-        if isinstance(t, str):
+        elif isinstance(t, str):
             raise ValueError('t must be a scalar or array-like, not a string.')
         elif isinstance(t, (collections.Sequence, np.ndarray)):
             if not len(t) == x.shape[0]:

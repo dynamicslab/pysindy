@@ -12,10 +12,10 @@ class LASSO(BaseOptimizer):
 
     Parameters
     ----------
-    alpha : float, optional, default 1
+    alpha : float, optional (default 1)
         Strength of the L1 regularization
 
-    max_iter : int, optional, default 1000
+    max_iter : int, optional (default 1000)
         Maximum iterations of the optimization algorithm.
 
     lasso_kw : dict, optional

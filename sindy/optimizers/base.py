@@ -19,16 +19,16 @@ class BaseOptimizer(LinearModel, RegressorMixin):
 
     Parameters
     ----------
-    fit_intercept : boolean, optional, default False
+    fit_intercept : boolean, optional (default False)
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    normalize : boolean, optional, default False
+    normalize : boolean, optional (default False)
         This parameter is ignored when fit_intercept is set to False. If True,
         the regressors X will be normalized before regression by subtracting the
         mean and dividing by the l2-norm.
 
-    copy_X : boolean, optional, default True
+    copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
     """
     def __init__(

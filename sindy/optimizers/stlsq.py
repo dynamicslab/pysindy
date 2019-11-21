@@ -18,15 +18,15 @@ class STLSQ(BaseOptimizer):
 
     Parameters
     ----------
-    threshold : float, optional, default 0.1
+    threshold : float, optional (default 0.1)
         Minimum magnitude for a coefficient in the weight vector.
         Coefficients with magnitude below the threshold are set
         to zero.
 
-    alpha : float, optional, default 0
+    alpha : float, optional (default 0)
         Optional L2 (ridge) regularization on the weight vector.
 
-    max_iter : int, optional, default 20
+    max_iter : int, optional (default 20)
         Maximum iterations of the optimization algorithm.
 
     ridge_kw : dict, optional

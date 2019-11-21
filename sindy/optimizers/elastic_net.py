@@ -14,16 +14,16 @@ class ElasticNet(BaseOptimizer):
 
     Parameters
     ----------
-    alpha : float, optional, default 1
+    alpha : float, optional (default 1)
         Strength of the L2 regularization
 
-    l1_ratio : float, optional, default 0.5
+    l1_ratio : float, optional (default 0.5)
         The ElasticNet mixing parameter, with 0 <= l1_ratio <= 1. For
         l1_ratio = 0 the penalty is an L2 penalty. For l1_ratio = 1 it is
         an L1 penalty. For 0 < l1_ratio < 1, the penalty is a combination
         of L1 and L2.
 
-    max_iter : int, optional, default 1000
+    max_iter : int, optional (default 1000)
         Maximum iterations of the optimization algorithm.
 
     elastic_net_kw : dict, optional

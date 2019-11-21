@@ -36,7 +36,7 @@ class SINDy(BaseEstimator):
     feature_names : list of string, length n_input_features, optional
         Names for the input features. If None, will use ['x0','x1',...].
 
-    n_jobs : int, optional, default 1
+    n_jobs : int, optional (default 1)
         The number of parallel jobs to use when fitting, predicting with, and
         scoring the model.
 
@@ -140,7 +140,7 @@ class SINDy(BaseEstimator):
         x: array-like or list of array-like, shape (n_samples, n_input_features)
             Samples
 
-        multiple_trajectories: boolean, optional, default False
+        multiple_trajectories: boolean, optional (default False)
             If True, x contains multiple trajectories and must be a list of data
             from each trajectory. If False, x is a single trajectory.
 
@@ -168,7 +168,7 @@ class SINDy(BaseEstimator):
 
         Parameters
         ----------
-        precision: int, optional, default 3
+        precision: int, optional (default 3)
             Number of decimal points to print for each coefficient in the equation.
 
         Returns
@@ -231,7 +231,7 @@ class SINDy(BaseEstimator):
             derivatives of the training data will be computed using the
             specified differentiation method.
 
-        multiple_trajectories: boolean, optional, default False
+        multiple_trajectories: boolean, optional (default False)
             If True, x contains multiple trajectories and must be a list of data
             from each trajectory. If False, x is a single trajectory.
 
@@ -310,7 +310,7 @@ class SINDy(BaseEstimator):
             Time step between samples or array of collection times. Default is a
             time step of 1 between samples.
 
-        multiple_trajectories: boolean, optional, default False
+        multiple_trajectories: boolean, optional (default False)
             If True, x contains multiple trajectories and must be a list of data
             from each trajectory. If False, x is a single trajectory.
 

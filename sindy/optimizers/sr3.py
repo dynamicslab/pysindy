@@ -18,28 +18,28 @@ class SR3(BaseOptimizer):
 
     Parameters
     ----------
-    threshold : float, optional, default 0.1
+    threshold : float, optional (default 0.1)
         Determines the strength of the regularization. When the
         regularization function R is the l0 norm, the regularization
         is equivalent to performing hard thresholding, and lambda
         is chosen to threshold at the value given by this parameter.
         This is equivalent to choosing lambda = threshold^2 / (2 * nu).
 
-    nu : float, optional, default 1
+    nu : float, optional (default 1)
         Determines the level of relaxation. Decreasing nu encourages
         w and v to be close, whereas increasing nu allows the
         regularized coefficients v to be farther from w.
 
-    tol : float, optional, default 1e-5
+    tol : float, optional (default 1e-5)
         Tolerance used for determining convergence of the optimization
         algorithm.
 
-    thresholder : string, optional, default 'l0'
+    thresholder : string, optional (default 'l0')
         Regularization function to use. Currently implemented options
         are 'l0' (l0 norm), 'l1' (l1 norm), and 'cad' (clipped
         absolute deviation).
 
-    max_iter : int, optional, default 30
+    max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
     Attributes

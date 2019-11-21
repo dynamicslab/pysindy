@@ -196,12 +196,15 @@ class SINDy(BaseEstimator):
                 "SINDy model must be fit before equations can be called"
             )
 
-    def print(self, precision=3):
+    def print(self, lhs=None, precision=3):
         """Print the SINDy model equations.
         """
         eqns = self.equations(precision)
-        for i in range(self.n_input_features_):
-            print(self.feature_names[i] + "' = " + eqns[i])
+        for i,eqn in enumerate(eqns):
+            if lhs is None:
+                print(self.feature_names[i] + "' = " + eqn)
+            else:
+                print(lhs[i] + " = " + eqn)
 
     def score(
         self,

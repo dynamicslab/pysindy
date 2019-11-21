@@ -72,8 +72,9 @@ class SINDy(BaseEstimator):
             trajectories may contain different numbers of samples.
 
         t: float, numpy array of shape [n_samples], or list of numpy arrays, optional (default 1)
-            If t is a float, it specifies the timestep between each sample. If
-            array-like, it specifies the time at which each sample was collected.
+            If t is a float, it specifies the timestep between each sample.
+            If array-like, it specifies the time at which each sample was collected.
+            In this case the values in t must be strictly increasing.
             In the case of multi-trajectory training data, t may also be a list of
             arrays containing the collection times for each individual trajectory.
             Default value is a timestep of 1 between samples.
@@ -97,13 +98,12 @@ class SINDy(BaseEstimator):
         if multiple_trajectories:
             x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
         else:
-            x = validate_input(x)
-            # TODO: check t
+            x = validate_input(x, t)
 
             if x_dot is None:
                 x_dot = self.differentiation_method(x, t)
             else:
-                x_dot = validate_input(x_dot)
+                x_dot = validate_input(x_dot, t)
 
         # Drop rows where derivative isn't known
         x, x_dot = drop_nan_rows(x, x_dot)
@@ -151,8 +151,7 @@ class SINDy(BaseEstimator):
         """
         if hasattr(self, "model"):
             if multiple_trajectories:
-                for i in range(len(x)):
-                    x[i] = validate_input(x[i])
+                x = [validate_input(xi) for xi in x]
                 return [self.model.predict(xi) for xi in x]
             else:
                 x = validate_input(x)
@@ -253,7 +252,7 @@ class SINDy(BaseEstimator):
                 x, t, x_dot, return_array=True
             )
         else:
-            x = validate_input(x)
+            x = validate_input(x, t)
             if x_dot is None:
                 x_dot = self.differentiation_method(x, t)
 
@@ -275,15 +274,24 @@ class SINDy(BaseEstimator):
             if isinstance(t, list):
                 x_dot = []
                 for i in range(len(x)):
-                    x[i] = validate_input(x[i])
+                    x[i] = validate_input(x[i], t[i])
                     x_dot.append(self.differentiation_method(x[i], t[i]))
             else:
                 x_dot = []
                 for i in range(len(x)):
-                    x[i] = validate_input(x[i])
+                    x[i] = validate_input(x[i], t)
                     x_dot.append(self.differentiation_method(x[i], t))
         else:
-            x_dot = [validate_input[xd] for xd in x_dot]
+            if not isinstance(x_dot, list):
+                raise ValueError(
+                    "x_dot must be a list if used with x of list type "
+                    "(i.e. for multiple trajectories)"
+                )
+            if isinstance(t, list):
+                x_dot = [validate_input(xd, t) for xd, t in zip(x_dot, t)]
+            else:
+                x_dot = [validate_input(xd, t) for xd in x_dot]
+
         if return_array:
             return vstack(x), vstack(x_dot)
         else:
@@ -319,7 +327,7 @@ class SINDy(BaseEstimator):
                 return_array=False
             )[1]
         else:
-            x = validate_input(x)
+            x = validate_input(x, t)
             return self.differentiation_method(x, t)
 
     def coefficients(self):

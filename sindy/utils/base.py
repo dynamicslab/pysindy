@@ -1,4 +1,5 @@
 import warnings
+import collections
 from itertools import repeat
 from functools import wraps
 
@@ -15,10 +16,30 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 
-def validate_input(x):
+def validate_input(x, t=None):
     if x.ndim == 1:
         x = x.reshape(-1, 1)
     check_array(x)
+
+    if t is not None:
+        # Apply this check if t is a scalar
+        if np.ndim(t) == 0:
+            if t <= 0:
+                raise ValueError('t must be positive')
+
+        # Only apply these tests if t is array-like
+        if isinstance(t, str):
+            raise ValueError('t must be a scalar or array-like, not a string.')
+        elif isinstance(t, (collections.Sequence, np.ndarray)):
+            if not len(t) == x.shape[0]:
+                raise ValueError('Length of t should match x.shape[0].')
+            if not np.all(t[:-1] < t[1:]):
+                raise ValueError(
+                    'Values in t should be in strictly increasing order.'
+                )
+        else:
+            raise ValueError('t must be a scalar or array-like.')
+
     return x
 
 

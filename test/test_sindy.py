@@ -93,3 +93,10 @@ def test_nan_derivatives(data_lorenz):
         differentiation_method=FiniteDifference(drop_endpoints=True)
     )
     model.fit(x, t)
+
+# TODO: add test for scalar value of t
+# TODO: add test for when t size doesn't match x
+# TODO: add test for when t is out of order
+
+# TODO: add tests for manually specifying x_dot,
+# especially for multiple trajectories

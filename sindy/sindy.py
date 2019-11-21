@@ -71,21 +71,21 @@ class SINDy(BaseEstimator):
             x should be a list containing data for each trajectory. Individual
             trajectories may contain different numbers of samples.
 
-        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional
+        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional (default 1)
             If t is a float, it specifies the timestep between each sample. If
             array-like, it specifies the time at which each sample was collected.
             In the case of multi-trajectory training data, t may also be a list of
             arrays containing the collection times for each individual trajectory.
             Default value is a timestep of 1 between samples.
 
-        x_dot: array-like or list of array-like, shape (n_samples, n_input_features), optional
+        x_dot: array-like or list of array-like, shape (n_samples, n_input_features), optional (default None)
             Optional pre-computed derivatives of the training data. If not provided,
             the time derivatives of the training data will be computed using the
             specified differentiation method. If x_dot is provided, it must match
             the shape of the training data and these values will be used as the time
             derivatives.
 
-        multiple_trajectories: boolean, optional, default False
+        multiple_trajectories: boolean, optional, (default False)
             Whether or not the training data includes multiple trajectories. If
             True, the training data must be a list of arrays containing data for
             each trajectory. If False, the training data must be a single array.

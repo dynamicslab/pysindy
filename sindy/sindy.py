@@ -123,6 +123,12 @@ class SINDy(BaseEstimator):
             self.model.estimators_[0].steps[0][1].n_output_features_
         )
 
+        if self.feature_names is None:
+            feature_names = []
+            for i in range(self.n_input_features_):
+                feature_names.append('x'+str(i))
+            self.feature_names = feature_names
+
         return self
 
     def predict(self, x, multiple_trajectories=False):
@@ -159,7 +165,7 @@ class SINDy(BaseEstimator):
 
     def equations(self, precision=3):
         """
-        Get the SINDy model equations.
+        Get the right hand sides of the SINDy model equations.
 
         Parameters
         ----------
@@ -190,6 +196,13 @@ class SINDy(BaseEstimator):
             raise NotFittedError(
                 "SINDy model must be fit before equations can be called"
             )
+
+    def print(self, precision=3):
+        """Print the SINDy model equations.
+        """
+        eqns = self.equations(precision)
+        for i in range(self.n_input_features_):
+            print(self.feature_names[i] + "' = " + eqns[i])
 
     def score(
         self,

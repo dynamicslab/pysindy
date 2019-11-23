@@ -200,7 +200,7 @@ class SINDy(BaseEstimator):
         """Print the SINDy model equations.
         """
         eqns = self.equations(precision)
-        for i,eqn in enumerate(eqns):
+        for i, eqn in enumerate(eqns):
             if lhs is None:
                 print(self.feature_names[i] + "' = " + eqn)
             else:

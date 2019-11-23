@@ -19,8 +19,10 @@ class CustomLibrary(BaseFeatureLibrary):
         List of functions used to generate feature names for each library
         function. Each name function must take a string input (representing
         a variable name), and output a string depiction of the respective
-        mathematical function applied to that variable. This list must be
-        the same length as library_functions.
+        mathematical function applied to that variable. For example, if the
+        first library function is sine, the name function might return
+        'sin(x)' given 'x' as input. The function_names list must be the
+        same length as library_functions.
 
     Attributes
     ----------

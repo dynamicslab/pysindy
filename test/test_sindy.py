@@ -203,4 +203,13 @@ def test_score(data):
     model.score(x, t, x_dot=x)
 
 
+def test_parallel(data_lorenz):
+    x, t = data_lorenz
+    model = SINDy(n_jobs=4)
+    model.fit(x, t)
+
+    x_dot = model.predict(x)
+    model.score(x, x_dot=x_dot)
+
+
 # TODO: add tests for multiple trajectories

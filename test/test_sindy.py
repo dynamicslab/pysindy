@@ -11,6 +11,7 @@ sys.path.insert(0, my_path + '/../')
 
 from sindy import SINDy
 from sindy.differentiation import FiniteDifference
+from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
 
 
 @pytest.fixture
@@ -146,5 +147,60 @@ def test_bad_t(data):
         model.fit(x, t)
 
 
-# TODO: add tests for manually specifying x_dot,
-# especially for multiple trajectories
+@pytest.mark.parametrize(
+    'data, optimizer',
+    [
+        (data_1d(), STLSQ()),
+        (data_lorenz(), STLSQ()),
+        (data_1d(), SR3()),
+        (data_lorenz(), SR3()),
+        (data_1d(), LASSO()),
+        (data_lorenz(), LASSO()),
+        (data_1d(), ElasticNet()),
+        (data_lorenz(), ElasticNet()),
+    ]
+)
+def test_predict(data, optimizer):
+    x, t = data
+    model = SINDy(optimizer=optimizer)
+    model.fit(x, t)
+    x_dot = model.predict(x)
+
+    assert x.shape == x_dot.shape
+
+
+@pytest.mark.parametrize(
+    'data',
+    [
+        (data_1d()),
+        (data_lorenz())
+    ]
+)
+def test_simulate(data):
+    x, t = data
+    model = SINDy()
+    model.fit(x, t)
+    x1 = model.simulate(x[0], t)
+
+    assert len(x1) == len(t)
+
+
+@pytest.mark.parametrize(
+    'data',
+    [
+        (data_1d()),
+        (data_lorenz())
+    ]
+)
+def test_score(data):
+    x, t = data
+    model = SINDy()
+    model.fit(x, t)
+
+    model.score(x)
+    model.score(x, t)
+    model.score(x, x_dot=x)
+    model.score(x, t, x_dot=x)
+
+
+# TODO: add tests for multiple trajectories

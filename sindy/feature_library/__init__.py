@@ -1,2 +1,3 @@
 from .feature_library import BaseFeatureLibrary
 from .polynomial_library import PolynomialLibrary
+from .custom_library import CustomLibrary

@@ -80,12 +80,6 @@ def test_improper_shape_input(data_1d):
     model.fit(x.flatten(), t, x_dot=x.flatten())
 
 
-def test_xdot_input(data_1d):
-    x, t = data_1d
-    model = SINDy()
-    model.fit(x, t, x_dot=x)
-
-
 def test_nan_derivatives(data_lorenz):
     x, t = data_lorenz
 
@@ -94,9 +88,63 @@ def test_nan_derivatives(data_lorenz):
     )
     model.fit(x, t)
 
-# TODO: add test for scalar value of t
-# TODO: add test for when t size doesn't match x
-# TODO: add test for when t is out of order
+
+@pytest.mark.parametrize(
+    'data',
+    [
+        (data_1d()),
+        (data_lorenz())
+    ]
+)
+def test_mixed_inputs(data):
+    x, t = data
+    model = SINDy()
+
+    # Scalar t
+    model.fit(x, t=2)
+
+    # x_dot is passed in
+    model.fit(x, t, x_dot=x)
+
+
+@pytest.mark.parametrize(
+    'data',
+    [
+        (data_1d()),
+        (data_lorenz())
+    ]
+)
+def test_bad_t(data):
+    x, t = data
+    model = SINDy()
+
+    # No t
+    with pytest.raises(ValueError):
+        model.fit(x, t=None)
+
+    # Invalid value of t
+    with pytest.raises(ValueError):
+        model.fit(x, t=-1)
+
+    # t is a list
+    with pytest.raises(ValueError):
+        model.fit(x, list(t))
+
+    # Wrong number of time points
+    with pytest.raises(ValueError):
+        model.fit(x, t[:-1])
+
+    # Two points in t out of order
+    t[2], t[4] = t[4], t[2]
+    with pytest.raises(ValueError):
+        model.fit(x, t)
+    t[2], t[4] = t[4], t[2]
+
+    # Two matching times in t
+    t[3] = t[5]
+    with pytest.raises(ValueError):
+        model.fit(x, t)
+
 
 # TODO: add tests for manually specifying x_dot,
 # especially for multiple trajectories

@@ -15,21 +15,28 @@ from sklearn.utils.validation import check_array
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
+# Define a special object for the default value of t in
+# validate_input. Normally we would set the default
+# value of t to be None, but it is possile for the user
+# to pass in None, in which case validate_input performs
+# no checks on t.
+T_DEFAULT = object()
 
-def validate_input(x, t=None):
+
+def validate_input(x, t=T_DEFAULT):
     if x.ndim == 1:
         x = x.reshape(-1, 1)
     check_array(x)
 
-    if t is not None:
+    if t is not T_DEFAULT:
+        if t is None:
+            raise ValueError('t must be a scalar or array-like.')
         # Apply this check if t is a scalar
-        if np.ndim(t) == 0:
+        elif np.ndim(t) == 0:
             if t <= 0:
                 raise ValueError('t must be positive')
         # Only apply these tests if t is array-like
-        elif isinstance(t, str):
-            raise ValueError('t must be a scalar or array-like, not a string.')
-        elif isinstance(t, (collections.Sequence, np.ndarray)):
+        elif isinstance(t, np.ndarray):
             if not len(t) == x.shape[0]:
                 raise ValueError('Length of t should match x.shape[0].')
             if not np.all(t[:-1] < t[1:]):

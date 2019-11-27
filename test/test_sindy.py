@@ -15,6 +15,19 @@ from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
 
 
 @pytest.fixture
+def data_1d():
+    t = np.linspace(0, 5, 100)
+    x = 2 * t.reshape(-1, 1)
+    return x, t
+
+
+@pytest.fixture
+def data_1d_bad_shape():
+    x = np.linspace(0, 5, 100)
+    return x
+
+
+@pytest.fixture
 def data_lorenz():
 
     def lorenz(z, t):
@@ -32,16 +45,30 @@ def data_lorenz():
 
 
 @pytest.fixture
-def data_1d():
-    t = np.linspace(0, 5, 100)
-    x = 2 * t.reshape(-1, 1)
-    return x, t
+def data_multiple_trajctories():
 
+    def lorenz(z, t):
+        return [
+            10*(z[1] - z[0]),
+            z[0]*(28 - z[2]) - z[1],
+            z[0]*z[1] - 8/3*z[2]
+        ]
 
-@pytest.fixture
-def data_1d_bad_shape():
-    x = np.linspace(0, 5, 100)
-    return x
+    n_points = [10, 50, 100]
+    initial_conditions = [
+        [8, 27, -7],
+        [9, 28, -8],
+        [-1, 10, 1]
+    ]
+
+    x_list = []
+    t_list = []
+    for n, x0 in zip(n_points, initial_conditions):
+        t = np.linspace(0, 5, n)
+        t_list.append(t)
+        x_list.append(odeint(lorenz, x0, t))
+
+    return x_list, t_list
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -212,4 +239,42 @@ def test_parallel(data_lorenz):
     model.score(x, x_dot=x_dot)
 
 
-# TODO: add tests for multiple trajectories
+def test_fit_multiple_trajectores(data_multiple_trajctories):
+    x, t = data_multiple_trajctories
+    model = SINDy()
+
+    # Should fail if multiple_trajectories flag is not set
+    with pytest.raises(ValueError):
+        model.fit(x, t=t)
+
+    model.fit(x, multiple_trajectories=True)
+    model.fit(x, t=t, multiple_trajectories=True)
+    model.fit(x, x_dot=x, multiple_trajectories=True)
+    model.fit(x, t=t, x_dot=x, multiple_trajectories=True)
+
+
+def test_predict_multiple_trajectories(data_multiple_trajctories):
+    x, t = data_multiple_trajctories
+    model = SINDy()
+    model.fit(x, t=t, multiple_trajectories=True)
+
+    # Should fail if multiple_trajectories flag is not set
+    with pytest.raises(ValueError):
+        model.predict(x)
+
+    model.predict(x, multiple_trajectories=True)
+
+
+def test_score_multiple_trajectories(data_multiple_trajctories):
+    x, t = data_multiple_trajctories
+    model = SINDy()
+    model.fit(x, t=t, multiple_trajectories=True)
+
+    # Should fail if multiple_trajectories flag is not set
+    with pytest.raises(ValueError):
+        model.score(x)
+
+    model.score(x, multiple_trajectories=True)
+    model.score(x, t=t, multiple_trajectories=True)
+    model.score(x, x_dot=x, multiple_trajectories=True)
+    model.score(x, t=t, x_dot=x, multiple_trajectories=True)

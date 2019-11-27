@@ -49,7 +49,10 @@ class BaseOptimizer(LinearModel, RegressorMixin):
     # Force subclasses to implement this
     @abc.abstractmethod
     def _reduce(self):
-        """Carry out the bulk of the work of the fit function
+        """
+        Carry out the bulk of the work of the fit function.
+
+        Subclass implementations MUST update self.coef_.
         """
         raise NotImplementedError
 

@@ -5,57 +5,53 @@ from sklearn.utils.validation import check_is_fitted
 
 import numpy as np
 
-class CustomLibrary(BaseFeatureLibrary):
+
+class FourierLibrary(BaseFeatureLibrary):
     """
     Generate a library with custom functions.
 
     Parameters
     ----------
-    library_functions : list of mathematical functions
-        Functions to include in the library. Each function will be
-        applied to each input variable.
+    n_frequencies : int, optional (default 1)
+        Number of frequencies to include in the library. The library will
+        include functions sin(x), sin(2*x), ... sin(n_frequencies * x) for
+        each input feature x (depending on which of sine and/or cosine
+        features are included).
 
-    function_names : list of functions
-        List of functions used to generate feature names for each library
-        function. Each name function must take a string input (representing
-        a variable name), and output a string depiction of the respective
-        mathematical function applied to that variable. For example, if the
-        first library function is sine, the name function might return
-        'sin(x)' given 'x' as input. The function_names list must be the
-        same length as library_functions.
+    include_sin : boolean, optional (default True)
+        If True, include sine terms in the library.
+
+    include_cos : boolean, optional (default True)
+        If True, include cosine terms in the library.
 
     Attributes
     ----------
-    functions : list of functions
-        Mathematical library functions to be applied to each input feature.
-
-    function_names : list of functions
-        Functions for generating string representations of each library
-        function.
-
     n_input_features_ : int
         The total number of input features.
 
     n_output_features_ : int
         The total number of output features. The number of output features
-        is the product of the number of library functions and the number of
-        input features.
+        is 2*n_input_features_*n_frequencies if both sines and cosines
+        are included. Otherwise it is n_input_features*n_frequencies.
     """
-    def __init__(self, library_functions, function_names):
-        super(CustomLibrary, self).__init__()
-        self.functions = library_functions
-        self.function_names = function_names
-        if len(library_functions) != len(function_names):
-            raise ValueError("library_functions and function_names must have the same number of elements")
+    def __init__(self, n_frequencies=1, include_sin=True, include_cos=True):
+        super(FourierLibrary, self).__init__()
+        self.n_frequencies = n_frequencies
+        self.include_sin = include_sin
+        self.include_cos = include_cos
+        if not (include_sin or include_cos):
+            raise ValueError("include_sin and include_cos cannot both be False")
 
     def get_feature_names(self, input_features=None):
         """
         Return feature names for output features
+        
         Parameters
         ----------
         input_features : list of string, length n_features, optional
             String names for input features if available. By default,
             "x0", "x1", ... "xn_features" is used.
+
         Returns
         -------
         output_feature_names : list of string, length n_output_features
@@ -64,29 +60,37 @@ class CustomLibrary(BaseFeatureLibrary):
         if input_features is None:
             input_features = ['x%d' % i for i in range(self.n_input_features_)]
         feature_names = []
-        for function_name in self.function_names:
+        for i in range(self.n_frequencies):
             for feature in input_features:
-                feature_names.append(function_name(feature))
+                if self.include_sin:
+                    feature_names.append('sin(' + str(i+1) + ' ' + feature + ')')
+                if self.include_cos:
+                    feature_names.append('cos(' + str(i+1) + ' ' + feature + ')')
         return feature_names
 
     def fit(self, X, y=None):
         """
         Compute number of output features.
+        
         Parameters
         ----------
         X : array-like, shape (n_samples, n_features)
             The data.
+        
         Returns
         -------
         self : instance
         """
         n_samples, n_features = check_array(X).shape
         self.n_input_features_ = n_features
-        self.n_output_features_ = n_features*len(self.functions)
+        if self.include_sin and self.include_cos:
+            self.n_output_features_ = n_features*self.n_frequencies*2
+        else:
+            self.n_output_features_ = n_features*self.n_frequencies
         return self
 
     def transform(self, X):
-        """Transform data to custom features
+        """Transform data to Fourier features
 
         Parameters
         ----------
@@ -96,8 +100,8 @@ class CustomLibrary(BaseFeatureLibrary):
         Returns
         -------
         XP : np.ndarray, shape [n_samples, NP]
-            The matrix of features, where NP is the number of features
-            generated from applying the custom functions to the inputs.
+            The matrix of features, where NP is the number of Fourier
+            features generated from the inputs.
         """
         check_is_fitted(self, ['n_input_features_', 'n_output_features_'])
 
@@ -109,8 +113,13 @@ class CustomLibrary(BaseFeatureLibrary):
             raise ValueError("X shape does not match training shape")
 
         XP = np.empty((n_samples, self.n_output_features_), dtype=X.dtype)
-        for i, f in enumerate(self.functions):
+        idx = 0
+        for i in range(self.n_frequencies):
             for j in range(self.n_input_features_):
-                XP[:, j+i*self.n_input_features_] = f(X[:, j])
-
+                if self.include_sin:
+                    XP[:, idx] = np.sin((i+1)*X[:, j])
+                    idx += 1
+                if self.include_cos:
+                    XP[:, idx] = np.cos((i+1)*X[:, j])
+                    idx += 1
         return XP

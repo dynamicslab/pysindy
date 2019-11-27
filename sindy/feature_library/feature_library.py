@@ -3,7 +3,9 @@ Base class for feature library classes.
 """
 import abc
 
-class BaseFeatureLibrary():
+from sklearn.base import TransformerMixin
+
+class BaseFeatureLibrary(TransformerMixin):
     """
     Functions that should eventually be implemented:
         -print/get names of features
@@ -50,9 +52,11 @@ class BaseFeatureLibrary():
         """
         raise NotImplementedError
 
-    # Some kind of function that applies the library
-    def fit_transform(self, x):
-        pass
+    # # Some kind of function that applies the library
+    # def fit_transform(self, X, y=None):
+    #     pass
+    #     # self.fit(X, y)
+    #     # return self.transform(X)
 
     @property
     def size(self):

@@ -24,7 +24,9 @@ T_DEFAULT = object()
 
 
 def validate_input(x, t=T_DEFAULT):
-    if x.ndim == 1:
+    if not isinstance(x, np.ndarray):
+        raise ValueError('x must be array-like')
+    elif x.ndim == 1:
         x = x.reshape(-1, 1)
     check_array(x)
 

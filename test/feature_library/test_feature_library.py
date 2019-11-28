@@ -7,7 +7,7 @@ import os
 import pytest
 
 my_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, my_path + '/../')
+sys.path.insert(0, my_path + '/../../')
 
 from sindy.feature_library import (
 	PolynomialLibrary,

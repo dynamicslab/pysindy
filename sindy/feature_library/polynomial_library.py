@@ -1,15 +1,18 @@
-from sindy.feature_library import BaseFeatureLibrary
-
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.utils import check_array
-from sklearn.utils.validation import (check_is_fitted,FLOAT_DTYPES)
-from sklearn.preprocessing import _csr_polynomial_expansion
-
 import numpy as np
 from scipy import sparse
 from itertools import chain, combinations
 from itertools import combinations_with_replacement as combinations_w_r
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.utils import check_array
+from sklearn.utils.validation import check_is_fitted, FLOAT_DTYPES
+from sklearn.preprocessing import _csr_polynomial_expansion
 
+from sindy.feature_library import BaseFeatureLibrary
+
+# TODO
+# -Check if order or base classes needs to be swapped
+# -Feed through black
+# -Tell Kathleen about black
 class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     """
     Generate polynomial and interaction features. This is the same as
@@ -19,9 +22,11 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     def __init__(self, degree=2, include_interaction=True, interaction_only=False, include_bias=True, order='C'):
         super(PolynomialLibrary, self).__init__(degree=degree,interaction_only=interaction_only,
                                                 include_bias=include_bias,order=order)
-        self.include_interaction = include_interaction
+        if degree < 0 or not isinstance(degree, int):
+            raise ValueError("degree must be a nonnegative integer")
         if (not include_interaction) and interaction_only:
             raise ValueError("Can't have include_interaction be False and interaction_only be True")
+        self.include_interaction = include_interaction
             
     @staticmethod
     def _combinations(n_features, degree, include_interaction, interaction_only, include_bias):
@@ -98,7 +103,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         return self
 
     def transform(self, X):
-        """Transform data to polynomial features
+        """
+        Transform data to polynomial features
         Parameters
         ----------
         X : array-like or CSR/CSC sparse matrix, shape [n_samples, n_features]

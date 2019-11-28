@@ -36,11 +36,13 @@ class FourierLibrary(BaseFeatureLibrary):
     """
     def __init__(self, n_frequencies=1, include_sin=True, include_cos=True):
         super(FourierLibrary, self).__init__()
+        if not (include_sin or include_cos):
+            raise ValueError("include_sin and include_cos cannot both be False")
+        if n_frequencies < 1 or not isinstance(n_frequencies, int):
+            raise ValueError("n_frequencies must be a positive integer")
         self.n_frequencies = n_frequencies
         self.include_sin = include_sin
         self.include_cos = include_cos
-        if not (include_sin or include_cos):
-            raise ValueError("include_sin and include_cos cannot both be False")
 
     def get_feature_names(self, input_features=None):
         """

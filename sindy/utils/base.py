@@ -25,28 +25,26 @@ T_DEFAULT = object()
 
 def validate_input(x, t=T_DEFAULT):
     if not isinstance(x, np.ndarray):
-        raise ValueError('x must be array-like')
+        raise ValueError("x must be array-like")
     elif x.ndim == 1:
         x = x.reshape(-1, 1)
     check_array(x)
 
     if t is not T_DEFAULT:
         if t is None:
-            raise ValueError('t must be a scalar or array-like.')
+            raise ValueError("t must be a scalar or array-like.")
         # Apply this check if t is a scalar
         elif np.ndim(t) == 0:
             if t <= 0:
-                raise ValueError('t must be positive')
+                raise ValueError("t must be positive")
         # Only apply these tests if t is array-like
         elif isinstance(t, np.ndarray):
             if not len(t) == x.shape[0]:
-                raise ValueError('Length of t should match x.shape[0].')
+                raise ValueError("Length of t should match x.shape[0].")
             if not np.all(t[:-1] < t[1:]):
-                raise ValueError(
-                    'Values in t should be in strictly increasing order.'
-                )
+                raise ValueError("Values in t should be in strictly increasing order.")
         else:
-            raise ValueError('t must be a scalar or array-like.')
+            raise ValueError("t must be a scalar or array-like.")
 
     return x
 
@@ -61,17 +59,17 @@ def debug(func):
     """Decorator which prints function signature and return value
     whenever it is called
     """
+
     @wraps(func)
     def wrapper_debug(*args, **kwargs):
         args_repr = [repr(a) for a in args]
         kwargs_repr = ["{}={}".format(k, v) for k, v in kwargs.items()]
         signature = ", ".join(args_repr + kwargs_repr)
-        print(
-            "Calling {}({})".format(func.__name__, signature)
-        )
+        print("Calling {}({})".format(func.__name__, signature))
         value = func(*args, **kwargs)
         print("{} returned {}".format(func.__name__, value))
         return value
+
     return wrapper_debug
 
 
@@ -102,27 +100,31 @@ def prox_cad(x, lower_threshold):
     For simplicity we set b = 5*a in this implementation.
     """
     upper_threshold = 5 * lower_threshold
-    return (
-        prox_l0(x, upper_threshold)
-        + prox_l1(x, lower_threshold)
-        * (np.abs(x) < upper_threshold)
+    return prox_l0(x, upper_threshold) + prox_l1(x, lower_threshold) * (
+        np.abs(x) < upper_threshold
     )
 
 
 def get_prox(regularization):
-    if regularization.lower() == 'l0':
+    if regularization.lower() == "l0":
         return prox_l0
-    elif regularization.lower() == 'l1':
+    elif regularization.lower() == "l1":
         return prox_l1
-    elif regularization.lower() == 'cad':
+    elif regularization.lower() == "cad":
         return prox_cad
     else:
-        raise NotImplementedError(
-            '{} has not been implemented'.format(regularization)
-        )
+        raise NotImplementedError("{} has not been implemented".format(regularization))
 
 
-def print_model(coef, input_features, errors=None, intercept=None, error_intercept=None, precision=3, pm="±"):
+def print_model(
+    coef,
+    input_features,
+    errors=None,
+    intercept=None,
+    error_intercept=None,
+    precision=3,
+    pm="±",
+):
     """
 
     Args:
@@ -159,7 +161,9 @@ def print_model(coef, input_features, errors=None, intercept=None, error_interce
         intercept = intercept or 0
         if eq:
             eq += " + "
-        eq += term(intercept, error_intercept, "").strip() or f"{intercept:.{precision}f}"
+        eq += (
+            term(intercept, error_intercept, "").strip() or f"{intercept:.{precision}f}"
+        )
 
     return eq
 
@@ -190,10 +194,14 @@ class RationalFunctionMixin:
     def predict(self, x):
         check_is_fitted(self, "coef_")
         x = check_array(x)
-        return (self.intercept_ + x @ self.coef_nominator_) / (1 + x @ self.coef_denominator_)
+        return (self.intercept_ + x @ self.coef_nominator_) / (
+            1 + x @ self.coef_denominator_
+        )
 
     def print_model(self, input_features=None):
-        input_features = input_features or ["x_{}".format(i) for i in range(len(self.coef_nominator_))]
+        input_features = input_features or [
+            "x_{}".format(i) for i in range(len(self.coef_nominator_))
+        ]
         nominator = print_model(self.coef_nominator_, input_features)
         if self.intercept_:
             nominator += "+ {}".format(self.intercept_)
@@ -207,5 +215,9 @@ class RationalFunctionMixin:
 
 class PrintMixin:
     def print_model(self, input_features=None, precision=3):
-        input_features = input_features or ["x_{}".format(i) for i in range(len(self.coef_))]
-        return print_model(self.coef_, input_features, intercept=self.intercept_, precision=precision)
+        input_features = input_features or [
+            "x_{}".format(i) for i in range(len(self.coef_))
+        ]
+        return print_model(
+            self.coef_, input_features, intercept=self.intercept_, precision=precision
+        )

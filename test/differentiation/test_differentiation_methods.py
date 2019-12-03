@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 my_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, my_path + '/../../')
+sys.path.insert(0, my_path + "/../../")
 from sindy.differentiation import FiniteDifference
 
 """
@@ -37,7 +37,7 @@ def test_forward_difference_variable_timestep_length():
     t = np.linspace(1, 10, 100) ** 2
     x = 2 * t
     forward_difference = FiniteDifference(order=1)
-    assert(len(forward_difference(x, t) == len(x)))
+    assert len(forward_difference(x, t) == len(x))
 
 
 def test_centered_difference_length():
@@ -53,7 +53,7 @@ def test_centered_difference_variable_timestep_length():
     t = np.linspace(1, 10, 100) ** 2
     x = 2 * t
     centered_difference = FiniteDifference(order=2)
-    assert(len(centered_difference(x, t) == len(x)))
+    assert len(centered_difference(x, t) == len(x))
 
 
 # Fixtures: data sets to be re-used in multiple tests
@@ -79,70 +79,40 @@ def data_2d_linear():
 def test_forward_difference_1d(data_1d_linear):
     x, x_dot = data_1d_linear
     forward_difference = FiniteDifference(order=1)
-    np.testing.assert_allclose(
-        forward_difference(x),
-        x_dot
-    )
+    np.testing.assert_allclose(forward_difference(x), x_dot)
 
 
 def test_forward_difference_2d(data_2d_linear):
     x, x_dot = data_2d_linear
     forward_difference = FiniteDifference(order=1)
-    np.testing.assert_allclose(
-        forward_difference(x),
-        x_dot
-    )
+    np.testing.assert_allclose(forward_difference(x), x_dot)
 
 
 def test_centered_difference_1d(data_1d_linear):
     x, x_dot = data_1d_linear
     centered_difference = FiniteDifference(order=2)
-    np.testing.assert_allclose(
-        centered_difference(x),
-        x_dot
-    )
+    np.testing.assert_allclose(centered_difference(x), x_dot)
 
 
 def test_centered_difference_2d(data_2d_linear):
     x, x_dot = data_2d_linear
     centered_difference = FiniteDifference(order=2)
-    np.testing.assert_allclose(
-        centered_difference(x),
-        x_dot
-    )
+    np.testing.assert_allclose(centered_difference(x), x_dot)
 
 
 # Alternative implementation of the four tests above using parametrization
-@pytest.mark.parametrize(
-    'data',
-    [
-        (data_1d_linear()),
-        (data_2d_linear())
-    ]
-)
+@pytest.mark.parametrize("data", [(data_1d_linear()), (data_2d_linear())])
 def test_forward_difference(data):
     x, x_dot = data
     forward_difference = FiniteDifference(order=1)
-    np.testing.assert_allclose(
-        forward_difference(x),
-        x_dot
-    )
+    np.testing.assert_allclose(forward_difference(x), x_dot)
 
 
-@pytest.mark.parametrize(
-    'data',
-    [
-        (data_1d_linear()),
-        (data_2d_linear())
-    ]
-)
+@pytest.mark.parametrize("data", [(data_1d_linear()), (data_2d_linear())])
 def test_centered_difference(data):
     x, x_dot = data
     centered_difference = FiniteDifference(order=2)
-    np.testing.assert_allclose(
-        centered_difference(x),
-        x_dot
-    )
+    np.testing.assert_allclose(centered_difference(x), x_dot)
 
 
 # pytest can also check that methods throw errors when appropriate

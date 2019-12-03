@@ -24,22 +24,18 @@ class SmoothedFiniteDifference(FiniteDifference):
         Addtional parameters passed to the FiniteDifference __init__
         function.
     """
-    def __init__(
-        self,
-        smoother=savgol_filter,
-        smoother_kws={},
-        **kwargs
-    ):
+
+    def __init__(self, smoother=savgol_filter, smoother_kws={}, **kwargs):
         super(SmoothedFiniteDifference, self).__init__(**kwargs)
         self.smoother = smoother
         self.smoother_kws = smoother_kws
 
         if smoother is savgol_filter:
-            if 'window_length' not in smoother_kws:
-                self.smoother_kws['window_length'] = 11
-            if 'polyorder' not in smoother_kws:
-                self.smoother_kws['polyorder'] = 3
-            self.smoother_kws['axis'] = 0
+            if "window_length" not in smoother_kws:
+                self.smoother_kws["window_length"] = 11
+            if "polyorder" not in smoother_kws:
+                self.smoother_kws["polyorder"] = 3
+            self.smoother_kws["axis"] = 0
 
     def _differentiate(self, x, t):
         """

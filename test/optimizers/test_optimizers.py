@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 my_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, my_path + '/../../')
+sys.path.insert(0, my_path + "/../../")
 from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
 
 
@@ -16,13 +16,13 @@ def data_1d():
 
 
 @pytest.mark.parametrize(
-    'data, optimizer',
+    "data, optimizer",
     [
         (data_1d(), STLSQ()),
         (data_1d(), SR3()),
         (data_1d(), LASSO()),
         (data_1d(), ElasticNet()),
-    ]
+    ],
 )
 def test_fit(data, optimizer):
     x, x_dot = data
@@ -64,7 +64,7 @@ def test_bad_parameters(data_1d):
         model = SR3(tol=0)
 
     with pytest.raises(NotImplementedError):
-        model = SR3(thresholder='l2')
+        model = SR3(thresholder="l2")
 
     with pytest.raises(ValueError):
         model = SR3(max_iter=0)
@@ -87,14 +87,7 @@ def test_bad_parameters(data_1d):
 
 # The different captilizations are intentional;
 # I want to make sure different versions are recognized
-@pytest.mark.parametrize(
-    'thresholder',
-    [
-        ('L0'),
-        ('l1'),
-        ('CAD')
-    ]
-)
+@pytest.mark.parametrize("thresholder", [("L0"), ("l1"), ("CAD")])
 def test_sr3_prox_functions(data_1d, thresholder):
     x, x_dot = data_1d
     model = SR3(thresholder=thresholder)

@@ -5,6 +5,7 @@ from sklearn.utils.validation import check_is_fitted
 
 import numpy as np
 
+
 class CustomLibrary(BaseFeatureLibrary):
     """
     Generate a library with custom functions.
@@ -41,12 +42,15 @@ class CustomLibrary(BaseFeatureLibrary):
         is the product of the number of library functions and the number of
         input features.
     """
+
     def __init__(self, library_functions, function_names):
         super(CustomLibrary, self).__init__()
         self.functions = library_functions
         self.function_names = function_names
         if len(library_functions) != len(function_names):
-            raise ValueError("library_functions and function_names must have the same number of elements")
+            raise ValueError(
+                "library_functions and function_names must have the same number of elements"
+            )
 
     def get_feature_names(self, input_features=None):
         """
@@ -60,9 +64,9 @@ class CustomLibrary(BaseFeatureLibrary):
         -------
         output_feature_names : list of string, length n_output_features
         """
-        check_is_fitted(self, 'n_input_features_')
+        check_is_fitted(self, "n_input_features_")
         if input_features is None:
-            input_features = ['x%d' % i for i in range(self.n_input_features_)]
+            input_features = ["x%d" % i for i in range(self.n_input_features_)]
         feature_names = []
         for function_name in self.function_names:
             for feature in input_features:
@@ -82,7 +86,7 @@ class CustomLibrary(BaseFeatureLibrary):
         """
         n_samples, n_features = check_array(X).shape
         self.n_input_features_ = n_features
-        self.n_output_features_ = n_features*len(self.functions)
+        self.n_output_features_ = n_features * len(self.functions)
         return self
 
     def transform(self, X):
@@ -99,7 +103,7 @@ class CustomLibrary(BaseFeatureLibrary):
             The matrix of features, where NP is the number of features
             generated from applying the custom functions to the inputs.
         """
-        check_is_fitted(self, ['n_input_features_', 'n_output_features_'])
+        check_is_fitted(self, ["n_input_features_", "n_output_features_"])
 
         X = check_array(X)
 
@@ -111,6 +115,6 @@ class CustomLibrary(BaseFeatureLibrary):
         XP = np.empty((n_samples, self.n_output_features_), dtype=X.dtype)
         for i, f in enumerate(self.functions):
             for j in range(self.n_input_features_):
-                XP[:, j+i*self.n_input_features_] = f(X[:, j])
+                XP[:, j + i * self.n_input_features_] = f(X[:, j])
 
         return XP

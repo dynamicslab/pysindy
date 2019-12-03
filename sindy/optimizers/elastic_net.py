@@ -38,22 +38,18 @@ class ElasticNet(BaseOptimizer):
     iters : int
         Number of iterations performed in the optimization
     """
+
     def __init__(
-        self,
-        alpha=1.0,
-        l1_ratio=0.5,
-        max_iter=1000,
-        elastic_net_kw={},
-        **kwargs
+        self, alpha=1.0, l1_ratio=0.5, max_iter=1000, elastic_net_kw={}, **kwargs
     ):
         super(ElasticNet, self).__init__(**kwargs)
 
         if alpha < 0:
-            raise ValueError('alpha must be nonnegative')
+            raise ValueError("alpha must be nonnegative")
         if l1_ratio < 0:
-            raise ValueError('l1_ratio must be nonnegative')
+            raise ValueError("l1_ratio must be nonnegative")
         if max_iter <= 0:
-            raise ValueError('max_iter must be positive')
+            raise ValueError("max_iter must be positive")
 
         self.alpha = alpha
         self.l1_ratio = l1_ratio

@@ -30,19 +30,14 @@ class LASSO(BaseOptimizer):
     iters : int
         Number of iterations performed in the optimization
     """
-    def __init__(
-        self,
-        alpha=1.0,
-        lasso_kw=None,
-        max_iter=1000,
-        **kwargs
-    ):
+
+    def __init__(self, alpha=1.0, lasso_kw=None, max_iter=1000, **kwargs):
         super(LASSO, self).__init__(**kwargs)
 
         if alpha < 0:
-            raise ValueError('alpha cannot be negative')
+            raise ValueError("alpha cannot be negative")
         if max_iter <= 0:
-            raise ValueError('max_iter must be positive')
+            raise ValueError("max_iter must be positive")
 
         self.lasso_kw = lasso_kw
         self.alpha = alpha
@@ -53,10 +48,7 @@ class LASSO(BaseOptimizer):
         """
         kw = self.lasso_kw or {}
         lasso_model = Lasso(
-            alpha=self.alpha,
-            max_iter=self.max_iter,
-            fit_intercept=False,
-            **kw
+            alpha=self.alpha, max_iter=self.max_iter, fit_intercept=False, **kw
         )
 
         lasso_model.fit(x, y)

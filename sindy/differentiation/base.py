@@ -14,6 +14,7 @@ class BaseDifferentiation:
     Simply forces differentiation methods to implement a
     _differentiate function.
     """
+
     def __init__(self):
         pass
 

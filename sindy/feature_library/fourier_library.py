@@ -34,6 +34,7 @@ class FourierLibrary(BaseFeatureLibrary):
         is 2*n_input_features_*n_frequencies if both sines and cosines
         are included. Otherwise it is n_input_features*n_frequencies.
     """
+
     def __init__(self, n_frequencies=1, include_sin=True, include_cos=True):
         super(FourierLibrary, self).__init__()
         if not (include_sin or include_cos):
@@ -58,16 +59,16 @@ class FourierLibrary(BaseFeatureLibrary):
         -------
         output_feature_names : list of string, length n_output_features
         """
-        check_is_fitted(self, 'n_input_features_')
+        check_is_fitted(self, "n_input_features_")
         if input_features is None:
-            input_features = ['x%d' % i for i in range(self.n_input_features_)]
+            input_features = ["x%d" % i for i in range(self.n_input_features_)]
         feature_names = []
         for i in range(self.n_frequencies):
             for feature in input_features:
                 if self.include_sin:
-                    feature_names.append('sin(' + str(i+1) + ' ' + feature + ')')
+                    feature_names.append("sin(" + str(i + 1) + " " + feature + ")")
                 if self.include_cos:
-                    feature_names.append('cos(' + str(i+1) + ' ' + feature + ')')
+                    feature_names.append("cos(" + str(i + 1) + " " + feature + ")")
         return feature_names
 
     def fit(self, X, y=None):
@@ -86,9 +87,9 @@ class FourierLibrary(BaseFeatureLibrary):
         n_samples, n_features = check_array(X).shape
         self.n_input_features_ = n_features
         if self.include_sin and self.include_cos:
-            self.n_output_features_ = n_features*self.n_frequencies*2
+            self.n_output_features_ = n_features * self.n_frequencies * 2
         else:
-            self.n_output_features_ = n_features*self.n_frequencies
+            self.n_output_features_ = n_features * self.n_frequencies
         return self
 
     def transform(self, X):
@@ -105,7 +106,7 @@ class FourierLibrary(BaseFeatureLibrary):
             The matrix of features, where NP is the number of Fourier
             features generated from the inputs.
         """
-        check_is_fitted(self, ['n_input_features_', 'n_output_features_'])
+        check_is_fitted(self, ["n_input_features_", "n_output_features_"])
 
         X = check_array(X)
 
@@ -119,9 +120,9 @@ class FourierLibrary(BaseFeatureLibrary):
         for i in range(self.n_frequencies):
             for j in range(self.n_input_features_):
                 if self.include_sin:
-                    XP[:, idx] = np.sin((i+1)*X[:, j])
+                    XP[:, idx] = np.sin((i + 1) * X[:, j])
                     idx += 1
                 if self.include_cos:
-                    XP[:, idx] = np.cos((i+1)*X[:, j])
+                    XP[:, idx] = np.cos((i + 1) * X[:, j])
                     idx += 1
         return XP

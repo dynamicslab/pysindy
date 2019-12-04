@@ -116,9 +116,7 @@ class SINDy(BaseEstimator):
 
         self.model.fit(x, x_dot)
 
-        self.n_input_features_ = (
-            self.model.estimators_[0].steps[0][1].n_input_features_
-        )
+        self.n_input_features_ = self.model.estimators_[0].steps[0][1].n_input_features_
         self.n_output_features_ = (
             self.model.estimators_[0].steps[0][1].n_output_features_
         )
@@ -126,7 +124,7 @@ class SINDy(BaseEstimator):
         if self.feature_names is None:
             feature_names = []
             for i in range(self.n_input_features_):
-                feature_names.append('x'+str(i))
+                feature_names.append("x" + str(i))
             self.feature_names = feature_names
 
         return self
@@ -158,9 +156,7 @@ class SINDy(BaseEstimator):
                 if hasattr(self, "model"):
                     return self.model.predict(x)
         else:
-            raise NotFittedError(
-                "SINDy model must be fit before predict can be called"
-            )
+            raise NotFittedError("SINDy model must be fit before predict can be called")
 
     def equations(self, precision=3):
         """
@@ -184,11 +180,7 @@ class SINDy(BaseEstimator):
                 .get_feature_names(input_features=self.feature_names)
             )
             return [
-                equation(
-                    est,
-                    input_features=feature_names,
-                    precision=precision
-                )
+                equation(est, input_features=feature_names, precision=precision)
                 for est in self.model.estimators_
             ]
         else:
@@ -323,12 +315,7 @@ class SINDy(BaseEstimator):
             Time derivatives computed by using the model's differentiation method
         """
         if multiple_trajectories:
-            return self.process_multiple_trajectories(
-                x,
-                t,
-                None,
-                return_array=False
-            )[1]
+            return self.process_multiple_trajectories(x, t, None, return_array=False)[1]
         else:
             x = validate_input(x, t)
             return self.differentiation_method(x, t)
@@ -389,6 +376,4 @@ class SINDy(BaseEstimator):
 
     @property
     def complexity(self):
-        return sum(
-            est.steps[1][1].complexity for est in self.model.estimators_
-        )
+        return sum(est.steps[1][1].complexity for est in self.model.estimators_)

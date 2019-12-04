@@ -5,6 +5,7 @@ import abc
 
 from sklearn.base import TransformerMixin
 
+
 class BaseFeatureLibrary(TransformerMixin):
     """
     Functions that should eventually be implemented:
@@ -13,6 +14,7 @@ class BaseFeatureLibrary(TransformerMixin):
         -addition (concatenate lists of features)
         -
     """
+
     def __init__(self, **kwargs):
         pass
 

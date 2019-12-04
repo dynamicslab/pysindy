@@ -31,12 +31,8 @@ class BaseOptimizer(LinearModel, RegressorMixin):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
     """
-    def __init__(
-        self,
-        normalize=False,
-        fit_intercept=False,
-        copy_X=True
-    ):
+
+    def __init__(self, normalize=False, fit_intercept=False, copy_X=True):
         self.fit_intercept = fit_intercept
         self.normalize = normalize
         self.copy_X = copy_X
@@ -79,13 +75,7 @@ class BaseOptimizer(LinearModel, RegressorMixin):
         -------
         self : returns an instance of self
         """
-        x_, y = check_X_y(
-            x_,
-            y,
-            accept_sparse=[],
-            y_numeric=True,
-            multi_output=False
-        )
+        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
             x_,
@@ -111,7 +101,6 @@ class BaseOptimizer(LinearModel, RegressorMixin):
 
     @property
     def complexity(self):
-        return (
-            np.count_nonzero(self.coef_)
-            + np.count_nonzero([abs(self.intercept_) >= self.threshold])
+        return np.count_nonzero(self.coef_) + np.count_nonzero(
+            [abs(self.intercept_) >= self.threshold]
         )

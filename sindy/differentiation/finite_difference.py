@@ -27,6 +27,7 @@ class FiniteDifference(BaseDifferentiation):
     -------
     self: returns an instance of self
     """
+
     def __init__(self, order=2, drop_endpoints=False):
         if order <= 0 or not isinstance(order, int):
             raise ValueError("order must be a positive int")
@@ -57,31 +58,17 @@ class FiniteDifference(BaseDifferentiation):
         if np.isscalar(t):
             x_dot[:-1, :] = (x[1:, :] - x[:-1, :]) / t
             if not self.drop_endpoints:
-                x_dot[-1, :] = (
-                    (
-                        3 * x[-1, :] / 2
-                        - 2 * x[-2, :]
-                        + x[-3, :] / 2
-                    )
-                    / t
-                )
+                x_dot[-1, :] = (3 * x[-1, :] / 2 - 2 * x[-2, :] + x[-3, :] / 2) / t
             return x_dot
 
         # Variable timestep
         else:
             t_diff = t[1:] - t[:-1]
-            x_dot[:-1, :] = (x[1:, :] - x[:-1, :]) / t_diff[
-                :, None
-            ]
+            x_dot[:-1, :] = (x[1:, :] - x[:-1, :]) / t_diff[:, None]
             if not self.drop_endpoints:
                 x_dot[-1, :] = (
-                    (
-                        3 * x[-1, :] / 2
-                        - 2 * x[-2, :]
-                        + x[-3, :] / 2
-                    )
-                    / t_diff[-1]
-                )
+                    3 * x[-1, :] / 2 - 2 * x[-2, :] + x[-3, :] / 2
+                ) / t_diff[-1]
             return x_dot
 
     def _centered_difference(self, x, t=1):
@@ -98,48 +85,22 @@ class FiniteDifference(BaseDifferentiation):
             x_dot[1:-1, :] = (x[2:, :] - x[:-2, :]) / (2 * t)
             if not self.drop_endpoints:
                 x_dot[0, :] = (
-                    (
-                        -11 / 6 * x[0, :]
-                        + 3 * x[1, :]
-                        - 3 / 2 * x[2, :]
-                        + x[3, :] / 3
-                    )
-                    / t
-                )
+                    -11 / 6 * x[0, :] + 3 * x[1, :] - 3 / 2 * x[2, :] + x[3, :] / 3
+                ) / t
                 x_dot[-1, :] = (
-                    (
-                        11 / 6 * x[-1, :]
-                        - 3 * x[-2, :]
-                        + 3 / 2 * x[-3, :]
-                        - x[-4, :] / 3
-                    )
-                    / t
-                )
+                    11 / 6 * x[-1, :] - 3 * x[-2, :] + 3 / 2 * x[-3, :] - x[-4, :] / 3
+                ) / t
             return x_dot
 
         # Variable timestep
         else:
             t_diff = t[2:] - t[:-2]
-            x_dot[1:-1, :] = (x[2:, :] - x[:-2, :]) / t_diff[
-                :, None
-            ]
+            x_dot[1:-1, :] = (x[2:, :] - x[:-2, :]) / t_diff[:, None]
             if not self.drop_endpoints:
                 x_dot[0, :] = (
-                    (
-                        -11 / 6 * x[0, :]
-                        + 3 * x[1, :]
-                        - 3 / 2 * x[2, :]
-                        + x[3, :] / 3
-                    )
-                    / (t_diff[0] / 2)
-                )
+                    -11 / 6 * x[0, :] + 3 * x[1, :] - 3 / 2 * x[2, :] + x[3, :] / 3
+                ) / (t_diff[0] / 2)
                 x_dot[-1, :] = (
-                    (
-                        11 / 6 * x[-1, :]
-                        - 3 * x[-2, :]
-                        + 3 / 2 * x[-3, :]
-                        - x[-4, :] / 3
-                    )
-                    / (t_diff[-1] / 2)
-                )
+                    11 / 6 * x[-1, :] - 3 * x[-2, :] + 3 / 2 * x[-3, :] - x[-4, :] / 3
+                ) / (t_diff[-1] / 2)
             return x_dot

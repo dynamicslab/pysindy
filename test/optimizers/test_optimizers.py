@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 my_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, my_path + '/../../')
+sys.path.insert(0, my_path + "/../../")
 from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
 
 
@@ -64,7 +64,7 @@ def test_bad_parameters(data_1d):
         model = SR3(tol=0)
 
     with pytest.raises(NotImplementedError):
-        model = SR3(thresholder='l2')
+        model = SR3(thresholder="l2")
 
     with pytest.raises(ValueError):
         model = SR3(max_iter=0)

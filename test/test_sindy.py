@@ -7,7 +7,7 @@ from scipy.integrate import odeint
 from sklearn.exceptions import NotFittedError
 
 my_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, my_path + '/../')
+sys.path.insert(0, my_path + "/../")
 
 from sindy import SINDy
 from sindy.differentiation import FiniteDifference
@@ -29,12 +29,11 @@ def data_1d_bad_shape():
 
 @pytest.fixture
 def data_lorenz():
-
     def lorenz(z, t):
         return [
-            10*(z[1] - z[0]),
-            z[0]*(28 - z[2]) - z[1],
-            z[0]*z[1] - 8/3*z[2]
+            10 * (z[1] - z[0]),
+            z[0] * (28 - z[2]) - z[1],
+            z[0] * z[1] - 8 / 3 * z[2],
         ]
 
     t = np.linspace(0, 5, 100)
@@ -46,20 +45,15 @@ def data_lorenz():
 
 @pytest.fixture
 def data_multiple_trajctories():
-
     def lorenz(z, t):
         return [
-            10*(z[1] - z[0]),
-            z[0]*(28 - z[2]) - z[1],
-            z[0]*z[1] - 8/3*z[2]
+            10 * (z[1] - z[0]),
+            z[0] * (28 - z[2]) - z[1],
+            z[0] * z[1] - 8 / 3 * z[2],
         ]
 
     n_points = [10, 50, 100]
-    initial_conditions = [
-        [8, 27, -7],
-        [9, 28, -8],
-        [-1, 10, 1]
-    ]
+    initial_conditions = [[8, 27, -7], [9, 28, -8], [-1, 10, 1]]
 
     x_list = []
     t_list = []
@@ -111,9 +105,7 @@ def test_improper_shape_input(data_1d):
 def test_nan_derivatives(data_lorenz):
     x, t = data_lorenz
 
-    model = SINDy(
-        differentiation_method=FiniteDifference(drop_endpoints=True)
-    )
+    model = SINDy(differentiation_method=FiniteDifference(drop_endpoints=True))
     model.fit(x, t)
 
 
@@ -175,7 +167,7 @@ def test_bad_t(data):
 
 
 @pytest.mark.parametrize(
-    'data, optimizer',
+    "data, optimizer",
     [
         (pytest.lazy_fixture('data_1d'), STLSQ()),
         (pytest.lazy_fixture('data_lorenz'), STLSQ()),

@@ -16,16 +16,16 @@ def data_1d():
 
 
 @pytest.mark.parametrize(
-    'data, optimizer',
+    'optimizer',
     [
-        (data_1d(), STLSQ()),
-        (data_1d(), SR3()),
-        (data_1d(), LASSO()),
-        (data_1d(), ElasticNet()),
+        STLSQ(),
+        SR3(),
+        LASSO(),
+        ElasticNet(),
     ]
 )
-def test_fit(data, optimizer):
-    x, x_dot = data
+def test_fit(data_1d, optimizer):
+    x, x_dot = data_1d
     optimizer.fit(x, x_dot)
 
 
@@ -90,9 +90,9 @@ def test_bad_parameters(data_1d):
 @pytest.mark.parametrize(
     'thresholder',
     [
-        ('L0'),
-        ('l1'),
-        ('CAD')
+        'L0',
+        'l1',
+        'CAD'
     ]
 )
 def test_sr3_prox_functions(data_1d, thresholder):

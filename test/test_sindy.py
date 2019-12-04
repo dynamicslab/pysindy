@@ -120,8 +120,8 @@ def test_nan_derivatives(data_lorenz):
 @pytest.mark.parametrize(
     'data',
     [
-        (data_1d()),
-        (data_lorenz())
+        pytest.lazy_fixture('data_1d'),
+        pytest.lazy_fixture('data_lorenz')
     ]
 )
 def test_mixed_inputs(data):
@@ -138,8 +138,8 @@ def test_mixed_inputs(data):
 @pytest.mark.parametrize(
     'data',
     [
-        (data_1d()),
-        (data_lorenz())
+        pytest.lazy_fixture('data_1d'),
+        pytest.lazy_fixture('data_lorenz')
     ]
 )
 def test_bad_t(data):
@@ -177,14 +177,14 @@ def test_bad_t(data):
 @pytest.mark.parametrize(
     'data, optimizer',
     [
-        (data_1d(), STLSQ()),
-        (data_lorenz(), STLSQ()),
-        (data_1d(), SR3()),
-        (data_lorenz(), SR3()),
-        (data_1d(), LASSO()),
-        (data_lorenz(), LASSO()),
-        (data_1d(), ElasticNet()),
-        (data_lorenz(), ElasticNet()),
+        (pytest.lazy_fixture('data_1d'), STLSQ()),
+        (pytest.lazy_fixture('data_lorenz'), STLSQ()),
+        (pytest.lazy_fixture('data_1d'), SR3()),
+        (pytest.lazy_fixture('data_lorenz'), SR3()),
+        (pytest.lazy_fixture('data_1d'), LASSO()),
+        (pytest.lazy_fixture('data_lorenz'), LASSO()),
+        (pytest.lazy_fixture('data_1d'), ElasticNet()),
+        (pytest.lazy_fixture('data_lorenz'), ElasticNet()),
     ]
 )
 def test_predict(data, optimizer):
@@ -199,8 +199,8 @@ def test_predict(data, optimizer):
 @pytest.mark.parametrize(
     'data',
     [
-        (data_1d()),
-        (data_lorenz())
+        pytest.lazy_fixture('data_1d'),
+        pytest.lazy_fixture('data_lorenz')
     ]
 )
 def test_simulate(data):
@@ -215,8 +215,8 @@ def test_simulate(data):
 @pytest.mark.parametrize(
     'data',
     [
-        (data_1d()),
-        (data_lorenz())
+        pytest.lazy_fixture('data_1d'),
+        pytest.lazy_fixture('data_lorenz')
     ]
 )
 def test_score(data):

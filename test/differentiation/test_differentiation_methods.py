@@ -116,8 +116,8 @@ def test_centered_difference_2d(data_2d_linear):
 @pytest.mark.parametrize(
     'data',
     [
-        (data_1d_linear()),
-        (data_2d_linear())
+        pytest.lazy_fixture('data_1d_linear'),
+        pytest.lazy_fixture('data_2d_linear')
     ]
 )
 def test_forward_difference(data):
@@ -132,8 +132,8 @@ def test_forward_difference(data):
 @pytest.mark.parametrize(
     'data',
     [
-        (data_1d_linear()),
-        (data_2d_linear())
+        pytest.lazy_fixture('data_1d_linear'),
+        pytest.lazy_fixture('data_2d_linear')
     ]
 )
 def test_centered_difference(data):
@@ -162,4 +162,4 @@ def test_centered_difference_dim():
 
 def test_higher_order_error():
     with pytest.raises(NotImplementedError):
-        third_order = FiniteDifference(order=3)
+        FiniteDifference(order=3)

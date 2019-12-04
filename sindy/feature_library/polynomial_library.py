@@ -11,7 +11,6 @@ from sindy.feature_library import BaseFeatureLibrary
 
 # TODO
 # -Check if order or base classes needs to be swapped
-# -Feed through black
 # -Tell Kathleen about black
 class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     """
@@ -27,14 +26,14 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         if (not include_interaction) and interaction_only:
             raise ValueError("Can't have include_interaction be False and interaction_only be True")
         self.include_interaction = include_interaction
-            
+
     @staticmethod
     def _combinations(n_features, degree, include_interaction, interaction_only, include_bias):
         comb = (combinations if interaction_only else combinations_w_r)
         start = int(not include_bias)
         if not include_interaction:
             if include_bias:
-                return chain([()],chain.from_iterable(combinations_w_r([j],i)
+                return chain([()], chain.from_iterable(combinations_w_r([j],i)
                                                       for i in range(1, degree + 1)
                                                       for j in range(n_features)))
             else:

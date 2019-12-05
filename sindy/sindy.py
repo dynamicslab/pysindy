@@ -173,7 +173,7 @@ class SINDy(BaseEstimator):
             Strings containing the SINDy model equation for each input feature.
         """
         if hasattr(self, "model"):
-            check_is_fitted(self.model.estimators_[0].steps[-1][1], "coef_")
+            check_is_fitted(self.model.estimators_[0].steps[-1][1])
             feature_names = (
                 self.model.estimators_[0]
                 .steps[0][1]
@@ -324,7 +324,7 @@ class SINDy(BaseEstimator):
         """Return a list of the coefficients learned by SINDy model
         """
         if hasattr(self, "model"):
-            check_is_fitted(self.model.estimators_[0].steps[-1][1], "coef_")
+            check_is_fitted(self.model.estimators_[0].steps[-1][1])
             return self.model.estimators_[0].steps[-1][1].coef_
         else:
             raise NotFittedError(

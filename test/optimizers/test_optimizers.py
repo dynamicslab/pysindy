@@ -1,7 +1,6 @@
 import sys
 import os
 import pytest
-# import numpy as np
 
 my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, my_path + "/../../")

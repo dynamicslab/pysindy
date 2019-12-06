@@ -18,3 +18,5 @@ docs/_build
 .vscode
 
 *.pyc
+
+*.sublime*

@@ -64,7 +64,7 @@ class CustomLibrary(BaseFeatureLibrary):
         -------
         output_feature_names : list of string, length n_output_features
         """
-        check_is_fitted(self, "n_input_features_")
+        check_is_fitted(self)
         if input_features is None:
             input_features = ["x%d" % i for i in range(self.n_input_features_)]
         feature_names = []
@@ -103,7 +103,7 @@ class CustomLibrary(BaseFeatureLibrary):
             The matrix of features, where NP is the number of features
             generated from applying the custom functions to the inputs.
         """
-        check_is_fitted(self, ["n_input_features_", "n_output_features_"])
+        check_is_fitted(self)
 
         X = check_array(X)
 

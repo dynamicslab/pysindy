@@ -1,19 +1,8 @@
-import warnings
-import collections
 from itertools import repeat
 from functools import wraps
 
 import numpy as np
-from sklearn.base import RegressorMixin
-from sklearn.exceptions import ConvergenceWarning
-from sklearn.exceptions import FitFailedWarning
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import ridge_regression
-from sklearn.linear_model.base import _rescale_data
-from sklearn.linear_model.base import LinearModel
 from sklearn.utils.validation import check_array
-from sklearn.utils.validation import check_is_fitted
-from sklearn.utils.validation import check_X_y
 
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default
@@ -42,7 +31,9 @@ def validate_input(x, t=T_DEFAULT):
             if not len(t) == x.shape[0]:
                 raise ValueError("Length of t should match x.shape[0].")
             if not np.all(t[:-1] < t[1:]):
-                raise ValueError("Values in t should be in strictly increasing order.")
+                raise ValueError(
+                    "Values in t should be in strictly increasing order."
+                )
         else:
             raise ValueError("t must be a scalar or array-like.")
 
@@ -88,7 +79,7 @@ def prox_l1(x, threshold):
 def prox_cad(x, lower_threshold):
     """
     Proximal operator for CAD regularization
-    prox_cad(z, a, b) = 
+    prox_cad(z, a, b) =
         0                  if |z| < a
         sign(z)(|z| - a)   if a < |z| <= b
         z                  if |z| > b
@@ -113,7 +104,9 @@ def get_prox(regularization):
     elif regularization.lower() == "cad":
         return prox_cad
     else:
-        raise NotImplementedError("{} has not been implemented".format(regularization))
+        raise NotImplementedError(
+            "{} has not been implemented".format(regularization)
+        )
 
 
 def print_model(
@@ -147,11 +140,15 @@ def print_model(
         if rounded_coef == 0 and sigma is None:
             return ""
         elif sigma is None:
-            return f"{coef:.{precision}f} {name}"
+            return "{coef:.{precision}f} {name}".format(
+                coef=coef, precision=precision, name=name
+            )
         elif rounded_coef == 0 and np.round(sigma, precision) == 0:
             return ""
         else:
-            return f"({coef:.{precision}f} {pm} {sigma:.{precision}f}) {name}"
+            return "({coef:.{precision}f} {pm} {sigma:.{precision}f}) {name}".format(
+                coef=coef, precision=precision, pm=pm, sigma=sigma, name=name
+            )
 
     errors = errors if errors is not None else repeat(None)
     components = map(term, coef, errors, input_features)
@@ -161,8 +158,10 @@ def print_model(
         intercept = intercept or 0
         if eq:
             eq += " + "
-        eq += (
-            term(intercept, error_intercept, "").strip() or f"{intercept:.{precision}f}"
+        eq += term(
+            intercept, error_intercept, ""
+        ).strip() or "{intercept:.{precision}f}".format(
+            intercept=intercept, precision=precision
         )
 
     return eq
@@ -173,51 +172,6 @@ def equation(pipeline, input_features=None, precision=3, input_fmt=None):
         input_features = [input_fmt(i) for i in input_features]
     coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
-    return print_model(coef, input_features, intercept=intercept, precision=precision)
-
-
-class RationalFunctionMixin:
-    def _transform(self, x, y):
-        return np.hstack((x, y.reshape(-1, 1) * x))
-
-    def fit(self, x, y, **kwargs):
-        # x, y = check_X_y(x, y, multi_output=False)
-        super().fit(self._transform(x, y), y, **kwargs)
-        self._arrange_coef()
-        return self
-
-    def _arrange_coef(self):
-        nom = len(self.coef_) // 2
-        self.coef_nominator_ = self.coef_[:nom]
-        self.coef_denominator_ = -self.coef_[nom:]
-
-    def predict(self, x):
-        check_is_fitted(self, "coef_")
-        x = check_array(x)
-        return (self.intercept_ + x @ self.coef_nominator_) / (
-            1 + x @ self.coef_denominator_
-        )
-
-    def print_model(self, input_features=None):
-        input_features = input_features or [
-            "x_{}".format(i) for i in range(len(self.coef_nominator_))
-        ]
-        nominator = print_model(self.coef_nominator_, input_features)
-        if self.intercept_:
-            nominator += "+ {}".format(self.intercept_)
-        if np.any(self.coef_denominator_):
-            denominator = print_model(self.coef_denominator_, input_features, 1)
-            model = "(" + nominator + ") / (" + denominator + ")"
-        else:
-            model = nominator
-        return model
-
-
-class PrintMixin:
-    def print_model(self, input_features=None, precision=3):
-        input_features = input_features or [
-            "x_{}".format(i) for i in range(len(self.coef_))
-        ]
-        return print_model(
-            self.coef_, input_features, intercept=self.intercept_, precision=precision
-        )
+    return print_model(
+        coef, input_features, intercept=intercept, precision=precision
+    )

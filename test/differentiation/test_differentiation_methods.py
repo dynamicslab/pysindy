@@ -57,45 +57,29 @@ def test_centered_difference_variable_timestep_length():
 
 
 # Fixtures: data sets to be re-used in multiple tests
-@pytest.fixture
-def data_1d_linear():
-    x = 2 * np.linspace(1, 100, 100)
-    x_dot = 2 * np.ones(100).reshape(-1, 1)
-    return x, x_dot
+# data_derivative_1d and data_derivative_2d are defined
+# in ../conftest.py
 
-
-@pytest.fixture
-def data_2d_linear():
-    x = np.zeros((100, 2))
-    x[:, 0] = 2 * np.linspace(1, 100, 100)
-    x[:, 1] = -10 * np.linspace(1, 100, 100)
-
-    x_dot = np.ones((100, 2))
-    x_dot[:, 0] *= 2
-    x_dot[:, 1] *= -10
-    return x, x_dot
-
-
-def test_forward_difference_1d(data_1d_linear):
-    x, x_dot = data_1d_linear
+def test_forward_difference_1d(data_derivative_1d):
+    x, x_dot = data_derivative_1d
     forward_difference = FiniteDifference(order=1)
     np.testing.assert_allclose(forward_difference(x), x_dot)
 
 
-def test_forward_difference_2d(data_2d_linear):
-    x, x_dot = data_2d_linear
+def test_forward_difference_2d(data_derivative_2d):
+    x, x_dot = data_derivative_2d
     forward_difference = FiniteDifference(order=1)
     np.testing.assert_allclose(forward_difference(x), x_dot)
 
 
-def test_centered_difference_1d(data_1d_linear):
-    x, x_dot = data_1d_linear
+def test_centered_difference_1d(data_derivative_1d):
+    x, x_dot = data_derivative_1d
     centered_difference = FiniteDifference(order=2)
     np.testing.assert_allclose(centered_difference(x), x_dot)
 
 
-def test_centered_difference_2d(data_2d_linear):
-    x, x_dot = data_2d_linear
+def test_centered_difference_2d(data_derivative_2d):
+    x, x_dot = data_derivative_2d
     centered_difference = FiniteDifference(order=2)
     np.testing.assert_allclose(centered_difference(x), x_dot)
 
@@ -104,8 +88,8 @@ def test_centered_difference_2d(data_2d_linear):
 @pytest.mark.parametrize(
     'data',
     [
-        pytest.lazy_fixture('data_1d_linear'),
-        pytest.lazy_fixture('data_2d_linear')
+        pytest.lazy_fixture('data_derivative_1d'),
+        pytest.lazy_fixture('data_derivative_2d')
     ]
 )
 def test_forward_difference(data):
@@ -120,8 +104,8 @@ def test_forward_difference(data):
 @pytest.mark.parametrize(
     'data',
     [
-        pytest.lazy_fixture('data_1d_linear'),
-        pytest.lazy_fixture('data_2d_linear')
+        pytest.lazy_fixture('data_derivative_1d'),
+        pytest.lazy_fixture('data_derivative_2d')
     ]
 )
 def test_centered_difference(data):

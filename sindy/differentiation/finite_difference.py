@@ -50,6 +50,9 @@ class FiniteDifference(BaseDifferentiation):
         """
         First order forward difference
         (and 2nd order backward difference for final point).
+
+        Note that in order to maintain compatibility with sklearn the,
+        array returned, x_dot, always satisfies np.ndim(x_dot) == 2.
         """
 
         x_dot = np.full_like(x, fill_value=np.nan)
@@ -59,7 +62,6 @@ class FiniteDifference(BaseDifferentiation):
             x_dot[:-1, :] = (x[1:, :] - x[:-1, :]) / t
             if not self.drop_endpoints:
                 x_dot[-1, :] = (3 * x[-1, :] / 2 - 2 * x[-2, :] + x[-3, :] / 2) / t
-            return x_dot
 
         # Variable timestep
         else:
@@ -69,14 +71,19 @@ class FiniteDifference(BaseDifferentiation):
                 x_dot[-1, :] = (
                     3 * x[-1, :] / 2 - 2 * x[-2, :] + x[-3, :] / 2
                 ) / t_diff[-1]
-            return x_dot
+
+        return x_dot
 
     def _centered_difference(self, x, t=1):
         """
         Second order centered difference
         with third order forward/backward difference at endpoints.
+
         Warning: Sometimes has trouble with nonuniform grid spacing
         near boundaries
+
+        Note that in order to maintain compatibility with sklearn the,
+        array returned, x_dot, always satisfies np.ndim(x_dot) == 2.
         """
         x_dot = np.full_like(x, fill_value=np.nan)
 
@@ -90,7 +97,6 @@ class FiniteDifference(BaseDifferentiation):
                 x_dot[-1, :] = (
                     11 / 6 * x[-1, :] - 3 * x[-2, :] + 3 / 2 * x[-3, :] - x[-4, :] / 3
                 ) / t
-            return x_dot
 
         # Variable timestep
         else:
@@ -103,4 +109,5 @@ class FiniteDifference(BaseDifferentiation):
                 x_dot[-1, :] = (
                     11 / 6 * x[-1, :] - 3 * x[-2, :] + 3 / 2 * x[-3, :] - x[-4, :] / 3
                 ) / (t_diff[-1] / 2)
-            return x_dot
+
+        return x_dot

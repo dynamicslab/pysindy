@@ -6,8 +6,6 @@ import sys
 import os
 
 import pytest
-import numpy as np
-from scipy.integrate import odeint
 
 
 my_path = os.path.dirname(os.path.abspath(__file__))
@@ -29,22 +27,6 @@ def data_custom_library():
         library_functions=library_functions,
         function_names=function_names
     )
-
-
-@pytest.fixture
-def data_lorenz():
-    def lorenz(z, t):
-        return [
-            10 * (z[1] - z[0]),
-            z[0] * (28 - z[2]) - z[1],
-            z[0] * z[1] - 8 / 3 * z[2],
-        ]
-
-    t = np.linspace(0, 5, 100)
-    x0 = [8, 27, -7]
-    x = odeint(lorenz, x0, t)
-
-    return x, t
 
 
 def test_form_custom_library():

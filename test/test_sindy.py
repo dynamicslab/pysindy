@@ -1,9 +1,7 @@
 import sys
 import os
 import pytest
-import numpy as np
 
-from scipy.integrate import odeint
 from sklearn.exceptions import NotFittedError
 
 my_path = os.path.dirname(os.path.abspath(__file__))
@@ -12,57 +10,6 @@ sys.path.insert(0, my_path + "/../")
 from sindy import SINDy
 from sindy.differentiation import FiniteDifference
 from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
-
-
-@pytest.fixture
-def data_1d():
-    t = np.linspace(0, 5, 100)
-    x = 2 * t.reshape(-1, 1)
-    return x, t
-
-
-@pytest.fixture
-def data_1d_bad_shape():
-    x = np.linspace(0, 5, 100)
-    return x
-
-
-@pytest.fixture
-def data_lorenz():
-    def lorenz(z, t):
-        return [
-            10 * (z[1] - z[0]),
-            z[0] * (28 - z[2]) - z[1],
-            z[0] * z[1] - 8 / 3 * z[2],
-        ]
-
-    t = np.linspace(0, 5, 100)
-    x0 = [8, 27, -7]
-    x = odeint(lorenz, x0, t)
-
-    return x, t
-
-
-@pytest.fixture
-def data_multiple_trajctories():
-    def lorenz(z, t):
-        return [
-            10 * (z[1] - z[0]),
-            z[0] * (28 - z[2]) - z[1],
-            z[0] * z[1] - 8 / 3 * z[2],
-        ]
-
-    n_points = [10, 50, 100]
-    initial_conditions = [[8, 27, -7], [9, 28, -8], [-1, 10, 1]]
-
-    x_list = []
-    t_list = []
-    for n, x0 in zip(n_points, initial_conditions):
-        t = np.linspace(0, 5, n)
-        t_list.append(t)
-        x_list.append(odeint(lorenz, x0, t))
-
-    return x_list, t_list
 
 
 def test_get_feature_names_len(data_lorenz):

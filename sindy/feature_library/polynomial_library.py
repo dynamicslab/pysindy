@@ -9,9 +9,7 @@ from sklearn.preprocessing import _csr_polynomial_expansion
 
 from sindy.feature_library import BaseFeatureLibrary
 
-# TODO
-# -Check if order or base classes needs to be swapped
-# -Tell Kathleen about black
+
 class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     """
     Generate polynomial and interaction features. This is the same as
@@ -64,7 +62,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
     @property
     def powers_(self):
-        check_is_fitted(self, "n_input_features_")
+        check_is_fitted(self)
 
         combinations = self._combinations(
             self.n_input_features_,
@@ -154,7 +152,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             The matrix of features, where NP is the number of polynomial
             features generated from the combination of inputs.
         """
-        check_is_fitted(self, ["n_input_features_", "n_output_features_"])
+        check_is_fitted(self)
 
         X = check_array(X, order="F", dtype=FLOAT_DTYPES, accept_sparse=("csr", "csc"))
 

@@ -16,14 +16,15 @@ class CustomLibrary(BaseFeatureLibrary):
         Functions to include in the library. Each function will be
         applied to each input variable.
 
-    function_names : list of functions
+    function_names : list of functions, optional (default None)
         List of functions used to generate feature names for each library
         function. Each name function must take a string input (representing
         a variable name), and output a string depiction of the respective
         mathematical function applied to that variable. For example, if the
         first library function is sine, the name function might return
         'sin(x)' given 'x' as input. The function_names list must be the
-        same length as library_functions.
+        same length as library_functions. If no list of function names is
+        provided, defaults to using ['f0(x)','f1(x)','f2(x)',...].
 
     Attributes
     ----------
@@ -43,11 +44,11 @@ class CustomLibrary(BaseFeatureLibrary):
         input features.
     """
 
-    def __init__(self, library_functions, function_names):
+    def __init__(self, library_functions, function_names=None):
         super(CustomLibrary, self).__init__()
         self.functions = library_functions
         self.function_names = function_names
-        if len(library_functions) != len(function_names):
+        if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
                 "library_functions and function_names must have the same number of elements"
             )
@@ -87,6 +88,13 @@ class CustomLibrary(BaseFeatureLibrary):
         n_samples, n_features = check_array(X).shape
         self.n_input_features_ = n_features
         self.n_output_features_ = n_features * len(self.functions)
+        if self.function_names is None:
+            self.function_names = list(
+                map(
+                    lambda i: (lambda x: "f" + str(i) + "(" + x + ")"),
+                    range(len(self.functions)),
+                )
+            )
         return self
 
     def transform(self, X):

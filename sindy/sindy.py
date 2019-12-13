@@ -6,7 +6,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_is_fitted
 from sklearn.exceptions import NotFittedError
 from scipy.integrate import odeint
-from numpy import vstack, newaxis
+from numpy import vstack, newaxis, zeros, isscalar
 
 from sindy.differentiation import FiniteDifference
 from sindy.optimizers import STLSQ
@@ -36,6 +36,12 @@ class SINDy(BaseEstimator):
     feature_names : list of string, length n_input_features, optional
         Names for the input features. If None, will use ['x0','x1',...].
 
+    discrete_time : boolean, optional (default False)
+        If True, dynamical system is treated as a map. Rather than predicting
+        derivatives, the right hand side functions step the system forward by
+        one time step. If False, dynamical system is assumed to be a flow
+        (right hand side functions predict continuous time derivatives).
+
     n_jobs : int, optional (default 1)
         The number of parallel jobs to use when fitting, predicting with, and
         scoring the model.
@@ -52,12 +58,14 @@ class SINDy(BaseEstimator):
         feature_library=PolynomialFeatures(),
         differentiation_method=FiniteDifference(),
         feature_names=None,
+        discrete_time=False,
         n_jobs=1,
     ):
         self.optimizer = optimizer
         self.feature_library = feature_library
         self.differentiation_method = differentiation_method
         self.feature_names = feature_names
+        self.discrete_time = discrete_time
         self.n_jobs = n_jobs
 
     def fit(self, x, t=1, x_dot=None, multiple_trajectories=False):
@@ -100,18 +108,22 @@ class SINDy(BaseEstimator):
         else:
             x = validate_input(x, t)
 
-            if x_dot is None:
-                x_dot = self.differentiation_method(x, t)
+            if self.discrete_time:
+                if x_dot is None:
+                    x_dot = x[1:]
+                    x = x[:-1]
+                else:
+                    x_dot = validate_input(x)
             else:
-                x_dot = validate_input(x_dot, t)
+                if x_dot is None:
+                    x_dot = self.differentiation_method(x, t)
+                else:
+                    x_dot = validate_input(x_dot, t)
 
         # Drop rows where derivative isn't known
         x, x_dot = drop_nan_rows(x, x_dot)
 
-        steps = [
-            ("features", self.feature_library),
-            ("model", self.optimizer),
-        ]
+        steps = [("features", self.feature_library), ("model", self.optimizer)]
         self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
 
         self.model.fit(x, x_dot)
@@ -174,10 +186,14 @@ class SINDy(BaseEstimator):
         """
         if hasattr(self, "model"):
             check_is_fitted(self.model.estimators_[0].steps[-1][1])
+            if self.discrete_time:
+                base_feature_names = [f + "[k]" for f in self.feature_names]
+            else:
+                base_feature_names = self.feature_names
             feature_names = (
                 self.model.estimators_[0]
                 .steps[0][1]
-                .get_feature_names(input_features=self.feature_names)
+                .get_feature_names(input_features=base_feature_names)
             )
             return [
                 equation(est, input_features=feature_names, precision=precision)
@@ -193,7 +209,9 @@ class SINDy(BaseEstimator):
         """
         eqns = self.equations(precision)
         for i, eqn in enumerate(eqns):
-            if lhs is None:
+            if self.discrete_time:
+                print(self.feature_names[i] + "[k+1] = " + eqn)
+            elif lhs is None:
                 print(self.feature_names[i] + "' = " + eqn)
             else:
                 print(lhs[i] + " = " + eqn)
@@ -265,27 +283,42 @@ class SINDy(BaseEstimator):
         if not isinstance(x, list):
             raise TypeError("Input x must be a list")
 
-        if x_dot is None:
-            if isinstance(t, list):
+        if self.discrete_time:
+            if x_dot is None:
                 x_dot = []
                 for i in range(len(x)):
-                    x[i] = validate_input(x[i], t[i])
-                    x_dot.append(self.differentiation_method(x[i], t[i]))
+                    x_tmp = validate_input(x[i])
+                    x[i] = x_tmp[:-1]
+                    x_dot.append(x_tmp[1:])
             else:
-                x_dot = []
-                for i in range(len(x)):
-                    x[i] = validate_input(x[i], t)
-                    x_dot.append(self.differentiation_method(x[i], t))
+                if not isinstance(x_dot, list):
+                    raise ValueError(
+                        "x_dot must be a list if used with x of list type "
+                        "(i.e. for multiple trajectories)"
+                    )
+                x_dot = [validate_input(xd) for xd in x_dot]
         else:
-            if not isinstance(x_dot, list):
-                raise ValueError(
-                    "x_dot must be a list if used with x of list type "
-                    "(i.e. for multiple trajectories)"
-                )
-            if isinstance(t, list):
-                x_dot = [validate_input(xd, t) for xd, t in zip(x_dot, t)]
+            if x_dot is None:
+                if isinstance(t, list):
+                    x_dot = []
+                    for i in range(len(x)):
+                        x[i] = validate_input(x[i], t[i])
+                        x_dot.append(self.differentiation_method(x[i], t[i]))
+                else:
+                    x_dot = []
+                    for i in range(len(x)):
+                        x[i] = validate_input(x[i], t)
+                        x_dot.append(self.differentiation_method(x[i], t))
             else:
-                x_dot = [validate_input(xd, t) for xd in x_dot]
+                if not isinstance(x_dot, list):
+                    raise ValueError(
+                        "x_dot must be a list if used with x of list type "
+                        "(i.e. for multiple trajectories)"
+                    )
+                if isinstance(t, list):
+                    x_dot = [validate_input(xd, t) for xd, t in zip(x_dot, t)]
+                else:
+                    x_dot = [validate_input(xd, t) for xd in x_dot]
 
         if return_array:
             return vstack(x), vstack(x_dot)
@@ -314,6 +347,9 @@ class SINDy(BaseEstimator):
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
             Time derivatives computed by using the model's differentiation method
         """
+        if self.discrete_time:
+            raise RuntimeError("No differentiation implemented for discrete time model")
+
         if multiple_trajectories:
             return self.process_multiple_trajectories(x, t, None, return_array=False)[1]
         else:
@@ -345,7 +381,7 @@ class SINDy(BaseEstimator):
                 "SINDy model must be fit before get_feature_names is called"
             )
 
-    def simulate(self, x0, t, integrator=odeint, **integrator_kws):
+    def simulate(self, x0, t, integrator=odeint, stop_condition=None, **integrator_kws):
         """
         Simulate the SINDy model forward in time.
 
@@ -354,11 +390,17 @@ class SINDy(BaseEstimator):
         x0: numpy array, size [n_features]
             Initial condition from which to simulate
 
-        t: numpy array, size [n_samples]
-            Time points at which to simulate
+        t: int or numpy array of size [n_samples]
+            If the model is in continuous time, t must be an array of time
+            points at which to simulate. If the model is in discrete time,
+            t must be an integer indicating how many steps to predict.
 
         integrator: function object, optional
             Function to use to integrate the system. Default is scipy's odeint.
+
+        stop_condition: function object, optional
+            If model is in discrete time, optional function that gives a
+            stopping condition for stepping the simulation forward.
 
         integrator_kws: dict, optional
             Optional keyword arguments to pass to the integrator
@@ -369,10 +411,29 @@ class SINDy(BaseEstimator):
             Simulation results
         """
 
-        def rhs(x, t):
-            return self.predict(x[newaxis, :])[0]
+        if self.discrete_time:
+            if not isinstance(t, int):
+                raise ValueError(
+                    "For discrete time model, t must be an integer (indicating the number of steps to predict)"
+                )
 
-        return integrator(rhs, x0, t, **integrator_kws)
+            x = zeros((t, self.n_input_features_))
+            x[0] = x0
+            for i in range(1, t):
+                x[i] = self.predict(x[i - 1 : i])
+                if stop_condition is not None and stop_condition(x[i]):
+                    return x[: i + 1]
+            return x
+        else:
+            if isscalar(t):
+                raise ValueError(
+                    "For continuous time model, t must be an array of time points at which to simulate"
+                )
+
+            def rhs(x, t):
+                return self.predict(x[newaxis, :])[0]
+
+            return integrator(rhs, x0, t, **integrator_kws)
 
     @property
     def complexity(self):

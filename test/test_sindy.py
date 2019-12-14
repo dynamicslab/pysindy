@@ -239,7 +239,7 @@ def test_simulate_discrete_time(data_discrete_time):
 
 
 def test_fit_discrete_time_multiple_trajectories(data_discrete_time_multiple_trajectories):
-    x = data_discrete_time_multiple_trajctories
+    x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
 
     # Should fail if multiple_trajectories flag is not set
@@ -262,8 +262,8 @@ def test_predict_discrete_time_multiple_trajectories(data_discrete_time_multiple
     model.predict(x, multiple_trajectories=True)
 
 
-def test_score_discrete_time_multiple_trajectories(data_discrete_time_multiple_trajctories):
-    x = data_discrete_time_multiple_trajctories
+def test_score_discrete_time_multiple_trajectories(data_discrete_time_multiple_trajectories):
+    x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
     model.fit(x, multiple_trajectories=True)
 

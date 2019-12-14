@@ -59,6 +59,37 @@ def data_multiple_trajctories():
 
 
 @pytest.fixture
+def data_discrete_time():
+    def logistic_map(x, mu):
+        return mu*x*(1-x)
+
+    n_steps = 100
+    mu = 3.6
+    x = np.zeros((n_steps))
+    x[0] = 0.5
+    for i in range(1,n_steps):
+        x[i] = logistic_map(x[i-1],mu)
+
+    return x
+
+
+@pytest.fixture
+def data_discrete_time_multiple_trajectories():
+    def logistic_map(x, mu):
+        return mu*x*(1-x)
+
+    n_steps = 100
+    mus = [1,2.3,3.6]
+    x = [np.zeros((n_steps)) for mu in mus]
+    for i,mu in enumerate(mus):
+        x[i][0] = 0.5
+        for k in range(1,n_steps):
+            x[i][k] = logistic_map(x[i][k-1],mu)
+
+    return x
+
+
+@pytest.fixture
 def data_derivative_1d():
     x = 2 * np.linspace(1, 100, 100)
     x_dot = 2 * np.ones(100).reshape(-1, 1)

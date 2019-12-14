@@ -217,3 +217,59 @@ def test_score_multiple_trajectories(data_multiple_trajctories):
     model.score(x, t=t, multiple_trajectories=True)
     model.score(x, x_dot=x, multiple_trajectories=True)
     model.score(x, t=t, x_dot=x, multiple_trajectories=True)
+
+
+def test_fit_discrete_time(data_discrete_time):
+    x = data_discrete_time
+
+    model = SINDy(discrete_time=True)
+
+    model.fit(x)
+    model.fit(x[:-1], x_dot=x[1:])
+
+
+def test_simulate_discrete_time(data_discrete_time):
+    x = data_discrete_time
+    model = SINDy(discrete_time=True)
+    model.fit(x)
+    n_steps = x.shape[0]
+    x1 = model.simulate(x[0], n_steps)
+
+    assert len(x1) == n_steps
+
+
+def test_fit_discrete_time_multiple_trajectories(data_discrete_time_multiple_trajectories):
+    x = data_discrete_time_multiple_trajctories
+    model = SINDy(discrete_time=True)
+
+    # Should fail if multiple_trajectories flag is not set
+    with pytest.raises(ValueError):
+        model.fit(x)
+
+    model.fit(x, multiple_trajectories=True)
+    model.fit(x, x_dot=x, multiple_trajectories=True)
+
+
+def test_predict_discrete_time_multiple_trajectories(data_discrete_time_multiple_trajectories):
+    x = data_discrete_time_multiple_trajectories
+    model = SINDy(discrete_time=True)
+    model.fit(x, multiple_trajectories=True)
+
+    # Should fail if multiple_trajectories flag is not set
+    with pytest.raises(ValueError):
+        model.predict(x)
+
+    model.predict(x, multiple_trajectories=True)
+
+
+def test_score_discrete_time_multiple_trajectories(data_discrete_time_multiple_trajctories):
+    x = data_discrete_time_multiple_trajctories
+    model = SINDy(discrete_time=True)
+    model.fit(x, multiple_trajectories=True)
+
+    # Should fail if multiple_trajectories flag is not set
+    with pytest.raises(ValueError):
+        model.score(x)
+
+    model.score(x, multiple_trajectories=True)
+    model.score(x, x_dot=x, multiple_trajectories=True)

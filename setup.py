@@ -1,9 +1,9 @@
 import sys
+import pathlib
+from setuptools import find_packages, setup
+
 
 assert sys.version_info >= (3, 6, 0), "sindy requires Python 3.6+"
-import pathlib
-
-from setuptools import find_packages, setup
 
 NAME = "sindy"
 DESCRIPTION = "Sparse Identification of Nonlinear Dynamics"

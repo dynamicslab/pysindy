@@ -45,6 +45,7 @@ def test_centered_difference_variable_timestep_length():
 # data_derivative_1d and data_derivative_2d are defined
 # in ../conftest.py
 
+
 def test_forward_difference_1d(data_derivative_1d):
     x, x_dot = data_derivative_1d
     forward_difference = FiniteDifference(order=1)
@@ -74,24 +75,21 @@ def test_centered_difference_2d(data_derivative_2d):
     "data",
     [
         pytest.lazy_fixture("data_derivative_1d"),
-        pytest.lazy_fixture("data_derivative_2d")
-    ]
+        pytest.lazy_fixture("data_derivative_2d"),
+    ],
 )
 def test_forward_difference(data):
     x, x_dot = data
     forward_difference = FiniteDifference(order=1)
-    np.testing.assert_allclose(
-        forward_difference(x),
-        x_dot
-    )
+    np.testing.assert_allclose(forward_difference(x), x_dot)
 
 
 @pytest.mark.parametrize(
     "data",
     [
         pytest.lazy_fixture("data_derivative_1d"),
-        pytest.lazy_fixture("data_derivative_2d")
-    ]
+        pytest.lazy_fixture("data_derivative_2d"),
+    ],
 )
 def test_centered_difference(data):
     x, x_dot = data

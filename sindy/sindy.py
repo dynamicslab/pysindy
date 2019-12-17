@@ -29,9 +29,9 @@ class SINDy(BaseEstimator):
         TODO: Implement better feature library class.
 
     differentiation_method : differentiation object, optional
-        Method for differentiating the data. This must be an object that extends
-        the sindy.differentiation_methods.BaseDifferentiation class. Default is
-        centered difference.
+        Method for differentiating the data. This must be an object that
+        extends the sindy.differentiation_methods.BaseDifferentiation class.
+        Default is centered difference.
 
     feature_names : list of string, length n_input_features, optional
         Names for the input features. If None, will use ['x0','x1',...].
@@ -74,30 +74,36 @@ class SINDy(BaseEstimator):
 
         Parameters
         ----------
-        x: array-like or list of array-like, shape (n_samples, n_input_features)
+        x: array-like or list of array-like, shape
+        (n_samples, n_input_features)
             Training data. If training data contains multiple trajectories,
             x should be a list containing data for each trajectory. Individual
             trajectories may contain different numbers of samples.
 
-        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional (default 1)
+        t: float, numpy array of shape [n_samples], or list of numpy arrays,
+        optional (default 1)
             If t is a float, it specifies the timestep between each sample.
-            If array-like, it specifies the time at which each sample was collected.
+            If array-like, it specifies the time at which each sample was
+            collected.
             In this case the values in t must be strictly increasing.
-            In the case of multi-trajectory training data, t may also be a list of
-            arrays containing the collection times for each individual trajectory.
+            In the case of multi-trajectory training data, t may also be a list
+            of arrays containing the collection times for each individual
+            trajectory.
             Default value is a timestep of 1 between samples.
 
-        x_dot: array-like or list of array-like, shape (n_samples, n_input_features), optional (default None)
-            Optional pre-computed derivatives of the training data. If not provided,
-            the time derivatives of the training data will be computed using the
-            specified differentiation method. If x_dot is provided, it must match
-            the shape of the training data and these values will be used as the time
-            derivatives.
+        x_dot: array-like or list of array-like, shape (n_samples,
+        n_input_features), optional (default None)
+            Optional pre-computed derivatives of the training data. If not
+            provided, the time derivatives of the training data will be
+            computed using the specified differentiation method. If x_dot is
+            provided, it must match the shape of the training data and these
+            values will be used as the time derivatives.
 
         multiple_trajectories: boolean, optional, (default False)
             Whether or not the training data includes multiple trajectories. If
-            True, the training data must be a list of arrays containing data for
-            each trajectory. If False, the training data must be a single array.
+            True, the training data must be a list of arrays containing data
+            for each trajectory. If False, the training data must be a single
+            array.
 
         Returns
         -------
@@ -128,7 +134,9 @@ class SINDy(BaseEstimator):
 
         self.model.fit(x, x_dot)
 
-        self.n_input_features_ = self.model.estimators_[0].steps[0][1].n_input_features_
+        self.n_input_features_ = (
+            self.model.estimators_[0].steps[0][1].n_input_features_
+        )
         self.n_output_features_ = (
             self.model.estimators_[0].steps[0][1].n_output_features_
         )
@@ -147,16 +155,18 @@ class SINDy(BaseEstimator):
 
         Parameters
         ----------
-        x: array-like or list of array-like, shape (n_samples, n_input_features)
+        x: array-like or list of array-like, shape
+        (n_samples, n_input_features)
             Samples
 
         multiple_trajectories: boolean, optional (default False)
-            If True, x contains multiple trajectories and must be a list of data
-            from each trajectory. If False, x is a single trajectory.
+            If True, x contains multiple trajectories and must be a list of
+            data from each trajectory. If False, x is a single trajectory.
 
         Returns
         -------
-        x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
+        x_dot: array-like or list of array-like, shape
+        (n_samples, n_input_features)
             Predicted time derivatives
         """
         if hasattr(self, "model"):
@@ -168,7 +178,9 @@ class SINDy(BaseEstimator):
                 if hasattr(self, "model"):
                     return self.model.predict(x)
         else:
-            raise NotFittedError("SINDy model must be fit before predict can be called")
+            raise NotFittedError(
+                "SINDy model must be fit before predict can be called"
+            )
 
     def equations(self, precision=3):
         """
@@ -177,7 +189,8 @@ class SINDy(BaseEstimator):
         Parameters
         ----------
         precision: int, optional (default 3)
-            Number of decimal points to print for each coefficient in the equation.
+            Number of decimal points to print for each coefficient in the
+            equation.
 
         Returns
         -------
@@ -196,7 +209,9 @@ class SINDy(BaseEstimator):
                 .get_feature_names(input_features=base_feature_names)
             )
             return [
-                equation(est, input_features=feature_names, precision=precision)
+                equation(
+                    est, input_features=feature_names, precision=precision
+                )
                 for est in self.model.estimators_
             ]
         else:
@@ -230,23 +245,26 @@ class SINDy(BaseEstimator):
 
         Parameters
         ----------
-        x: array-like or list of array-like, shape (n_samples, n_input_features)
+        x: array-like or list of array-like, shape
+        (n_samples, n_input_features)
             Samples
 
-        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional
+        t: float, numpy array of shape [n_samples], or list of numpy arrays,
+        optional
             Time step between samples or array of collection times. Optional,
             used to compute the time derivatives of the samples if x_dot is not
             provided.
 
-        x_dot: array-like or list of array-like, shape (n_samples, n_input_features), optional
-            Optional pre-computed derivatives of the samples. If provided, these
-            values will be used to compute the score. If not provided, the time
-            derivatives of the training data will be computed using the
-            specified differentiation method.
+        x_dot: array-like or list of array-like, shape
+        (n_samples, n_input_features), optional
+            Optional pre-computed derivatives of the samples. If provided,
+            these values will be used to compute the score. If not provided,
+            the time derivatives of the training data will be computed using
+            the specified differentiation method.
 
         multiple_trajectories: boolean, optional (default False)
-            If True, x contains multiple trajectories and must be a list of data
-            from each trajectory. If False, x is a single trajectory.
+            If True, x contains multiple trajectories and must be a list of
+            data from each trajectory. If False, x is a single trajectory.
 
         metric: metric function, optional
             Metric function with which to score the prediction. Default is the
@@ -338,27 +356,35 @@ class SINDy(BaseEstimator):
 
         Parameters
         ----------
-        x: array-like or list of array-like, shape (n_samples, n_input_features)
+        x: array-like or list of array-like, shape
+        (n_samples, n_input_features)
             Samples
 
-        t: int, numpy array of shape [n_samples], or list of numpy arrays, optional
-            Time step between samples or array of collection times. Default is a
-            time step of 1 between samples.
+        t: int, numpy array of shape [n_samples], or list of numpy arrays,
+        optional
+            Time step between samples or array of collection times. Default is
+            a time step of 1 between samples.
 
         multiple_trajectories: boolean, optional (default False)
-            If True, x contains multiple trajectories and must be a list of data
-            from each trajectory. If False, x is a single trajectory.
+            If True, x contains multiple trajectories and must be a list of
+            data from each trajectory. If False, x is a single trajectory.
 
         Returns
         -------
-        x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
-            Time derivatives computed by using the model's differentiation method
+        x_dot: array-like or list of array-like, shape
+        (n_samples, n_input_features)
+            Time derivatives computed by using the model's differentiation
+            method
         """
         if self.discrete_time:
-            raise RuntimeError("No differentiation implemented for discrete time model")
+            raise RuntimeError(
+                "No differentiation implemented for discrete time model"
+            )
 
         if multiple_trajectories:
-            return self.process_multiple_trajectories(x, t, None, return_array=False)[1]
+            return self.process_multiple_trajectories(
+                x, t, None, return_array=False
+            )[1]
         else:
             x = validate_input(x, t)
             return self.differentiation_method(x, t)
@@ -388,7 +414,9 @@ class SINDy(BaseEstimator):
                 "SINDy model must be fit before get_feature_names is called"
             )
 
-    def simulate(self, x0, t, integrator=odeint, stop_condition=None, **integrator_kws):
+    def simulate(
+        self, x0, t, integrator=odeint, stop_condition=None, **integrator_kws
+    ):
         """
         Simulate the SINDy model forward in time.
 
@@ -421,7 +449,8 @@ class SINDy(BaseEstimator):
         if self.discrete_time:
             if not isinstance(t, int):
                 raise ValueError(
-                    "For discrete time model, t must be an integer (indicating the number of steps to predict)"
+                    "For discrete time model, t must be an integer (indicating"
+                    "the number of steps to predict)"
                 )
 
             x = zeros((t, self.n_input_features_))
@@ -434,7 +463,8 @@ class SINDy(BaseEstimator):
         else:
             if isscalar(t):
                 raise ValueError(
-                    "For continuous time model, t must be an array of time points at which to simulate"
+                    "For continuous time model, t must be an array of time"
+                    " points at which to simulate"
                 )
 
             def rhs(x, t):
@@ -444,4 +474,6 @@ class SINDy(BaseEstimator):
 
     @property
     def complexity(self):
-        return sum(est.steps[1][1].complexity for est in self.model.estimators_)
+        return sum(
+            est.steps[1][1].complexity for est in self.model.estimators_
+        )

@@ -2,14 +2,7 @@
 Unit tests for feature libraries.
 """
 
-import sys
-import os
-
 import pytest
-
-
-my_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, my_path + "/../../")
 
 from sindy.feature_library import (
     PolynomialLibrary,
@@ -18,26 +11,21 @@ from sindy.feature_library import (
 )
 
 
-@pytest.fixture
-def data_custom_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-    function_names = [lambda s: str(s), lambda s: str(s) + "^2", lambda s: "0"]
-
-    return CustomLibrary(
-        library_functions=library_functions,
-        function_names=function_names
-    )
-
-
 def test_form_custom_library():
     library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
     function_names = [
         lambda s: str(s), lambda s: "{}^2".format(s), lambda s: "0"
     ]
 
+    # Test with user-supplied function names
     CustomLibrary(
         library_functions=library_functions,
         function_names=function_names
+    )
+
+    # Test without user-supplied function names
+    CustomLibrary(
+        library_functions=library_functions
     )
 
 
@@ -74,7 +62,7 @@ def test_bad_parameters():
     "library", [
         PolynomialLibrary(),
         FourierLibrary(),
-        pytest.lazy_fixture('data_custom_library')
+        pytest.lazy_fixture("data_custom_library")
     ]
 )
 def test_fit_transform(data_lorenz, library):
@@ -87,7 +75,7 @@ def test_fit_transform(data_lorenz, library):
     [
         (PolynomialLibrary(), 10),
         (FourierLibrary(), 6),
-        (pytest.lazy_fixture('data_custom_library'), 9)
+        (pytest.lazy_fixture("data_custom_library"), 9)
     ],
 )
 def test_output_shape(data_lorenz, library, shape):

@@ -6,7 +6,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_is_fitted
 from sklearn.exceptions import NotFittedError
 from scipy.integrate import odeint
-from numpy import vstack, newaxis, zeros, isscalar
+from numpy import vstack, newaxis, zeros, isscalar, ndim
 
 from sindy.differentiation import FiniteDifference
 from sindy.optimizers import STLSQ
@@ -267,7 +267,14 @@ class SINDy(BaseEstimator):
         else:
             x = validate_input(x, t)
             if x_dot is None:
-                x_dot = self.differentiation_method(x, t)
+                if self.discrete_time:
+                    x_dot = x[1:]
+                    x = x[:-1]
+                else:
+                    x_dot = self.differentiation_method(x, t)
+
+        if ndim(x_dot) == 1:
+            x_dot = x_dot.reshape(-1, 1)
 
         # Drop rows where derivative isn't known (usually endpoints)
         x, x_dot = drop_nan_rows(x, x_dot)
@@ -420,7 +427,7 @@ class SINDy(BaseEstimator):
             x = zeros((t, self.n_input_features_))
             x[0] = x0
             for i in range(1, t):
-                x[i] = self.predict(x[i - 1 : i])
+                x[i] = self.predict(x[i - 1: i])
                 if stop_condition is not None and stop_condition(x[i]):
                     return x[: i + 1]
             return x

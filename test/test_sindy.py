@@ -20,10 +20,7 @@ from sklearn.exceptions import NotFittedError
 from sindy import SINDy
 from sindy.differentiation import FiniteDifference
 from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
-from sindy.feature_library import (
-    PolynomialLibrary,
-    FourierLibrary
-)
+from sindy.feature_library import PolynomialLibrary, FourierLibrary
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -75,8 +72,8 @@ def test_nan_derivatives(data_lorenz):
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape")
-    ]
+        pytest.lazy_fixture("data_1d_bad_shape"),
+    ],
 )
 def test_mixed_inputs(data):
     x, t = data
@@ -92,10 +89,7 @@ def test_mixed_inputs(data):
 
 @pytest.mark.parametrize(
     "data",
-    [
-        pytest.lazy_fixture("data_1d"),
-        pytest.lazy_fixture("data_lorenz")
-    ]
+    [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")],
 )
 def test_bad_t(data):
     x, t = data
@@ -140,7 +134,7 @@ def test_bad_t(data):
         (pytest.lazy_fixture("data_lorenz"), LASSO()),
         (pytest.lazy_fixture("data_1d"), ElasticNet()),
         (pytest.lazy_fixture("data_lorenz"), ElasticNet()),
-    ]
+    ],
 )
 def test_predict(data, optimizer):
     x, t = data
@@ -156,8 +150,8 @@ def test_predict(data, optimizer):
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape")
-    ]
+        pytest.lazy_fixture("data_1d_bad_shape"),
+    ],
 )
 def test_simulate(data):
     x, t = data
@@ -173,8 +167,8 @@ def test_simulate(data):
     [
         PolynomialLibrary(degree=3),
         FourierLibrary(n_frequencies=3),
-        pytest.lazy_fixture("data_custom_library")
-    ]
+        pytest.lazy_fixture("data_custom_library"),
+    ],
 )
 def test_libraries(data_lorenz, library):
     x, t = data_lorenz
@@ -189,8 +183,8 @@ def test_libraries(data_lorenz, library):
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape")
-    ]
+        pytest.lazy_fixture("data_1d_bad_shape"),
+    ],
 )
 def test_score(data):
     x, t = data
@@ -288,7 +282,7 @@ def test_score_discrete_time(data_discrete_time):
 
 
 def test_fit_discrete_time_multiple_trajectories(
-    data_discrete_time_multiple_trajectories
+    data_discrete_time_multiple_trajectories,
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
@@ -302,7 +296,7 @@ def test_fit_discrete_time_multiple_trajectories(
 
 
 def test_predict_discrete_time_multiple_trajectories(
-    data_discrete_time_multiple_trajectories
+    data_discrete_time_multiple_trajectories,
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
@@ -316,7 +310,7 @@ def test_predict_discrete_time_multiple_trajectories(
 
 
 def test_score_discrete_time_multiple_trajectories(
-    data_discrete_time_multiple_trajectories
+    data_discrete_time_multiple_trajectories,
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)

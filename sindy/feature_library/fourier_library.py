@@ -38,7 +38,9 @@ class FourierLibrary(BaseFeatureLibrary):
     def __init__(self, n_frequencies=1, include_sin=True, include_cos=True):
         super(FourierLibrary, self).__init__()
         if not (include_sin or include_cos):
-            raise ValueError("include_sin and include_cos cannot both be False")
+            raise ValueError(
+                "include_sin and include_cos cannot both be False"
+            )
         if n_frequencies < 1 or not isinstance(n_frequencies, int):
             raise ValueError("n_frequencies must be a positive integer")
         self.n_frequencies = n_frequencies
@@ -48,7 +50,7 @@ class FourierLibrary(BaseFeatureLibrary):
     def get_feature_names(self, input_features=None):
         """
         Return feature names for output features
-        
+
         Parameters
         ----------
         input_features : list of string, length n_features, optional
@@ -66,20 +68,24 @@ class FourierLibrary(BaseFeatureLibrary):
         for i in range(self.n_frequencies):
             for feature in input_features:
                 if self.include_sin:
-                    feature_names.append("sin(" + str(i + 1) + " " + feature + ")")
+                    feature_names.append(
+                        "sin(" + str(i + 1) + " " + feature + ")"
+                    )
                 if self.include_cos:
-                    feature_names.append("cos(" + str(i + 1) + " " + feature + ")")
+                    feature_names.append(
+                        "cos(" + str(i + 1) + " " + feature + ")"
+                    )
         return feature_names
 
     def fit(self, X, y=None):
         """
         Compute number of output features.
-        
+
         Parameters
         ----------
         X : array-like, shape (n_samples, n_features)
             The data.
-        
+
         Returns
         -------
         self : instance

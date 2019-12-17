@@ -50,7 +50,8 @@ class CustomLibrary(BaseFeatureLibrary):
         self.function_names = function_names
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
-                "library_functions and function_names must have the same number of elements"
+                "library_functions and function_names must have the same"
+                " number of elements"
             )
 
     def get_feature_names(self, input_features=None):

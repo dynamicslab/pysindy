@@ -71,7 +71,7 @@ def data_discrete_time():
     x = np.zeros((n_steps))
     x[0] = 0.5
     for i in range(1, n_steps):
-        x[i] = logistic_map(x[i-1], mu)
+        x[i] = logistic_map(x[i - 1], mu)
 
     return x
 
@@ -87,7 +87,7 @@ def data_discrete_time_multiple_trajectories():
     for i, mu in enumerate(mus):
         x[i][0] = 0.5
         for k in range(1, n_steps):
-            x[i][k] = logistic_map(x[i][k-1], mu)
+            x[i][k] = logistic_map(x[i][k - 1], mu)
 
     return x
 
@@ -117,6 +117,5 @@ def data_custom_library():
     function_names = [lambda s: str(s), lambda s: str(s) + "^2", lambda s: "0"]
 
     return CustomLibrary(
-        library_functions=library_functions,
-        function_names=function_names
+        library_functions=library_functions, function_names=function_names
     )

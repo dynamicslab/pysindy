@@ -35,7 +35,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             raise ValueError("degree must be a nonnegative integer")
         if (not include_interaction) and interaction_only:
             raise ValueError(
-                "Can't have include_interaction be False and interaction_only be True"
+                "Can't have include_interaction be False and interaction_only"
+                " be True"
             )
         self.include_interaction = include_interaction
 
@@ -47,9 +48,14 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         start = int(not include_bias)
         if not include_interaction:
             if include_bias:
-                return chain([()], chain.from_iterable(combinations_w_r([j],i)
-                                                      for i in range(1, degree + 1)
-                                                      for j in range(n_features)))
+                return chain(
+                    [()],
+                    chain.from_iterable(
+                        combinations_w_r([j], i)
+                        for i in range(1, degree + 1)
+                        for j in range(n_features)
+                    ),
+                )
             else:
                 return chain.from_iterable(
                     combinations_w_r([j], i)
@@ -72,7 +78,10 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             self.include_bias,
         )
         return np.vstack(
-            [np.bincount(c, minlength=self.n_input_features_) for c in combinations]
+            [
+                np.bincount(c, minlength=self.n_input_features_)
+                for c in combinations
+            ]
         )
 
     def get_feature_names(self, input_features=None):
@@ -154,7 +163,9 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         """
         check_is_fitted(self)
 
-        X = check_array(X, order="F", dtype=FLOAT_DTYPES, accept_sparse=("csr", "csc"))
+        X = check_array(
+            X, order="F", dtype=FLOAT_DTYPES, accept_sparse=("csr", "csc")
+        )
 
         n_samples, n_features = X.shape
 
@@ -170,7 +181,12 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             to_stack.append(X)
             for deg in range(2, self.degree + 1):
                 Xp_next = _csr_polynomial_expansion(
-                    X.data, X.indices, X.indptr, X.shape[1], self.interaction_only, deg
+                    X.data,
+                    X.indices,
+                    X.indptr,
+                    X.shape[1],
+                    self.interaction_only,
+                    deg,
                 )
                 if Xp_next is None:
                     break

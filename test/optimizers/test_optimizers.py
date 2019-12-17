@@ -7,15 +7,7 @@ import pytest
 from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
 
 
-@pytest.mark.parametrize(
-    'optimizer',
-    [
-        STLSQ(),
-        SR3(),
-        LASSO(),
-        ElasticNet(),
-    ]
-)
+@pytest.mark.parametrize("optimizer", [STLSQ(), SR3(), LASSO(), ElasticNet()])
 def test_fit(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
@@ -83,14 +75,7 @@ def test_bad_parameters(data_derivative_1d):
 
 # The different capitalizations are intentional;
 # I want to make sure different versions are recognized
-@pytest.mark.parametrize(
-    'thresholder',
-    [
-        'L0',
-        'l1',
-        'CAD'
-    ]
-)
+@pytest.mark.parametrize("thresholder", ["L0", "l1", "CAD"])
 def test_sr3_prox_functions(data_derivative_1d, thresholder):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)

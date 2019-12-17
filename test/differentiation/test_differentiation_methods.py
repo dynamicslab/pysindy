@@ -1,26 +1,11 @@
-import sys
-import os
+"""
+Unit tests for differentiation methods.
+"""
+
 import pytest
 import numpy as np
 
-my_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, my_path + "/../../")
 from sindy.differentiation import FiniteDifference
-
-"""
-Note: all tests should be encapsulated in functions whose
-names start with "test_"
-
-To run tests, navigate to this directory in the terminal
-and run the command
-python3 -m pytest
-
-To run tests for just one file, run
-python3 -m pytest file_to_test.py
-
-(normally you should just be able to run 'pytest' but
-there's something fishy going on with the imports)
-"""
 
 
 # Simplest example: just use an assert statement
@@ -86,10 +71,10 @@ def test_centered_difference_2d(data_derivative_2d):
 
 # Alternative implementation of the four tests above using parametrization
 @pytest.mark.parametrize(
-    'data',
+    "data",
     [
-        pytest.lazy_fixture('data_derivative_1d'),
-        pytest.lazy_fixture('data_derivative_2d')
+        pytest.lazy_fixture("data_derivative_1d"),
+        pytest.lazy_fixture("data_derivative_2d")
     ]
 )
 def test_forward_difference(data):
@@ -102,10 +87,10 @@ def test_forward_difference(data):
 
 
 @pytest.mark.parametrize(
-    'data',
+    "data",
     [
-        pytest.lazy_fixture('data_derivative_1d'),
-        pytest.lazy_fixture('data_derivative_2d')
+        pytest.lazy_fixture("data_derivative_1d"),
+        pytest.lazy_fixture("data_derivative_2d")
     ]
 )
 def test_centered_difference(data):

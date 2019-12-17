@@ -1,9 +1,9 @@
-import sys
-import os
+"""
+Unit tests for optimizers.
+"""
+
 import pytest
 
-my_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, my_path + "/../../")
 from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
 
 

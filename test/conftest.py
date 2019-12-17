@@ -6,6 +6,8 @@ import pytest
 import numpy as np
 from scipy.integrate import odeint
 
+from sindy.feature_library import CustomLibrary
+
 
 @pytest.fixture
 def data_1d():
@@ -16,8 +18,9 @@ def data_1d():
 
 @pytest.fixture
 def data_1d_bad_shape():
-    x = np.linspace(0, 5, 100)
-    return x
+    t = np.linspace(0, 5, 100)
+    x = 2 * t
+    return x, t
 
 
 @pytest.fixture
@@ -61,14 +64,14 @@ def data_multiple_trajctories():
 @pytest.fixture
 def data_discrete_time():
     def logistic_map(x, mu):
-        return mu*x*(1-x)
+        return mu * x * (1 - x)
 
     n_steps = 100
     mu = 3.6
     x = np.zeros((n_steps))
     x[0] = 0.5
-    for i in range(1,n_steps):
-        x[i] = logistic_map(x[i-1],mu)
+    for i in range(1, n_steps):
+        x[i] = logistic_map(x[i-1], mu)
 
     return x
 
@@ -76,15 +79,15 @@ def data_discrete_time():
 @pytest.fixture
 def data_discrete_time_multiple_trajectories():
     def logistic_map(x, mu):
-        return mu*x*(1-x)
+        return mu * x * (1 - x)
 
     n_steps = 100
-    mus = [1,2.3,3.6]
+    mus = [1, 2.3, 3.6]
     x = [np.zeros((n_steps)) for mu in mus]
-    for i,mu in enumerate(mus):
+    for i, mu in enumerate(mus):
         x[i][0] = 0.5
-        for k in range(1,n_steps):
-            x[i][k] = logistic_map(x[i][k-1],mu)
+        for k in range(1, n_steps):
+            x[i][k] = logistic_map(x[i][k-1], mu)
 
     return x
 
@@ -106,3 +109,14 @@ def data_derivative_2d():
     x_dot[:, 0] *= 2
     x_dot[:, 1] *= -10
     return x, x_dot
+
+
+@pytest.fixture
+def data_custom_library():
+    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    function_names = [lambda s: str(s), lambda s: str(s) + "^2", lambda s: "0"]
+
+    return CustomLibrary(
+        library_functions=library_functions,
+        function_names=function_names
+    )

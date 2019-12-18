@@ -2,34 +2,30 @@
 Unit tests for feature libraries.
 """
 
-import sys
-import os
-
 import pytest
 
-
-my_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, my_path + "/../../")
-
-from sindy.feature_library import PolynomialLibrary, FourierLibrary, CustomLibrary
-
-
-@pytest.fixture
-def data_custom_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-    function_names = [lambda s: str(s), lambda s: str(s) + "^2", lambda s: "0"]
-
-    return CustomLibrary(
-        library_functions=library_functions, function_names=function_names
-    )
+from sindy.feature_library import (
+    PolynomialLibrary,
+    FourierLibrary,
+    CustomLibrary,
+)
 
 
 def test_form_custom_library():
     library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-    function_names = [lambda s: str(s), lambda s: "{}^2".format(s), lambda s: "0"]
+    function_names = [
+        lambda s: str(s),
+        lambda s: "{}^2".format(s),
+        lambda s: "0",
+    ]
 
+    # Test with user-supplied function names
+    CustomLibrary(
+        library_functions=library_functions, function_names=function_names
+    )
+
+    # Test without user-supplied function names
     CustomLibrary(library_functions=library_functions)
-    CustomLibrary(library_functions=library_functions, function_names=function_names)
 
 
 def test_bad_parameters():
@@ -57,7 +53,11 @@ def test_bad_parameters():
 
 @pytest.mark.parametrize(
     "library",
-    [PolynomialLibrary(), FourierLibrary(), pytest.lazy_fixture("data_custom_library")],
+    [
+        PolynomialLibrary(),
+        FourierLibrary(),
+        pytest.lazy_fixture("data_custom_library"),
+    ],
 )
 def test_fit_transform(data_lorenz, library):
     x, t = data_lorenz

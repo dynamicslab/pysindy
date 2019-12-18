@@ -54,7 +54,13 @@ class SR3(BaseOptimizer):
     """
 
     def __init__(
-        self, threshold=0.1, nu=1.0, tol=1e-5, thresholder="l0", max_iter=30, **kwargs
+        self,
+        threshold=0.1,
+        nu=1.0,
+        tol=1e-5,
+        thresholder="l0",
+        max_iter=30,
+        **kwargs
     ):
         super(SR3, self).__init__(**kwargs)
 
@@ -109,7 +115,9 @@ class SR3(BaseOptimizer):
 
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
-        cho = cho_factor(np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu)))
+        cho = cho_factor(
+            np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
+        )
         x_transpose_y = np.dot(x.T, y)
 
         for _ in range(self.max_iter):

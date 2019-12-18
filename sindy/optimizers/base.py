@@ -16,11 +16,13 @@ def _rescale_data(X, y, sample_weight):
     n_samples = X.shape[0]
     sample_weight = np.asarray(sample_weight)
     if sample_weight.ndim == 0:
-        sample_weight = np.full(n_samples, sample_weight,
-                                dtype=sample_weight.dtype)
+        sample_weight = np.full(
+            n_samples, sample_weight, dtype=sample_weight.dtype
+        )
     sample_weight = np.sqrt(sample_weight)
-    sw_matrix = sparse.dia_matrix((sample_weight, 0),
-                                  shape=(n_samples, n_samples))
+    sw_matrix = sparse.dia_matrix(
+        (sample_weight, 0), shape=(n_samples, n_samples)
+    )
     X = safe_sparse_dot(sw_matrix, X)
     y = safe_sparse_dot(sw_matrix, y)
     return X, y
@@ -40,8 +42,8 @@ class BaseOptimizer(LinearRegression):
 
     normalize : boolean, optional (default False)
         This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting the
-        mean and dividing by the l2-norm.
+        the regressors X will be normalized before regression by subtracting
+        the mean and dividing by the l2-norm.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -49,9 +51,7 @@ class BaseOptimizer(LinearRegression):
 
     def __init__(self, normalize=False, fit_intercept=False, copy_X=True):
         super(BaseOptimizer, self).__init__(
-            fit_intercept=fit_intercept,
-            normalize=normalize,
-            copy_X=copy_X
+            fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
         # self.fit_intercept = fit_intercept
         # self.normalize = normalize
@@ -95,7 +95,9 @@ class BaseOptimizer(LinearRegression):
         -------
         self : returns an instance of self
         """
-        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
+        x_, y = check_X_y(
+            x_, y, accept_sparse=[], y_numeric=True, multi_output=False
+        )
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
             x_,

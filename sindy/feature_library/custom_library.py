@@ -4,6 +4,8 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 import numpy as np
+from itertools import chain, combinations
+from itertools import combinations_with_replacement as combinations_w_r
 
 
 class CustomLibrary(BaseFeatureLibrary):
@@ -44,7 +46,7 @@ class CustomLibrary(BaseFeatureLibrary):
         input features.
     """
 
-    def __init__(self, library_functions, function_names=None):
+    def __init__(self, library_functions, function_names=None, interaction_only=True):
         super(CustomLibrary, self).__init__()
         self.functions = library_functions
         self.function_names = function_names
@@ -53,6 +55,13 @@ class CustomLibrary(BaseFeatureLibrary):
                 "library_functions and function_names must have the same"
                 " number of elements"
             )
+        self.interaction_only = interaction_only
+
+    @staticmethod
+    def _combinations(n_features, n_args, interaction_only):
+        """Get the combinations of features to be passed to a library function"""
+        comb = combinations if interaction_only else combinations_w_r
+        return comb(range(n_features), n_args)
 
     def get_feature_names(self, input_features=None):
         """
@@ -70,9 +79,13 @@ class CustomLibrary(BaseFeatureLibrary):
         if input_features is None:
             input_features = ["x%d" % i for i in range(self.n_input_features_)]
         feature_names = []
-        for function_name in self.function_names:
-            for feature in input_features:
-                feature_names.append(function_name(feature))
+        for i, f in enumerate(self.functions):
+            for c in self._combinations(
+                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
+            ):
+                feature_names.append(
+                    self.function_names[i](*[input_features[j] for j in c])
+                )
         return feature_names
 
     def fit(self, X, y=None):
@@ -88,11 +101,17 @@ class CustomLibrary(BaseFeatureLibrary):
         """
         n_samples, n_features = check_array(X).shape
         self.n_input_features_ = n_features
-        self.n_output_features_ = n_features * len(self.functions)
+        n_output_features = 0
+        for f in self.functions:
+            n_args = f.__code__.co_argcount
+            n_output_features += len(
+                list(self._combinations(n_features, n_args, self.interaction_only))
+            )
+        self.n_output_features_ = n_output_features
         if self.function_names is None:
             self.function_names = list(
                 map(
-                    lambda i: (lambda x: "f" + str(i) + "(" + x + ")"),
+                    lambda i: (lambda *x: "f" + str(i) + "(" + ",".join(x) + ")"),
                     range(len(self.functions)),
                 )
             )
@@ -122,8 +141,12 @@ class CustomLibrary(BaseFeatureLibrary):
             raise ValueError("X shape does not match training shape")
 
         XP = np.empty((n_samples, self.n_output_features_), dtype=X.dtype)
+        library_idx = 0
         for i, f in enumerate(self.functions):
-            for j in range(self.n_input_features_):
-                XP[:, j + i * self.n_input_features_] = f(X[:, j])
+            for c in self._combinations(
+                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
+            ):
+                XP[:, library_idx] = f(*[X[:, j] for j in c])
+                library_idx += 1
 
         return XP

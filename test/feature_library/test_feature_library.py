@@ -45,10 +45,7 @@ def test_bad_parameters():
         FourierLibrary(include_sin=False, include_cos=False)
     with pytest.raises(ValueError):
         library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        function_names = [
-            lambda s: str(s),
-            lambda s: "{}^2".format(s),
-        ]
+        function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
         CustomLibrary(
             library_functions=library_functions, function_names=function_names
         )

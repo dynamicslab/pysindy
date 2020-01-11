@@ -1,6 +1,8 @@
 sindy
 =========
 
+|travis|
+
 **sindy** is a sparse regression package with several implementations for Sparse Identification of Nonlinear Dynamical systems (SINDy).
 
 Installation
@@ -51,3 +53,6 @@ If you find a bug in the code or want to request a new feature, please open an i
 Getting help
 ^^^^^^^^^^^^
 For help using sindy please consult the documentation and/or our `examples <https://github.com/briandesilva/sindy/tree/master/example>`_, or create an issue.
+
+.. |travis| image:: https://travis-ci.com/briandesilva/sindy.svg?branch=master
+   :target: https://travis-ci.com/briandesilva/sindy

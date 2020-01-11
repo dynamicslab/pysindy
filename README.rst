@@ -1,7 +1,7 @@
 sindy
 =========
 
-|travis|
+|travis| |codecov|
 
 **sindy** is a sparse regression package with several implementations for Sparse Identification of Nonlinear Dynamical systems (SINDy).
 
@@ -56,3 +56,5 @@ For help using sindy please consult the documentation and/or our `examples <http
 
 .. |travis| image:: https://travis-ci.com/briandesilva/sindy.svg?branch=master
    :target: https://travis-ci.com/briandesilva/sindy
+.. |codecov| image:: https://codecov.io/gh/briandesilva/sindy/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/briandesilva/sindy

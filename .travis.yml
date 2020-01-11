@@ -10,10 +10,7 @@ cache:
 install:
   - pip install --upgrade -r requirements-dev.txt
 script:
-  - pytest test --flake8
-  # - pytest test --cov=sindy --flake8
-# env should be removed once we set up a *public* repo
-# env:
-#   - CODECOV_TOKEN=9d40a0bb-0bfb-44d5-a01b-9f32fff65e56
-# after_success:
-#   - codecov
+  - py.test test --cov=sindy --flake8
+# We can remove the --token option once we move to a public repo 
+after_success:
+  - codecov --token=9d40a0bb-0bfb-44d5-a01b-9f32fff65e56

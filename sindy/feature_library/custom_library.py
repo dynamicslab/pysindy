@@ -4,7 +4,7 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 import numpy as np
-from itertools import chain, combinations
+from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
 
@@ -46,7 +46,9 @@ class CustomLibrary(BaseFeatureLibrary):
         input features.
     """
 
-    def __init__(self, library_functions, function_names=None, interaction_only=True):
+    def __init__(
+        self, library_functions, function_names=None, interaction_only=True
+    ):
         super(CustomLibrary, self).__init__()
         self.functions = library_functions
         self.function_names = function_names
@@ -59,7 +61,8 @@ class CustomLibrary(BaseFeatureLibrary):
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
-        """Get the combinations of features to be passed to a library function"""
+        """Get the combinations of features to be passed to a library function
+        """
         comb = combinations if interaction_only else combinations_w_r
         return comb(range(n_features), n_args)
 
@@ -81,7 +84,9 @@ class CustomLibrary(BaseFeatureLibrary):
         feature_names = []
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
+                self.n_input_features_,
+                f.__code__.co_argcount,
+                self.interaction_only,
             ):
                 feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
@@ -105,13 +110,19 @@ class CustomLibrary(BaseFeatureLibrary):
         for f in self.functions:
             n_args = f.__code__.co_argcount
             n_output_features += len(
-                list(self._combinations(n_features, n_args, self.interaction_only))
+                list(
+                    self._combinations(
+                        n_features, n_args, self.interaction_only
+                    )
+                )
             )
         self.n_output_features_ = n_output_features
         if self.function_names is None:
             self.function_names = list(
                 map(
-                    lambda i: (lambda *x: "f" + str(i) + "(" + ",".join(x) + ")"),
+                    lambda i: (
+                        lambda *x: "f" + str(i) + "(" + ",".join(x) + ")"
+                    ),
                     range(len(self.functions)),
                 )
             )
@@ -144,7 +155,9 @@ class CustomLibrary(BaseFeatureLibrary):
         library_idx = 0
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
+                self.n_input_features_,
+                f.__code__.co_argcount,
+                self.interaction_only,
             ):
                 XP[:, library_idx] = f(*[X[:, j] for j in c])
                 library_idx += 1

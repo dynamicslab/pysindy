@@ -10,8 +10,7 @@ cache:
 install:
   - pip install --upgrade -r requirements-dev.txt
 script:
-  - flake8 sindy
-  - pytest
+  - pytest test --flake8
   # - pytest test --cov=sindy
 # after_success:
 #   - codecov

@@ -3,7 +3,6 @@
 pytest
 pytest-cov
 pytest-lazy-fixture
-flake8
 pytest-flake8
 flake8-builtins-unleashed
 flake8_module_name

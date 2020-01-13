@@ -394,7 +394,7 @@ class SINDy(BaseEstimator):
         """
         if hasattr(self, "model"):
             check_is_fitted(self.model.estimators_[0].steps[-1][1])
-            return self.model.estimators_[0].steps[-1][1].coef_
+            return vstack([est.steps[-1][1].coef_ for est in self.model.estimators_]).T
         else:
             raise NotFittedError(
                 "SINDy model must be fit before coefficients is called"

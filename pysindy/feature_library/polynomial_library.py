@@ -7,7 +7,7 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted, FLOAT_DTYPES
 from sklearn.preprocessing import _csr_polynomial_expansion
 
-from sindy.feature_library import BaseFeatureLibrary
+from pysindy.feature_library import BaseFeatureLibrary
 
 
 class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):

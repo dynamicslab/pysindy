@@ -4,7 +4,7 @@ Base class for numerical differentiation methods
 
 import abc
 
-from sindy.utils.base import validate_input
+from pysindy.utils.base import validate_input
 
 
 class BaseDifferentiation:

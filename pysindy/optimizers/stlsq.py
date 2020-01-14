@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.linear_model import ridge_regression
 from sklearn.exceptions import ConvergenceWarning
 
-from sindy.optimizers import BaseOptimizer
+from pysindy.optimizers import BaseOptimizer
 
 
 class STLSQ(BaseOptimizer):

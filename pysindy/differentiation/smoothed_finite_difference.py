@@ -1,6 +1,6 @@
 from scipy.signal import savgol_filter
 
-from sindy.differentiation import FiniteDifference
+from pysindy.differentiation import FiniteDifference
 
 
 class SmoothedFiniteDifference(FiniteDifference):

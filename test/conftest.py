@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 from scipy.integrate import odeint
 
-from sindy.feature_library import CustomLibrary
+from pysindy.feature_library import CustomLibrary
 
 
 @pytest.fixture

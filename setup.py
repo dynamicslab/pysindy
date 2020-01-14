@@ -5,9 +5,9 @@ from setuptools import find_packages, setup
 
 assert sys.version_info >= (3, 6, 0), "sindy requires Python 3.6+"
 
-NAME = "sindy"
+NAME = "pysindy"
 DESCRIPTION = "Sparse Identification of Nonlinear Dynamics"
-URL = "https://github.com/briandesilva/sindy"
+URL = "https://github.com/briandesilva/pysindy"
 EMAIL = "bdesilva@uw.edu"
 AUTHOR = "Brian de Silva"
 PYTHON = ">=3.6"

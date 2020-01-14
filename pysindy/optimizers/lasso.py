@@ -1,6 +1,6 @@
 from sklearn.linear_model import Lasso
 
-from sindy.optimizers import BaseOptimizer
+from pysindy.optimizers import BaseOptimizer
 
 
 class LASSO(BaseOptimizer):

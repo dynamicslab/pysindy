@@ -1,6 +1,6 @@
 from sklearn.linear_model import ElasticNet as SKElasticNet
 
-from sindy.optimizers import BaseOptimizer
+from pysindy.optimizers import BaseOptimizer
 
 
 class ElasticNet(BaseOptimizer):

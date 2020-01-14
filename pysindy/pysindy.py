@@ -8,9 +8,9 @@ from sklearn.exceptions import NotFittedError
 from scipy.integrate import odeint
 from numpy import vstack, newaxis, zeros, isscalar, ndim
 
-from sindy.differentiation import FiniteDifference
-from sindy.optimizers import STLSQ
-from sindy.utils.base import equation, validate_input, drop_nan_rows
+from pysindy.differentiation import FiniteDifference
+from pysindy.optimizers import STLSQ
+from pysindy.utils.base import equation, validate_input, drop_nan_rows
 
 
 class SINDy(BaseEstimator):

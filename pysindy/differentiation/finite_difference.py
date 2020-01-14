@@ -1,6 +1,6 @@
 import numpy as np
 
-from sindy.differentiation import BaseDifferentiation
+from pysindy.differentiation import BaseDifferentiation
 
 
 class FiniteDifference(BaseDifferentiation):

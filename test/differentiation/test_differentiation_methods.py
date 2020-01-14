@@ -5,7 +5,7 @@ Unit tests for differentiation methods.
 import pytest
 import numpy as np
 
-from sindy.differentiation import FiniteDifference
+from pysindy.differentiation import FiniteDifference
 
 
 # Simplest example: just use an assert statement

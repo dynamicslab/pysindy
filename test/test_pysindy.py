@@ -17,10 +17,10 @@ import pytest
 
 from sklearn.exceptions import NotFittedError
 
-from sindy import SINDy
-from sindy.differentiation import FiniteDifference
-from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
-from sindy.feature_library import PolynomialLibrary, FourierLibrary
+from pysindy import SINDy
+from pysindy.differentiation import FiniteDifference
+from pysindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
+from pysindy.feature_library import PolynomialLibrary, FourierLibrary
 
 
 def test_get_feature_names_len(data_lorenz):

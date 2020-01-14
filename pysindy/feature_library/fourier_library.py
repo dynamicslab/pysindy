@@ -1,4 +1,4 @@
-from sindy.feature_library import BaseFeatureLibrary
+from pysindy.feature_library import BaseFeatureLibrary
 
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted

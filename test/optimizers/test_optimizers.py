@@ -4,7 +4,7 @@ Unit tests for optimizers.
 
 import pytest
 
-from sindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
+from pysindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
 
 
 @pytest.mark.parametrize("optimizer", [STLSQ(), SR3(), LASSO(), ElasticNet()])

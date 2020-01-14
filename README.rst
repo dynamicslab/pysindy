@@ -1,9 +1,9 @@
-sindy
+PySINDy
 =========
 
 |travis| |codecov|
 
-**sindy** is a sparse regression package with several implementations for Sparse Identification of Nonlinear Dynamical systems (SINDy).
+**PySINDy** is a sparse regression package with several implementations for Sparse Identification of Nonlinear Dynamical systems (SINDy).
 
 Installation
 ------------
@@ -11,15 +11,15 @@ Installation
 Installing with pip
 ^^^^^^^^^^^^^^^^^^^
 
-If you are using Linux or macOS you can install sindy with pip:
+If you are using Linux or macOS you can install PySINDy with pip:
 
-``pip install sindy``
+``pip install pysindy``
 
 Installing from source
 ^^^^^^^^^^^^^^^^^^^^^^
 First clone this repository:
 
-``git clone https://github.com/briandesilva/sindy``
+``git clone https://github.com/briandesilva/pysindy``
 
 Then, to install the package, run:
 
@@ -42,7 +42,7 @@ Community guidelines
 
 Contributing code
 ^^^^^^^^^^^^^^^^^
-We welcome contributions to sindy. To contribute a new feature please submit a pull request. To be accepted your code should conform to PEP8 (you may choose to use flake8 to test this before submitting your pull request). Your contributed code should pass all unit tests. Upon submission of a pull request, your code will be tested automatically, but you may also choose to test it yourself by running
+We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To be accepted your code should conform to PEP8 (you may choose to use flake8 to test this before submitting your pull request). Your contributed code should pass all unit tests. Upon submission of a pull request, your code will be tested automatically, but you may also choose to test it yourself by running
 
 ``pytest``
 
@@ -52,7 +52,7 @@ If you find a bug in the code or want to request a new feature, please open an i
 
 Getting help
 ^^^^^^^^^^^^
-For help using sindy please consult the documentation and/or our `examples <https://github.com/briandesilva/sindy/tree/master/example>`_, or create an issue.
+For help using PySINDy please consult the documentation and/or our `examples <https://github.com/briandesilva/pysindy/tree/master/example>`_, or create an issue.
 
 .. |travis| image:: https://travis-ci.com/briandesilva/sindy.svg?branch=master
    :target: https://travis-ci.com/briandesilva/sindy

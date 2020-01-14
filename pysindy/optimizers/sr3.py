@@ -4,8 +4,8 @@ import numpy as np
 from scipy.linalg import cho_factor, cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
-from sindy.optimizers import BaseOptimizer
-from sindy.utils import get_prox
+from pysindy.optimizers import BaseOptimizer
+from pysindy.utils import get_prox
 
 
 class SR3(BaseOptimizer):

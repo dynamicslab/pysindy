@@ -4,7 +4,7 @@ Unit tests for feature libraries.
 
 import pytest
 
-from sindy.feature_library import (
+from pysindy.feature_library import (
     PolynomialLibrary,
     FourierLibrary,
     CustomLibrary,

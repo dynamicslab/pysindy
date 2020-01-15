@@ -1,7 +1,7 @@
 PySINDy
 =========
 
-![](https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg)
+|BuildCI|
 
 **PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method.
 
@@ -53,3 +53,5 @@ If you find a bug in the code or want to request a new feature, please open an i
 Getting help
 ^^^^^^^^^^^^
 For help using PySINDy please consult the documentation and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/example>`_, or create an issue.
+
+.. |BuildCI| image:: https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg

@@ -55,3 +55,4 @@ Getting help
 For help using PySINDy please consult the documentation and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/example>`_, or create an issue.
 
 .. |BuildCI| image:: https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg
+    :target: https://github.com/dynamicslab/pysindy/actions?query=workflow%3A%22Build+CI%22

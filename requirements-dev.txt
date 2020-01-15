@@ -1,15 +1,10 @@
 -e .
 -r requirements.txt
+matplotlib
 pytest
 pytest-cov
 pytest-lazy-fixture
 pytest-flake8
 flake8-builtins-unleashed
-flake8_module_name
 codecov
-sphinx
-alabaster
-recommonmark
-# sphinx_rtd_theme
-sphinxcontrib-apidoc
 pre-commit

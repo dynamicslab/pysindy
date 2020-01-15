@@ -1,9 +1,9 @@
 PySINDy
 =========
 
-|travis| |codecov|
+![](https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg)
 
-**PySINDy** is a sparse regression package with several implementations for Sparse Identification of Nonlinear Dynamical systems (SINDy).
+**PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method.
 
 Installation
 ------------
@@ -19,7 +19,7 @@ Installing from source
 ^^^^^^^^^^^^^^^^^^^^^^
 First clone this repository:
 
-``git clone https://github.com/briandesilva/pysindy``
+``git clone https://github.com/dynamicslab/pysindy``
 
 Then, to install the package, run:
 
@@ -52,9 +52,4 @@ If you find a bug in the code or want to request a new feature, please open an i
 
 Getting help
 ^^^^^^^^^^^^
-For help using PySINDy please consult the documentation and/or our `examples <https://github.com/briandesilva/pysindy/tree/master/example>`_, or create an issue.
-
-.. |travis| image:: https://travis-ci.com/briandesilva/sindy.svg?branch=master
-   :target: https://travis-ci.com/briandesilva/sindy
-.. |codecov| image:: https://codecov.io/gh/briandesilva/sindy/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/briandesilva/sindy
+For help using PySINDy please consult the documentation and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/example>`_, or create an issue.

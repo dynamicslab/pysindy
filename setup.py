@@ -7,7 +7,7 @@ assert sys.version_info >= (3, 6, 0), "sindy requires Python 3.6+"
 
 NAME = "pysindy"
 DESCRIPTION = "Sparse Identification of Nonlinear Dynamics"
-URL = "https://github.com/briandesilva/pysindy"
+URL = "https://github.com/dynamicslab/pysindy"
 EMAIL = "bdesilva@uw.edu"
 AUTHOR = "Brian de Silva"
 PYTHON = ">=3.6"

@@ -1,4 +1,4 @@
-name: Python Package
+name: Build CI
 
 on: [push]
 
@@ -9,7 +9,7 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: [3.6, 3.7]
+        python-version: [3.6, 3.7, 3.8]
 
     steps:
     - uses: actions/checkout@v1
@@ -24,7 +24,7 @@ jobs:
     - name: Test with pytest
       run: |
         pip install pytest
-        pytest test --cov=sindy
+        py.test test --cov=sindy --flake8
     - uses: actions/cache@v1
       with:
         path: ~/.cache/pip

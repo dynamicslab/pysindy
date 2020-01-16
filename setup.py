@@ -34,7 +34,8 @@ with open(here / "README.rst", "r") as f:
 
 setup(
     name=NAME,
-    version="0.0.1",
+    use_scm_version=True,
+    setup_requires=["setuptools_scm", "setuptools_scm_git_archive"],
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     author=AUTHOR,

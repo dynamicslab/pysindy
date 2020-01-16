@@ -7,4 +7,5 @@ pytest-lazy-fixture
 pytest-flake8
 flake8-builtins-unleashed
 codecov
-pre-commit
+setuptools_scm
+setuptools_scm_git_archive

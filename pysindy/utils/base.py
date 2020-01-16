@@ -31,9 +31,7 @@ def validate_input(x, t=T_DEFAULT):
             if not len(t) == x.shape[0]:
                 raise ValueError("Length of t should match x.shape[0].")
             if not np.all(t[:-1] < t[1:]):
-                raise ValueError(
-                    "Values in t should be in strictly increasing order."
-                )
+                raise ValueError("Values in t should be in strictly increasing order.")
         else:
             raise ValueError("t must be a scalar or array-like.")
 
@@ -104,9 +102,7 @@ def get_prox(regularization):
     elif regularization.lower() == "cad":
         return prox_cad
     else:
-        raise NotImplementedError(
-            "{} has not been implemented".format(regularization)
-        )
+        raise NotImplementedError("{} has not been implemented".format(regularization))
 
 
 def print_model(
@@ -119,59 +115,48 @@ def print_model(
     pm="±",
 ):
     """
-
     Args:
         coef:
         input_features:
         errors:
         intercept:
-        error_intercept:
+        sigma_intercept:
         precision:
         pm:
-
     Returns:
-
     """
 
-    def term(coef, sigma, name):
-        rounded_coef = np.round(coef, precision)
-        if name == "1":
-            name = ""
+    def term(c, sigma, name):
+        rounded_coef = np.round(c, precision)
         if rounded_coef == 0 and sigma is None:
             return ""
         elif sigma is None:
-            return "{coef:.{precision}f} {name}".format(
-                coef=coef, precision=precision, name=name
-            )
+            return f"{c:.{precision}f} {name}"
         elif rounded_coef == 0 and np.round(sigma, precision) == 0:
             return ""
         else:
-            return "({coef:.{precision}f} {pm} {sigma:.{precision}f}) {name}".format(
-                coef=coef, precision=precision, pm=pm, sigma=sigma, name=name
-            )
+            return f"({c:.{precision}f} {pm} {sigma:.{precision}f}) {name}"
 
     errors = errors if errors is not None else repeat(None)
-    components = map(term, coef, errors, input_features)
+    # components = map(term, coef, errors, input_features)
+    components = [term(c, e, i) for c, e, i in zip(coef, errors, input_features)]
     eq = " + ".join(filter(bool, components))
 
     if not eq or intercept or error_intercept is not None:
         intercept = intercept or 0
-        if eq:
+        intercept_str = term(intercept, error_intercept, "").strip()
+        if eq and intercept_str:
             eq += " + "
-        eq += term(
-            intercept, error_intercept, ""
-        ).strip() or "{intercept:.{precision}f}".format(
-            intercept=intercept, precision=precision
-        )
-
+            eq += intercept_str
+        elif not eq:
+            eq = f"{intercept:.{precision}f}"
     return eq
 
 
 def equation(pipeline, input_features=None, precision=3, input_fmt=None):
+    input_features = pipeline.steps[0][1].get_feature_names(input_features)
     if input_fmt:
         input_features = [input_fmt(i) for i in input_features]
     coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
-    return print_model(
-        coef, input_features, intercept=intercept, precision=precision
-    )
+    return print_model(coef, input_features, intercept=intercept, precision=precision)

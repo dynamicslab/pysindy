@@ -138,7 +138,6 @@ def print_model(
             return f"({c:.{precision}f} {pm} {sigma:.{precision}f}) {name}"
 
     errors = errors if errors is not None else repeat(None)
-    # components = map(term, coef, errors, input_features)
     components = [term(c, e, i) for c, e, i in zip(coef, errors, input_features)]
     eq = " + ".join(filter(bool, components))
 

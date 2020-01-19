@@ -4,24 +4,22 @@ from pysindy.differentiation import FiniteDifference
 
 
 class SmoothedFiniteDifference(FiniteDifference):
-    """
-    Smoothed finite difference derivatives.
+    """Smoothed finite difference derivatives.
 
     Perform differentiation by smoothing input data then applying a finite
     difference method.
 
     Parameters
     ----------
-    smoother: function, optional (default savgol_filter)
+    smoother: function, optional (default :code:`savgol_filter`)
         Function to perform smoothing. Must be compatible with the
-        following call signature:
-        x_smoothed = smoother(x, **smoother_kws)
+        following call signature: :code:`x_smoothed = smoother(x, **smoother_kws)`
 
-    smoother_kws: dict, optional (default {})
+    smoother_kws: dict, optional (default :code:`{}`)
         Arguments passed to smoother when it is invoked.
 
     **kwargs: kwargs
-        Addtional parameters passed to the FiniteDifference __init__
+        Addtional parameters passed to the :code:`FiniteDifference.__init__`
         function.
     """
 
@@ -38,8 +36,6 @@ class SmoothedFiniteDifference(FiniteDifference):
             self.smoother_kws["axis"] = 0
 
     def _differentiate(self, x, t):
-        """
-        Apply finite difference method after smoothing.
-        """
+        """Apply finite difference method after smoothing."""
         x = self.smoother(x, **self.smoother_kws)
         return super(SmoothedFiniteDifference, self)._differentiate(x, t)

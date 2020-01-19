@@ -1,7 +1,3 @@
-Overview
---------
-
-
 .. include:: ../README.rst
 
 

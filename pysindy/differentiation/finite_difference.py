@@ -4,8 +4,7 @@ from pysindy.differentiation import BaseDifferentiation
 
 
 class FiniteDifference(BaseDifferentiation):
-    """
-    Finite difference derivatives.
+    """Finite difference derivatives.
 
     For now only first and second order finite difference methods have been
     implemented.
@@ -61,9 +60,7 @@ class FiniteDifference(BaseDifferentiation):
         if np.isscalar(t):
             x_dot[:-1, :] = (x[1:, :] - x[:-1, :]) / t
             if not self.drop_endpoints:
-                x_dot[-1, :] = (
-                    3 * x[-1, :] / 2 - 2 * x[-2, :] + x[-3, :] / 2
-                ) / t
+                x_dot[-1, :] = (3 * x[-1, :] / 2 - 2 * x[-2, :] + x[-3, :] / 2) / t
 
         # Variable timestep
         else:
@@ -94,16 +91,10 @@ class FiniteDifference(BaseDifferentiation):
             x_dot[1:-1, :] = (x[2:, :] - x[:-2, :]) / (2 * t)
             if not self.drop_endpoints:
                 x_dot[0, :] = (
-                    -11 / 6 * x[0, :]
-                    + 3 * x[1, :]
-                    - 3 / 2 * x[2, :]
-                    + x[3, :] / 3
+                    -11 / 6 * x[0, :] + 3 * x[1, :] - 3 / 2 * x[2, :] + x[3, :] / 3
                 ) / t
                 x_dot[-1, :] = (
-                    11 / 6 * x[-1, :]
-                    - 3 * x[-2, :]
-                    + 3 / 2 * x[-3, :]
-                    - x[-4, :] / 3
+                    11 / 6 * x[-1, :] - 3 * x[-2, :] + 3 / 2 * x[-3, :] - x[-4, :] / 3
                 ) / t
 
         # Variable timestep
@@ -112,16 +103,10 @@ class FiniteDifference(BaseDifferentiation):
             x_dot[1:-1, :] = (x[2:, :] - x[:-2, :]) / t_diff[:, None]
             if not self.drop_endpoints:
                 x_dot[0, :] = (
-                    -11 / 6 * x[0, :]
-                    + 3 * x[1, :]
-                    - 3 / 2 * x[2, :]
-                    + x[3, :] / 3
+                    -11 / 6 * x[0, :] + 3 * x[1, :] - 3 / 2 * x[2, :] + x[3, :] / 3
                 ) / (t_diff[0] / 2)
                 x_dot[-1, :] = (
-                    11 / 6 * x[-1, :]
-                    - 3 * x[-2, :]
-                    + 3 / 2 * x[-3, :]
-                    - x[-4, :] / 3
+                    11 / 6 * x[-1, :] - 3 * x[-2, :] + 3 / 2 * x[-3, :] - x[-4, :] / 3
                 ) / (t_diff[-1] / 2)
 
         return x_dot

@@ -11,10 +11,10 @@ from pysindy.feature_library import BaseFeatureLibrary
 
 
 class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
-    """
-    Generate polynomial and interaction features. This is the same as
-    sklearn.preprocessing.PolynomialFeatures, but also adds the option
-    to omit interaction features from the library.
+    """Generate polynomial and interaction features.
+
+    This is the same as :code:`sklearn.preprocessing.PolynomialFeatures`,
+    but also adds the option to omit interaction features from the library.
     """
 
     def __init__(
@@ -78,23 +78,22 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             self.include_bias,
         )
         return np.vstack(
-            [
-                np.bincount(c, minlength=self.n_input_features_)
-                for c in combinations
-            ]
+            [np.bincount(c, minlength=self.n_input_features_) for c in combinations]
         )
 
     def get_feature_names(self, input_features=None):
-        """
-        Return feature names for output features
+        """Return feature names for output features.
+
         Parameters
         ----------
         input_features : list of string, length n_features, optional
             String names for input features if available. By default,
             "x0", "x1", ... "xn_features" is used.
+
         Returns
         -------
         output_feature_names : list of string, length n_output_features
+
         """
         powers = self.powers_
         if input_features is None:
@@ -138,8 +137,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         return self
 
     def transform(self, X):
-        """
-        Transform data to polynomial features
+        """Transform data to polynomial features.
+
         Parameters
         ----------
         X : array-like or CSR/CSC sparse matrix, shape [n_samples, n_features]
@@ -155,17 +154,17 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             this reason, a CSC input will be converted to CSR, and the output
             will be converted back to CSC prior to being returned, hence the
             preference of CSR.
+
         Returns
         -------
         XP : np.ndarray or CSR/CSC sparse matrix, shape [n_samples, NP]
             The matrix of features, where NP is the number of polynomial
             features generated from the combination of inputs.
+
         """
         check_is_fitted(self)
 
-        X = check_array(
-            X, order="F", dtype=FLOAT_DTYPES, accept_sparse=("csr", "csc")
-        )
+        X = check_array(X, order="F", dtype=FLOAT_DTYPES, accept_sparse=("csr", "csc"))
 
         n_samples, n_features = X.shape
 
@@ -181,12 +180,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             to_stack.append(X)
             for deg in range(2, self.degree + 1):
                 Xp_next = _csr_polynomial_expansion(
-                    X.data,
-                    X.indices,
-                    X.indptr,
-                    X.shape[1],
-                    self.interaction_only,
-                    deg,
+                    X.data, X.indices, X.indptr, X.shape[1], self.interaction_only, deg,
                 )
                 if Xp_next is None:
                     break

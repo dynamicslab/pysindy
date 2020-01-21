@@ -9,3 +9,5 @@ flake8-builtins-unleashed
 codecov
 setuptools_scm
 setuptools_scm_git_archive
+jupyter
+notebook

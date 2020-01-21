@@ -17,12 +17,12 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
         pip install papermill
     - name: Execute notebooks with papermill
       run: |
-        for nb in examples/*.ipynb; do papermill --report-mode $nb out.json; done
+        cd example
+        for nb in *.ipynb; do papermill --report-mode $nb out.json; done
     - uses: actions/cache@v1
       with:
         path: ~/.cache/pip

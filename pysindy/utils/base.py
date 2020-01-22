@@ -46,7 +46,7 @@ def drop_nan_rows(x, x_dot):
 
 def debug(func):
     """Decorator which prints function signature and return value
-    whenever it is called
+    whenever it is called.
     """
 
     @wraps(func)
@@ -63,30 +63,32 @@ def debug(func):
 
 
 def prox_l0(x, threshold):
-    """Proximal operator for l0 regularization
-    """
+    """Proximal operator for l0 regularization."""
     return x * (np.abs(x) > threshold)
 
 
 def prox_l1(x, threshold):
-    """Proximal operator for l1 regularization
-    """
+    """Proximal operator for l1 regularization."""
     return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
 
 
+# TODO: replace code block with proper math block
 def prox_cad(x, lower_threshold):
     """
     Proximal operator for CAD regularization
-    prox_cad(z, a, b) =
-        0                  if |z| < a
-        sign(z)(|z| - a)   if a < |z| <= b
-        z                  if |z| > b
 
-    Entries of x smaller than a in magnitude are set to 0,
+    .. code ::
+
+        prox_cad(z, a, b) =
+            0                    if \|z\| < a
+            sign(z)(\|z\| - a)   if a < \|z\| <= b
+            z                    if \|z\| > b
+
+    Entries of :math:`x` smaller than a in magnitude are set to 0,
     entries with magnitudes larger than b are untouched,
     and entries in between have soft-thresholding applied.
 
-    For simplicity we set b = 5*a in this implementation.
+    For simplicity we set :math:`b = 5*a` in this implementation.
     """
     upper_threshold = 5 * lower_threshold
     return prox_l0(x, upper_threshold) + prox_l1(x, lower_threshold) * (

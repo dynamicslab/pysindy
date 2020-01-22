@@ -9,8 +9,7 @@ from itertools import combinations_with_replacement as combinations_w_r
 
 
 class CustomLibrary(BaseFeatureLibrary):
-    """
-    Generate a library with custom functions.
+    """Generate a library with custom functions.
 
     Parameters
     ----------
@@ -24,9 +23,9 @@ class CustomLibrary(BaseFeatureLibrary):
         a variable name), and output a string depiction of the respective
         mathematical function applied to that variable. For example, if the
         first library function is sine, the name function might return
-        'sin(x)' given 'x' as input. The function_names list must be the
+        :math:`\sin(x)` given :math:`x` as input. The function_names list must be the
         same length as library_functions. If no list of function names is
-        provided, defaults to using ['f0(x)','f1(x)','f2(x)',...].
+        provided, defaults to using :math:`[ f_0(x),f_1(x), f_2(x), \ldots ]`.
 
     Attributes
     ----------
@@ -46,9 +45,7 @@ class CustomLibrary(BaseFeatureLibrary):
         input features.
     """
 
-    def __init__(
-        self, library_functions, function_names=None, interaction_only=True
-    ):
+    def __init__(self, library_functions, function_names=None, interaction_only=True):
         super(CustomLibrary, self).__init__()
         self.functions = library_functions
         self.function_names = function_names
@@ -61,14 +58,13 @@ class CustomLibrary(BaseFeatureLibrary):
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
-        """Get the combinations of features to be passed to a library function
-        """
+        """Get the combinations of features to be passed to a library function."""
         comb = combinations if interaction_only else combinations_w_r
         return comb(range(n_features), n_args)
 
     def get_feature_names(self, input_features=None):
-        """
-        Return feature names for output features
+        """Return feature names for output features.
+
         Parameters
         ----------
         input_features : list of string, length n_features, optional
@@ -77,6 +73,7 @@ class CustomLibrary(BaseFeatureLibrary):
         Returns
         -------
         output_feature_names : list of string, length n_output_features
+
         """
         check_is_fitted(self)
         if input_features is None:
@@ -84,9 +81,7 @@ class CustomLibrary(BaseFeatureLibrary):
         feature_names = []
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                self.n_input_features_,
-                f.__code__.co_argcount,
-                self.interaction_only,
+                self.n_input_features_, f.__code__.co_argcount, self.interaction_only,
             ):
                 feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
@@ -94,8 +89,8 @@ class CustomLibrary(BaseFeatureLibrary):
         return feature_names
 
     def fit(self, X, y=None):
-        """
-        Compute number of output features.
+        """Compute number of output features.
+
         Parameters
         ----------
         X : array-like, shape (n_samples, n_features)
@@ -103,6 +98,7 @@ class CustomLibrary(BaseFeatureLibrary):
         Returns
         -------
         self : instance
+
         """
         n_samples, n_features = check_array(X).shape
         self.n_input_features_ = n_features
@@ -110,19 +106,13 @@ class CustomLibrary(BaseFeatureLibrary):
         for f in self.functions:
             n_args = f.__code__.co_argcount
             n_output_features += len(
-                list(
-                    self._combinations(
-                        n_features, n_args, self.interaction_only
-                    )
-                )
+                list(self._combinations(n_features, n_args, self.interaction_only))
             )
         self.n_output_features_ = n_output_features
         if self.function_names is None:
             self.function_names = list(
                 map(
-                    lambda i: (
-                        lambda *x: "f" + str(i) + "(" + ",".join(x) + ")"
-                    ),
+                    lambda i: (lambda *x: "f" + str(i) + "(" + ",".join(x) + ")"),
                     range(len(self.functions)),
                 )
             )
@@ -141,6 +131,7 @@ class CustomLibrary(BaseFeatureLibrary):
         XP : np.ndarray, shape [n_samples, NP]
             The matrix of features, where NP is the number of features
             generated from applying the custom functions to the inputs.
+
         """
         check_is_fitted(self)
 
@@ -155,9 +146,7 @@ class CustomLibrary(BaseFeatureLibrary):
         library_idx = 0
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                self.n_input_features_,
-                f.__code__.co_argcount,
-                self.interaction_only,
+                self.n_input_features_, f.__code__.co_argcount, self.interaction_only,
             ):
                 XP[:, library_idx] = f(*[X[:, j] for j in c])
                 library_idx += 1

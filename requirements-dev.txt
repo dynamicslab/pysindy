@@ -11,6 +11,6 @@ setuptools_scm
 setuptools_scm_git_archive
 jupyter
 notebook
-sphinx
+sphinx >= 2
 sphinxcontrib-apidoc
 sphinx_rtd_theme

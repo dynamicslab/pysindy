@@ -22,7 +22,8 @@ jobs:
     - name: Execute notebooks with papermill
       run: |
         cd example
-        for nb in *.ipynb; do papermill --report-mode $nb out.json; done
+        papermill --report-mode feature_overview.ipynb out.json
+        # for nb in *.ipynb; do papermill --report-mode $nb out.json; done
     - uses: actions/cache@v1
       with:
         path: ~/.cache/pip

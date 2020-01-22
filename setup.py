@@ -3,13 +3,13 @@ import pathlib
 from setuptools import find_packages, setup
 
 
-assert sys.version_info >= (3, 6, 0), "sindy requires Python 3.6+"
+assert sys.version_info >= (3, 6, 0), "PySindy requires Python 3.6+"
 
 NAME = "pysindy"
 DESCRIPTION = "Sparse Identification of Nonlinear Dynamics"
 URL = "https://github.com/dynamicslab/pysindy"
-EMAIL = "bdesilva@uw.edu"
-AUTHOR = "Brian de Silva"
+EMAIL = "bdesilva@uw.edu, kpchamp@uw.edu, info@markusqua.de"
+AUTHOR = "Brian de Silva, Kathleen Champion, Markus Quade"
 PYTHON = ">=3.6"
 LICENSE = "MIT"
 CLASSIFIERS = [

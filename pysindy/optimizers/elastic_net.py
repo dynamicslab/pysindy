@@ -40,12 +40,7 @@ class ElasticNet(BaseOptimizer):
     """
 
     def __init__(
-        self,
-        alpha=1.0,
-        l1_ratio=0.5,
-        max_iter=1000,
-        elastic_net_kw={},
-        **kwargs
+        self, alpha=1.0, l1_ratio=0.5, max_iter=1000, elastic_net_kw={}, **kwargs
     ):
         super(ElasticNet, self).__init__(**kwargs)
 

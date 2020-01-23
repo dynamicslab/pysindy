@@ -1,11 +1,14 @@
+from itertools import chain
+from itertools import combinations
+from itertools import combinations_with_replacement as combinations_w_r
+
 import numpy as np
 from scipy import sparse
-from itertools import chain, combinations
-from itertools import combinations_with_replacement as combinations_w_r
+from sklearn.preprocessing import _csr_polynomial_expansion
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils import check_array
-from sklearn.utils.validation import check_is_fitted, FLOAT_DTYPES
-from sklearn.preprocessing import _csr_polynomial_expansion
+from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import FLOAT_DTYPES
 
 from pysindy.feature_library import BaseFeatureLibrary
 

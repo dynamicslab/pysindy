@@ -1,11 +1,11 @@
-from pysindy.feature_library import BaseFeatureLibrary
+from itertools import combinations
+from itertools import combinations_with_replacement as combinations_w_r
 
+import numpy as np
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-import numpy as np
-from itertools import combinations
-from itertools import combinations_with_replacement as combinations_w_r
+from pysindy.feature_library import BaseFeatureLibrary
 
 
 class CustomLibrary(BaseFeatureLibrary):
@@ -23,9 +23,9 @@ class CustomLibrary(BaseFeatureLibrary):
         a variable name), and output a string depiction of the respective
         mathematical function applied to that variable. For example, if the
         first library function is sine, the name function might return
-        :math:`\sin(x)` given :math:`x` as input. The function_names list must be the
+        :math:`\\sin(x)` given :math:`x` as input. The function_names list must be the
         same length as library_functions. If no list of function names is
-        provided, defaults to using :math:`[ f_0(x),f_1(x), f_2(x), \ldots ]`.
+        provided, defaults to using :math:`[ f_0(x),f_1(x), f_2(x), \\ldots ]`.
 
     Attributes
     ----------

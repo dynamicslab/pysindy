@@ -1,5 +1,5 @@
-from itertools import repeat
 from functools import wraps
+from itertools import repeat
 
 import numpy as np
 from sklearn.utils.validation import check_array
@@ -80,9 +80,9 @@ def prox_cad(x, lower_threshold):
     .. code ::
 
         prox_cad(z, a, b) =
-            0                    if \|z\| < a
-            sign(z)(\|z\| - a)   if a < \|z\| <= b
-            z                    if \|z\| > b
+            0                    if |z| < a
+            sign(z)(|z| - a)   if a < |z| <= b
+            z                    if |z| > b
 
     Entries of :math:`x` smaller than a in magnitude are set to 0,
     entries with magnitudes larger than b are untouched,

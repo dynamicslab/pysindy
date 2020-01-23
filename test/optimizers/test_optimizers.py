@@ -1,10 +1,12 @@
 """
 Unit tests for optimizers.
 """
-
 import pytest
 
-from pysindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
+from pysindy.optimizers import ElasticNet
+from pysindy.optimizers import LASSO
+from pysindy.optimizers import SR3
+from pysindy.optimizers import STLSQ
 
 
 @pytest.mark.parametrize("optimizer", [STLSQ(), SR3(), LASSO(), ElasticNet()])

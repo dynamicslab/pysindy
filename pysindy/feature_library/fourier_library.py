@@ -1,9 +1,8 @@
-from pysindy.feature_library import BaseFeatureLibrary
-
+import numpy as np
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-import numpy as np
+from pysindy.feature_library import BaseFeatureLibrary
 
 
 class FourierLibrary(BaseFeatureLibrary):
@@ -38,9 +37,7 @@ class FourierLibrary(BaseFeatureLibrary):
     def __init__(self, n_frequencies=1, include_sin=True, include_cos=True):
         super(FourierLibrary, self).__init__()
         if not (include_sin or include_cos):
-            raise ValueError(
-                "include_sin and include_cos cannot both be False"
-            )
+            raise ValueError("include_sin and include_cos cannot both be False")
         if n_frequencies < 1 or not isinstance(n_frequencies, int):
             raise ValueError("n_frequencies must be a positive integer")
         self.n_frequencies = n_frequencies
@@ -68,13 +65,9 @@ class FourierLibrary(BaseFeatureLibrary):
         for i in range(self.n_frequencies):
             for feature in input_features:
                 if self.include_sin:
-                    feature_names.append(
-                        "sin(" + str(i + 1) + " " + feature + ")"
-                    )
+                    feature_names.append("sin(" + str(i + 1) + " " + feature + ")")
                 if self.include_cos:
-                    feature_names.append(
-                        "cos(" + str(i + 1) + " " + feature + ")"
-                    )
+                    feature_names.append("cos(" + str(i + 1) + " " + feature + ")")
         return feature_names
 
     def fit(self, X, y=None):

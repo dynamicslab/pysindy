@@ -1,7 +1,6 @@
 """
 Base class for numerical differentiation methods
 """
-
 import abc
 
 from pysindy.utils.base import validate_input

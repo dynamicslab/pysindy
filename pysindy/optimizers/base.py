@@ -1,14 +1,13 @@
 """
 Base class for SINDy optimizers.
 """
-
 import abc
 
 import numpy as np
 from scipy import sparse
 from sklearn.linear_model import LinearRegression
-from sklearn.utils.validation import check_X_y
 from sklearn.utils.extmath import safe_sparse_dot
+from sklearn.utils.validation import check_X_y
 
 
 def _rescale_data(X, y, sample_weight):
@@ -16,13 +15,9 @@ def _rescale_data(X, y, sample_weight):
     n_samples = X.shape[0]
     sample_weight = np.asarray(sample_weight)
     if sample_weight.ndim == 0:
-        sample_weight = np.full(
-            n_samples, sample_weight, dtype=sample_weight.dtype
-        )
+        sample_weight = np.full(n_samples, sample_weight, dtype=sample_weight.dtype)
     sample_weight = np.sqrt(sample_weight)
-    sw_matrix = sparse.dia_matrix(
-        (sample_weight, 0), shape=(n_samples, n_samples)
-    )
+    sw_matrix = sparse.dia_matrix((sample_weight, 0), shape=(n_samples, n_samples))
     X = safe_sparse_dot(sw_matrix, X)
     y = safe_sparse_dot(sw_matrix, y)
     return X, y
@@ -95,9 +90,7 @@ class BaseOptimizer(LinearRegression):
         -------
         self : returns an instance of self
         """
-        x_, y = check_X_y(
-            x_, y, accept_sparse=[], y_numeric=True, multi_output=False
-        )
+        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
             x_,

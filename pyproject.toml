@@ -1,8 +1,8 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4", "setuptools_scm_git_archive"]
 
 [tool.setuptools_scm]
-write_to = "pkg/version.py"
+write_to = "pysindy/version.py"
 
 [tool.black]
 line-length = 88

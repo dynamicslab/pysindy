@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy.feature_library import BaseFeatureLibrary
+from .feature_library import BaseFeatureLibrary
 
 
 class FourierLibrary(BaseFeatureLibrary):

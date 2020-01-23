@@ -1,16 +1,22 @@
+from numpy import isscalar
+from numpy import ndim
+from numpy import newaxis
+from numpy import vstack
+from numpy import zeros
+from scipy.integrate import odeint
 from sklearn.base import BaseEstimator
+from sklearn.exceptions import NotFittedError
 from sklearn.metrics import r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_is_fitted
-from sklearn.exceptions import NotFittedError
-from scipy.integrate import odeint
-from numpy import vstack, newaxis, zeros, isscalar, ndim
 
 from pysindy.differentiation import FiniteDifference
 from pysindy.optimizers import STLSQ
-from pysindy.utils.base import equation, validate_input, drop_nan_rows
+from pysindy.utils.base import drop_nan_rows
+from pysindy.utils.base import equation
+from pysindy.utils.base import validate_input
 
 
 class SINDy(BaseEstimator):
@@ -134,9 +140,7 @@ class SINDy(BaseEstimator):
 
         self.model.fit(x, x_dot)
 
-        self.n_input_features_ = (
-            self.model.estimators_[0].steps[0][1].n_input_features_
-        )
+        self.n_input_features_ = self.model.estimators_[0].steps[0][1].n_input_features_
         self.n_output_features_ = (
             self.model.estimators_[0].steps[0][1].n_output_features_
         )
@@ -178,9 +182,7 @@ class SINDy(BaseEstimator):
                 if hasattr(self, "model"):
                     return self.model.predict(x)
         else:
-            raise NotFittedError(
-                "SINDy model must be fit before predict can be called"
-            )
+            raise NotFittedError("SINDy model must be fit before predict can be called")
 
     def equations(self, precision=3):
         """
@@ -209,9 +211,7 @@ class SINDy(BaseEstimator):
                 .get_feature_names(input_features=base_feature_names)
             )
             return [
-                equation(
-                    est, input_features=feature_names, precision=precision
-                )
+                equation(est, input_features=feature_names, precision=precision)
                 for est in self.model.estimators_
             ]
         else:
@@ -377,14 +377,10 @@ class SINDy(BaseEstimator):
             method
         """
         if self.discrete_time:
-            raise RuntimeError(
-                "No differentiation implemented for discrete time model"
-            )
+            raise RuntimeError("No differentiation implemented for discrete time model")
 
         if multiple_trajectories:
-            return self.process_multiple_trajectories(
-                x, t, None, return_array=False
-            )[1]
+            return self.process_multiple_trajectories(x, t, None, return_array=False)[1]
         else:
             x = validate_input(x, t)
             return self.differentiation_method(x, t)
@@ -414,9 +410,7 @@ class SINDy(BaseEstimator):
                 "SINDy model must be fit before get_feature_names is called"
             )
 
-    def simulate(
-        self, x0, t, integrator=odeint, stop_condition=None, **integrator_kws
-    ):
+    def simulate(self, x0, t, integrator=odeint, stop_condition=None, **integrator_kws):
         """
         Simulate the SINDy model forward in time.
 
@@ -456,7 +450,7 @@ class SINDy(BaseEstimator):
             x = zeros((t, self.n_input_features_))
             x[0] = x0
             for i in range(1, t):
-                x[i] = self.predict(x[i - 1: i])
+                x[i] = self.predict(x[i - 1 : i])
                 if stop_condition is not None and stop_condition(x[i]):
                     return x[: i + 1]
             return x
@@ -474,6 +468,4 @@ class SINDy(BaseEstimator):
 
     @property
     def complexity(self):
-        return sum(
-            est.steps[1][1].complexity for est in self.model.estimators_
-        )
+        return sum(est.steps[1][1].complexity for est in self.model.estimators_)

@@ -7,7 +7,7 @@ author = "dynamicslab"
 project = "pysindy"  # package name
 
 
-#### no need to edit below this line ##
+# no need to edit below this line
 
 copyright = f"{datetime.datetime.now().year}, {author}"
 

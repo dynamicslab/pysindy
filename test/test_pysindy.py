@@ -12,15 +12,17 @@ To run tests for just one file, run
 pytest file_to_test.py
 
 """
-
 import pytest
-
 from sklearn.exceptions import NotFittedError
 
 from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
-from pysindy.optimizers import STLSQ, SR3, LASSO, ElasticNet
-from pysindy.feature_library import PolynomialLibrary, FourierLibrary
+from pysindy.feature_library import FourierLibrary
+from pysindy.feature_library import PolynomialLibrary
+from pysindy.optimizers import ElasticNet
+from pysindy.optimizers import LASSO
+from pysindy.optimizers import SR3
+from pysindy.optimizers import STLSQ
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -88,8 +90,7 @@ def test_mixed_inputs(data):
 
 
 @pytest.mark.parametrize(
-    "data",
-    [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")],
+    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")],
 )
 def test_bad_t(data):
     x, t = data

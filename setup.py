@@ -1,6 +1,8 @@
-import sys
 import pathlib
-from setuptools import find_packages, setup
+import sys
+
+from setuptools import find_packages
+from setuptools import setup
 
 
 assert sys.version_info >= (3, 6, 0), "PySindy requires Python 3.6+"

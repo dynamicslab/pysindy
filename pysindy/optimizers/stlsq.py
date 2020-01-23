@@ -1,8 +1,8 @@
 import warnings
 
 import numpy as np
-from sklearn.linear_model import ridge_regression
 from sklearn.exceptions import ConvergenceWarning
+from sklearn.linear_model import ridge_regression
 
 from pysindy.optimizers import BaseOptimizer
 
@@ -42,9 +42,7 @@ class STLSQ(BaseOptimizer):
         weight vector have not been masked out.
     """
 
-    def __init__(
-        self, threshold=0.1, alpha=0.0, max_iter=20, ridge_kw=None, **kwargs
-    ):
+    def __init__(self, threshold=0.1, alpha=0.0, max_iter=20, ridge_kw=None, **kwargs):
         super(STLSQ, self).__init__(**kwargs)
 
         if threshold < 0:
@@ -108,9 +106,7 @@ class STLSQ(BaseOptimizer):
                 break
 
             coef = self._regress(x[:, ind], y)
-            coef, ind = self._sparse_coefficients(
-                n_features, ind, coef, self.threshold
-            )
+            coef, ind = self._sparse_coefficients(n_features, ind, coef, self.threshold)
 
             if sum(ind) == n_features_selected or self._no_change():
                 # could not (further) select important features

@@ -1,9 +1,8 @@
 """
 Unit tests for differentiation methods.
 """
-
-import pytest
 import numpy as np
+import pytest
 
 from pysindy.differentiation import FiniteDifference
 

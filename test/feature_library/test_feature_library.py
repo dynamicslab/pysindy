@@ -1,14 +1,11 @@
 """
 Unit tests for feature libraries.
 """
-
 import pytest
 
-from pysindy.feature_library import (
-    PolynomialLibrary,
-    FourierLibrary,
-    CustomLibrary,
-)
+from pysindy.feature_library import CustomLibrary
+from pysindy.feature_library import FourierLibrary
+from pysindy.feature_library import PolynomialLibrary
 
 
 def test_form_custom_library():
@@ -20,9 +17,7 @@ def test_form_custom_library():
     ]
 
     # Test with user-supplied function names
-    CustomLibrary(
-        library_functions=library_functions, function_names=function_names
-    )
+    CustomLibrary(library_functions=library_functions, function_names=function_names)
 
     # Test without user-supplied function names
     CustomLibrary(library_functions=library_functions)

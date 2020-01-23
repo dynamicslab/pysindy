@@ -42,7 +42,11 @@ Community guidelines
 
 Contributing code
 ^^^^^^^^^^^^^^^^^
-We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To be accepted your code should conform to PEP8 (you may choose to use flake8 to test this before submitting your pull request). Your contributed code should pass all unit tests. Upon submission of a pull request, your code will be tested automatically, but you may also choose to test it yourself by running
+We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To be accepted your code should conform to PEP8 (you may choose to use flake8 to test this before submitting your pull request). Your contributed code should pass all unit tests. Upon submission of a pull request, your code will be linted and tested automatically, but you may also choose to lint it yourself invoking
+
+``pre-commit -a -v``
+
+as well as test it yourself by running
 
 ``pytest``
 

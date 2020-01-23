@@ -14,3 +14,8 @@ repos:
   rev: stable
   hooks:
     - id: black
+- repo: https://gitlab.com/pycqa/flake8
+  rev: master
+  hooks:
+    - id: flake8
+      args: ["--config=setup.cfg"]

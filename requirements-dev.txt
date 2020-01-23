@@ -4,7 +4,6 @@ matplotlib
 pytest
 pytest-cov
 pytest-lazy-fixture
-pytest-flake8
 flake8-builtins-unleashed
 codecov
 setuptools_scm
@@ -14,3 +13,4 @@ notebook
 sphinx >= 2
 sphinxcontrib-apidoc
 sphinx_rtd_theme
+pre-commit

@@ -43,6 +43,20 @@ class CustomLibrary(BaseFeatureLibrary):
         The total number of output features. The number of output features
         is the product of the number of library functions and the number of
         input features.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pysindy.feature_library import CustomLibrary
+    >>> X = np.array([[0.,-1],[1.,0.],[2.,-1.]])
+    >>> functions = [lambda x : np.exp(x), lambda x,y : np.sin(x+y)]
+    >>> lib = CustomLibrary(library_functions=functions).fit(X)
+    >>> lib.transform(X)
+    array([[ 1.        ,  0.36787944, -0.84147098],
+           [ 2.71828183,  1.        ,  0.84147098],
+           [ 7.3890561 ,  0.36787944,  0.84147098]])
+    >>> lib.get_feature_names()
+    ['f0(x0)', 'f0(x1)', 'f1(x0,x1)']
     """
 
     def __init__(self, library_functions, function_names=None, interaction_only=True):
@@ -81,7 +95,7 @@ class CustomLibrary(BaseFeatureLibrary):
         feature_names = []
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                self.n_input_features_, f.__code__.co_argcount, self.interaction_only,
+                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
             ):
                 feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
@@ -146,7 +160,7 @@ class CustomLibrary(BaseFeatureLibrary):
         library_idx = 0
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                self.n_input_features_, f.__code__.co_argcount, self.interaction_only,
+                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
             ):
                 XP[:, library_idx] = f(*[X[:, j] for j in c])
                 library_idx += 1

@@ -32,6 +32,19 @@ class FourierLibrary(BaseFeatureLibrary):
         The total number of output features. The number of output features
         is 2*n_input_features_*n_frequencies if both sines and cosines
         are included. Otherwise it is n_input_features*n_frequencies.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pysindy.feature_library import FourierLibrary
+    >>> X = np.array([[0.],[1.],[2.]])
+    >>> lib = FourierLibrary(n_frequencies=2).fit(X)
+    >>> lib.transform(X)
+    array([[ 0.        ,  1.        ,  0.        ,  1.        ],
+           [ 0.84147098,  0.54030231,  0.90929743, -0.41614684],
+           [ 0.90929743, -0.41614684, -0.7568025 , -0.65364362]])
+    >>> lib.get_feature_names()
+    ['sin(1 x0)', 'cos(1 x0)', 'sin(2 x0)', 'cos(2 x0)']
     """
 
     def __init__(self, n_frequencies=1, include_sin=True, include_cos=True):

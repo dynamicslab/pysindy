@@ -22,9 +22,19 @@ class FiniteDifference(BaseDifferentiation):
         Note that which points are endpoints depends on the method
         being used.
 
-    Returns
-    -------
-    self: returns an instance of self
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pysindy.differentiation import FiniteDifference
+    >>> t = np.linspace(0,1,5)
+    >>> X = np.vstack((np.sin(t),np.cos(t))).T
+    >>> fd = FiniteDifference()
+    >>> fd._differentiate(X, t)
+    array([[ 1.00114596,  0.00370551],
+           [ 0.95885108, -0.24483488],
+           [ 0.8684696 , -0.47444711],
+           [ 0.72409089, -0.67456051],
+           [ 0.53780339, -0.84443737]])
     """
 
     def __init__(self, order=2, drop_endpoints=False):

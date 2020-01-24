@@ -65,5 +65,5 @@ For help using PySINDy please consult the documentation and/or our `examples <ht
      :target: https://pysindy.readthedocs.io/en/latest/?badge=latest
      :alt: Documentation Status
 
-.. |Codecov| .. image:: https://codecov.io/gh/dynamicslab/pysindy/branch/master/graph/badge.svg
+.. |Codecov| image:: https://codecov.io/gh/dynamicslab/pysindy/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/dynamicslab/pysindy

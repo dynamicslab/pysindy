@@ -205,13 +205,8 @@ class SINDy(BaseEstimator):
                 base_feature_names = [f + "[k]" for f in self.feature_names]
             else:
                 base_feature_names = self.feature_names
-            feature_names = (
-                self.model.estimators_[0]
-                .steps[0][1]
-                .get_feature_names(input_features=base_feature_names)
-            )
             return [
-                equation(est, input_features=feature_names, precision=precision)
+                equation(est, input_features=base_feature_names, precision=precision)
                 for est in self.model.estimators_
             ]
         else:

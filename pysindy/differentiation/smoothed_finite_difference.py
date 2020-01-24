@@ -28,7 +28,7 @@ class SmoothedFiniteDifference(FiniteDifference):
     >>> from pysindy.differentiation import SmoothedFiniteDifference
     >>> t = np.linspace(0,1,10)
     >>> X = np.vstack((np.sin(t),np.cos(t))).T
-    >>> sfd = SmoothedFiniteDifference(smoother_kws={'window_length': 5}) 
+    >>> sfd = SmoothedFiniteDifference(smoother_kws={'window_length': 5})
     >>> sfd._differentiate(X, t)
     array([[ 1.00013114e+00,  7.38006789e-04],
            [ 9.91779070e-01, -1.10702304e-01],

@@ -12,5 +12,5 @@
    :caption: Useful links
 
 
-   PySINDy @ PyPI <https://pypi.org/>
+   PySINDy @ PyPI <https://pypi.org/project/PySINDy/>
    Issue Tracker <https://github.com/dynamicslab/pysindy/issues>

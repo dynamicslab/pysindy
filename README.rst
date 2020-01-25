@@ -1,7 +1,7 @@
 PySINDy
 =========
 
-|BuildCI| |RTD|
+|BuildCI| |RTD| |Codecov|
 
 **PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method.
 
@@ -64,3 +64,6 @@ For help using PySINDy please consult the documentation and/or our `examples <ht
 .. |RTD| image:: https://readthedocs.org/projects/pysindy/badge/?version=latest
      :target: https://pysindy.readthedocs.io/en/latest/?badge=latest
      :alt: Documentation Status
+
+.. |Codecov| image:: https://codecov.io/gh/dynamicslab/pysindy/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/dynamicslab/pysindy

@@ -37,6 +37,12 @@ jobs:
     - name: Test with pytest
       run: |
         py.test test --cov=pysindy
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: codecov-umbrella
+        flags: unittests
     - name: Execute feature notebook with papermill
       run: |
         pip install papermill

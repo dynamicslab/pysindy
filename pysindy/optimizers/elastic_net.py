@@ -44,7 +44,9 @@ class ElasticNet(BaseOptimizer):
     >>> from scipy.integrate import odeint
     >>> from pysindy import SINDy
     >>> from pysindy.optimizers import ElasticNet
-    >>> lorenz = lambda z,t : [10*(z[1] - z[0]), z[0]*(28 - z[2]) - z[1], z[0]*z[1] - 8/3*z[2]]
+    >>> lorenz = lambda z,t : [10*(z[1] - z[0]),
+    >>>                        z[0]*(28 - z[2]) - z[1],
+    >>>                        z[0]*z[1] - 8/3*z[2]]
     >>> t = np.arange(0,2,.002)
     >>> x = odeint(lorenz, [-8,8,27], t)
     >>> opt = ElasticNet(alpha=100, l1_ratio=0.8)

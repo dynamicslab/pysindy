@@ -37,6 +37,23 @@ class ElasticNet(BaseOptimizer):
 
     iters : int
         Number of iterations performed in the optimization
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from scipy.integrate import odeint
+    >>> from pysindy import SINDy
+    >>> from pysindy.optimizers import ElasticNet
+    >>> lorenz = lambda z,t : [10*(z[1] - z[0]), z[0]*(28 - z[2]) - z[1], z[0]*z[1] - 8/3*z[2]]
+    >>> t = np.arange(0,2,.002)
+    >>> x = odeint(lorenz, [-8,8,27], t)
+    >>> opt = ElasticNet(alpha=100, l1_ratio=0.8)
+    >>> model = SINDy(optimizer=opt)
+    >>> model.fit(x, t=t[1]-t[0])
+    >>> model.print()
+    x0' = -0.328 1 x1 + 0.050 x0^2 + 0.319 x0 x1 + 0.004 x1^2
+    x1' = -1.100 1^2 + 0.639 x0^2 + -0.045 x0 x1 + 0.018 x1^2
+    x2' = 0.141 1^2 + 0.286 1 x0 + 0.274 1 x1 + 0.125 x0^2 + 0.066 x0 x1 + -0.147 x1^2
     """
 
     def __init__(

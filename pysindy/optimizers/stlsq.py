@@ -40,6 +40,23 @@ class STLSQ(BaseOptimizer):
     ind_ : array, shape (n_features,) or (n_targets, n_features)
         Array of 0s and 1s indicating which coefficients of the
         weight vector have not been masked out.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from scipy.integrate import odeint
+    >>> from pysindy import SINDy
+    >>> from pysindy.optimizers import STLSQ
+    >>> lorenz = lambda z,t : [10*(z[1] - z[0]), z[0]*(28 - z[2]) - z[1], z[0]*z[1] - 8/3*z[2]]
+    >>> t = np.arange(0,2,.002)
+    >>> x = odeint(lorenz, [-8,8,27], t)
+    >>> opt = STLSQ(threshold=.1, alpha=.5)
+    >>> model = SINDy(optimizer=opt)
+    >>> model.fit(x, t=t[1]-t[0])
+    >>> model.print()
+    x0' = -9.999 1 + 9.999 x0
+    x1' = 27.984 1 + -0.996 x0 + -1.000 1 x1
+    x2' = -2.666 x1 + 1.000 1 x0
     """
 
     def __init__(self, threshold=0.1, alpha=0.0, max_iter=20, ridge_kw=None, **kwargs):

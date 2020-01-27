@@ -29,6 +29,23 @@ class LASSO(BaseOptimizer):
 
     iters : int
         Number of iterations performed in the optimization
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from scipy.integrate import odeint
+    >>> from pysindy import SINDy
+    >>> from pysindy.optimizers import LASSO
+    >>> lorenz = lambda z,t : [10*(z[1] - z[0]), z[0]*(28 - z[2]) - z[1], z[0]*z[1] - 8/3*z[2]]
+    >>> t = np.arange(0,2,.002)
+    >>> x = odeint(lorenz, [-8,8,27], t)
+    >>> opt = LASSO(alpha=100)
+    >>> model = SINDy(optimizer=opt)
+    >>> model.fit(x, t=t[1]-t[0])
+    >>> model.print()
+    x0' = -0.351 1 x1 + 0.054 x0^2 + 0.329 x0 x1 + 0.009 x1^2
+    x1' = -1.357 1^2 + 0.035 1 x1 + 0.710 x0^2 + -0.039 x0 x1 + 0.027 x1
+    x2' = 0.369 1^2 + 0.558 1 x0 + 0.150 1 x1 + 0.018 x0^2 + -0.133 x1^2
     """
 
     def __init__(self, alpha=1.0, lasso_kw=None, max_iter=1000, **kwargs):

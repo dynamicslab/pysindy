@@ -36,13 +36,12 @@ jobs:
         pip install -r requirements-dev.txt
     - name: Test with pytest
       run: |
-        py.test test --cov=pysindy
+        py.test test --cov=pysindy --cov-report=xml
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        name: codecov-umbrella
-        flags: unittests
+        file: ./coverage.xml
     - name: Execute feature notebook with papermill
       run: |
         pip install papermill

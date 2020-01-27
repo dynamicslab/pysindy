@@ -56,6 +56,36 @@ class SINDy(BaseEstimator):
     ----------
     model : sklearn.multioutput.MultiOutputRegressor object
         The fitted SINDy model.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from scipy.integrate import odeint
+    >>> from pysindy import SINDy
+    >>> lorenz = lambda z,t : [10*(z[1] - z[0]),
+    >>>                        z[0]*(28 - z[2]) - z[1],
+    >>>                        z[0]*z[1] - 8/3*z[2]]
+    >>> t = np.arange(0,2,.002)
+    >>> x = odeint(lorenz, [-8,8,27], t)
+    >>> model = SINDy()
+    >>> model.fit(x, t=t[1]-t[0])
+    >>> model.print()
+    x0' = -10.000 1 + 10.000 x0
+    x1' = 27.993 1 + -0.999 x0 + -1.000 1 x1
+    x2' = -2.666 x1 + 1.000 1 x0
+    >>> model.coefficients()
+    array([[ 0.        ,  0.        ,  0.        ],
+           [-9.99969193, 27.99344519,  0.        ],
+           [ 9.99961547, -0.99905338,  0.        ],
+           [ 0.        ,  0.        , -2.66645651],
+           [ 0.        ,  0.        ,  0.        ],
+           [ 0.        ,  0.        ,  0.99990257],
+           [ 0.        , -0.99980268,  0.        ],
+           [ 0.        ,  0.        ,  0.        ],
+           [ 0.        ,  0.        ,  0.        ],
+           [ 0.        ,  0.        ,  0.        ]])
+    >>> model.score(x, t=t[1]-t[0])
+    0.999999985520653
     """
 
     def __init__(

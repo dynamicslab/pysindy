@@ -37,6 +37,10 @@ Implemented algorithms
    of Sciences 113.15 (2016): 3932-3937. `DOI:
    10.1073/pnas.1517384113 <http://dx.doi.org/10.1073/pnas.1517384113>`__
 
+Documentation
+-------------
+The documentation for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`_.
+
 Community guidelines
 --------------------
 
@@ -56,7 +60,7 @@ If you find a bug in the code or want to request a new feature, please open an i
 
 Getting help
 ^^^^^^^^^^^^
-For help using PySINDy please consult the documentation and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/example>`_, or create an issue.
+For help using PySINDy please consult the `documentation <https://pysindy.readthedocs.io/en/latest/>`_ and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/example>`_, or create an issue.
 
 .. |BuildCI| image:: https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg
     :target: https://github.com/dynamicslab/pysindy/actions?query=workflow%3A%22Build+CI%22

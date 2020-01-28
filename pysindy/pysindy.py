@@ -32,7 +32,6 @@ class SINDy(BaseEstimator):
 
     feature_library : feature library object, optional
         Default is polynomial features of degree 2.
-        TODO: Implement better feature library class.
 
     differentiation_method : differentiation object, optional
         Method for differentiating the data. This must be an object that

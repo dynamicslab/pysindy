@@ -48,9 +48,6 @@ class BaseOptimizer(LinearRegression):
         super(BaseOptimizer, self).__init__(
             fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
-        # self.fit_intercept = fit_intercept
-        # self.normalize = normalize
-        # self.copy_X = copy_X
         self.iters = 0
         self.coef_ = []
         self.ind_ = []

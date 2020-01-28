@@ -7,14 +7,14 @@ from .feature_library import BaseFeatureLibrary
 
 class FourierLibrary(BaseFeatureLibrary):
     """
-    Generate a library with custom functions.
+    Generate a library with trigonometric functions.
 
     Parameters
     ----------
     n_frequencies : int, optional (default 1)
         Number of frequencies to include in the library. The library will
-        include functions sin(x), sin(2*x), ... sin(n_frequencies * x) for
-        each input feature x (depending on which of sine and/or cosine
+        include functions :math:`\\sin(x), \\sin(2x), \\dots \\sin(n_{frequencies}x)`
+        for each input feature :math:`x` (depending on which of sine and/or cosine
         features are included).
 
     include_sin : boolean, optional (default True)

@@ -119,6 +119,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     def fit(self, X, y=None):
         """
         Compute number of output features.
+
         Parameters
         ----------
         X : array-like, shape (n_samples, n_features)

@@ -8,11 +8,9 @@ from sklearn.base import TransformerMixin
 
 class BaseFeatureLibrary(TransformerMixin):
     """
-    Functions that should eventually be implemented:
-        -print/get names of features
-        -evaluate all features (and store in member variable)
-        -addition (concatenate lists of features)
-        -
+    Base class for feature libraries.
+
+    Forces subclasses to implement fit and transform functions.
     """
 
     def __init__(self, **kwargs):
@@ -39,7 +37,7 @@ class BaseFeatureLibrary(TransformerMixin):
     @abc.abstractmethod
     def transform(self, X):
         """
-        Transform data to polynomial features
+        Transform data.
 
         Parameters
         ----------
@@ -53,12 +51,6 @@ class BaseFeatureLibrary(TransformerMixin):
             of features generated from the combination of inputs.
         """
         raise NotImplementedError
-
-    # # Some kind of function that applies the library
-    # def fit_transform(self, X, y=None):
-    #     pass
-    #     # self.fit(X, y)
-    #     # return self.transform(X)
 
     @property
     def size(self):

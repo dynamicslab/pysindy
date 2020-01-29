@@ -1,7 +1,7 @@
 PySINDy
 =========
 
-|BuildCI| |RTD| |Codecov|
+|BuildCI| |RTD| |PyPI| |Codecov|
 
 **PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method.
 
@@ -49,16 +49,6 @@ Getting help
 ^^^^^^^^^^^^
 For help using PySINDy please consult the documentation and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/example>`_, or create an issue.
 
-.. |BuildCI| image:: https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg
-    :target: https://github.com/dynamicslab/pysindy/actions?query=workflow%3A%22Build+CI%22
-
-.. |RTD| image:: https://readthedocs.org/projects/pysindy/badge/?version=latest
-     :target: https://pysindy.readthedocs.io/en/latest/?badge=latest
-     :alt: Documentation Status
-
-.. |Codecov| image:: https://codecov.io/gh/dynamicslab/pysindy/branch/master/graph/badge.svg
-  :target: https://codecov.io/gh/dynamicslab/pysindy
-
 References
 ----------------------
 
@@ -73,3 +63,17 @@ References
    framework to learn parsimonious physics-informed models from
    data.* arXiv preprint arXiv:1906.10612 (2019).
    `[arXiv] <https://arxiv.org/abs/1906.10612>`__
+
+
+.. |BuildCI| image:: https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg
+    :target: https://github.com/dynamicslab/pysindy/actions?query=workflow%3A%22Build+CI%22
+
+.. |RTD| image:: https://readthedocs.org/projects/pysindy/badge/?version=latest
+     :target: https://pysindy.readthedocs.io/en/latest/?badge=latest
+     :alt: Documentation Status
+
+.. |PyPI| image:: https://badge.fury.io/py/pysindy.svg
+    :target: https://badge.fury.io/py/pysindy
+
+.. |Codecov| image:: https://codecov.io/gh/dynamicslab/pysindy/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/dynamicslab/pysindy

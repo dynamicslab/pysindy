@@ -4,7 +4,7 @@ from itertools import combinations_with_replacement as combinations_w_r
 
 import numpy as np
 from scipy import sparse
-from sklearn.preprocessing import _csr_polynomial_expansion
+from sklearn.preprocessing._csr_polynomial_expansion import _csr_polynomial_expansion
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted

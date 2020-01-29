@@ -28,15 +28,6 @@ Then, to install the package, run:
 If you do not have root access, you should add the ``--user`` option to the above line.
 
 
-Implemented algorithms
-----------------------
-
--  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
-   “Discovering governing equations from data by sparse identification
-   of nonlinear dynamical systems.” Proceedings of the National Academy
-   of Sciences 113.15 (2016): 3932-3937. `DOI:
-   10.1073/pnas.1517384113 <http://dx.doi.org/10.1073/pnas.1517384113>`__
-
 Community guidelines
 --------------------
 
@@ -67,3 +58,18 @@ For help using PySINDy please consult the documentation and/or our `examples <ht
 
 .. |Codecov| image:: https://codecov.io/gh/dynamicslab/pysindy/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/dynamicslab/pysindy
+
+References
+----------------------
+
+-  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
+   *Discovering governing equations from data by sparse identification
+   of nonlinear dynamical systems.* Proceedings of the National
+   Academy of Sciences 113.15 (2016): 3932-3937.
+   `[DOI] <http://dx.doi.org/10.1073/pnas.1517384113>`__
+
+-  Champion, Kathleen, Peng Zheng, Aleksandr Y. Aravkin, Steven L.
+   Brunton, and J. Nathan Kutz. *A unified sparse optimization
+   framework to learn parsimonious physics-informed models from
+   data.* arXiv preprint arXiv:1906.10612 (2019).
+   `[arXiv] <https://arxiv.org/abs/1906.10612>`__

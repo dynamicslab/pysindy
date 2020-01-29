@@ -2,15 +2,15 @@
 Unit tests for feature libraries.
 """
 import pytest
-from sklearn.exceptions import NotFittedError
+from scipy.sparse import coo_matrix
 from scipy.sparse import csc_matrix
 from scipy.sparse import csr_matrix
-from scipy.sparse import coo_matrix
+from sklearn.exceptions import NotFittedError
 
-from pysindy.feature_library.feature_library import BaseFeatureLibrary
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
+from pysindy.feature_library.feature_library import BaseFeatureLibrary
 
 
 def test_form_custom_library():
@@ -112,7 +112,7 @@ def test_get_feature_names(data_lorenz, library):
     library.fit_transform(x)
     library.get_feature_names()
 
-    input_features = ['a'] * x.shape[1]
+    input_features = ["a"] * x.shape[1]
     library.get_feature_names(input_features=input_features)
 
 
@@ -136,9 +136,7 @@ def test_polynomial_options(data_lorenz):
     library = PolynomialLibrary(include_interaction=False)
     library.fit_transform(x)
 
-    library = PolynomialLibrary(
-        include_interaction=False, include_bias=True
-    )
+    library = PolynomialLibrary(include_interaction=False, include_bias=True)
 
 
 # Catch-all for various combinations of options and

@@ -323,3 +323,36 @@ def test_score_discrete_time_multiple_trajectories(
 
     model.score(x, multiple_trajectories=True)
     model.score(x, x_dot=x, multiple_trajectories=True)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.lazy_fixture("data_1d"),
+        pytest.lazy_fixture("data_lorenz"),
+        pytest.lazy_fixture("data_1d_bad_shape"),
+    ],
+)
+def test_equations(data):
+    x, t = data
+    model = SINDy()
+    model.fit(x, t)
+
+    model.print(precision=2)
+
+
+def test_print_discrete_time(data_discrete_time):
+    x = data_discrete_time
+    model = SINDy(discrete_time=True)
+    model.fit(x)
+    model.print()
+
+
+def test_print_discrete_time_multiple_trajectories(
+    data_discrete_time_multiple_trajectories
+):
+    x = data_discrete_time_multiple_trajectories
+    model = SINDy(discrete_time=True)
+    model.fit(x, multiple_trajectories=True)
+
+    model.print()

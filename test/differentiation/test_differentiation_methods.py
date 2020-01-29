@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from pysindy.differentiation import FiniteDifference
+from pysindy.differentiation import SmoothedFiniteDifference
 
 
 # Simplest example: just use an assert statement
@@ -114,3 +115,17 @@ def test_centered_difference_dim():
 def test_higher_order_error():
     with pytest.raises(NotImplementedError):
         FiniteDifference(order=3)
+
+
+# Test smoothed finite difference method
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.lazy_fixture("data_derivative_1d"),
+        pytest.lazy_fixture("data_derivative_2d"),
+    ],
+)
+def test_smoothed_finite_difference(data):
+    x, x_dot = data
+    smoothed_centered_difference = SmoothedFiniteDifference()
+    smoothed_centered_difference(x)

@@ -349,7 +349,7 @@ def test_print_discrete_time(data_discrete_time):
 
 
 def test_print_discrete_time_multiple_trajectories(
-    data_discrete_time_multiple_trajectories
+    data_discrete_time_multiple_trajectories,
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)

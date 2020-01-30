@@ -386,7 +386,9 @@ def test_complexity(data_lorenz):
     x, t = data_lorenz
     model = SINDy()
     model.fit(x, t)
-    model.complexity
+    # TODO: update complexity implementations
+    with pytest.raises(NotImplementedError):
+        model.complexity
 
 
 def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_time):

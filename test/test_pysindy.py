@@ -12,6 +12,7 @@ To run tests for just one file, run
 pytest file_to_test.py
 
 """
+import numpy as np
 import pytest
 from sklearn.exceptions import NotFittedError
 
@@ -27,31 +28,31 @@ from pysindy.optimizers import STLSQ
 
 def test_get_feature_names_len(data_lorenz):
     x, t = data_lorenz
-
     model = SINDy()
+
+    with pytest.raises(NotFittedError):
+        model.get_feature_names()
+
     model.fit(x, t)
 
     # Assumes default library is polynomial features of degree 2
     assert len(model.get_feature_names()) == 10
 
 
-def test_predict_not_fitted(data_1d):
+def test_not_fitted(data_1d):
     x, t = data_1d
     model = SINDy()
+
     with pytest.raises(NotFittedError):
         model.predict(x)
-
-
-def test_coefficient_not_fitted():
-    model = SINDy()
+    with pytest.raises(NotFittedError):
+        model.get_feature_names()
     with pytest.raises(NotFittedError):
         model.coefficients()
-
-
-def test_equation_not_fitted():
-    model = SINDy()
     with pytest.raises(NotFittedError):
         model.equations()
+    with pytest.raises(NotFittedError):
+        model.simulate(x[0], t)
 
 
 def test_improper_shape_input(data_1d):
@@ -266,6 +267,8 @@ def test_simulate_discrete_time(data_discrete_time):
 
     assert len(x1) == n_steps
 
+    # TODO: implement test using the stop_condition option
+
 
 def test_predict_discrete_time(data_discrete_time):
     x = data_discrete_time
@@ -356,3 +359,62 @@ def test_print_discrete_time_multiple_trajectories(
     model.fit(x, multiple_trajectories=True)
 
     model.print()
+
+
+def test_differentiate(data_lorenz, data_multiple_trajctories):
+    x, t = data_lorenz
+
+    model = SINDy()
+    model.differentiate(x, t)
+
+    x, t = data_multiple_trajctories
+    model.differentiate(x, t, multiple_trajectories=True)
+
+    model = SINDy(discrete_time=True)
+    with pytest.raises(RuntimeError):
+        model.differentiate(x)
+
+
+def test_coefficients(data_lorenz):
+    x, t = data_lorenz
+    model = SINDy()
+    model.fit(x, t)
+    model.coefficients()
+
+
+def test_complexity(data_lorenz):
+    x, t = data_lorenz
+    model = SINDy()
+    model.fit(x, t)
+    model.complexity
+
+
+def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_time):
+    x, t = data_multiple_trajctories
+
+    model = SINDy()
+    with pytest.raises(TypeError):
+        model.process_multiple_trajectories(np.array(x), t, x)
+    with pytest.raises(TypeError):
+        model.process_multiple_trajectories(x, t, np.array(x))
+
+    # Test an option that doesn't get tested elsewhere
+    model.process_multiple_trajectories(x, t, x, return_array=False)
+
+    x = data_discrete_time
+    model = SINDy(discrete_time=True)
+    with pytest.raises(TypeError):
+        model.process_multiple_trajectories(x, t, np.array(x))
+
+
+def test_simulate_errors(data_lorenz):
+    x, t = data_lorenz
+    model = SINDy()
+    model.fit(x, t)
+
+    with pytest.raises(ValueError):
+        model.simulate(x[0], t=1)
+
+    model = SINDy(discrete_time=True)
+    with pytest.raises(ValueError):
+        model.simulate(x[0], t=[1, 2])

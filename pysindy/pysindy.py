@@ -341,7 +341,7 @@ class SINDy(BaseEstimator):
                     x_dot.append(x_tmp[1:])
             else:
                 if not isinstance(x_dot, list):
-                    raise ValueError(
+                    raise TypeError(
                         "x_dot must be a list if used with x of list type "
                         "(i.e. for multiple trajectories)"
                     )
@@ -360,7 +360,7 @@ class SINDy(BaseEstimator):
                         x_dot.append(self.differentiation_method(x[i], t))
             else:
                 if not isinstance(x_dot, list):
-                    raise ValueError(
+                    raise TypeError(
                         "x_dot must be a list if used with x of list type "
                         "(i.e. for multiple trajectories)"
                     )

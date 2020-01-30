@@ -149,3 +149,7 @@ class SR3(BaseOptimizer):
 
         self.coef_ = coef_sparse
         self.coef_full_ = coef_full
+
+    @property
+    def complexity(self):
+        raise NotImplementedError

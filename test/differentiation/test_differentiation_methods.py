@@ -3,9 +3,11 @@ Unit tests for differentiation methods.
 """
 import numpy as np
 import pytest
+
 from pysindy.differentiation import FiniteDifference
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.differentiation.base import BaseDifferentiation
+
 
 # Simplest example: just use an assert statement
 def test_forward_difference_length():

@@ -74,3 +74,7 @@ class LASSO(BaseOptimizer):
 
         self.coef_ = lasso_model.coef_
         self.iters = lasso_model.n_iter_
+
+    @property
+    def complexity(self):
+        raise NotImplementedError

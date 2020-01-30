@@ -147,3 +147,10 @@ class STLSQ(BaseOptimizer):
                 )
         self.coef_ = coef
         self.ind_ = ind
+
+    @property
+    def complexity(self):
+        # TODO: add check for optimizer being fitted
+        return np.count_nonzero(self.coef_) + np.count_nonzero(
+            [abs(self.intercept_) >= self.threshold]
+        )

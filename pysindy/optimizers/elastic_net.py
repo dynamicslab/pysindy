@@ -91,3 +91,7 @@ class ElasticNet(BaseOptimizer):
 
         self.coef_ = elastic_net_model.coef_
         self.iters = elastic_net_model.n_iter_
+
+    @property
+    def complexity(self):
+        raise NotImplementedError

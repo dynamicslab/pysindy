@@ -111,8 +111,6 @@ class BaseOptimizer(LinearRegression):
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
 
-    @property
+    @abc.abstractmethod
     def complexity(self):
-        return np.count_nonzero(self.coef_) + np.count_nonzero(
-            [abs(self.intercept_) >= self.threshold]
-        )
+        raise NotImplementedError

@@ -15,6 +15,8 @@ def test_fit(data_derivative_1d, optimizer):
     x = x.reshape(-1, 1)
     x_dot = x_dot.reshape(-1)
     optimizer.fit(x, x_dot)
+    # TODO: update complexity property
+    # optimizer.complexity
 
 
 def test_alternate_parameters(data_derivative_1d):
@@ -30,6 +32,9 @@ def test_alternate_parameters(data_derivative_1d):
 
     model = STLSQ(copy_X=False)
     model.fit(x, x_dot)
+
+    model = STLSQ()
+    model.fit(x, x_dot, sample_weight=x[:, 0])
 
 
 def test_bad_parameters(data_derivative_1d):

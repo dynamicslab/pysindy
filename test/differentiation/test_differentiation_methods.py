@@ -3,10 +3,9 @@ Unit tests for differentiation methods.
 """
 import numpy as np
 import pytest
-
 from pysindy.differentiation import FiniteDifference
 from pysindy.differentiation import SmoothedFiniteDifference
-
+from pysindy.differentiation.base import BaseDifferentiation
 
 # Simplest example: just use an assert statement
 def test_forward_difference_length():
@@ -112,9 +111,17 @@ def test_centered_difference_dim():
         centered_difference(x)
 
 
-def test_higher_order_error():
+def test_order_error():
     with pytest.raises(NotImplementedError):
         FiniteDifference(order=3)
+    with pytest.raises(ValueError):
+        FiniteDifference(order=-1)
+
+
+def test_base_class(data_derivative_1d):
+    x, x_dot = data_derivative_1d
+    with pytest.raises(NotImplementedError):
+        BaseDifferentiation()._differentiate(x)
 
 
 # Test smoothed finite difference method

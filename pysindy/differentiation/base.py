@@ -19,7 +19,7 @@ class BaseDifferentiation:
 
     # Force subclasses to implement this
     @abc.abstractmethod
-    def _differentiate(self, x, t):
+    def _differentiate(self, x, t=1):
         """
         Numerically differentiate data.
 

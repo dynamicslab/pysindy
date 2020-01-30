@@ -150,7 +150,8 @@ class STLSQ(BaseOptimizer):
 
     @property
     def complexity(self):
+        raise NotImplementedError
         # TODO: add check for optimizer being fitted
-        return np.count_nonzero(self.coef_) + np.count_nonzero(
-            [abs(self.intercept_) >= self.threshold]
-        )
+        # return np.count_nonzero(self.coef_) + np.count_nonzero(
+        #     [abs(self.intercept_) >= self.threshold]
+        # )

@@ -16,7 +16,8 @@ def test_fit(data_derivative_1d, optimizer):
     x_dot = x_dot.reshape(-1)
     optimizer.fit(x, x_dot)
     # TODO: update complexity property
-    # optimizer.complexity
+    with pytest.raises(NotImplementedError):
+        optimizer.complexity
 
 
 def test_alternate_parameters(data_derivative_1d):

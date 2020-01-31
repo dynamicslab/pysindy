@@ -27,6 +27,9 @@ Then, to install the package, run:
 
 If you do not have root access, you should add the ``--user`` option to the above line.
 
+Documentation
+-------------
+The documentation for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`_.
 
 Community guidelines
 --------------------
@@ -47,7 +50,7 @@ If you find a bug in the code or want to request a new feature, please open an i
 
 Getting help
 ^^^^^^^^^^^^
-For help using PySINDy please consult the documentation and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/example>`_, or create an issue.
+For help using PySINDy please consult the `documentation <https://pysindy.readthedocs.io/en/latest/>`_ and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/example>`_, or create an issue.
 
 References
 ----------------------

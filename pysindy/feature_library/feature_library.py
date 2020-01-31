@@ -4,15 +4,14 @@ Base class for feature library classes.
 import abc
 
 from sklearn.base import TransformerMixin
+from sklearn.utils.validation import check_is_fitted
 
 
 class BaseFeatureLibrary(TransformerMixin):
     """
-    Functions that should eventually be implemented:
-        -print/get names of features
-        -evaluate all features (and store in member variable)
-        -addition (concatenate lists of features)
-        -
+    Base class for feature libraries.
+
+    Forces subclasses to implement fit and transform functions.
     """
 
     def __init__(self, **kwargs):
@@ -39,7 +38,7 @@ class BaseFeatureLibrary(TransformerMixin):
     @abc.abstractmethod
     def transform(self, X):
         """
-        Transform data to polynomial features
+        Transform data.
 
         Parameters
         ----------
@@ -54,12 +53,24 @@ class BaseFeatureLibrary(TransformerMixin):
         """
         raise NotImplementedError
 
-    # # Some kind of function that applies the library
-    # def fit_transform(self, X, y=None):
-    #     pass
-    #     # self.fit(X, y)
-    #     # return self.transform(X)
+    # Force subclasses to implement this
+    @abc.abstractmethod
+    def get_feature_names(self, input_features=None):
+        """Return feature names for output features.
+
+        Parameters
+        ----------
+        input_features : list of string, length n_features, optional
+            String names for input features if available. By default,
+            "x0", "x1", ... "xn_features" is used.
+
+        Returns
+        -------
+        output_feature_names : list of string, length n_output_features
+        """
+        raise NotImplementedError
 
     @property
     def size(self):
-        return self._size
+        check_is_fitted(self)
+        return self.n_output_features_

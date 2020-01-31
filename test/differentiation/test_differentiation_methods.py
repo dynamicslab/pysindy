@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 
 from pysindy.differentiation import FiniteDifference
+from pysindy.differentiation import SmoothedFiniteDifference
+from pysindy.differentiation.base import BaseDifferentiation
 
 
 # Simplest example: just use an assert statement
@@ -111,6 +113,28 @@ def test_centered_difference_dim():
         centered_difference(x)
 
 
-def test_higher_order_error():
+def test_order_error():
     with pytest.raises(NotImplementedError):
         FiniteDifference(order=3)
+    with pytest.raises(ValueError):
+        FiniteDifference(order=-1)
+
+
+def test_base_class(data_derivative_1d):
+    x, x_dot = data_derivative_1d
+    with pytest.raises(NotImplementedError):
+        BaseDifferentiation()._differentiate(x)
+
+
+# Test smoothed finite difference method
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.lazy_fixture("data_derivative_1d"),
+        pytest.lazy_fixture("data_derivative_2d"),
+    ],
+)
+def test_smoothed_finite_difference(data):
+    x, x_dot = data
+    smoothed_centered_difference = SmoothedFiniteDifference()
+    np.testing.assert_allclose(smoothed_centered_difference(x), x_dot)

@@ -48,9 +48,6 @@ class BaseOptimizer(LinearRegression):
         super(BaseOptimizer, self).__init__(
             fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
-        # self.fit_intercept = fit_intercept
-        # self.normalize = normalize
-        # self.copy_X = copy_X
         self.iters = 0
         self.coef_ = []
         self.ind_ = []
@@ -116,6 +113,4 @@ class BaseOptimizer(LinearRegression):
 
     @property
     def complexity(self):
-        return np.count_nonzero(self.coef_) + np.count_nonzero(
-            [abs(self.intercept_) >= self.threshold]
-        )
+        return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)

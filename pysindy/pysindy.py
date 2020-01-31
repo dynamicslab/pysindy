@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from numpy import isscalar
 from numpy import ndim
 from numpy import newaxis
@@ -32,7 +34,6 @@ class SINDy(BaseEstimator):
 
     feature_library : feature library object, optional
         Default is polynomial features of degree 2.
-        TODO: Implement better feature library class.
 
     differentiation_method : differentiation object, optional
         Method for differentiating the data. This must be an object that
@@ -330,7 +331,7 @@ class SINDy(BaseEstimator):
         Handle input data that contains multiple trajectories by doing the
         necessary validation, reshaping, and computation of derivatives.
         """
-        if not isinstance(x, list):
+        if not isinstance(x, Sequence):
             raise TypeError("Input x must be a list")
 
         if self.discrete_time:
@@ -341,15 +342,15 @@ class SINDy(BaseEstimator):
                     x[i] = x_tmp[:-1]
                     x_dot.append(x_tmp[1:])
             else:
-                if not isinstance(x_dot, list):
-                    raise ValueError(
+                if not isinstance(x_dot, Sequence):
+                    raise TypeError(
                         "x_dot must be a list if used with x of list type "
                         "(i.e. for multiple trajectories)"
                     )
                 x_dot = [validate_input(xd) for xd in x_dot]
         else:
             if x_dot is None:
-                if isinstance(t, list):
+                if isinstance(t, Sequence):
                     x_dot = []
                     for i in range(len(x)):
                         x[i] = validate_input(x[i], t[i])
@@ -360,12 +361,12 @@ class SINDy(BaseEstimator):
                         x[i] = validate_input(x[i], t)
                         x_dot.append(self.differentiation_method(x[i], t))
             else:
-                if not isinstance(x_dot, list):
-                    raise ValueError(
+                if not isinstance(x_dot, Sequence):
+                    raise TypeError(
                         "x_dot must be a list if used with x of list type "
                         "(i.e. for multiple trajectories)"
                     )
-                if isinstance(t, list):
+                if isinstance(t, Sequence):
                     x_dot = [validate_input(xd, t) for xd, t in zip(x_dot, t)]
                 else:
                     x_dot = [validate_input(xd, t) for xd in x_dot]

@@ -2,6 +2,7 @@
 Unit tests for optimizers.
 """
 import pytest
+from sklearn.utils.validation import check_is_fitted
 
 from pysindy.optimizers import ElasticNet
 from pysindy.optimizers import LASSO
@@ -16,20 +17,23 @@ def test_fit(data_derivative_1d, optimizer):
     x_dot = x_dot.reshape(-1)
     optimizer.fit(x, x_dot)
 
+    check_is_fitted(optimizer)
+    assert optimizer.complexity >= 0
 
-def test_alternate_parameters(data_derivative_1d):
+
+@pytest.mark.parametrize(
+    "kwargs", [{"normalize": True}, {"fit_intercept": True}, {"copy_X": False}]
+)
+def test_alternate_parameters(data_derivative_1d, kwargs):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
     x_dot = x_dot.reshape(-1)
 
-    model = STLSQ(normalize=True)
+    model = STLSQ(**kwargs)
     model.fit(x, x_dot)
+    model.fit(x, x_dot, sample_weight=x[:, 0])
 
-    model = STLSQ(fit_intercept=True)
-    model.fit(x, x_dot)
-
-    model = STLSQ(copy_X=False)
-    model.fit(x, x_dot)
+    check_is_fitted(model)
 
 
 def test_bad_parameters(data_derivative_1d):
@@ -84,3 +88,4 @@ def test_sr3_prox_functions(data_derivative_1d, thresholder):
     x_dot = x_dot.reshape(-1)
     model = SR3(thresholder=thresholder)
     model.fit(x, x_dot)
+    check_is_fitted(model)

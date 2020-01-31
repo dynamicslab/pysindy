@@ -1,4 +1,3 @@
-from functools import wraps
 from itertools import repeat
 
 import numpy as np
@@ -42,24 +41,6 @@ def drop_nan_rows(x, x_dot):
     x = x[~np.isnan(x_dot).any(axis=1)]
     x_dot = x_dot[~np.isnan(x_dot).any(axis=1)]
     return x, x_dot
-
-
-def debug(func):
-    """Decorator which prints function signature and return value
-    whenever it is called.
-    """
-
-    @wraps(func)
-    def wrapper_debug(*args, **kwargs):
-        args_repr = [repr(a) for a in args]
-        kwargs_repr = ["{}={}".format(k, v) for k, v in kwargs.items()]
-        signature = ", ".join(args_repr + kwargs_repr)
-        print("Calling {}({})".format(func.__name__, signature))
-        value = func(*args, **kwargs)
-        print("{} returned {}".format(func.__name__, value))
-        return value
-
-    return wrapper_debug
 
 
 def prox_l0(x, threshold):

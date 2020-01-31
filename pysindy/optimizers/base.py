@@ -111,6 +111,8 @@ class BaseOptimizer(LinearRegression):
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
 
+    # Subclasses should implement this themselves
+    @property
     @abc.abstractmethod
     def complexity(self):
         raise NotImplementedError

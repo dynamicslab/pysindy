@@ -137,4 +137,4 @@ def test_base_class(data_derivative_1d):
 def test_smoothed_finite_difference(data):
     x, x_dot = data
     smoothed_centered_difference = SmoothedFiniteDifference()
-    smoothed_centered_difference(x)
+    np.testing.assert_allclose(smoothed_centered_difference(x), x_dot)

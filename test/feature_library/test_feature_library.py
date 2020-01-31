@@ -6,6 +6,7 @@ from scipy.sparse import coo_matrix
 from scipy.sparse import csc_matrix
 from scipy.sparse import csr_matrix
 from sklearn.exceptions import NotFittedError
+from sklearn.utils.validation import check_is_fitted
 
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
@@ -62,6 +63,7 @@ def test_bad_parameters():
 def test_fit_transform(data_lorenz, library):
     x, t = data_lorenz
     library.fit_transform(x)
+    check_is_fitted(library)
 
 
 @pytest.mark.parametrize(
@@ -92,8 +94,7 @@ def test_output_shape(data_lorenz, library, shape):
     y = library.fit_transform(x)
     expected_shape = (x.shape[0], shape)
     assert y.shape == expected_shape
-
-    library.size
+    assert library.size > 0
 
 
 @pytest.mark.parametrize(
@@ -110,33 +111,40 @@ def test_get_feature_names(data_lorenz, library):
 
     x, t = data_lorenz
     library.fit_transform(x)
-    library.get_feature_names()
+    feature_names = library.get_feature_names()
+    assert isinstance(feature_names, list)
+    assert isinstance(feature_names[0], str)
 
     input_features = ["a"] * x.shape[1]
     library.get_feature_names(input_features=input_features)
+    assert isinstance(feature_names, list)
+    assert isinstance(feature_names[0], str)
+
+
+@pytest.mark.parametrize("sparse_format", [csc_matrix, csr_matrix, coo_matrix])
+def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
+    x, t = data_lorenz
+    library = PolynomialLibrary()
+    library.fit_transform(sparse_format(x))
+    check_is_fitted(library)
 
 
 # Catch-all for various combinations of options and
 # inputs for polynomial features
-def test_polynomial_options(data_lorenz):
+@pytest.mark.parametrize(
+    "kwargs, sparse_format",
+    [
+        ({"degree": 4}, csr_matrix),
+        ({"include_bias": True}, csr_matrix),
+        ({"include_interaction": False}, lambda x: x),
+        ({"include_interaction": False, "include_bias": True}, lambda x: x),
+    ],
+)
+def test_polynomial_options(data_lorenz, kwargs, sparse_format):
     x, t = data_lorenz
-
-    # Check sparse inputs
-    library = PolynomialLibrary()
-    library.fit_transform(csc_matrix(x))
-    library.fit_transform(csr_matrix(x))
-    library.fit_transform(coo_matrix(x))
-
-    library = PolynomialLibrary(degree=4)
-    library.fit_transform(csr_matrix(x))
-
-    library = PolynomialLibrary(include_bias=True)
-    library.fit_transform(csr_matrix(x))
-
-    library = PolynomialLibrary(include_interaction=False)
-    library.fit_transform(x)
-
-    library = PolynomialLibrary(include_interaction=False, include_bias=True)
+    library = PolynomialLibrary(**kwargs)
+    library.fit_transform(sparse_format(x))
+    check_is_fitted(library)
 
 
 # Catch-all for various combinations of options and
@@ -146,6 +154,7 @@ def test_fourier_options(data_lorenz):
 
     library = FourierLibrary(include_cos=False)
     library.fit_transform(x)
+    check_is_fitted(library)
 
 
 def test_not_implemented(data_lorenz):

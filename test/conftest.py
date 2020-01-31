@@ -31,7 +31,7 @@ def data_lorenz():
             z[0] * z[1] - 8 / 3 * z[2],
         ]
 
-    t = np.linspace(0, 5, 100)
+    t = np.linspace(0, 5, 500)
     x0 = [8, 27, -7]
     x = odeint(lorenz, x0, t)
 
@@ -47,8 +47,12 @@ def data_multiple_trajctories():
             z[0] * z[1] - 8 / 3 * z[2],
         ]
 
-    n_points = [10, 50, 100]
-    initial_conditions = [[8, 27, -7], [9, 28, -8], [-1, 10, 1]]
+    n_points = [50, 100, 200]
+    initial_conditions = [
+        [8, 27, -7],
+        [-10.9595724, 21.7346758, 24.5722540],
+        [-3.95406365, -9.21825124, 12.07459147],
+    ]
 
     x_list = []
     t_list = []

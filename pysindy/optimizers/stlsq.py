@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ridge_regression
+from sklearn.utils.validation import check_is_fitted
 
 from pysindy.optimizers import BaseOptimizer
 
@@ -150,8 +151,8 @@ class STLSQ(BaseOptimizer):
 
     @property
     def complexity(self):
-        raise NotImplementedError
-        # TODO: add check for optimizer being fitted
-        # return np.count_nonzero(self.coef_) + np.count_nonzero(
-        #     [abs(self.intercept_) >= self.threshold]
-        # )
+        check_is_fitted(self)
+
+        return np.count_nonzero(self.coef_) + np.count_nonzero(
+            [abs(self.intercept_) >= self.threshold]
+        )

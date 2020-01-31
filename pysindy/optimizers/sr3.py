@@ -4,7 +4,6 @@ import numpy as np
 from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.utils.validation import check_is_fitted
 
 from pysindy.optimizers import BaseOptimizer
 from pysindy.utils import get_prox
@@ -150,8 +149,3 @@ class SR3(BaseOptimizer):
 
         self.coef_ = coef_sparse
         self.coef_full_ = coef_full
-
-    @property
-    def complexity(self):
-        check_is_fitted(self)
-        return np.count_nonzero(self.coef_)

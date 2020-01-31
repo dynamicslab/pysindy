@@ -1,6 +1,4 @@
-from numpy import count_nonzero
 from sklearn.linear_model import Lasso
-from sklearn.utils.validation import check_is_fitted
 
 from pysindy.optimizers import BaseOptimizer
 
@@ -76,8 +74,3 @@ class LASSO(BaseOptimizer):
 
         self.coef_ = lasso_model.coef_
         self.iters = lasso_model.n_iter_
-
-    @property
-    def complexity(self):
-        check_is_fitted(self)
-        return count_nonzero(self.coef_)

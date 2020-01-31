@@ -1,6 +1,4 @@
-from numpy import count_nonzero
 from sklearn.linear_model import ElasticNet as SKElasticNet
-from sklearn.utils.validation import check_is_fitted
 
 from pysindy.optimizers import BaseOptimizer
 
@@ -93,8 +91,3 @@ class ElasticNet(BaseOptimizer):
 
         self.coef_ = elastic_net_model.coef_
         self.iters = elastic_net_model.n_iter_
-
-    @property
-    def complexity(self):
-        check_is_fitted(self)
-        return count_nonzero(self.coef_)

@@ -44,13 +44,14 @@ class BaseOptimizer(LinearRegression):
         If True, X will be copied; else, it may be overwritten.
     """
 
-    def __init__(self, normalize=False, fit_intercept=False, copy_X=True):
+    def __init__(self, normalize=False, fit_intercept=False, copy_X=True, unbias=False):
         super(BaseOptimizer, self).__init__(
             fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
         self.iters = 0
         self.coef_ = []
         self.ind_ = []
+        self.unbias = unbias
 
         self.history_ = []
 
@@ -107,9 +108,18 @@ class BaseOptimizer(LinearRegression):
         self.history_.append(self.coef_)
 
         self._reduce(x, y, **reduce_kws)
+        self.ind_ = self.coef_ != 0
+
+        if self.unbias:
+            self._unbias(x, y)
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
+
+    def _unbias(self, x, y):
+        if np.any(self.ind_):
+            coef = super(BaseOptimizer, self).fit(x[: , self.ind_], y)
+            self.coef_[self.ind_] = coef
 
     @property
     def complexity(self):

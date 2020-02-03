@@ -47,7 +47,7 @@ def data_multiple_trajctories():
             z[0] * z[1] - 8 / 3 * z[2],
         ]
 
-    n_points = [50, 100, 200]
+    n_points = [100, 200, 500]
     initial_conditions = [
         [8, 27, -7],
         [-10.9595724, 21.7346758, 24.5722540],

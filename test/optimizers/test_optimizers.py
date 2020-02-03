@@ -2,6 +2,7 @@
 Unit tests for optimizers.
 """
 import pytest
+from numpy.linalg import norm
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy.optimizers import ElasticNet
@@ -89,3 +90,21 @@ def test_sr3_prox_functions(data_derivative_1d, thresholder):
     model = SR3(thresholder=thresholder)
     model.fit(x, x_dot)
     check_is_fitted(model)
+
+
+def test_unbias(data_derivative_1d):
+    x, x_dot = data_derivative_1d
+    x = x.reshape(-1, 1)
+    x_dot = x_dot.reshape(-1)
+
+    optimizer_biased = STLSQ(threshold=0.01, alpha=0.01, max_iter=1, unbias=False)
+    optimizer_biased.fit(x, x_dot)
+
+    optimizer_unbiased = STLSQ(threshold=0.01, alpha=0.01, max_iter=1, unbias=True)
+    optimizer_unbiased.fit(x, x_dot)
+
+    assert (
+        norm(optimizer_biased.coef_ - optimizer_unbiased.coef_)
+        / norm(optimizer_unbiased.coef_)
+        > 1e-9
+    )

@@ -42,15 +42,25 @@ class BaseOptimizer(LinearRegression):
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
+
+    unbias : boolean, optional (default True)
+        Whether to perform an extra step of unregularized linear regression to unbias
+        the coefficients for the identified support.
+        For example, if `STLSQ(alpha=0.1)` is used then the learned coefficients will
+        be biased toward 0 due to the L2 regularization.
+        Setting `unbias=True` will trigger an additional step wherein the nonzero
+        coefficients learned by the `STLSQ` object will be updated using an
+        unregularized least-squares fit.
     """
 
-    def __init__(self, normalize=False, fit_intercept=False, copy_X=True):
+    def __init__(self, normalize=False, fit_intercept=False, copy_X=True, unbias=True):
         super(BaseOptimizer, self).__init__(
             fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
         self.iters = 0
         self.coef_ = []
         self.ind_ = []
+        self.unbias = unbias
 
         self.history_ = []
 
@@ -107,9 +117,18 @@ class BaseOptimizer(LinearRegression):
         self.history_.append(self.coef_)
 
         self._reduce(x, y, **reduce_kws)
+        self.ind_ = np.abs(self.coef_) > 1e-14
+
+        if self.unbias:
+            self._unbias(x, y)
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
+
+    def _unbias(self, x, y):
+        if np.any(self.ind_):
+            coef = LinearRegression().fit(x[:, self.ind_], y).coef_
+            self.coef_[self.ind_] = coef
 
     @property
     def complexity(self):

@@ -13,9 +13,9 @@ class STLSQ(BaseOptimizer):
     Sequentially thresholded least squares algorithm.
 
     Attempts to minimize the objective function
-    ||y - Xw||^2_2 + alpha * ||w||^2_2 by iteratively performing
-    least squares and masking out elements of the weight that are
-    below a given threshold.
+    :math: `||y - Xw||^2_2 + alpha \\times ||w||^2_2`
+    by iteratively performing least squares and masking out
+    elements of the weight that are below a given threshold.
 
     Parameters
     ----------

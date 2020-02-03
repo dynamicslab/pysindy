@@ -11,6 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
+from pysindy.feature_library import IdentityLibrary
 from pysindy.feature_library.feature_library import BaseFeatureLibrary
 
 
@@ -55,6 +56,7 @@ def test_bad_parameters():
 @pytest.mark.parametrize(
     "library",
     [
+        IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),
@@ -69,6 +71,7 @@ def test_fit_transform(data_lorenz, library):
 @pytest.mark.parametrize(
     "library",
     [
+        IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),
@@ -84,6 +87,7 @@ def test_change_in_data_shape(data_lorenz, library):
 @pytest.mark.parametrize(
     "library, shape",
     [
+        (IdentityLibrary(), 3),
         (PolynomialLibrary(), 10),
         (FourierLibrary(), 6),
         (pytest.lazy_fixture("data_custom_library"), 9),
@@ -100,6 +104,7 @@ def test_output_shape(data_lorenz, library, shape):
 @pytest.mark.parametrize(
     "library",
     [
+        IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),

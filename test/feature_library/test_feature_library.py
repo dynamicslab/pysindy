@@ -10,8 +10,8 @@ from sklearn.utils.validation import check_is_fitted
 
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
-from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import IdentityLibrary
+from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library.feature_library import BaseFeatureLibrary
 
 

@@ -15,7 +15,10 @@ class SR3(BaseOptimizer):
 
     Attempts to minimize the objective function
     .. math::
-        0.5\\|y-Xw\\|^2_2 + lambda R(v) + (0.5 / nu)\\frac{1}{2 nu}||w-v||^2_2
+
+        0.5\\|y-Xw\\|^2_2 + lambda \\times R(v)
+        + (0.5 / nu)\\|w-v\\|^2_2
+
     where R(v) is a regularization function.
 
     Parameters

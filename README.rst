@@ -21,11 +21,15 @@ First clone this repository:
 
 ``git clone https://github.com/dynamicslab/pysindy``
 
-Then, to install the package, run:
+Then, to install the package, run
+
+``pip install .``
+
+If you do not have pip you can instead use
 
 ``python setup.py install``
 
-If you do not have root access, you should add the ``--user`` option to the above line.
+If you do not have root access, you should add the ``--user`` option to the above lines.
 
 Documentation
 -------------

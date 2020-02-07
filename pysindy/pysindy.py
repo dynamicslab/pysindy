@@ -111,14 +111,13 @@ class SINDy(BaseEstimator):
 
         Parameters
         ----------
-        x: array-like or list of array-like, shape
-        (n_samples, n_input_features)
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
             Training data. If training data contains multiple trajectories,
             x should be a list containing data for each trajectory. Individual
             trajectories may contain different numbers of samples.
 
-        t: float, numpy array of shape [n_samples], or list of numpy arrays,
-        optional (default 1)
+        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
+                (default 1)
             If t is a float, it specifies the timestep between each sample.
             If array-like, it specifies the time at which each sample was
             collected.
@@ -190,9 +189,8 @@ class SINDy(BaseEstimator):
 
         Parameters
         ----------
-        x: array-like or list of array-like, shape
-        (n_samples, n_input_features)
-            Samples
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Samples.
 
         multiple_trajectories: boolean, optional (default False)
             If True, x contains multiple trajectories and must be a list of
@@ -200,8 +198,7 @@ class SINDy(BaseEstimator):
 
         Returns
         -------
-        x_dot: array-like or list of array-like, shape
-        (n_samples, n_input_features)
+        x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
             Predicted time derivatives
         """
         if hasattr(self, "model"):
@@ -247,6 +244,14 @@ class SINDy(BaseEstimator):
 
     def print(self, lhs=None, precision=3):
         """Print the SINDy model equations.
+
+        Parameters
+        ----------
+        lhs: list of strings, optional (default None)
+            List of variables to print on the left-hand sides of the learned equations.
+
+        precision: int, optional (default 3)
+            Precision to be used when printing out model coefficients.
         """
         eqns = self.equations(precision)
         for i, eqn in enumerate(eqns):
@@ -271,12 +276,11 @@ class SINDy(BaseEstimator):
 
         Parameters
         ----------
-        x: array-like or list of array-like, shape
-        (n_samples, n_input_features)
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
             Samples
 
-        t: float, numpy array of shape [n_samples], or list of numpy arrays,
-        optional
+        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
+                (default 1)
             Time step between samples or array of collection times. Optional,
             used to compute the time derivatives of the samples if x_dot is not
             provided.
@@ -382,12 +386,11 @@ class SINDy(BaseEstimator):
 
         Parameters
         ----------
-        x: array-like or list of array-like, shape
-        (n_samples, n_input_features)
-            Samples
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Data to be differentiated.
 
-        t: int, numpy array of shape [n_samples], or list of numpy arrays,
-        optional
+        t: int, numpy array of shape [n_samples], or list of numpy arrays, optional \
+                (default 1)
             Time step between samples or array of collection times. Default is
             a time step of 1 between samples.
 
@@ -397,8 +400,7 @@ class SINDy(BaseEstimator):
 
         Returns
         -------
-        x_dot: array-like or list of array-like, shape
-        (n_samples, n_input_features)
+        x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
             Time derivatives computed by using the model's differentiation
             method
         """
@@ -412,7 +414,7 @@ class SINDy(BaseEstimator):
             return self.differentiation_method(x, t)
 
     def coefficients(self):
-        """Return a list of the coefficients learned by SINDy model
+        """Return a list of the coefficients learned by SINDy model.
         """
         if hasattr(self, "model"):
             check_is_fitted(self.model.estimators_[0].steps[-1][1])
@@ -423,7 +425,7 @@ class SINDy(BaseEstimator):
             )
 
     def get_feature_names(self):
-        """Return a list of names of features used by SINDy model
+        """Return a list of names of features used by SINDy model.
         """
         if hasattr(self, "model"):
             return (
@@ -462,7 +464,7 @@ class SINDy(BaseEstimator):
 
         Returns
         -------
-        x: numpy array, size (n_samples, n_features)
+        x: numpy array, shape (n_samples, n_features)
             Simulation results
         """
 

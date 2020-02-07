@@ -11,7 +11,7 @@ class ElasticNet(BaseOptimizer):
 
     .. math::
 
-        (0.5 /  n_{samples}) \times \\|y - Xw\\|^2_2
+        (0.5 /  n_{samples}) \\times \\|y - Xw\\|^2_2
         + alpha \\times l1_{ratio} \\times \\|w\\|_1
         + 0.5 \\times alpha \\times (1 - l1_{ratio}) \\times \\|w\\|^2_2.
 

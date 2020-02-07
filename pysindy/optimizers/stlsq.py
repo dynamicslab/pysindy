@@ -33,6 +33,27 @@ class STLSQ(BaseOptimizer):
     ridge_kw : dict, optional
         Optional keyword arguments to pass to the ridge regression.
 
+    fit_intercept : boolean, optional (default False)
+        Whether to calculate the intercept for this model. If set to false, no
+        intercept will be used in calculations.
+
+    normalize : boolean, optional (default False)
+        This parameter is ignored when fit_intercept is set to False. If True,
+        the regressors X will be normalized before regression by subtracting
+        the mean and dividing by the l2-norm.
+
+    copy_X : boolean, optional (default True)
+        If True, X will be copied; else, it may be overwritten.
+
+    unbias : boolean, optional (default True)
+        Whether to perform an extra step of unregularized linear regression to unbias
+        the coefficients for the identified support.
+        For example, if `STLSQ(alpha=0.1)` is used then the learned coefficients will
+        be biased toward 0 due to the L2 regularization.
+        Setting `unbias=True` will trigger an additional step wherein the nonzero
+        coefficients learned by the `STLSQ` object will be updated using an
+        unregularized least-squares fit.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -62,8 +83,24 @@ class STLSQ(BaseOptimizer):
     x2' = -2.666 x1 + 1.000 1 x0
     """
 
-    def __init__(self, threshold=0.1, alpha=0.0, max_iter=20, ridge_kw=None, **kwargs):
-        super(STLSQ, self).__init__(**kwargs)
+    def __init__(
+        self,
+        threshold=0.1,
+        alpha=0.0,
+        max_iter=20,
+        ridge_kw=None,
+        normalize=False,
+        fit_intercept=False,
+        copy_X=True,
+        unbias=True,
+    ):
+        super(STLSQ, self).__init__(
+            max_iter=max_iter,
+            normalize=normalize,
+            fit_intercept=fit_intercept,
+            copy_X=copy_X,
+            unbias=unbias,
+        )
 
         if threshold < 0:
             raise ValueError("threshold cannot be negative")
@@ -74,7 +111,6 @@ class STLSQ(BaseOptimizer):
 
         self.threshold = threshold
         self.alpha = alpha
-        self.max_iter = max_iter
         self.ridge_kw = ridge_kw
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):

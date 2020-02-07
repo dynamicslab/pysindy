@@ -47,6 +47,27 @@ class SR3(BaseOptimizer):
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
+    fit_intercept : boolean, optional (default False)
+        Whether to calculate the intercept for this model. If set to false, no
+        intercept will be used in calculations.
+
+    normalize : boolean, optional (default False)
+        This parameter is ignored when fit_intercept is set to False. If True,
+        the regressors X will be normalized before regression by subtracting
+        the mean and dividing by the l2-norm.
+
+    copy_X : boolean, optional (default True)
+        If True, X will be copied; else, it may be overwritten.
+
+    unbias : boolean, optional (default True)
+        Whether to perform an extra step of unregularized linear regression to unbias
+        the coefficients for the identified support.
+        For example, if `STLSQ(alpha=0.1)` is used then the learned coefficients will
+        be biased toward 0 due to the L2 regularization.
+        Setting `unbias=True` will trigger an additional step wherein the nonzero
+        coefficients learned by the `STLSQ` object will be updated using an
+        unregularized least-squares fit.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -78,9 +99,24 @@ class SR3(BaseOptimizer):
     """
 
     def __init__(
-        self, threshold=0.1, nu=1.0, tol=1e-5, thresholder="l0", max_iter=30, **kwargs
+        self,
+        threshold=0.1,
+        nu=1.0,
+        tol=1e-5,
+        thresholder="l0",
+        max_iter=30,
+        normalize=False,
+        fit_intercept=False,
+        copy_X=True,
+        unbias=True,
     ):
-        super(SR3, self).__init__(**kwargs)
+        super(SR3, self).__init__(
+            max_iter=max_iter,
+            normalize=normalize,
+            fit_intercept=fit_intercept,
+            copy_X=copy_X,
+            unbias=unbias,
+        )
 
         if threshold < 0:
             raise ValueError("threshold cannot be negative")
@@ -88,15 +124,12 @@ class SR3(BaseOptimizer):
             raise ValueError("nu must be positive")
         if tol <= 0:
             raise ValueError("tol must be positive")
-        if max_iter <= 0:
-            raise ValueError("max_iter must be positive")
 
         self.threshold = threshold
         self.nu = nu
         self.tol = tol
         self.thresholder = thresholder
         self.prox = get_prox(thresholder)
-        self.max_iter = max_iter
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
         """Update the unregularized weight vector

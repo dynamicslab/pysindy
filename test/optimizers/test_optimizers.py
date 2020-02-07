@@ -105,6 +105,6 @@ def test_unbias(data_derivative_1d):
 
     assert (
         norm(optimizer_biased.coef_ - optimizer_unbiased.coef_)
-        / norm(optimizer_unbiased.coef_)
+        / (norm(optimizer_unbiased.coef_) + 1e-5)
         > 1e-9
     )

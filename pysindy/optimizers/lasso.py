@@ -22,6 +22,27 @@ class LASSO(BaseOptimizer):
         Optional keyword arguments to pass to the LASSO regression
         object.
 
+    fit_intercept : boolean, optional (default False)
+        Whether to calculate the intercept for this model. If set to false, no
+        intercept will be used in calculations.
+
+    normalize : boolean, optional (default False)
+        This parameter is ignored when fit_intercept is set to False. If True,
+        the regressors X will be normalized before regression by subtracting
+        the mean and dividing by the l2-norm.
+
+    copy_X : boolean, optional (default True)
+        If True, X will be copied; else, it may be overwritten.
+
+    unbias : boolean, optional (default True)
+        Whether to perform an extra step of unregularized linear regression to unbias
+        the coefficients for the identified support.
+        For example, if `STLSQ(alpha=0.1)` is used then the learned coefficients will
+        be biased toward 0 due to the L2 regularization.
+        Setting `unbias=True` will trigger an additional step wherein the nonzero
+        coefficients learned by the `STLSQ` object will be updated using an
+        unregularized least-squares fit.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -50,17 +71,29 @@ class LASSO(BaseOptimizer):
     x2' = 0.369 1^2 + 0.558 1 x0 + 0.150 1 x1 + 0.018 x0^2 + -0.133 x1^2
     """
 
-    def __init__(self, alpha=1.0, lasso_kw=None, max_iter=1000, **kwargs):
-        super(LASSO, self).__init__(**kwargs)
+    def __init__(
+        self,
+        alpha=1.0,
+        lasso_kw=None,
+        max_iter=1000,
+        normalize=False,
+        fit_intercept=False,
+        copy_X=True,
+        unbias=True,
+    ):
+        super(LASSO, self).__init__(
+            max_iter=max_iter,
+            normalize=normalize,
+            fit_intercept=fit_intercept,
+            copy_X=copy_X,
+            unbias=unbias,
+        )
 
         if alpha < 0:
             raise ValueError("alpha cannot be negative")
-        if max_iter <= 0:
-            raise ValueError("max_iter must be positive")
 
         self.lasso_kw = lasso_kw
         self.alpha = alpha
-        self.max_iter = max_iter
 
     def _reduce(self, x, y):
         """Performs the LASSO regression

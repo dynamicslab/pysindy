@@ -30,6 +30,27 @@ class ElasticNet(BaseOptimizer):
         Optional keyword arguments to pass to the ElasticNet regression
         object.
 
+    fit_intercept : boolean, optional (default False)
+        Whether to calculate the intercept for this model. If set to false, no
+        intercept will be used in calculations.
+
+    normalize : boolean, optional (default False)
+        This parameter is ignored when fit_intercept is set to False. If True,
+        the regressors X will be normalized before regression by subtracting
+        the mean and dividing by the l2-norm.
+
+    copy_X : boolean, optional (default True)
+        If True, X will be copied; else, it may be overwritten.
+
+    unbias : boolean, optional (default True)
+        Whether to perform an extra step of unregularized linear regression to unbias
+        the coefficients for the identified support.
+        For example, if `STLSQ(alpha=0.1)` is used then the learned coefficients will
+        be biased toward 0 due to the L2 regularization.
+        Setting `unbias=True` will trigger an additional step wherein the nonzero
+        coefficients learned by the `STLSQ` object will be updated using an
+        unregularized least-squares fit.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -59,20 +80,31 @@ class ElasticNet(BaseOptimizer):
     """
 
     def __init__(
-        self, alpha=1.0, l1_ratio=0.5, max_iter=1000, elastic_net_kw={}, **kwargs
+        self,
+        alpha=1.0,
+        l1_ratio=0.5,
+        max_iter=1000,
+        elastic_net_kw={},
+        normalize=False,
+        fit_intercept=False,
+        copy_X=True,
+        unbias=True,
     ):
-        super(ElasticNet, self).__init__(**kwargs)
+        super(ElasticNet, self).__init__(
+            max_iter=max_iter,
+            normalize=normalize,
+            fit_intercept=fit_intercept,
+            copy_X=copy_X,
+            unbias=unbias,
+        )
 
         if alpha < 0:
             raise ValueError("alpha must be nonnegative")
         if l1_ratio < 0:
             raise ValueError("l1_ratio must be nonnegative")
-        if max_iter <= 0:
-            raise ValueError("max_iter must be positive")
 
         self.alpha = alpha
         self.l1_ratio = l1_ratio
-        self.max_iter = max_iter
         self.elastic_net_kw = elastic_net_kw
 
     def _reduce(self, x, y):

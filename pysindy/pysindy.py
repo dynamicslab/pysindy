@@ -17,7 +17,7 @@ from sklearn.utils.validation import check_is_fitted
 from pysindy.differentiation import FiniteDifference
 from pysindy.optimizers import STLSQ
 from pysindy.utils.base import drop_nan_rows
-from pysindy.utils.base import equation
+from pysindy.utils.base import equations
 from pysindy.utils.base import validate_input
 
 
@@ -167,13 +167,13 @@ class SINDy(BaseEstimator):
         x, x_dot = drop_nan_rows(x, x_dot)
 
         steps = [("features", self.feature_library), ("model", self.optimizer)]
-        self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
+        self.model = Pipeline(steps)
 
         self.model.fit(x, x_dot)
 
-        self.n_input_features_ = self.model.estimators_[0].steps[0][1].n_input_features_
+        self.n_input_features_ = self.model.steps[0][1].n_input_features_
         self.n_output_features_ = (
-            self.model.estimators_[0].steps[0][1].n_output_features_
+            self.model.steps[0][1].n_output_features_
         )
 
         if self.feature_names is None:
@@ -231,15 +231,12 @@ class SINDy(BaseEstimator):
             Strings containing the SINDy model equation for each input feature.
         """
         if hasattr(self, "model"):
-            check_is_fitted(self.model.estimators_[0].steps[-1][1])
+            check_is_fitted(self.model.steps[-1][1])
             if self.discrete_time:
                 base_feature_names = [f + "[k]" for f in self.feature_names]
             else:
                 base_feature_names = self.feature_names
-            return [
-                equation(est, input_features=base_feature_names, precision=precision)
-                for est in self.model.estimators_
-            ]
+            return equations(self.model, input_features=base_feature_names, precision=precision)
         else:
             raise NotFittedError(
                 "SINDy model must be fit before equations can be called"
@@ -415,8 +412,8 @@ class SINDy(BaseEstimator):
         """Return a list of the coefficients learned by SINDy model
         """
         if hasattr(self, "model"):
-            check_is_fitted(self.model.estimators_[0].steps[-1][1])
-            return vstack([est.steps[-1][1].coef_ for est in self.model.estimators_]).T
+            check_is_fitted(self.model.steps[-1][1])
+            return self.model.steps[-1][1].coef_
         else:
             raise NotFittedError(
                 "SINDy model must be fit before coefficients is called"
@@ -427,7 +424,7 @@ class SINDy(BaseEstimator):
         """
         if hasattr(self, "model"):
             return (
-                self.model.estimators_[0]
+                self.model
                 .steps[0][1]
                 .get_feature_names(input_features=self.feature_names)
             )

@@ -53,10 +53,22 @@ class BaseOptimizer(LinearRegression):
         unregularized least-squares fit.
     """
 
-    def __init__(self, normalize=False, fit_intercept=False, copy_X=True, unbias=True):
+    def __init__(
+        self,
+        max_iter=20,
+        normalize=False,
+        fit_intercept=False,
+        copy_X=True,
+        unbias=True,
+    ):
         super(BaseOptimizer, self).__init__(
             fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
+
+        if max_iter <= 0:
+            raise ValueError("max_iter must be positive")
+
+        self.max_iter = max_iter
         self.iters = 0
         self.coef_ = []
         self.ind_ = []

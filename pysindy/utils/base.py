@@ -135,10 +135,15 @@ def print_model(
     return eq
 
 
-def equation(pipeline, input_features=None, precision=3, input_fmt=None):
+def equations(pipeline, input_features=None, precision=3, input_fmt=None):
     input_features = pipeline.steps[0][1].get_feature_names(input_features)
     if input_fmt:
         input_features = [input_fmt(i) for i in input_features]
     coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
-    return print_model(coef, input_features, intercept=intercept, precision=precision)
+    return [
+        print_model(
+            coef[i], input_features, intercept=intercept, precision=precision
+        )
+        for i in range(coef.shape[0])
+    ]

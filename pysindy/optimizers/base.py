@@ -8,6 +8,7 @@ from scipy import sparse
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_X_y
+import pdb
 
 
 def _rescale_data(X, y, sample_weight):
@@ -97,7 +98,7 @@ class BaseOptimizer(LinearRegression):
         -------
         self : returns an instance of self
         """
-        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
+        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
             x_,
@@ -107,12 +108,12 @@ class BaseOptimizer(LinearRegression):
             copy=self.copy_X,
             sample_weight=sample_weight,
         )
-
+        pdb.set_trace()
         if sample_weight is not None:
             x, y = _rescale_data(x, y, sample_weight)
 
         self.iters = 0
-        self.ind_ = np.ones(x.shape[1], dtype=bool)
+        self.ind_ = np.ones((x.shape[1], y.shape[1]), dtype=bool)
         self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0]  # initial guess
         self.history_.append(self.coef_)
 
@@ -121,14 +122,15 @@ class BaseOptimizer(LinearRegression):
 
         if self.unbias:
             self._unbias(x, y)
-
+        pdb.set_trace()
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
 
     def _unbias(self, x, y):
         if np.any(self.ind_):
-            coef = LinearRegression().fit(x[:, self.ind_], y).coef_
-            self.coef_[self.ind_] = coef
+            for i in range(self.ind_.shape[0]):
+                coef = LinearRegression().fit(x[:, self.ind_[i]], y[:,i]).coef_
+                self.coef_[i,self.ind_[i]] = coef
 
     @property
     def complexity(self):

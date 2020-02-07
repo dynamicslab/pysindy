@@ -14,11 +14,7 @@ class SR3(BaseOptimizer):
     Sparse relaxed regularized regression.
 
     Attempts to minimize the objective function
-    .. math::
-
-        0.5\\|y-Xw\\|^2_2 + lambda \\times R(v)
-        + (0.5 / nu)\\|w-v\\|^2_2
-
+    0.5 * ||y-Xw||^2_2 + lambda * R(v) + (0.5 / nu) * ||w-v||^2_2
     where R(v) is a regularization function.
 
     Parameters
@@ -151,5 +147,5 @@ class SR3(BaseOptimizer):
                 ConvergenceWarning,
             )
 
-        self.coef_ = coef_sparse
-        self.coef_full_ = coef_full
+        self.coef_ = coef_sparse.T
+        self.coef_full_ = coef_full.T

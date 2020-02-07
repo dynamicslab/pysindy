@@ -127,7 +127,7 @@ class BaseOptimizer(LinearRegression):
 
     def _unbias(self, x, y):
         if np.any(self.ind_):
-            coef = LinearRegression().fit(x[:, self.ind_], y).coef_
+            coef = LinearRegression(fit_intercept=False).fit(x[:, self.ind_], y).coef_
             self.coef_[self.ind_] = coef
 
     @property

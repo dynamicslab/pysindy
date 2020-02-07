@@ -8,9 +8,12 @@ class ElasticNet(BaseOptimizer):
     Linear regression with combined L1 and L2 regularization.
 
     Minimizes the objective function
-    1 / (2 * n_samples) * ||y - Xw||^2_2
-    + alpha * l1_ratio * ||w||_1
-    + 0.5 * alpha * (1 - l1_ratio) * ||w||^2_2.
+
+    .. math::
+
+        (0.5 /  n_{samples}) \times \\|y - Xw\\|^2_2
+        + alpha \\times l1_{ratio} \\times \\|w\\|_1
+        + 0.5 \\times alpha \\times (1 - l1_{ratio}) \\times \\|w\\|^2_2.
 
     Parameters
     ----------

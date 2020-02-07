@@ -14,12 +14,17 @@ class SR3(BaseOptimizer):
     Sparse relaxed regularized regression.
 
     Attempts to minimize the objective function
+
     .. math::
 
         0.5\\|y-Xw\\|^2_2 + lambda \\times R(v)
         + (0.5 / nu)\\|w-v\\|^2_2
 
-    where R(v) is a regularization function.
+    where :math:`R(v)` is a regularization function. See the following reference
+    for more details:
+
+        Zheng, Peng, et al. "A unified framework for sparse relaxed
+        regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
 
     Parameters
     ----------

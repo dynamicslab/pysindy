@@ -8,7 +8,11 @@ class LASSO(BaseOptimizer):
     LASSO algorithm (linear regression with L1 regularization).
 
     Attempts to minimize the objective function
-    (1 / (2 * n_samples)) * ||y - Xw||^2_2 + alpha * ||w||_1.
+
+    .. math::
+
+        (0.5 / n_{samples}) \\times \\|y - Xw\\|^2_2
+        + alpha \\times \\|w|\\|_1.
 
     Parameters
     ----------

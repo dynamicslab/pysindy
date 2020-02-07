@@ -127,8 +127,8 @@ class SINDy(BaseEstimator):
             trajectory.
             Default value is a timestep of 1 between samples.
 
-        x_dot: array-like or list of array-like, shape (n_samples,
-        n_input_features), optional (default None)
+        x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
+                optional (default None)
             Optional pre-computed derivatives of the training data. If not
             provided, the time derivatives of the training data will be
             computed using the specified differentiation method. If x_dot is
@@ -285,8 +285,8 @@ class SINDy(BaseEstimator):
             used to compute the time derivatives of the samples if x_dot is not
             provided.
 
-        x_dot: array-like or list of array-like, shape
-        (n_samples, n_input_features), optional
+        x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
+                optional
             Optional pre-computed derivatives of the samples. If provided,
             these values will be used to compute the score. If not provided,
             the time derivatives of the training data will be computed using
@@ -306,7 +306,7 @@ class SINDy(BaseEstimator):
         Returns
         -------
         score: float
-            Metric function value for the model prediction of x_dot
+            Metric function value for the model prediction of x_dot.
         """
         if multiple_trajectories:
             x, x_dot = self.process_multiple_trajectories(
@@ -382,7 +382,7 @@ class SINDy(BaseEstimator):
 
     def differentiate(self, x, t=1, multiple_trajectories=False):
         """
-        Apply the model's differentiation method to data
+        Apply the model's differentiation method to data.
 
         Parameters
         ----------
@@ -445,7 +445,7 @@ class SINDy(BaseEstimator):
         Parameters
         ----------
         x0: numpy array, size [n_features]
-            Initial condition from which to simulate
+            Initial condition from which to simulate.
 
         t: int or numpy array of size [n_samples]
             If the model is in continuous time, t must be an array of time

@@ -107,7 +107,7 @@ class BaseOptimizer(LinearRegression):
             copy=self.copy_X,
             sample_weight=sample_weight,
         )
-        
+
         if sample_weight is not None:
             x, y = _rescale_data(x, y, sample_weight)
 
@@ -121,15 +121,15 @@ class BaseOptimizer(LinearRegression):
 
         if self.unbias:
             self._unbias(x, y)
-        
+
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
 
     def _unbias(self, x, y):
         if np.any(self.ind_):
             for i in range(self.ind_.shape[0]):
-                coef = LinearRegression().fit(x[:, self.ind_[i]], y[:,i]).coef_
-                self.coef_[i,self.ind_[i]] = coef
+                coef = LinearRegression().fit(x[:, self.ind_[i]], y[:, i]).coef_
+                self.coef_[i, self.ind_[i]] = coef
 
     @property
     def complexity(self):

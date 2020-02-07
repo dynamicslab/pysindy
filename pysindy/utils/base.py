@@ -142,8 +142,6 @@ def equations(pipeline, input_features=None, precision=3, input_fmt=None):
     coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
     return [
-        print_model(
-            coef[i], input_features, intercept=intercept, precision=precision
-        )
+        print_model(coef[i], input_features, intercept=intercept, precision=precision)
         for i in range(coef.shape[0])
     ]

@@ -129,11 +129,11 @@ class STLSQ(BaseOptimizer):
             for i in range(n_targets):
                 coef_i = self._regress(x[:, ind[i]], y[:, i])
                 coef_i, ind_i = self._sparse_coefficients(
-                        n_features, ind[i], coef_i, self.threshold
-                    )
+                    n_features, ind[i], coef_i, self.threshold
+                )
                 coef[i] = coef_i
                 ind[i] = ind_i
-            
+
             self.history_.append(coef)
             if np.sum(ind) == n_features_selected or self._no_change():
                 # could not (further) select important features

@@ -171,9 +171,7 @@ class SINDy(BaseEstimator):
         self.model.fit(x, x_dot)
 
         self.n_input_features_ = self.model.steps[0][1].n_input_features_
-        self.n_output_features_ = (
-            self.model.steps[0][1].n_output_features_
-        )
+        self.n_output_features_ = self.model.steps[0][1].n_output_features_
 
         if self.feature_names is None:
             feature_names = []
@@ -235,7 +233,9 @@ class SINDy(BaseEstimator):
                 base_feature_names = [f + "[k]" for f in self.feature_names]
             else:
                 base_feature_names = self.feature_names
-            return equations(self.model, input_features=base_feature_names, precision=precision)
+            return equations(
+                self.model, input_features=base_feature_names, precision=precision
+            )
         else:
             raise NotFittedError(
                 "SINDy model must be fit before equations can be called"
@@ -422,10 +422,8 @@ class SINDy(BaseEstimator):
         """Return a list of names of features used by SINDy model
         """
         if hasattr(self, "model"):
-            return (
-                self.model
-                .steps[0][1]
-                .get_feature_names(input_features=self.feature_names)
+            return self.model.steps[0][1].get_feature_names(
+                input_features=self.feature_names
             )
         else:
             raise NotFittedError(

@@ -124,7 +124,7 @@ class SR3(BaseOptimizer):
         Iterates the thresholding. Assumes an initial guess
         is saved in self.coef_ and self.ind_
         """
-        coef_sparse = self.coef_
+        coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 
         # Precompute some objects for upcoming least-squares solves.

@@ -1,0 +1,22 @@
+{
+  "@context": "https://raw.githubusercontent.com/codemeta/codemeta/master/codemeta.jsonld",
+  "@type": "Code",
+  "author": [
+    "Brian de Silva",
+    "Kathleen Champion",
+    "Markus Quade",
+    "Jean-Christophe Loiseau",
+    "J. Nathan Kutz",
+    "Steven L. Brunton"
+  ],
+  "identifier": "",
+  "codeRepository": "https://github.com/dynamicslab/pysindy",
+  "datePublished": "2020-02-10",
+  "dateModified": "2020-02-10",
+  "dateCreated": "2020-02-10",
+  "description": "A package for the sparse identification of nonlinear dynamical systems from data.",
+  "keywords": "python, model discovery, dynamical systems, sparse regression",
+  "license": "MIT",
+  "title": "PySINDy",
+  "version": "v0.12.0"
+}

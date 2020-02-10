@@ -126,8 +126,8 @@ class BaseOptimizer(LinearRegression):
         return self
 
     def _unbias(self, x, y):
-        if np.any(self.ind_):
-            for i in range(self.ind_.shape[0]):
+        for i in range(self.ind_.shape[0]):
+            if np.any(self.ind_[i]):
                 coef = LinearRegression().fit(x[:, self.ind_[i]], y[:, i]).coef_
                 self.coef_[i, self.ind_[i]] = coef
 

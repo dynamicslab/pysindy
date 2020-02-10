@@ -122,11 +122,19 @@ class STLSQ(BaseOptimizer):
                         self.threshold
                     )
                 )
-                coef = np.zeros_like(ind, dtype=float)
+                coef = np.zeros((n_targets, n_features))
                 break
 
             coef = np.zeros((n_targets, n_features))
             for i in range(n_targets):
+                if np.count_nonzero(ind[i]) == 0:
+                    warnings.warn(
+                        """Sparsity parameter is too big ({}) and eliminated all
+                        coeficients""".format(
+                            self.threshold
+                        )
+                    )
+                    continue
                 coef_i = self._regress(x[:, ind[i]], y[:, i])
                 coef_i, ind_i = self._sparse_coefficients(
                     n_features, ind[i], coef_i, self.threshold

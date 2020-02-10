@@ -29,6 +29,7 @@ affiliations:
    index: 3
  - name: Department of Mechanical Engineering, University of Washington
    index: 4
+date: 10 February 2020
 bibliography: paper.bib
 ---
 

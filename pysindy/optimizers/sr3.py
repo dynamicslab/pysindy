@@ -106,7 +106,7 @@ class SR3(BaseOptimizer):
         """Update the regularized weight vector
         """
         coef_sparse = self.prox(coef_full, self.threshold)
-        self.history_.append(coef_sparse)
+        self.history_.append(coef_sparse.T)
         return coef_sparse
 
     def _convergence_criterion(self):

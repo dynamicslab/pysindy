@@ -482,3 +482,16 @@ def test_simulate_errors(data_lorenz):
     model = SINDy(discrete_time=True)
     with pytest.raises(ValueError):
         model.simulate(x[0], t=[1, 2])
+
+
+def test_fit_warn(data_lorenz):
+    x, t = data_lorenz
+    model = SINDy(optimizer=STLSQ(threshold=100))
+
+    with pytest.warns(UserWarning):
+        model.fit(x, t)
+
+    with pytest.warns(None) as warn_record:
+        model.fit(x, t, quiet=True)
+
+    assert warn_record is None

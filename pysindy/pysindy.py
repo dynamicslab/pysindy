@@ -1,3 +1,4 @@
+import warnings
 from typing import Sequence
 
 from numpy import isscalar
@@ -105,7 +106,7 @@ class SINDy(BaseEstimator):
         self.discrete_time = discrete_time
         self.n_jobs = n_jobs
 
-    def fit(self, x, t=1, x_dot=None, multiple_trajectories=False):
+    def fit(self, x, t=1, x_dot=None, multiple_trajectories=False, quiet=False):
         """
         Fit the SINDy model.
 
@@ -141,10 +142,16 @@ class SINDy(BaseEstimator):
             for each trajectory. If False, the training data must be a single
             array.
 
+        quiet: boolean, optional (default False)
+            Whether or not to suppress warnings during model fitting.
+
         Returns
         -------
         self: returns an instance of self
         """
+        if quiet:
+            warnings.filterwarnings("ignore")
+
         if multiple_trajectories:
             x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
         else:

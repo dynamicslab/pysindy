@@ -1,1 +1,4 @@
 .git_archival.txt  export-subst
+
+# Interpret Jupyter notebooks as Python
+*.ipynb linguist-language=Python

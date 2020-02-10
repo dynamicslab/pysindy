@@ -74,7 +74,7 @@ class LASSO(BaseOptimizer):
         lasso_model.fit(x, y)
 
         if lasso_model.coef_.ndim == 1:
-            self.coef_ = lasso_model.coef_[newaxis,:]
+            self.coef_ = lasso_model.coef_[newaxis, :]
         else:
             self.coef_ = lasso_model.coef_
         self.iters = lasso_model.n_iter_

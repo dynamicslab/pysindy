@@ -6,6 +6,7 @@ import abc
 import numpy as np
 from scipy import sparse
 from sklearn.linear_model import LinearRegression
+from sklearn.multioutput import MultiOutputRegressor
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_X_y
 
@@ -23,7 +24,13 @@ def _rescale_data(X, y, sample_weight):
     return X, y
 
 
-class BaseOptimizer(LinearRegression):
+class ComplexityMixin:
+    @property
+    def complexity(self):
+        return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)
+
+
+class BaseOptimizer(LinearRegression, ComplexityMixin):
     """
     Base class for SINDy optimizers. Subclasses must implement
     a _reduce method for carrying out the bulk of the work of
@@ -131,6 +138,12 @@ class BaseOptimizer(LinearRegression):
                 coef = LinearRegression().fit(x[:, self.ind_[i]], y[:, i]).coef_
                 self.coef_[i, self.ind_[i]] = coef
 
+
+class _MultiTargetLinearRegressor(MultiOutputRegressor, ComplexityMixin):
     @property
-    def complexity(self):
-        return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)
+    def coef_(self):
+        return np.vstack([est.coef_ for est in self.estimators_])
+
+    @property
+    def intercept_(self):
+        return np.array([est.intercep_ for est in self.estimators_])

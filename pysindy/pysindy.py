@@ -15,8 +15,10 @@ from sklearn.utils.validation import check_is_fitted
 
 from pysindy.differentiation import FiniteDifference
 from pysindy.optimizers import STLSQ
+from pysindy.optimizers.base import _MultiTargetLinearRegressor
 from pysindy.utils.base import drop_nan_rows
 from pysindy.utils.base import equations
+from pysindy.utils.base import supports_multiple_targets
 from pysindy.utils.base import validate_input
 
 
@@ -164,6 +166,12 @@ class SINDy(BaseEstimator):
 
         # Drop rows where derivative isn't known
         x, x_dot = drop_nan_rows(x, x_dot)
+
+        if supports_multiple_targets(self.optimizer):
+            optimizer = self.optimizer
+        else:
+            optimizer = _MultiTargetLinearRegressor(self.optimizer)
+        steps = [("features", self.feature_library), ("model", optimizer)]
 
         steps = [("features", self.feature_library), ("model", self.optimizer)]
         self.model = Pipeline(steps)
@@ -488,4 +496,4 @@ class SINDy(BaseEstimator):
 
     @property
     def complexity(self):
-        return sum(est.steps[1][1].complexity for est in self.model.estimators_)
+        return self.model.complexity

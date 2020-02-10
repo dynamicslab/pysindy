@@ -1,6 +1,7 @@
 from itertools import repeat
 
 import numpy as np
+from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
 
 # Define a special object for the default value of t in
@@ -145,3 +146,13 @@ def equations(pipeline, input_features=None, precision=3, input_fmt=None):
         print_model(coef[i], input_features, intercept=intercept, precision=precision)
         for i in range(coef.shape[0])
     ]
+
+
+def supports_multiple_targets(estimator):
+    """Checkes whether estimator support mutliple targets."""
+    if isinstance(estimator, MultiOutputMixin):
+        return True
+    try:
+        return estimator._more_tags["multioutput"]
+    except (AttributeError, KeyError):
+        return False

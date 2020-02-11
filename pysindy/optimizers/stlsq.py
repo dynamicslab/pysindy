@@ -24,7 +24,7 @@ class STLSQ(BaseOptimizer):
         Coefficients with magnitude below the threshold are set
         to zero.
 
-    alpha : float, optional (default 0)
+    alpha : float, optional (default 0.1)
         Optional L2 (ridge) regularization on the weight vector.
 
     max_iter : int, optional (default 20)
@@ -86,7 +86,7 @@ class STLSQ(BaseOptimizer):
     def __init__(
         self,
         threshold=0.1,
-        alpha=0.0,
+        alpha=0.1,
         max_iter=20,
         ridge_kw=None,
         normalize=False,

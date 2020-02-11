@@ -1,3 +1,4 @@
+from numpy import newaxis
 from sklearn.linear_model import ElasticNet as SKElasticNet
 
 from pysindy.optimizers import BaseOptimizer
@@ -89,5 +90,8 @@ class ElasticNet(BaseOptimizer):
 
         elastic_net_model.fit(x, y)
 
-        self.coef_ = elastic_net_model.coef_
+        if elastic_net_model.coef_.ndim == 1:
+            self.coef_ = elastic_net_model.coef_[newaxis, :]
+        else:
+            self.coef_ = elastic_net_model.coef_
         self.iters = elastic_net_model.n_iter_

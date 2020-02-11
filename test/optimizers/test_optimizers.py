@@ -15,7 +15,6 @@ from pysindy.optimizers import STLSQ
 def test_fit(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    x_dot = x_dot.reshape(-1)
     optimizer.fit(x, x_dot)
 
     check_is_fitted(optimizer)
@@ -28,7 +27,6 @@ def test_fit(data_derivative_1d, optimizer):
 def test_alternate_parameters(data_derivative_1d, kwargs):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    x_dot = x_dot.reshape(-1)
 
     model = STLSQ(**kwargs)
     model.fit(x, x_dot)
@@ -86,7 +84,6 @@ def test_bad_parameters(data_derivative_1d):
 def test_sr3_prox_functions(data_derivative_1d, thresholder):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    x_dot = x_dot.reshape(-1)
     model = SR3(thresholder=thresholder)
     model.fit(x, x_dot)
     check_is_fitted(model)
@@ -95,7 +92,6 @@ def test_sr3_prox_functions(data_derivative_1d, thresholder):
 def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    x_dot = x_dot.reshape(-1)
 
     optimizer_biased = STLSQ(threshold=0.01, alpha=0.01, max_iter=1, unbias=False)
     optimizer_biased.fit(x, x_dot)

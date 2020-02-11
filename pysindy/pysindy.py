@@ -1,3 +1,4 @@
+import warnings
 from typing import Sequence
 
 from numpy import isscalar
@@ -6,7 +7,9 @@ from numpy import newaxis
 from numpy import vstack
 from numpy import zeros
 from scipy.integrate import odeint
+from scipy.linalg import LinAlgWarning
 from sklearn.base import BaseEstimator
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.metrics import r2_score
 from sklearn.multioutput import MultiOutputRegressor
@@ -105,7 +108,7 @@ class SINDy(BaseEstimator):
         self.discrete_time = discrete_time
         self.n_jobs = n_jobs
 
-    def fit(self, x, t=1, x_dot=None, multiple_trajectories=False):
+    def fit(self, x, t=1, x_dot=None, multiple_trajectories=False, quiet=False):
         """
         Fit the SINDy model.
 
@@ -141,6 +144,9 @@ class SINDy(BaseEstimator):
             for each trajectory. If False, the training data must be a single
             array.
 
+        quiet: boolean, optional (default False)
+            Whether or not to suppress warnings during model fitting.
+
         Returns
         -------
         self: returns an instance of self
@@ -168,7 +174,13 @@ class SINDy(BaseEstimator):
         steps = [("features", self.feature_library), ("model", self.optimizer)]
         self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
 
-        self.model.fit(x, x_dot)
+        action = "ignore" if quiet else "default"
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action, category=ConvergenceWarning)
+            warnings.filterwarnings(action, category=LinAlgWarning)
+            warnings.filterwarnings(action, category=UserWarning)
+
+            self.model.fit(x, x_dot)
 
         self.n_input_features_ = self.model.estimators_[0].steps[0][1].n_input_features_
         self.n_output_features_ = (

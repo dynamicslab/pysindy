@@ -7,7 +7,9 @@ from numpy import newaxis
 from numpy import vstack
 from numpy import zeros
 from scipy.integrate import odeint
+from scipy.linalg import LinAlgWarning
 from sklearn.base import BaseEstimator
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.metrics import r2_score
 from sklearn.multioutput import MultiOutputRegressor
@@ -149,9 +151,6 @@ class SINDy(BaseEstimator):
         -------
         self: returns an instance of self
         """
-        if quiet:
-            warnings.filterwarnings("ignore")
-
         if multiple_trajectories:
             x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
         else:
@@ -175,7 +174,13 @@ class SINDy(BaseEstimator):
         steps = [("features", self.feature_library), ("model", self.optimizer)]
         self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
 
-        self.model.fit(x, x_dot)
+        action = "ignore" if quiet else "default"
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action, category=ConvergenceWarning)
+            warnings.filterwarnings(action, category=LinAlgWarning)
+            warnings.filterwarnings(action, category=UserWarning)
+
+            self.model.fit(x, x_dot)
 
         self.n_input_features_ = self.model.estimators_[0].steps[0][1].n_input_features_
         self.n_output_features_ = (

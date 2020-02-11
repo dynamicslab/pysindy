@@ -14,6 +14,7 @@ pytest file_to_test.py
 """
 import numpy as np
 import pytest
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 
@@ -484,11 +485,15 @@ def test_simulate_errors(data_lorenz):
         model.simulate(x[0], t=[1, 2])
 
 
-def test_fit_warn(data_lorenz):
+@pytest.mark.parametrize(
+    "params, warning",
+    [({"threshold": 100}, UserWarning), ({"max_iter": 1}, ConvergenceWarning)],
+)
+def test_fit_warn(data_lorenz, params, warning):
     x, t = data_lorenz
-    model = SINDy(optimizer=STLSQ(threshold=100))
+    model = SINDy(optimizer=STLSQ(**params))
 
-    with pytest.warns(UserWarning):
+    with pytest.warns(warning):
         model.fit(x, t)
 
     with pytest.warns(None) as warn_record:

@@ -494,4 +494,4 @@ def test_fit_warn(data_lorenz):
     with pytest.warns(None) as warn_record:
         model.fit(x, t, quiet=True)
 
-    assert warn_record is None
+    assert len(warn_record) == 0

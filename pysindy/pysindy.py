@@ -496,4 +496,4 @@ class SINDy(BaseEstimator):
 
     @property
     def complexity(self):
-        return self.model.complexity
+        return self.model.steps[-1][1].complexity

@@ -83,10 +83,14 @@ def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
 
-    optimizer_biased = SINDyOptimizer(STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=False)
+    optimizer_biased = SINDyOptimizer(
+        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=False
+    )
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = SINDyOptimizer(STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=True)
+    optimizer_unbiased = SINDyOptimizer(
+        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=True
+    )
     optimizer_unbiased.fit(x, x_dot)
 
     assert (
@@ -100,10 +104,14 @@ def test_unbias_external(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
 
-    optimizer_biased = SINDyOptimizer(Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=False)
+    optimizer_biased = SINDyOptimizer(
+        Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=False
+    )
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = SINDyOptimizer(Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=True)
+    optimizer_unbiased = SINDyOptimizer(
+        Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=True
+    )
     optimizer_unbiased.fit(x, x_dot)
 
     assert (

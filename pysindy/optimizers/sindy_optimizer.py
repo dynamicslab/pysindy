@@ -6,13 +6,11 @@ from sklearn.linear_model import LinearRegression
 class SINDyOptimizer(BaseEstimator):
     def __init__(self, optimizer, unbias=True):
         self.optimizer = optimizer
-        self.ind_ = None
         self.unbias = unbias
 
     def fit(self, x, y):
         self.optimizer.fit(x, y)
-        if not self.ind_:
-            self.ind_ = np.abs(self.coef_) > 1e-14
+        self.ind_ = np.abs(self.coef_) > 1e-14
 
         if self.unbias:
             self._unbias(x, y)

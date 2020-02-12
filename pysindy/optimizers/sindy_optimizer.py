@@ -37,7 +37,7 @@ class SINDyOptimizer(BaseEstimator):
     def predict(self, x):
         prediction = self.optimizer.predict(x)
         if prediction.ndim == 1:
-            return prediction[:,np.newaxis]
+            return prediction[:, np.newaxis]
         else:
             return prediction
 

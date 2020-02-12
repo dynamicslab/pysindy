@@ -23,10 +23,17 @@ class SINDyOptimizer(BaseEstimator, ComplexityMixin):
         return self
 
     def _unbias(self, x, y):
-        coef = np.zeros((y.shape[1],x.shape[1]))
+        coef = np.zeros((y.shape[1], x.shape[1]))
         for i in range(self.ind_.shape[0]):
             if np.any(self.ind_[i]):
-                coef[i, self.ind_[i]] = LinearRegression(fit_intercept=self.optimizer.fit_intercept, normalize=self.optimizer.normalize).fit(x[:, self.ind_[i]], y[:, i]).coef_
+                coef[i, self.ind_[i]] = (
+                    LinearRegression(
+                        fit_intercept=self.optimizer.fit_intercept,
+                        normalize=self.optimizer.normalize,
+                    )
+                    .fit(x[:, self.ind_[i]], y[:, i])
+                    .coef_
+                )
         if self.optimizer.coef_.ndim == 1:
             self.optimizer.coef_ = coef[0]
         else:
@@ -46,7 +53,7 @@ class SINDyOptimizer(BaseEstimator, ComplexityMixin):
     def intercept_(self):
         return self.optimizer.intercept_
 
-    # not sure if 
+    # not sure if
     @property
     def complexity(self):
         return self.optimizer.complexity

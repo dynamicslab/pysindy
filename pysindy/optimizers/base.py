@@ -120,7 +120,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self.ind_ = np.ones((y.shape[1], x.shape[1]), dtype=bool)
         self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0].T  # initial guess
         self.history_.append(self.coef_)
-        
+
         self._reduce(x, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
 

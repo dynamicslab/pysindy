@@ -14,6 +14,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy.differentiation import FiniteDifference
+from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers.base import _MultiTargetLinearRegressor
 from pysindy.utils.base import drop_nan_rows
@@ -106,7 +107,7 @@ class SINDy(BaseEstimator):
         self.discrete_time = discrete_time
         self.n_jobs = n_jobs
 
-    def fit(self, x, t=1, x_dot=None, multiple_trajectories=False):
+    def fit(self, x, t=1, x_dot=None, multiple_trajectories=False, unbias=True):
         """
         Fit the SINDy model.
 
@@ -171,9 +172,8 @@ class SINDy(BaseEstimator):
             optimizer = self.optimizer
         else:
             optimizer = _MultiTargetLinearRegressor(self.optimizer)
+        optimizer = SINDyOptimizer(optimizer, unbias=unbias)
         steps = [("features", self.feature_library), ("model", optimizer)]
-
-        steps = [("features", self.feature_library), ("model", self.optimizer)]
         self.model = Pipeline(steps)
 
         self.model.fit(x, x_dot)

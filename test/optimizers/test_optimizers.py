@@ -86,7 +86,7 @@ def test_sr3_prox_functions(data_derivative_1d, thresholder):
         Lasso(alpha=0.1, fit_intercept=False, max_iter=1),
     ],
 )
-def test_unbias(data_derivative_1d):
+def test_unbias(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
 

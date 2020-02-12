@@ -35,7 +35,11 @@ class SINDyOptimizer(BaseEstimator):
             self.optimizer.coef_ = coef
 
     def predict(self, x):
-        return self.optimizer.predict(x)
+        prediction = self.optimizer.predict(x)
+        if prediction.ndim == 1:
+            return prediction[:,np.newaxis]
+        else:
+            return prediction
 
     @property
     def coef_(self):

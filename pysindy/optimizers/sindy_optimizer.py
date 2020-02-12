@@ -1,9 +1,8 @@
 import numpy as np
-
-from pysindy.optimizers.base import ComplexityMixin
-
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
+
+from pysindy.optimizers.base import ComplexityMixin
 
 
 class SINDyOptimizer(BaseEstimator, ComplexityMixin):

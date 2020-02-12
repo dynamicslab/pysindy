@@ -2,10 +2,8 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
 
-from pysindy.optimizers.base import ComplexityMixin
 
-
-class SINDyOptimizer(BaseEstimator, ComplexityMixin):
+class SINDyOptimizer(BaseEstimator):
     def __init__(self, optimizer, unbias=True):
         self.optimizer = optimizer
         self.ind_ = None
@@ -55,4 +53,4 @@ class SINDyOptimizer(BaseEstimator, ComplexityMixin):
     # not sure if
     @property
     def complexity(self):
-        return self.optimizer.complexity
+        return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)

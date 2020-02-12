@@ -6,8 +6,8 @@ from pysindy.optimizers.base import ComplexityMixin
 
 
 class SINDyOptimizer(BaseEstimator, ComplexityMixin):
-    def __init__(self, internal_optimizer, unbias=True):
-        self.optimizer = internal_optimizer
+    def __init__(self, optimizer, unbias=True):
+        self.optimizer = optimizer
         self.ind_ = None
         self.unbias = unbias
 

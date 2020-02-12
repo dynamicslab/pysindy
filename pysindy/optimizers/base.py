@@ -60,14 +60,13 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         unregularized least-squares fit.
     """
 
-    def __init__(self, normalize=False, fit_intercept=False, copy_X=True, unbias=True):
+    def __init__(self, normalize=False, fit_intercept=False, copy_X=True):
         super(BaseOptimizer, self).__init__(
             fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
         self.iters = 0
         self.coef_ = None
         self.ind_ = None
-        self.unbias = unbias
         self.history_ = []
 
     # Force subclasses to implement this

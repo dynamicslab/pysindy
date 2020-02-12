@@ -157,6 +157,6 @@ def supports_multiple_targets(estimator):
     if isinstance(estimator, MultiOutputMixin):
         return True
     try:
-        return estimator._more_tags["multioutput"]
+        return estimator._more_tags()["multioutput"]
     except (AttributeError, KeyError):
         return False

@@ -135,4 +135,4 @@ class _MultiTargetLinearRegressor(MultiOutputRegressor, ComplexityMixin):
 
     @property
     def intercept_(self):
-        return np.array([est.intercep_ for est in self.estimators_])
+        return np.array([est.intercept_ for est in self.estimators_])

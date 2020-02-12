@@ -2,6 +2,9 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
 
+from pysindy.optimizers.base import _MultiTargetLinearRegressor
+from pysindy.utils.base import supports_multiple_targets
+
 
 class SINDyOptimizer(BaseEstimator):
     def __init__(self, optimizer, unbias=True):
@@ -9,6 +12,9 @@ class SINDyOptimizer(BaseEstimator):
         self.unbias = unbias
 
     def fit(self, x, y):
+        if len(y.shape) > 1 and y.shape[1] > 1:
+            if not supports_multiple_targets(self.optimizer):
+                self.optimizer = _MultiTargetLinearRegressor(self.optimizer)
         self.optimizer.fit(x, y)
         self.ind_ = np.abs(self.coef_) > 1e-14
 

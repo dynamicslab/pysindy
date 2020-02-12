@@ -1,8 +1,10 @@
 """
 Unit tests for optimizers.
 """
+import numpy as np
 import pytest
 from numpy.linalg import norm
+from sklearn.base import BaseEstimator
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
@@ -10,20 +12,53 @@ from sklearn.utils.validation import check_is_fitted
 from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
+from pysindy.utils import supports_multiple_targets
+
+
+class DummyLinearModel(BaseEstimator):
+    # Does not natively support multiple targets
+    def fit(self, x, y):
+        self.coef_ = np.ones(x.shape[1])
+        self.intercept_ = 0
+        return self
+
+
+@pytest.mark.parametrize(
+    "cls, support",
+    [(Lasso, True), (STLSQ, True), (SR3, True), (DummyLinearModel, False)],
+)
+def test_supports_multiple_targets(cls, support):
+    assert supports_multiple_targets(cls()) == support
+
+
+@pytest.fixture(params=["data_derivative_1d", "data_derivative_2d"])
+def data(request):
+    return request.getfixturevalue(request.param)
 
 
 @pytest.mark.parametrize(
     "optimizer",
-    [STLSQ(), SR3(), Lasso(fit_intercept=False), ElasticNet(fit_intercept=False)],
+    [
+        STLSQ(),
+        SR3(),
+        Lasso(fit_intercept=False),
+        ElasticNet(fit_intercept=False),
+        DummyLinearModel(),
+    ],
 )
-def test_fit(data_derivative_1d, optimizer):
-    x, x_dot = data_derivative_1d
-    x = x.reshape(-1, 1)
+def test_fit(data, optimizer):
+    x, x_dot = data
+    if len(x.shape) == 1:
+        x = x.reshape(-1, 1)
     opt = SINDyOptimizer(optimizer, unbias=False)
     opt.fit(x, x_dot)
 
     check_is_fitted(opt)
     assert opt.complexity >= 0
+    if len(x_dot.shape) > 1:
+        assert opt.coef_.shape == (x.shape[1], x_dot.shape[1])
+    else:
+        assert opt.coef_.shape == (1, x.shape[1])
 
 
 @pytest.mark.parametrize(

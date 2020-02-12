@@ -7,6 +7,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from pysindy.optimizers import ElasticNet
 from pysindy.optimizers import LASSO
+from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
 
@@ -93,10 +94,10 @@ def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
 
-    optimizer_biased = STLSQ(threshold=0.01, alpha=0.01, max_iter=1, unbias=False)
+    optimizer_biased = SINDyOptimizer(STLSQ(threshold=0.01, alpha=0.01, max_iter=1), unbias=False)
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = STLSQ(threshold=0.01, alpha=0.01, max_iter=1, unbias=True)
+    optimizer_unbiased = SINDyOptimizer(STLSQ(threshold=0.01, alpha=0.01, max_iter=1), unbias=True)
     optimizer_unbiased.fit(x, x_dot)
 
     assert (

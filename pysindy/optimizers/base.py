@@ -65,10 +65,9 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
             fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
         self.iters = 0
-        self.coef_ = []
-        self.ind_ = []
+        self.coef_ = None
+        self.ind_ = None
         self.unbias = unbias
-
         self.history_ = []
 
     # Force subclasses to implement this
@@ -122,21 +121,12 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self.ind_ = np.ones((y.shape[1], x.shape[1]), dtype=bool)
         self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0].T  # initial guess
         self.history_.append(self.coef_)
-
+        
         self._reduce(x, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
 
-        if self.unbias:
-            self._unbias(x, y)
-
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
-
-    def _unbias(self, x, y):
-        for i in range(self.ind_.shape[0]):
-            if np.any(self.ind_[i]):
-                coef = LinearRegression().fit(x[:, self.ind_[i]], y[:, i]).coef_
-                self.coef_[i, self.ind_[i]] = coef
 
 
 class _MultiTargetLinearRegressor(MultiOutputRegressor, ComplexityMixin):

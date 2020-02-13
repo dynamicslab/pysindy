@@ -14,7 +14,7 @@ class SR3(BaseOptimizer):
     Sparse relaxed regularized regression.
 
     Attempts to minimize the objective function
-    
+
     .. math::
 
         0.5\\|y-Xw\\|^2_2 + lambda \\times R(v)

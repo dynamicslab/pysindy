@@ -6,6 +6,7 @@ import abc
 import numpy as np
 from scipy import sparse
 from sklearn.linear_model import LinearRegression
+from sklearn.multioutput import MultiOutputRegressor
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_X_y
 
@@ -23,7 +24,13 @@ def _rescale_data(X, y, sample_weight):
     return X, y
 
 
-class BaseOptimizer(LinearRegression):
+class ComplexityMixin:
+    @property
+    def complexity(self):
+        return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)
+
+
+class BaseOptimizer(LinearRegression, ComplexityMixin):
     """
     Base class for SINDy optimizers. Subclasses must implement
     a _reduce method for carrying out the bulk of the work of
@@ -53,14 +60,7 @@ class BaseOptimizer(LinearRegression):
         unregularized least-squares fit.
     """
 
-    def __init__(
-        self,
-        max_iter=20,
-        normalize=False,
-        fit_intercept=False,
-        copy_X=True,
-        unbias=True,
-    ):
+    def __init__(self, max_iter=20, normalize=False, fit_intercept=False, copy_X=True):
         super(BaseOptimizer, self).__init__(
             fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
@@ -70,10 +70,8 @@ class BaseOptimizer(LinearRegression):
 
         self.max_iter = max_iter
         self.iters = 0
-        self.coef_ = []
-        self.ind_ = []
-        self.unbias = unbias
-
+        self.coef_ = None
+        self.ind_ = None
         self.history_ = []
 
     # Force subclasses to implement this
@@ -109,7 +107,7 @@ class BaseOptimizer(LinearRegression):
         -------
         self : returns an instance of self
         """
-        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=False)
+        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
         x, y, X_offset, y_offset, X_scale = self._preprocess_data(
             x_,
@@ -124,24 +122,22 @@ class BaseOptimizer(LinearRegression):
             x, y = _rescale_data(x, y, sample_weight)
 
         self.iters = 0
-        self.ind_ = np.ones(x.shape[1], dtype=bool)
-        self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0]  # initial guess
+        self.ind_ = np.ones((y.shape[1], x.shape[1]), dtype=bool)
+        self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0].T  # initial guess
         self.history_.append(self.coef_)
 
         self._reduce(x, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
 
-        if self.unbias:
-            self._unbias(x, y)
-
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
 
-    def _unbias(self, x, y):
-        if np.any(self.ind_):
-            coef = LinearRegression(fit_intercept=False).fit(x[:, self.ind_], y).coef_
-            self.coef_[self.ind_] = coef
+
+class _MultiTargetLinearRegressor(MultiOutputRegressor, ComplexityMixin):
+    @property
+    def coef_(self):
+        return np.vstack([est.coef_ for est in self.estimators_])
 
     @property
-    def complexity(self):
-        return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)
+    def intercept_(self):
+        return np.array([est.intercept_ for est in self.estimators_])

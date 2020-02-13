@@ -16,14 +16,14 @@ import numpy as np
 import pytest
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
+from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
-from pysindy.optimizers import ElasticNet
-from pysindy.optimizers import LASSO
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
 
@@ -109,7 +109,7 @@ def test_mixed_inputs(data):
 
 
 @pytest.mark.parametrize(
-    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")],
+    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
 )
 def test_bad_t(data):
     x, t = data
@@ -150,10 +150,10 @@ def test_bad_t(data):
         (pytest.lazy_fixture("data_lorenz"), STLSQ()),
         (pytest.lazy_fixture("data_1d"), SR3()),
         (pytest.lazy_fixture("data_lorenz"), SR3()),
-        (pytest.lazy_fixture("data_1d"), LASSO()),
-        (pytest.lazy_fixture("data_lorenz"), LASSO()),
-        (pytest.lazy_fixture("data_1d"), ElasticNet()),
-        (pytest.lazy_fixture("data_lorenz"), ElasticNet()),
+        (pytest.lazy_fixture("data_1d"), Lasso(fit_intercept=False)),
+        (pytest.lazy_fixture("data_lorenz"), Lasso(fit_intercept=False)),
+        (pytest.lazy_fixture("data_1d"), ElasticNet(fit_intercept=False)),
+        (pytest.lazy_fixture("data_lorenz"), ElasticNet(fit_intercept=False)),
     ],
 )
 def test_predict(data, optimizer):

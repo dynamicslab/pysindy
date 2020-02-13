@@ -12,15 +12,15 @@ from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.metrics import r2_score
-from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy.differentiation import FiniteDifference
+from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import STLSQ
 from pysindy.utils.base import drop_nan_rows
-from pysindy.utils.base import equation
+from pysindy.utils.base import equations
 from pysindy.utils.base import validate_input
 
 
@@ -108,7 +108,9 @@ class SINDy(BaseEstimator):
         self.discrete_time = discrete_time
         self.n_jobs = n_jobs
 
-    def fit(self, x, t=1, x_dot=None, multiple_trajectories=False, quiet=False):
+    def fit(
+        self, x, t=1, x_dot=None, multiple_trajectories=False, unbias=True, quiet=False
+    ):
         """
         Fit the SINDy model.
 
@@ -171,8 +173,9 @@ class SINDy(BaseEstimator):
         # Drop rows where derivative isn't known
         x, x_dot = drop_nan_rows(x, x_dot)
 
-        steps = [("features", self.feature_library), ("model", self.optimizer)]
-        self.model = MultiOutputRegressor(Pipeline(steps), n_jobs=self.n_jobs)
+        optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
+        steps = [("features", self.feature_library), ("model", optimizer)]
+        self.model = Pipeline(steps)
 
         action = "ignore" if quiet else "default"
         with warnings.catch_warnings():
@@ -182,10 +185,8 @@ class SINDy(BaseEstimator):
 
             self.model.fit(x, x_dot)
 
-        self.n_input_features_ = self.model.estimators_[0].steps[0][1].n_input_features_
-        self.n_output_features_ = (
-            self.model.estimators_[0].steps[0][1].n_output_features_
-        )
+        self.n_input_features_ = self.model.steps[0][1].n_input_features_
+        self.n_output_features_ = self.model.steps[0][1].n_output_features_
 
         if self.feature_names is None:
             feature_names = []
@@ -240,15 +241,14 @@ class SINDy(BaseEstimator):
             Strings containing the SINDy model equation for each input feature.
         """
         if hasattr(self, "model"):
-            check_is_fitted(self.model.estimators_[0].steps[-1][1])
+            check_is_fitted(self.model.steps[-1][1])
             if self.discrete_time:
                 base_feature_names = [f + "[k]" for f in self.feature_names]
             else:
                 base_feature_names = self.feature_names
-            return [
-                equation(est, input_features=base_feature_names, precision=precision)
-                for est in self.model.estimators_
-            ]
+            return equations(
+                self.model, input_features=base_feature_names, precision=precision
+            )
         else:
             raise NotFittedError(
                 "SINDy model must be fit before equations can be called"
@@ -429,8 +429,8 @@ class SINDy(BaseEstimator):
         """Return a list of the coefficients learned by SINDy model.
         """
         if hasattr(self, "model"):
-            check_is_fitted(self.model.estimators_[0].steps[-1][1])
-            return vstack([est.steps[-1][1].coef_ for est in self.model.estimators_]).T
+            check_is_fitted(self.model.steps[-1][1])
+            return self.model.steps[-1][1].coef_
         else:
             raise NotFittedError(
                 "SINDy model must be fit before coefficients is called"
@@ -440,10 +440,8 @@ class SINDy(BaseEstimator):
         """Return a list of names of features used by SINDy model.
         """
         if hasattr(self, "model"):
-            return (
-                self.model.estimators_[0]
-                .steps[0][1]
-                .get_feature_names(input_features=self.feature_names)
+            return self.model.steps[0][1].get_feature_names(
+                input_features=self.feature_names
             )
         else:
             raise NotFittedError(
@@ -508,4 +506,4 @@ class SINDy(BaseEstimator):
 
     @property
     def complexity(self):
-        return sum(est.steps[1][1].complexity for est in self.model.estimators_)
+        return self.model.steps[-1][1].complexity

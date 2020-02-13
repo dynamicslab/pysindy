@@ -14,7 +14,7 @@ class SR3(BaseOptimizer):
     Sparse relaxed regularized regression.
 
     Attempts to minimize the objective function
-
+    
     .. math::
 
         0.5\\|y-Xw\\|^2_2 + lambda \\times R(v)
@@ -113,14 +113,12 @@ class SR3(BaseOptimizer):
         normalize=False,
         fit_intercept=False,
         copy_X=True,
-        unbias=True,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
             normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
-            unbias=unbias,
         )
 
         if threshold < 0:
@@ -148,7 +146,7 @@ class SR3(BaseOptimizer):
         """Update the regularized weight vector
         """
         coef_sparse = self.prox(coef_full, self.threshold)
-        self.history_.append(coef_sparse)
+        self.history_.append(coef_sparse.T)
         return coef_sparse
 
     def _convergence_criterion(self):
@@ -166,7 +164,7 @@ class SR3(BaseOptimizer):
         Iterates the thresholding. Assumes an initial guess
         is saved in self.coef_ and self.ind_
         """
-        coef_sparse = self.coef_
+        coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 
         # Precompute some objects for upcoming least-squares solves.
@@ -189,5 +187,5 @@ class SR3(BaseOptimizer):
                 ConvergenceWarning,
             )
 
-        self.coef_ = coef_sparse
-        self.coef_full_ = coef_full
+        self.coef_ = coef_sparse.T
+        self.coef_full_ = coef_full.T

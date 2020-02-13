@@ -1,25 +1,64 @@
 """
 Unit tests for optimizers.
 """
+import numpy as np
 import pytest
 from numpy.linalg import norm
+from sklearn.base import BaseEstimator
+from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy.optimizers import ElasticNet
-from pysindy.optimizers import LASSO
+from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
+from pysindy.utils import supports_multiple_targets
 
 
-@pytest.mark.parametrize("optimizer", [STLSQ(), SR3(), LASSO(), ElasticNet()])
-def test_fit(data_derivative_1d, optimizer):
-    x, x_dot = data_derivative_1d
-    x = x.reshape(-1, 1)
-    x_dot = x_dot.reshape(-1)
-    optimizer.fit(x, x_dot)
+class DummyLinearModel(BaseEstimator):
+    # Does not natively support multiple targets
+    def fit(self, x, y):
+        self.coef_ = np.ones(x.shape[1])
+        self.intercept_ = 0
+        return self
 
-    check_is_fitted(optimizer)
-    assert optimizer.complexity >= 0
+
+@pytest.mark.parametrize(
+    "cls, support",
+    [(Lasso, True), (STLSQ, True), (SR3, True), (DummyLinearModel, False)],
+)
+def test_supports_multiple_targets(cls, support):
+    assert supports_multiple_targets(cls()) == support
+
+
+@pytest.fixture(params=["data_derivative_1d", "data_derivative_2d"])
+def data(request):
+    return request.getfixturevalue(request.param)
+
+
+@pytest.mark.parametrize(
+    "optimizer",
+    [
+        STLSQ(),
+        SR3(),
+        Lasso(fit_intercept=False),
+        ElasticNet(fit_intercept=False),
+        DummyLinearModel(),
+    ],
+)
+def test_fit(data, optimizer):
+    x, x_dot = data
+    if len(x.shape) == 1:
+        x = x.reshape(-1, 1)
+    opt = SINDyOptimizer(optimizer, unbias=False)
+    opt.fit(x, x_dot)
+
+    check_is_fitted(opt)
+    assert opt.complexity >= 0
+    if len(x_dot.shape) > 1:
+        assert opt.coef_.shape == (x.shape[1], x_dot.shape[1])
+    else:
+        assert opt.coef_.shape == (1, x.shape[1])
 
 
 @pytest.mark.parametrize(
@@ -28,7 +67,6 @@ def test_fit(data_derivative_1d, optimizer):
 def test_alternate_parameters(data_derivative_1d, kwargs):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    x_dot = x_dot.reshape(-1)
 
     model = STLSQ(**kwargs)
     model.fit(x, x_dot)
@@ -64,21 +102,6 @@ def test_bad_parameters(data_derivative_1d):
     with pytest.raises(ValueError):
         SR3(max_iter=0)
 
-    with pytest.raises(ValueError):
-        LASSO(alpha=-1)
-
-    with pytest.raises(ValueError):
-        LASSO(max_iter=0)
-
-    with pytest.raises(ValueError):
-        ElasticNet(alpha=-1)
-
-    with pytest.raises(ValueError):
-        ElasticNet(max_iter=0)
-
-    with pytest.raises(ValueError):
-        ElasticNet(l1_ratio=-0.1)
-
 
 # The different capitalizations are intentional;
 # I want to make sure different versions are recognized
@@ -86,7 +109,6 @@ def test_bad_parameters(data_derivative_1d):
 def test_sr3_prox_functions(data_derivative_1d, thresholder):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    x_dot = x_dot.reshape(-1)
     model = SR3(thresholder=thresholder)
     model.fit(x, x_dot)
     check_is_fitted(model)
@@ -95,12 +117,36 @@ def test_sr3_prox_functions(data_derivative_1d, thresholder):
 def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    x_dot = x_dot.reshape(-1)
 
-    optimizer_biased = STLSQ(threshold=0.01, alpha=0.01, max_iter=1, unbias=False)
+    optimizer_biased = SINDyOptimizer(
+        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=False
+    )
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = STLSQ(threshold=0.01, alpha=0.01, max_iter=1, unbias=True)
+    optimizer_unbiased = SINDyOptimizer(
+        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=True
+    )
+    optimizer_unbiased.fit(x, x_dot)
+
+    assert (
+        norm(optimizer_biased.coef_ - optimizer_unbiased.coef_)
+        / norm(optimizer_unbiased.coef_)
+        > 1e-9
+    )
+
+
+def test_unbias_external(data_derivative_1d):
+    x, x_dot = data_derivative_1d
+    x = x.reshape(-1, 1)
+
+    optimizer_biased = SINDyOptimizer(
+        Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=False
+    )
+    optimizer_biased.fit(x, x_dot)
+
+    optimizer_unbiased = SINDyOptimizer(
+        Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=True
+    )
     optimizer_unbiased.fit(x, x_dot)
 
     assert (

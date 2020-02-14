@@ -7,7 +7,33 @@ from pysindy.utils.base import supports_multiple_targets
 
 
 class SINDyOptimizer(BaseEstimator):
+    """
+    Wrapper class for optimizers/sparse regression methods passed into the SINDy object.
+
+    Enables single target regressors (i.e. those whose predictions are 1-dimensional)
+    to perform multi target regression (i.e. predictions are 2-dimensional).
+    Also enhances an `_unbias` function to reduce bias when regularization is used.
+
+    Parameters
+    ----------
+    optimizer: estimator object
+        The optimizer/sparse regressor to be wrapped, implementing `fit` and `predict`.
+        `optimizer` should also have the attributes `coef_`, `fit_intercept`,
+        `normalize`, and `intercept_`.
+
+    unbias : boolean, optional (default True)
+        Whether to perform an extra step of unregularized linear regression to unbias
+        the coefficients for the identified support.
+        For example, if `optimizer=STLSQ(alpha=0.1)` is used then the learned
+        coefficients will be biased toward 0 due to the L2 regularization.
+        Setting `unbias=True` will trigger an additional step wherein the nonzero
+        coefficients learned by the `STLSQ` object will be updated using an
+        unregularized least-squares fit.
+    """
+
     def __init__(self, optimizer, unbias=True):
+        # TODO: add a check that optimizer has the necessary attributes
+        # and methods
         self.optimizer = optimizer
         self.unbias = unbias
 
@@ -58,7 +84,6 @@ class SINDyOptimizer(BaseEstimator):
     def intercept_(self):
         return self.optimizer.intercept_
 
-    # not sure if
     @property
     def complexity(self):
         return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)

@@ -1,3 +1,3 @@
-scikit-learn[alldeps]>=0.19
+scikit-learn[alldeps]>=0.21
 numpy
 scipy

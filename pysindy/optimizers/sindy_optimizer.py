@@ -32,8 +32,13 @@ class SINDyOptimizer(BaseEstimator):
     """
 
     def __init__(self, optimizer, unbias=True):
-        # TODO: add a check that optimizer has the necessary attributes
-        # and methods
+        if not hasattr(optimizer, "fit") or not callable(getattr(optimizer, "fit")):
+            raise AttributeError("optimizer does not have a callable fit method")
+        if not hasattr(optimizer, "predict") or not callable(
+            getattr(optimizer, "predict")
+        ):
+            raise AttributeError("optimizer does not have a callable predict method")
+
         self.optimizer = optimizer
         self.unbias = unbias
 
@@ -42,6 +47,8 @@ class SINDyOptimizer(BaseEstimator):
             if not supports_multiple_targets(self.optimizer):
                 self.optimizer = _MultiTargetLinearRegressor(self.optimizer)
         self.optimizer.fit(x, y)
+        if not hasattr(self.optimizer, "coef_"):
+            raise AttributeError("optimizer has no attribute coef_")
         self.ind_ = np.abs(self.coef_) > 1e-14
 
         if self.unbias:
@@ -51,13 +58,18 @@ class SINDyOptimizer(BaseEstimator):
 
     def _unbias(self, x, y):
         coef = np.zeros((y.shape[1], x.shape[1]))
+        if hasattr(self.optimizer, "fit_intercept"):
+            fit_intercept = self.optimizer.fit_intercept
+        else:
+            fit_intercept = False
+        if hasattr(self.optimizer, "normalize"):
+            normalize = self.optimizer.normalize
+        else:
+            normalize = False
         for i in range(self.ind_.shape[0]):
             if np.any(self.ind_[i]):
                 coef[i, self.ind_[i]] = (
-                    LinearRegression(
-                        fit_intercept=self.optimizer.fit_intercept,
-                        normalize=self.optimizer.normalize,
-                    )
+                    LinearRegression(fit_intercept=fit_intercept, normalize=normalize)
                     .fit(x[:, self.ind_[i]], y[:, i])
                     .coef_
                 )
@@ -82,7 +94,10 @@ class SINDyOptimizer(BaseEstimator):
 
     @property
     def intercept_(self):
-        return self.optimizer.intercept_
+        if hasattr(self.optimizer, "intercept_"):
+            return self.optimizer.intercept_
+        else:
+            return 0.0
 
     @property
     def complexity(self):

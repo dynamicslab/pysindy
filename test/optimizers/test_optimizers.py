@@ -22,6 +22,26 @@ class DummyLinearModel(BaseEstimator):
         self.intercept_ = 0
         return self
 
+    def predict(self, x):
+        return x
+
+
+class DummyEmptyModel(BaseEstimator):
+    # Does not have fit or predict methods
+    def __init__(self):
+        self.fit_intercept = False
+        self.normalize = False
+
+
+class DummyModelNoCoef(BaseEstimator):
+    # Does not set the coef_ attribute
+    def fit(self, x, y):
+        self.intercept_ = 0
+        return self
+
+    def predict(self, x):
+        return x
+
 
 @pytest.mark.parametrize(
     "cls, support",
@@ -101,6 +121,18 @@ def test_bad_parameters(data_derivative_1d):
 
     with pytest.raises(ValueError):
         SR3(max_iter=0)
+
+
+def test_bad_optimizers(data_derivative_1d):
+    x, x_dot = data_derivative_1d
+    x = x.reshape(-1, 1)
+
+    with pytest.raises(AttributeError):
+        opt = SINDyOptimizer(DummyEmptyModel())
+
+    with pytest.raises(AttributeError):
+        opt = SINDyOptimizer(DummyModelNoCoef())
+        opt.fit(x, x_dot)
 
 
 # The different capitalizations are intentional;

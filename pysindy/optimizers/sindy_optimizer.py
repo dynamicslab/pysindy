@@ -47,7 +47,7 @@ class SINDyOptimizer(BaseEstimator):
             if not supports_multiple_targets(self.optimizer):
                 self.optimizer = _MultiTargetLinearRegressor(self.optimizer)
         self.optimizer.fit(x, y)
-        if not hasattr(object, "coef_"):
+        if not hasattr(self.optimizer, "coef_"):
             raise AttributeError("optimizer has no attribute coef_")
         self.ind_ = np.abs(self.coef_) > 1e-14
 

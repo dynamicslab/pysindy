@@ -146,6 +146,17 @@ class SINDy(BaseEstimator):
             for each trajectory. If False, the training data must be a single
             array.
 
+        unbias: boolean, optional (default True)
+            Whether to perform an extra step of unregularized linear regression to
+            unbias the coefficients for the identified support.
+            If the optimizer (`SINDy.optimizer`) applies any type of regularization,
+            that regularization may bias coefficients toward particular values,
+            improving the conditioning of the problem but harming the quality of the
+            fit. Setting `unbias=True` enables an extra step wherein unregularized
+            linear regression is applied, but only for the coefficients in the support
+            identified by the optimizer. This helps to remove the bias introduced by
+            regularization.
+
         quiet: boolean, optional (default False)
             Whether or not to suppress warnings during model fitting.
 

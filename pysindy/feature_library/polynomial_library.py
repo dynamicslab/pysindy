@@ -18,6 +18,30 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
     This is the same as :code:`sklearn.preprocessing.PolynomialFeatures`,
     but also adds the option to omit interaction features from the library.
+
+    Parameters
+    ----------
+    degree : integer, optional (default 2)
+        The degree of the polynomial features.
+    include_interaction : boolean, optional (default True)
+        Determines whether interaction features are produced.
+        If false, features are all of the form `x[i] ** k`.
+    interaction_only : boolean, optional (default False)
+        If true, only interaction features are produced: features that are
+        products of at most `degree` *distinct* input features (so not
+        `x[1] ** 2`, `x[0] * x[2] ** 3`, etc.).
+    include_bias : boolean, optional (default True)
+        If True (default), then include a bias column, the feature in which
+        all polynomial powers are zero (i.e. a column of ones - acts as an
+        intercept term in a linear model).
+    order : str in {'C', 'F'}, optional (default 'C')
+        Order of output array in the dense case. 'F' order is faster to
+        compute, but may slow down subsequent estimators.
+
+    Attributes
+    ----------
+    powers_ : array, shape (n_output_features, n_input_features)
+        powers_[i, j] is the exponent of the jth input in the ith output.
     """
 
     def __init__(

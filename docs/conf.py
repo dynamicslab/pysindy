@@ -58,3 +58,9 @@ html_show_sphinx = False
 html_show_copyright = True
 
 default_role = "any"
+
+# Added to support nbsphinx
+extensions.append("nbsphinx")
+extensions.append("sphinx.ext.mathjax")
+
+html_sourcelink_suffix = ""

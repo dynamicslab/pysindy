@@ -6,6 +6,7 @@
    :caption: User Guide
 
    API Documentation <api/pysindy>
+   Feature overview <../example/feature_overview>
 
 .. toctree::
    :maxdepth: 1

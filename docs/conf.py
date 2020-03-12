@@ -2,7 +2,6 @@ import datetime
 import importlib
 import pathlib
 
-
 author = "dynamicslab"
 project = "pysindy"  # package name
 
@@ -23,6 +22,8 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
+    "sphinx.ext.mathjax",
+    "sphinx_nbexamples",
 ]
 
 apidoc_module_dir = f"../{project}"
@@ -58,9 +59,11 @@ html_show_sphinx = False
 html_show_copyright = True
 
 default_role = "any"
-
-# Added to support nbsphinx
-extensions.append("nbsphinx")
-extensions.append("sphinx.ext.mathjax")
-
 html_sourcelink_suffix = ""
+
+example_gallery_config = dict(
+    dont_preprocess=True,
+    examples_dirs=["../examples"],
+    gallery_dirs=["examples"],
+    pattern=".+.ipynb",
+)

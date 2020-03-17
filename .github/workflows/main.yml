@@ -45,8 +45,8 @@ jobs:
     - name: Execute feature notebook with papermill
       run: |
         pip install papermill
-        cd example
-        papermill --report-mode feature_overview.ipynb out.json
+        cd examples
+        papermill --report-mode 1_feature_overview.ipynb out.json
     - uses: actions/cache@v1
       with:
         path: ~/.cache/pip

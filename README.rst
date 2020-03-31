@@ -3,7 +3,7 @@ PySINDy
 
 |BuildCI| |RTD| |PyPI| |Codecov| |JOSS|
 
-**PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method.
+**PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016), including the unified optimization approach of Champion et al. (2019).
 
 Installation
 ------------

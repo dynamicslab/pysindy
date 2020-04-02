@@ -10,7 +10,6 @@ from scipy.integrate import odeint
 from scipy.linalg import LinAlgWarning
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.exceptions import NotFittedError
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
@@ -225,16 +224,13 @@ class SINDy(BaseEstimator):
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
             Predicted time derivatives
         """
-        if hasattr(self, "model"):
-            if multiple_trajectories:
-                x = [validate_input(xi) for xi in x]
-                return [self.model.predict(xi) for xi in x]
-            else:
-                x = validate_input(x)
-                if hasattr(self, "model"):
-                    return self.model.predict(x)
+        check_is_fitted(self, "model")
+        if multiple_trajectories:
+            x = [validate_input(xi) for xi in x]
+            return [self.model.predict(xi) for xi in x]
         else:
-            raise NotFittedError("SINDy model must be fit before predict can be called")
+            x = validate_input(x)
+            return self.model.predict(x)
 
     def equations(self, precision=3):
         """
@@ -251,19 +247,14 @@ class SINDy(BaseEstimator):
         equations: list of strings
             Strings containing the SINDy model equation for each input feature.
         """
-        if hasattr(self, "model"):
-            check_is_fitted(self.model.steps[-1][1])
-            if self.discrete_time:
-                base_feature_names = [f + "[k]" for f in self.feature_names]
-            else:
-                base_feature_names = self.feature_names
-            return equations(
-                self.model, input_features=base_feature_names, precision=precision
-            )
+        check_is_fitted(self, "model")
+        if self.discrete_time:
+            base_feature_names = [f + "[k]" for f in self.feature_names]
         else:
-            raise NotFittedError(
-                "SINDy model must be fit before equations can be called"
-            )
+            base_feature_names = self.feature_names
+        return equations(
+            self.model, input_features=base_feature_names, precision=precision
+        )
 
     def print(self, lhs=None, precision=3):
         """Print the SINDy model equations.
@@ -439,25 +430,16 @@ class SINDy(BaseEstimator):
     def coefficients(self):
         """Return a list of the coefficients learned by SINDy model.
         """
-        if hasattr(self, "model"):
-            check_is_fitted(self.model.steps[-1][1])
-            return self.model.steps[-1][1].coef_
-        else:
-            raise NotFittedError(
-                "SINDy model must be fit before coefficients is called"
-            )
+        check_is_fitted(self, "model")
+        return self.model.steps[-1][1].coef_
 
     def get_feature_names(self):
         """Return a list of names of features used by SINDy model.
         """
-        if hasattr(self, "model"):
-            return self.model.steps[0][1].get_feature_names(
-                input_features=self.feature_names
-            )
-        else:
-            raise NotFittedError(
-                "SINDy model must be fit before get_feature_names is called"
-            )
+        check_is_fitted(self, "model")
+        return self.model.steps[0][1].get_feature_names(
+            input_features=self.feature_names
+        )
 
     def simulate(self, x0, t, integrator=odeint, stop_condition=None, **integrator_kws):
         """

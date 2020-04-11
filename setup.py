@@ -40,6 +40,7 @@ setup(
     setup_requires=["setuptools_scm", "setuptools_scm_git_archive"],
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
+    long_description_content_type="text/x-rst",
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,

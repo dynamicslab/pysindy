@@ -30,7 +30,7 @@ The approximation problem to be solved can then be compactly written as::
 
 Each row of this matrix equation corresponds to one coordinate function of ``f(x)``.
 SINDy employs sparse regression techniques to find a solution ``Xi`` with sparse column vectors.
-For a more in-depth look at the mathematical foundations of SINDy, please see our `introduction to SINDy <https://pysindy.readthedocs.io/en/latest/examples/2_introduction_to_sindy.html>`_.
+For a more in-depth look at the mathematical foundations of SINDy, please see our `introduction to SINDy <https://pysindy.readthedocs.io/en/latest/examples/2_introduction_to_sindy.html>`__.
 
 Relation to PySINDy
 ^^^^^^^^^^^^^^^^^^^
@@ -81,7 +81,7 @@ which prints the following::
   x' = -2.000 x
   y' = 1.000 y
 
-PySINDy provides numerous other features not shown here. We recommend the `feature overview <https://pysindy.readthedocs.io/en/latest/examples/1_feature_overview.html>`_ section of the documentation for a more exhaustive summary of additional features.
+PySINDy provides numerous other features not shown here. We recommend the `feature overview <https://pysindy.readthedocs.io/en/latest/examples/1_feature_overview.html>`__ section of the documentation for a more exhaustive summary of additional features.
 
 Installation
 ------------
@@ -119,7 +119,7 @@ If you do not have root access, you should add the ``--user`` option to the abov
 
 Documentation
 -------------
-The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`_. There are numerous `examples <https://github.com/dynamicslab/pysindy/tree/master/examples>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`_.
+The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`__. There are numerous `examples <https://github.com/dynamicslab/pysindy/tree/master/examples>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`__.
 
 Community guidelines
 --------------------
@@ -144,7 +144,7 @@ If you find a bug in the code or want to request a new feature, please open an i
 
 Getting help
 ^^^^^^^^^^^^
-For help using PySINDy please consult the `documentation <https://pysindy.readthedocs.io/en/latest/>`_ and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/examples>`_, or create an issue.
+For help using PySINDy please consult the `documentation <https://pysindy.readthedocs.io/en/latest/>`__ and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/examples>`__, or create an issue.
 
 References
 ----------------------

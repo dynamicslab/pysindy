@@ -7,6 +7,7 @@
 
    API Documentation <api/pysindy>
    Examples <examples/index>
+   Practical tips <tips>
 
 .. toctree::
    :maxdepth: 1

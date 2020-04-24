@@ -6,7 +6,7 @@ from sklearn.utils.validation import check_array
 
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default
-# value of t to be None, but it is possile for the user
+# value of t to be None, but it is possible for the user
 # to pass in None, in which case validate_input performs
 # no checks on t.
 T_DEFAULT = object()

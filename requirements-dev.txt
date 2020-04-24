@@ -17,3 +17,4 @@ pre-commit
 hypothesis
 sphinx-nbexamples
 jupyter_contrib_nbextensions
+pandas

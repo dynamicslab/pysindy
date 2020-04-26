@@ -9,8 +9,7 @@ from pysindy.optimizers import BaseOptimizer
 
 
 class STLSQ(BaseOptimizer):
-    """
-    Sequentially thresholded least squares algorithm.
+    """Sequentially thresholded least squares algorithm.
 
     Attempts to minimize the objective function
     :math:`\\|y - Xw\\|^2_2 + alpha \\times \\|w\\|^2_2`
@@ -128,8 +127,7 @@ class STLSQ(BaseOptimizer):
         return all(bool(i) == bool(j) for i, j in zip(this_coef, last_coef))
 
     def _reduce(self, x, y):
-        """
-        Iterates the thresholding. Assumes an initial guess is saved in
+        """Iterates the thresholding. Assumes an initial guess is saved in
         self.coef_ and self.ind_
         """
         ind = self.ind_
@@ -140,10 +138,8 @@ class STLSQ(BaseOptimizer):
         for _ in range(self.max_iter):
             if np.count_nonzero(ind) == 0:
                 warnings.warn(
-                    """Sparsity parameter is too big ({}) and eliminated all
-                    coefficients""".format(
-                        self.threshold
-                    )
+                    "Sparsity parameter is too big ({}) and eliminated all "
+                    "coefficients".format(self.threshold)
                 )
                 coef = np.zeros((n_targets, n_features))
                 break
@@ -152,10 +148,8 @@ class STLSQ(BaseOptimizer):
             for i in range(n_targets):
                 if np.count_nonzero(ind[i]) == 0:
                     warnings.warn(
-                        """Sparsity parameter is too big ({}) and eliminated all
-                        coefficients""".format(
-                            self.threshold
-                        )
+                        "Sparsity parameter is too big ({}) and eliminated all "
+                        "coefficients".format(self.threshold)
                     )
                     continue
                 coef_i = self._regress(x[:, ind[i]], y[:, i])

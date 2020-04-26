@@ -93,15 +93,21 @@ class SINDy(BaseEstimator):
 
     def __init__(
         self,
-        optimizer=STLSQ(),
-        feature_library=PolynomialFeatures(),
-        differentiation_method=FiniteDifference(),
+        optimizer=None,
+        feature_library=None,
+        differentiation_method=None,
         feature_names=None,
         discrete_time=False,
         n_jobs=1,
     ):
+        if optimizer is None:
+            optimizer = STLSQ()
         self.optimizer = optimizer
+        if feature_library is None:
+            feature_library = PolynomialFeatures()
         self.feature_library = feature_library
+        if differentiation_method is None:
+            differentiation_method = FiniteDifference()
         self.differentiation_method = differentiation_method
         self.feature_names = feature_names
         self.discrete_time = discrete_time

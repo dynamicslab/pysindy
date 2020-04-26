@@ -139,9 +139,7 @@ class STLSQ(BaseOptimizer):
             if np.count_nonzero(ind) == 0:
                 warnings.warn(
                     "Sparsity parameter is too big ({}) and eliminated all "
-                    "coefficients".format(
-                        self.threshold
-                    )
+                    "coefficients".format(self.threshold)
                 )
                 coef = np.zeros((n_targets, n_features))
                 break

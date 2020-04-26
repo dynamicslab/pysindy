@@ -91,9 +91,15 @@ class SINDy(BaseEstimator):
     0.999999985520653
     """
 
-    def __init__(self, optimizer=None, feature_library=None,
-                 differentiation_method=None, feature_names=None,
-                 discrete_time=False, n_jobs=1):
+    def __init__(
+        self,
+        optimizer=None,
+        feature_library=None,
+        differentiation_method=None,
+        feature_names=None,
+        discrete_time=False,
+        n_jobs=1,
+    ):
         if optimizer is None:
             self.optimizer = STLSQ()
         else:

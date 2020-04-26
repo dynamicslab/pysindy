@@ -101,17 +101,14 @@ class SINDy(BaseEstimator):
         n_jobs=1,
     ):
         if optimizer is None:
-            self.optimizer = STLSQ()
-        else:
-            self.optimizer = optimizer
+            optimizer = STLSQ()
+        self.optimizer = optimizer
         if feature_library is None:
-            self.feature_library = PolynomialFeatures()
-        else:
-            self.feature_library = feature_library
+            feature_library = PolynomialFeatures()
+        self.feature_library = feature_library
         if differentiation_method is None:
-            self.differentiation_method = FiniteDifference()
-        else:
-            self.differentiation_method = differentiation_method
+            differentiation_method = FiniteDifference()
+        self.differentiation_method = differentiation_method
         self.feature_names = feature_names
         self.discrete_time = discrete_time
         self.n_jobs = n_jobs

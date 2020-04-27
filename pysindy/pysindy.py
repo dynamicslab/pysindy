@@ -1,6 +1,7 @@
 import warnings
 from typing import Sequence
 
+from numpy import concatenate
 from numpy import isscalar
 from numpy import ndim
 from numpy import newaxis
@@ -20,6 +21,7 @@ from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import STLSQ
 from pysindy.utils.base import drop_nan_rows
 from pysindy.utils.base import equations
+from pysindy.utils.base import validate_control_variables
 from pysindy.utils.base import validate_input
 
 
@@ -114,7 +116,14 @@ class SINDy(BaseEstimator):
         self.n_jobs = n_jobs
 
     def fit(
-        self, x, t=1, x_dot=None, multiple_trajectories=False, unbias=True, quiet=False
+        self,
+        x,
+        t=1,
+        x_dot=None,
+        multiple_trajectories=False,
+        unbias=True,
+        control_variables=None,
+        quiet=False,
     ):
         """
         Fit the SINDy model.
@@ -162,6 +171,13 @@ class SINDy(BaseEstimator):
             identified by the optimizer. This helps to remove the bias introduced by
             regularization.
 
+        control_variables: array-like or list of array-like, shape \
+                (n_samples, n_control_features)
+            Control variables. If training data contains multiple trajectories
+            (i.e. if x is a list of array-like), then control_variables should be a
+            list containing control variable data for each trajectory. Individual
+            trajectories may contain different numbers of samples
+
         quiet: boolean, optional (default False)
             Whether or not to suppress warnings during model fitting.
 
@@ -169,6 +185,12 @@ class SINDy(BaseEstimator):
         -------
         self: returns an instance of self
         """
+
+        if control_variables:
+            control_variables, self.control_indices = validate_control_variables(
+                x, control_variables, multiple_trajectories
+            )
+
         if multiple_trajectories:
             x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
         else:
@@ -185,6 +207,10 @@ class SINDy(BaseEstimator):
                     x_dot = self.differentiation_method(x, t)
                 else:
                     x_dot = validate_input(x_dot, t)
+
+        # Append control variables
+        if control_variables:
+            x = concatenate((x, control_variables), axis=1)
 
         # Drop rows where derivative isn't known
         x, x_dot = drop_nan_rows(x, x_dot)

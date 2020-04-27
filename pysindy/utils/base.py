@@ -1,4 +1,5 @@
 from itertools import repeat
+from typing import Sequence
 
 import numpy as np
 from sklearn.base import MultiOutputMixin
@@ -36,6 +37,54 @@ def validate_input(x, t=T_DEFAULT):
             raise ValueError("t must be a scalar or array-like.")
 
     return x
+
+
+def validate_control_variables(x, control_variables, multiple_trajectories):
+    """
+    Ensure that control_variables are compatible with the data x.
+    If multiple_trajectories is True, convert control_variables from a list
+    into an array.
+    """
+    if multiple_trajectories:
+        if not isinstance(x, Sequence):
+            raise ValueError("x must be a list when multiple_trajectories is True")
+        if not isinstance(control_variables, Sequence):
+            raise ValueError(
+                "control_variables must be a list when multiple_trajectories is True"
+            )
+        if len(x) != len(control_variables):
+            raise ValueError(
+                "x and control_variables must be lists of the same length when "
+                "multiple_trajectories is True"
+            )
+
+        control_variables_arr = []
+        for x_i, control_variable in zip(x, control_variables):
+            control_variables_arr.append(_check_control_shape(x_i, control_variables))
+
+        control_variables_arr = np.vstack(control_variables_arr)
+
+    else:
+        control_variables_arr = _check_control_shape(x, control_variables)
+
+    control_indices = np.arange(x.shape[1], x.shape[1] + control_variables_arr.shape[1])
+
+    return control_variables_arr, control_indices
+
+
+def _check_control_shape(x, control_variables):
+    """
+    Convert control_variables to np.array(dtype=float64) and compare
+    its shape against x. Assumes x is array-like.
+    """
+    try:
+        control_variables = np.array(control_variables, dtype="float64")
+    except TypeError as e:
+        raise e("control_variables could not be converted to np.ndarray(dtype=float64)")
+    if x.shape[0] != control_variables.shape[0]:
+        raise ValueError("control_variables must have same number of rows as x")
+
+    return control_variables
 
 
 def drop_nan_rows(x, x_dot):
@@ -153,7 +202,7 @@ def equations(pipeline, input_features=None, precision=3, input_fmt=None):
 
 
 def supports_multiple_targets(estimator):
-    """Checkes whether estimator support mutliple targets."""
+    """Checkes whether estimator supports mutliple targets."""
     if isinstance(estimator, MultiOutputMixin):
         return True
     try:

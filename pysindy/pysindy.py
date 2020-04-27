@@ -179,7 +179,7 @@ class SINDy(BaseEstimator):
                     x_dot = x[1:]
                     x = x[:-1]
                 else:
-                    x_dot = validate_input(x)
+                    x_dot = validate_input(x_dot)
             else:
                 if x_dot is None:
                     x_dot = self.differentiation_method(x, t)

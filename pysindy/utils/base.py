@@ -43,7 +43,7 @@ def validate_control_variables(x, control_variables, multiple_trajectories):
     """
     Ensure that control_variables are compatible with the data x.
     If multiple_trajectories is True, convert control_variables from a list
-    into an array.
+    into an array (of concatenated list entries).
     """
     if multiple_trajectories:
         if not isinstance(x, Sequence):

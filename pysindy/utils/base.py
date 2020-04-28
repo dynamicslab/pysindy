@@ -39,52 +39,53 @@ def validate_input(x, t=T_DEFAULT):
     return x
 
 
-def validate_control_variables(x, control_variables, multiple_trajectories):
+def validate_control_variables(
+    x, u, multiple_trajectories=False, trim_last_point=False, return_array=True
+):
     """
-    Ensure that control_variables are compatible with the data x.
-    If multiple_trajectories is True, convert control_variables from a list
+    Ensure that control variables u are compatible with the data x.
+    If multiple_trajectories is True, convert u from a list
     into an array (of concatenated list entries).
     """
     if multiple_trajectories:
         if not isinstance(x, Sequence):
             raise ValueError("x must be a list when multiple_trajectories is True")
-        if not isinstance(control_variables, Sequence):
+        if not isinstance(u, Sequence):
+            raise ValueError("u must be a list when multiple_trajectories is True")
+        if len(x) != len(u):
             raise ValueError(
-                "control_variables must be a list when multiple_trajectories is True"
-            )
-        if len(x) != len(control_variables):
-            raise ValueError(
-                "x and control_variables must be lists of the same length when "
+                "x and u must be lists of the same length when "
                 "multiple_trajectories is True"
             )
 
-        control_variables_arr = []
-        for x_i, control_variable in zip(x, control_variables):
-            control_variables_arr.append(_check_control_shape(x_i, control_variables))
+        u_arr = []
+        for xi, control_variable in zip(x, u):
+            u_arr.append(_check_control_shape(xi, u, trim_last_point))
 
-        control_variables_arr = np.vstack(control_variables_arr)
+        if return_array:
+            u_arr = np.vstack(u_arr)
 
     else:
-        control_variables_arr = _check_control_shape(x, control_variables)
+        u_arr = _check_control_shape(x, u, trim_last_point)
 
-    control_indices = np.arange(x.shape[1], x.shape[1] + control_variables_arr.shape[1])
-
-    return control_variables_arr, control_indices
+    return u_arr
 
 
-def _check_control_shape(x, control_variables):
+def _check_control_shape(x, u, trim_last_point):
     """
-    Convert control_variables to np.array(dtype=float64) and compare
+    Convert control variables u to np.array(dtype=float64) and compare
     its shape against x. Assumes x is array-like.
     """
     try:
-        control_variables = np.array(control_variables, dtype="float64")
+        u = np.array(u, dtype="float64")
     except TypeError as e:
-        raise e("control_variables could not be converted to np.ndarray(dtype=float64)")
-    if x.shape[0] != control_variables.shape[0]:
-        raise ValueError("control_variables must have same number of rows as x")
+        raise e(
+            "control variables u could not be converted to np.ndarray(dtype=float64)"
+        )
+    if x.shape[0] != u.shape[0]:
+        raise ValueError("control variables u must have same number of rows as x")
 
-    return control_variables
+    return u[:-1] if trim_last_point else u
 
 
 def drop_nan_rows(x, x_dot):

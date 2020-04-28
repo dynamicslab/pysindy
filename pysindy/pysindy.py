@@ -796,7 +796,5 @@ class SINDyC(SINDy):
 
         # Separate control variables from system variables to conform
         # to the predict function's call signature
-        x_dot_predict = self.model.predict(
-            x[:, : -self.n_control_features_], x[:, -self.n_control_features_ :]
-        )
+        x_dot_predict = self.model.predict(x)
         return metric(x_dot_predict, x_dot, **metric_kws)

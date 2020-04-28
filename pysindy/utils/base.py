@@ -85,6 +85,8 @@ def _check_control_shape(x, u, trim_last_point):
     if x.shape[0] != u.shape[0]:
         raise ValueError("control variables u must have same number of rows as x")
 
+    if np.ndim(u) == 1:
+        u = u.reshape(-1, 1)
     return u[:-1] if trim_last_point else u
 
 

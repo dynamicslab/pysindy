@@ -639,7 +639,7 @@ class SINDyC(SINDy):
                     x_dot = x[1:]
                     x = x[:-1]
                 else:
-                    x_dot = validate_input(x)
+                    x_dot = validate_input(x_dot)
             else:
                 if x_dot is None:
                     x_dot = self.differentiation_method(x, t)
@@ -810,10 +810,14 @@ class SINDyC(SINDy):
         x0: numpy array, size [n_features]
             Initial condition from which to simulate.
 
-        u: function from R^1 to R^{n_control_features}
-            Control input function. This function should take in a time and output
-            the values of each of the n_control_features control features as a list
-            or numpy array.
+        u: function from R^1 to R^{n_control_features} or list/array
+            Control input function.
+            If the model is continuous time, i.e. `self.discrete_time == False`,
+            this function should take in a time and output the values of each of
+            the n_control_features control features as a list or numpy array.
+            If the model is discrete time, i.e. `self.discrete_time == True`,
+            u should be a list (with `len(u) == t`) or array (with `u.shape[0] == 1`)
+            giving the control inputs at each step.
 
         t: int or numpy array of size [n_samples]
             If the model is in continuous time, t must be an array of time
@@ -842,11 +846,10 @@ class SINDyC(SINDy):
                     "For discrete time model, t must be an integer (indicating"
                     "the number of steps to predict)"
                 )
-
-            x = zeros((t, self.n_input_features_))
+            x = zeros((t, self.n_input_features_ - self.n_control_features_))
             x[0] = x0
             for i in range(1, t):
-                x[i] = self.predict(x[i - 1 : i])
+                x[i] = self.predict(x[i - 1 : i], u[i - 1])
                 if stop_condition is not None and stop_condition(x[i]):
                     return x[: i + 1]
             return x

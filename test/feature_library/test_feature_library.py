@@ -12,6 +12,7 @@ from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import IdentityLibrary
 from pysindy.feature_library import PolynomialLibrary
+from pysindy.feature_library import ConcatLibrary
 from pysindy.feature_library.feature_library import BaseFeatureLibrary
 
 
@@ -59,6 +60,7 @@ def test_bad_parameters():
         IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
+        ConcatLibrary([IdentityLibrary(), PolynomialLibrary()]),
         pytest.lazy_fixture("data_custom_library"),
     ],
 )
@@ -74,6 +76,7 @@ def test_fit_transform(data_lorenz, library):
         IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
+        ConcatLibrary([IdentityLibrary(), PolynomialLibrary()]),
         pytest.lazy_fixture("data_custom_library"),
     ],
 )
@@ -89,6 +92,7 @@ def test_change_in_data_shape(data_lorenz, library):
     [
         (IdentityLibrary(), 3),
         (PolynomialLibrary(), 10),
+        (ConcatLibrary([IdentityLibrary(), PolynomialLibrary()]), 13),
         (FourierLibrary(), 6),
         (pytest.lazy_fixture("data_custom_library"), 9),
     ],
@@ -107,6 +111,7 @@ def test_output_shape(data_lorenz, library, shape):
         IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
+        ConcatLibrary([PolynomialLibrary(), FourierLibrary()]),
         pytest.lazy_fixture("data_custom_library"),
     ],
 )
@@ -174,3 +179,10 @@ def test_not_implemented(data_lorenz):
 
     with pytest.raises(NotImplementedError):
         library.get_feature_names(x)
+
+
+def test_concat():
+    ident_lib = IdentityLibrary()
+    poly_lib = PolynomialLibrary()
+    concat_lib = ConcatLibrary([ident_lib, poly_lib])
+    assert isinstance(concat_lib, ConcatLibrary)

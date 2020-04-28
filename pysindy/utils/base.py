@@ -82,8 +82,13 @@ def _check_control_shape(x, u, trim_last_point):
         raise e(
             "control variables u could not be converted to np.ndarray(dtype=float64)"
         )
+    if np.ndim(u) == 0:
+        u = u[np.newaxis]
     if x.shape[0] != u.shape[0]:
-        raise ValueError("control variables u must have same number of rows as x")
+        raise ValueError(
+            "control variables u must have same number of rows as x. "
+            "u has {} rows and x has {} rows".format(u.shape[0], x.shape[0])
+        )
 
     if np.ndim(u) == 1:
         u = u.reshape(-1, 1)

@@ -798,3 +798,66 @@ class SINDyC(SINDy):
         # to the predict function's call signature
         x_dot_predict = self.model.predict(x)
         return metric(x_dot_predict, x_dot, **metric_kws)
+
+    def simulate(
+        self, x0, u, t, integrator=odeint, stop_condition=None, **integrator_kws
+    ):
+        """
+        Simulate the SINDyC model forward in time.
+
+        Parameters
+        ----------
+        x0: numpy array, size [n_features]
+            Initial condition from which to simulate.
+
+        u: function from R^1 to R^{n_control_features}
+            Control input function. This function should take in a time and output
+            the values of each of the n_control_features control features as a list
+            or numpy array.
+
+        t: int or numpy array of size [n_samples]
+            If the model is in continuous time, t must be an array of time
+            points at which to simulate. If the model is in discrete time,
+            t must be an integer indicating how many steps to predict.
+
+        integrator: function object, optional
+            Function to use to integrate the system. Default is scipy's odeint.
+
+        stop_condition: function object, optional
+            If model is in discrete time, optional function that gives a
+            stopping condition for stepping the simulation forward.
+
+        integrator_kws: dict, optional
+            Optional keyword arguments to pass to the integrator
+
+        Returns
+        -------
+        x: numpy array, shape (n_samples, n_features)
+            Simulation results
+        """
+
+        if self.discrete_time:
+            if not isinstance(t, int):
+                raise ValueError(
+                    "For discrete time model, t must be an integer (indicating"
+                    "the number of steps to predict)"
+                )
+
+            x = zeros((t, self.n_input_features_))
+            x[0] = x0
+            for i in range(1, t):
+                x[i] = self.predict(x[i - 1 : i])
+                if stop_condition is not None and stop_condition(x[i]):
+                    return x[: i + 1]
+            return x
+        else:
+            if isscalar(t):
+                raise ValueError(
+                    "For continuous time model, t must be an array of time"
+                    " points at which to simulate"
+                )
+
+            def rhs(x, t):
+                return self.predict(x[newaxis, :], u(t))[0]
+
+            return integrator(rhs, x0, t, **integrator_kws)

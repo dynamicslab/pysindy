@@ -59,8 +59,8 @@ def validate_control_variables(
             )
 
         u_arr = []
-        for xi, control_variable in zip(x, u):
-            u_arr.append(_check_control_shape(xi, u, trim_last_point))
+        for xi, ui in zip(x, u):
+            u_arr.append(_check_control_shape(xi, ui, trim_last_point))
 
         if return_array:
             u_arr = np.vstack(u_arr)

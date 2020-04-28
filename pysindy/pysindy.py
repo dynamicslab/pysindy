@@ -116,14 +116,7 @@ class SINDy(BaseEstimator):
         self.n_jobs = n_jobs
 
     def fit(
-        self,
-        x,
-        t=1,
-        x_dot=None,
-        multiple_trajectories=False,
-        unbias=True,
-        control_variables=None,
-        quiet=False,
+        self, x, t=1, x_dot=None, multiple_trajectories=False, unbias=True, quiet=False,
     ):
         """
         Fit the SINDy model.
@@ -171,13 +164,6 @@ class SINDy(BaseEstimator):
             identified by the optimizer. This helps to remove the bias introduced by
             regularization.
 
-        control_variables: array-like or list of array-like, shape \
-                (n_samples, n_control_features)
-            Control variables. If training data contains multiple trajectories
-            (i.e. if x is a list of array-like), then control_variables should be a
-            list containing control variable data for each trajectory. Individual
-            trajectories may contain different numbers of samples
-
         quiet: boolean, optional (default False)
             Whether or not to suppress warnings during model fitting.
 
@@ -185,12 +171,6 @@ class SINDy(BaseEstimator):
         -------
         self: returns an instance of self
         """
-
-        if control_variables:
-            control_variables, self.control_indices = validate_control_variables(
-                x, control_variables, multiple_trajectories
-            )
-
         if multiple_trajectories:
             x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
         else:
@@ -207,10 +187,6 @@ class SINDy(BaseEstimator):
                     x_dot = self.differentiation_method(x, t)
                 else:
                     x_dot = validate_input(x_dot, t)
-
-        # Append control variables
-        if control_variables:
-            x = concatenate((x, control_variables), axis=1)
 
         # Drop rows where derivative isn't known
         x, x_dot = drop_nan_rows(x, x_dot)
@@ -532,3 +508,295 @@ class SINDy(BaseEstimator):
     @property
     def complexity(self):
         return self.model.steps[-1][1].complexity
+
+
+class SINDyC(SINDy):
+    """
+    SINDyC (SINDy with control) model object.
+
+    Parameters
+    ----------
+    optimizer : optimizer object, optional
+        Optimization method used to fit the SINDy model. This must be an object
+        that extends the sindy.optimizers.BaseOptimizer class. Default is
+        sequentially thresholded least squares with a threshold of 0.1.
+
+    feature_library : feature library object, optional
+        Default is polynomial features of degree 2.
+
+    differentiation_method : differentiation object, optional
+        Method for differentiating the data. This must be an object that
+        extends the sindy.differentiation_methods.BaseDifferentiation class.
+        Default is centered difference.
+
+    feature_names : list of string, length n_input_features, optional
+        Names for the input features. If None, will use ['x0','x1',...].
+
+    discrete_time : boolean, optional (default False)
+        If True, dynamical system is treated as a map. Rather than predicting
+        derivatives, the right hand side functions step the system forward by
+        one time step. If False, dynamical system is assumed to be a flow
+        (right hand side functions predict continuous time derivatives).
+
+    n_jobs : int, optional (default 1)
+        The number of parallel jobs to use when fitting, predicting with, and
+        scoring the model.
+
+    Attributes
+    ----------
+    model : sklearn.multioutput.MultiOutputRegressor object
+        The fitted SINDy model.
+    """
+
+    def __init__(self, **kwargs):
+        super(SINDyC, self).__init__(**kwargs)
+
+    def fit(
+        self,
+        x,
+        u,
+        t=1,
+        x_dot=None,
+        multiple_trajectories=False,
+        unbias=True,
+        quiet=False,
+    ):
+        """
+        Fit the SINDy model.
+
+        Parameters
+        ----------
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Training data. If training data contains multiple trajectories,
+            x should be a list containing data for each trajectory. Individual
+            trajectories may contain different numbers of samples.
+
+        u: array-like or list of array-like, shape (n_samples, n_control_features)
+            Control variables. If training data contains multiple trajectories
+            (i.e. if x is a list of array-like), then u should be a
+            list containing control variable data for each trajectory. Individual
+            trajectories may contain different numbers of samples
+
+        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
+                (default 1)
+            If t is a float, it specifies the timestep between each sample.
+            If array-like, it specifies the time at which each sample was
+            collected.
+            In this case the values in t must be strictly increasing.
+            In the case of multi-trajectory training data, t may also be a list
+            of arrays containing the collection times for each individual
+            trajectory.
+            Default value is a timestep of 1 between samples.
+
+        x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
+                optional (default None)
+            Optional pre-computed derivatives of the training data. If not
+            provided, the time derivatives of the training data will be
+            computed using the specified differentiation method. If x_dot is
+            provided, it must match the shape of the training data and these
+            values will be used as the time derivatives.
+
+        multiple_trajectories: boolean, optional, (default False)
+            Whether or not the training data includes multiple trajectories. If
+            True, the training data must be a list of arrays containing data
+            for each trajectory. If False, the training data must be a single
+            array.
+
+        unbias: boolean, optional (default True)
+            Whether to perform an extra step of unregularized linear regression to
+            unbias the coefficients for the identified support.
+            If the optimizer (`SINDy.optimizer`) applies any type of regularization,
+            that regularization may bias coefficients toward particular values,
+            improving the conditioning of the problem but harming the quality of the
+            fit. Setting `unbias=True` enables an extra step wherein unregularized
+            linear regression is applied, but only for the coefficients in the support
+            identified by the optimizer. This helps to remove the bias introduced by
+            regularization.
+
+        quiet: boolean, optional (default False)
+            Whether or not to suppress warnings during model fitting.
+
+        Returns
+        -------
+        self: returns an instance of self
+        """
+        trim_last_point = self.discrete_time and (x_dot is None)
+        u = validate_control_variables(
+            x,
+            u,
+            multiple_trajectories=multiple_trajectories,
+            trim_last_point=trim_last_point,
+        )
+        self.n_control_features_ = u.shape[1]
+
+        if multiple_trajectories:
+            x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
+        else:
+            x = validate_input(x, t)
+
+            if self.discrete_time:
+                if x_dot is None:
+                    x_dot = x[1:]
+                    x = x[:-1]
+                else:
+                    x_dot = validate_input(x)
+            else:
+                if x_dot is None:
+                    x_dot = self.differentiation_method(x, t)
+                else:
+                    x_dot = validate_input(x_dot, t)
+
+        # Append control variables
+        x = concatenate((x, u), axis=1)
+
+        # Drop rows where derivative isn't known
+        x, x_dot = drop_nan_rows(x, x_dot)
+
+        optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
+        steps = [("features", self.feature_library), ("model", optimizer)]
+        self.model = Pipeline(steps)
+
+        action = "ignore" if quiet else "default"
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action, category=ConvergenceWarning)
+            warnings.filterwarnings(action, category=LinAlgWarning)
+            warnings.filterwarnings(action, category=UserWarning)
+
+            self.model.fit(x, x_dot)
+
+        self.n_input_features_ = self.model.steps[0][1].n_input_features_
+        self.n_output_features_ = self.model.steps[0][1].n_output_features_
+
+        if self.feature_names is None:
+            feature_names = []
+            for i in range(self.n_input_features_ - self.n_control_features_):
+                feature_names.append("x" + str(i))
+            for i in range(self.n_control_features_):
+                feature_names.append("u" + str(i))
+            self.feature_names = feature_names
+
+        return self
+
+    def predict(self, x, u, multiple_trajectories=False):
+        """
+        Predict the time derivatives using the SINDyC model.
+
+        Parameters
+        ----------
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Samples.
+
+        u: array-like or list of array-like, shape(n_samples, n_control_features)
+            Control variables. If `multiple_trajectories=True` then u
+            must be a list of control variable data from each trajectory.
+
+        multiple_trajectories: boolean, optional (default False)
+            If True, x contains multiple trajectories and must be a list of
+            data from each trajectory. If False, x is a single trajectory.
+
+        Returns
+        -------
+        x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
+            Predicted time derivatives
+        """
+        check_is_fitted(self, "model")
+        if multiple_trajectories:
+            x = [validate_input(xi) for xi in x]
+            u = validate_control_variables(
+                x, u, multiple_trajectories=True, return_array=False
+            )
+            return [
+                self.model.predict(concatenate((xi, ui), axis=1))
+                for xi, ui in zip(x, u)
+            ]
+        else:
+            x = validate_input(x)
+            u = validate_control_variables(x, u)
+            return self.model.predict(concatenate((x, u), axis=1))
+
+    def score(
+        self,
+        x,
+        u,
+        t=1,
+        x_dot=None,
+        multiple_trajectories=False,
+        metric=r2_score,
+        **metric_kws
+    ):
+        """
+        Returns a score for the time derivative prediction.
+
+        Parameters
+        ----------
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Samples
+
+        u: array-like or list of array-like, shape(n_samples, n_control_features)
+            Control variables. If `multiple_trajectories=True` then u
+            must be a list of control variable data from each trajectory.
+
+        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
+                (default 1)
+            Time step between samples or array of collection times. Optional,
+            used to compute the time derivatives of the samples if x_dot is not
+            provided.
+
+        x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
+                optional
+            Optional pre-computed derivatives of the samples. If provided,
+            these values will be used to compute the score. If not provided,
+            the time derivatives of the training data will be computed using
+            the specified differentiation method.
+
+        multiple_trajectories: boolean, optional (default False)
+            If True, x contains multiple trajectories and must be a list of
+            data from each trajectory. If False, x is a single trajectory.
+
+        metric: metric function, optional
+            Metric function with which to score the prediction. Default is the
+            coefficient of determination R^2.
+
+        metric_kws: dict, optional
+            Optional keyword arguments to pass to the metric function.
+
+        Returns
+        -------
+        score: float
+            Metric function value for the model prediction of x_dot.
+        """
+        trim_last_point = self.discrete_time and (x_dot is None)
+        u = validate_control_variables(
+            x,
+            u,
+            multiple_trajectories=multiple_trajectories,
+            trim_last_point=trim_last_point,
+        )
+        if multiple_trajectories:
+            x, x_dot = self.process_multiple_trajectories(
+                x, t, x_dot, return_array=True
+            )
+        else:
+            x = validate_input(x, t)
+            if x_dot is None:
+                if self.discrete_time:
+                    x_dot = x[1:]
+                    x = x[:-1]
+                else:
+                    x_dot = self.differentiation_method(x, t)
+
+        if ndim(x_dot) == 1:
+            x_dot = x_dot.reshape(-1, 1)
+
+        # Append control variables
+        x = concatenate((x, u), axis=1)
+
+        # Drop rows where derivative isn't known (usually endpoints)
+        x, x_dot = drop_nan_rows(x, x_dot)
+
+        # Separate control variables from system variables to conform
+        # to the predict function's call signature
+        x_dot_predict = self.model.predict(
+            x[:, : -self.n_control_features_], x[:, -self.n_control_features_ :]
+        )
+        return metric(x_dot_predict, x_dot, **metric_kws)

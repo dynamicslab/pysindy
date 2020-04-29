@@ -141,6 +141,10 @@ def test_improper_shape_input(data_1d):
     model.fit(x, u_eval.reshape(-1, 1), t=t, x_dot=x.flatten())
     check_is_fitted(model)
 
+    # Should fail if x and u have incompatible numbers of rows
+    with pytest.raises(ValueError):
+        model.fit(x[:-1, :], u_eval, t=t[:-1])
+
 
 @pytest.mark.parametrize(
     "data",
@@ -162,6 +166,14 @@ def test_mixed_inputs(data):
     model = SINDyC()
     model.fit(x, u_eval, t, x_dot=x)
     check_is_fitted(model)
+
+
+def test_bad_control_input(data_lorenz_c_1d):
+    x, t, u_eval, _ = data_lorenz_c_1d
+    model = SINDyC()
+
+    with pytest.raises(TypeError):
+        model.fit(x, set(u_eval), t=t)
 
 
 @pytest.mark.parametrize(
@@ -272,6 +284,17 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
     # Should fail if multiple_trajectories flag is not set
     with pytest.raises(ValueError):
         model.fit(x, u_eval, t=t)
+
+    # Should fail if either x or u_eval is not a list
+    with pytest.raises(ValueError):
+        model.fit(x, u_eval[0], multiple_trajectories=True)
+
+    with pytest.raises(ValueError):
+        model.fit(x[0], u_eval, multiple_trajectories=True)
+
+    # x and u_eval should be lists of the same length
+    with pytest.raises(ValueError):
+        model.fit([x[:-1]], u_eval, multiple_trajectories=True)
 
     model.fit(x, u_eval, multiple_trajectories=True)
     check_is_fitted(model)

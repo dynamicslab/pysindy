@@ -543,7 +543,41 @@ class SINDyC(SINDy):
     Attributes
     ----------
     model : sklearn.multioutput.MultiOutputRegressor object
-        The fitted SINDy model.
+        The fitted SINDyC model.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from scipy.integrate import odeint
+    >>> from pysindy import SINDyC
+    >>> u = lambda t : np.sin(2 * t)
+    >>> lorenz_c = lambda z,t : [
+                10 * (z[1] - z[0]) + u(t) ** 2,
+                z[0] * (28 - z[2]) - z[1],
+                z[0] * z[1] - 8 / 3 * z[2],
+        ]
+    >>> t = np.arange(0,2,0.002)
+    >>> x = odeint(lorenz_c, [-8,8,27], t)
+    >>> u_eval = u(t)
+    >>> model = SINDyC()
+    >>> model.fit(x, u_eval, t=t[1]-t[0])
+    SINDyC()
+    >>> model.print()
+    x0' = -10.000 x0 + 10.000 x1 + 1.001 u0^2
+    x1' = 27.994 x0 + -0.999 x1 + -1.000 x0 x2
+    x2' = -2.666 x2 + 1.000 x0 x1
+    >>> model.coefficients()
+    array([[ 0.        , -9.99969851,  9.99958359,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  1.00120331],
+           [ 0.        , 27.9935177 , -0.99906375,  0.        ,  0.        ,
+             0.        ,  0.        , -0.99980455,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  0.        ],
+           [ 0.        ,  0.        ,  0.        , -2.666437  ,  0.        ,
+             0.        ,  0.99990137,  0.        ,  0.        ,  0.        ,
+             0.        ,  0.        ,  0.        ,  0.        ,  0.        ]])
+    >>> model.score(x, u_eval, t=t[1]-t[0])
+    0.9999999855414495
     """
 
     def __init__(self, **kwargs):

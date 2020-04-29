@@ -44,7 +44,7 @@ def validate_control_variables(
 ):
     """
     Ensure that control variables u are compatible with the data x.
-    If multiple_trajectories is True, convert u from a list
+    If `return_array` and `multiple_trajectories` are True, convert u from a list
     into an array (of concatenated list entries).
     """
     if multiple_trajectories:
@@ -58,9 +58,7 @@ def validate_control_variables(
                 "multiple_trajectories is True"
             )
 
-        u_arr = []
-        for xi, ui in zip(x, u):
-            u_arr.append(_check_control_shape(xi, ui, trim_last_point))
+        u_arr = [_check_control_shape(xi, ui, trim_last_point) for xi, ui in zip(x, u)]
 
         if return_array:
             u_arr = np.vstack(u_arr)

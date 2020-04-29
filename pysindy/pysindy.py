@@ -361,12 +361,10 @@ class SINDy(BaseEstimator):
             raise TypeError("Input x must be a list")
 
         if self.discrete_time:
+            x = [validate_input(xi) for xi in x]
             if x_dot is None:
-                x_dot = []
-                for i in range(len(x)):
-                    x_tmp = validate_input(x[i])
-                    x[i] = x_tmp[:-1]
-                    x_dot.append(x_tmp[1:])
+                x_dot = [xi[1:] for xi in x]
+                x = [xi[:-1] for xi in x]
             else:
                 if not isinstance(x_dot, Sequence):
                     raise TypeError(
@@ -377,15 +375,13 @@ class SINDy(BaseEstimator):
         else:
             if x_dot is None:
                 if isinstance(t, Sequence):
-                    x_dot = []
-                    for i in range(len(x)):
-                        x[i] = validate_input(x[i], t[i])
-                        x_dot.append(self.differentiation_method(x[i], t[i]))
+                    x = [validate_input(xi, ti) for xi, ti in zip(x, t)]
+                    x_dot = [
+                        self.differentiation_method(xi, ti) for xi, ti in zip(x, t)
+                    ]
                 else:
-                    x_dot = []
-                    for i in range(len(x)):
-                        x[i] = validate_input(x[i], t)
-                        x_dot.append(self.differentiation_method(x[i], t))
+                    x = [validate_input(xi, t) for xi in x]
+                    x_dot = [self.differentiation_method(xi, t) for xi in x]
             else:
                 if not isinstance(x_dot, Sequence):
                     raise TypeError(
@@ -393,8 +389,10 @@ class SINDy(BaseEstimator):
                         "(i.e. for multiple trajectories)"
                     )
                 if isinstance(t, Sequence):
-                    x_dot = [validate_input(xd, t) for xd, t in zip(x_dot, t)]
+                    x = [validate_input(xi, ti) for xi, ti in zip(x, t)]
+                    x_dot = [validate_input(xd, ti) for xd, ti in zip(x_dot, t)]
                 else:
+                    x = [validate_input(xi, t) for xi in x]
                     x_dot = [validate_input(xd, t) for xd in x_dot]
 
         if return_array:

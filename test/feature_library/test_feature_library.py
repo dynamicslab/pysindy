@@ -60,7 +60,7 @@ def test_bad_parameters():
         IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
-        ConcatLibrary([IdentityLibrary(), PolynomialLibrary()]),
+        IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("data_custom_library"),
     ],
 )
@@ -76,7 +76,7 @@ def test_fit_transform(data_lorenz, library):
         IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
-        ConcatLibrary([IdentityLibrary(), PolynomialLibrary()]),
+        IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("data_custom_library"),
     ],
 )

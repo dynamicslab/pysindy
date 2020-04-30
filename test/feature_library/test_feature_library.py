@@ -92,7 +92,7 @@ def test_change_in_data_shape(data_lorenz, library):
     [
         (IdentityLibrary(), 3),
         (PolynomialLibrary(), 10),
-        (ConcatLibrary([IdentityLibrary(), PolynomialLibrary()]), 13),
+        (IdentityLibrary() + PolynomialLibrary(), 13),
         (FourierLibrary(), 6),
         (pytest.lazy_fixture("data_custom_library"), 9),
     ],
@@ -111,7 +111,7 @@ def test_output_shape(data_lorenz, library, shape):
         IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
-        ConcatLibrary([PolynomialLibrary(), FourierLibrary()]),
+        PolynomialLibrary() + FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),
     ],
 )
@@ -184,5 +184,5 @@ def test_not_implemented(data_lorenz):
 def test_concat():
     ident_lib = IdentityLibrary()
     poly_lib = PolynomialLibrary()
-    concat_lib = ConcatLibrary([ident_lib, poly_lib])
+    concat_lib = ident_lib + poly_lib
     assert isinstance(concat_lib, ConcatLibrary)

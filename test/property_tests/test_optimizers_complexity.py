@@ -52,7 +52,7 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
     for less_complex, more_complex in zip(optimizers, optimizers[1:]):
         # relax the condition to account for
         # noise and non-normalized threshold parameters
-        assert less_complex.complexity <= more_complex.complexity + 1
+        assert less_complex.complexity <= more_complex.complexity + 2
 
 
 @pytest.mark.parametrize(

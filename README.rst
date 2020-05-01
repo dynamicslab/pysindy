@@ -14,17 +14,23 @@ The resulting models are inherently *interpretable* and *generalizable*.
 
 How it works
 ^^^^^^^^^^^^
-Suppose, for some physical system of interest, we have measurements of state variables ``x(t)`` (a vector of length n) at different points in time. Examples of state variables include the position, velocity, or acceleration of objects; lift, drag, or angle of attack of aerodynamic objects; and concentrations of different chemical species. If we suspect that the system could be well-modeled by a dynamical system of the form::
+Suppose, for some physical system of interest, we have measurements of state variables ``x(t)`` (a vector of length n) at different points in time. Examples of state variables include the position, velocity, or acceleration of objects; lift, drag, or angle of attack of aerodynamic objects; and concentrations of different chemical species. If we suspect that the system could be well-modeled by a dynamical system of the form
+
+.. code-block:: text
 
     x'(t) = f(x(t)),
 
-then we can use SINDy to learn ``f(x)`` from the data (``x'(t)`` denotes the time derivative of ``x(t)``). Note that both ``f(x)`` and ``x(t)`` are typically vectors. The fundamental assumption SINDy employs is that each component of ``f(x)``, ``f_i(x)`` can be represented as a *sparse* linear combination of basis functions ``theta_j(x)``::
+then we can use SINDy to learn ``f(x)`` from the data (``x'(t)`` denotes the time derivative of ``x(t)``). Note that both ``f(x)`` and ``x(t)`` are typically vectors. The fundamental assumption SINDy employs is that each component of ``f(x)``, ``f_i(x)`` can be represented as a *sparse* linear combination of basis functions ``theta_j(x)``
 
-  f_i(x) = theta_1(x) * xi_{1,i} + theta_2(x) * xi_{2,i} + ... + theta_k * xi{k,i}
+.. code-block:: text
+
+    f_i(x) = theta_1(x) * xi_{1,i} + theta_2(x) * xi_{2,i} + ... + theta_k * xi{k,i}
 
 Concatenating all the objects into matrices (denoted with capitalized names) helps to simplify things.
 To this end we place all measurements of the state variables into a data matrix ``X`` (with a row per time measurement and a column per variable), the derivatives of the state variables into a matrix ``X'``, all basis functions evaluated at all points in time into a matrix ``Theta(X)`` (each basis function gets a column), and all coefficients into a third matrix ``Xi`` (one column per state variable).
-The approximation problem to be solved can then be compactly written as::
+The approximation problem to be solved can then be compactly written as
+
+.. code-block:: text
 
     X' = Theta(X) * Xi.
 
@@ -44,11 +50,13 @@ Once a ``SINDy`` object has been created it must be fit to measurement data, sim
 
 Example
 ^^^^^^^
-Suppose we have measurements of the position of a particle obeying the following dynamical system at different points in time::
+Suppose we have measurements of the position of a particle obeying the following dynamical system at different points in time
+
+.. code-block:: text
 
   x' = -2x
   y' = y
-  
+
 Note that this system of differential equations decouples into two differential equations whose solutions are simply ``x(t) = x_0 * exp(-2 * t)`` and ``y(t) = y_0 * exp(t)``, where ``x_0 = x(0)`` and ``y_0 = y(0)`` are the initial conditions.
 
 Using the initial conditions ``x_0 = 3`` and ``y_0 = 0.5``, we construct the data matrix ``X``.
@@ -76,7 +84,9 @@ We use the ``feature_names`` argument so that the model prints out the correct l
 
   model.print()
 
-which prints the following::
+which prints the following
+
+.. code-block:: text
 
   x' = -2.000 x
   y' = 1.000 y
@@ -126,7 +136,7 @@ Community guidelines
 
 Contributing code
 ^^^^^^^^^^^^^^^^^
-We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To get started we recommend installing the packages in `requirements-dev.txt` via
+We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To get started we recommend installing the packages in ``requirements-dev.txt`` via
 
 .. code-block:: bash
 
@@ -138,7 +148,7 @@ This will allow you to run unit tests and automatically format your code. To be 
 
     pytest
 
-We recommed using `pre-commit` to format your code. Once you have staged changes to commit
+We recommed using ``pre-commit`` to format your code. Once you have staged changes to commit
 
 .. code-block:: bash
 

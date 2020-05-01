@@ -7,7 +7,7 @@ except DistributionNotFound:
     pass
 
 
-from pysindy.pysindy import SINDy
+from .pysindy import SINDy
 from pysindy.differentiation import *
 from pysindy.optimizers import *
 from pysindy.feature_library import *

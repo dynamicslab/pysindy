@@ -8,7 +8,6 @@ except DistributionNotFound:
 
 
 from .pysindy import SINDy
-from .pysindy import SINDyC
 from pysindy.differentiation import *
 from pysindy.optimizers import *
 from pysindy.feature_library import *

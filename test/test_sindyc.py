@@ -1,8 +1,4 @@
-"""Unit tests for SINDyC: SINDy with control.
-
-SINDyC inherits from SINDy, so we focus on testing methods with
-new functionality.
-"""
+"""Unit tests for SINDy with control."""
 import numpy as np
 import pytest
 from scipy.integrate import odeint
@@ -12,7 +8,7 @@ from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy import SINDyC
+from pysindy import SINDy
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
 
@@ -94,9 +90,9 @@ def data_discrete_time_multiple_trajectories_c():
 
 def test_get_feature_names_len(data_lorenz_c_1d):
     x, t, u_eval, _ = data_lorenz_c_1d
-    model = SINDyC()
+    model = SINDy()
 
-    model.fit(x, u_eval, t=t)
+    model.fit(x, u=u_eval, t=t)
 
     # Assumes default library is polynomial features of degree 2
     assert len(model.get_feature_names()) == 15
@@ -104,12 +100,12 @@ def test_get_feature_names_len(data_lorenz_c_1d):
 
 def test_not_fitted(data_lorenz_c_1d):
     x, t, u_eval, u = data_lorenz_c_1d
-    model = SINDyC()
+    model = SINDy()
 
     with pytest.raises(NotFittedError):
-        model.predict(x, u_eval)
+        model.predict(x, u=u_eval)
     with pytest.raises(NotFittedError):
-        model.simulate(x[0], u, t)
+        model.simulate(x[0], t=t, u=u_eval)
 
 
 def test_improper_shape_input(data_1d):
@@ -117,33 +113,33 @@ def test_improper_shape_input(data_1d):
     u_eval = np.ones_like(x)
 
     # Ensure model successfully handles different data shapes
-    model = SINDyC()
-    model.fit(x.flatten(), u_eval, t=t)
+    model = SINDy()
+    model.fit(x.flatten(), u=u_eval, t=t)
     check_is_fitted(model)
 
-    model = SINDyC()
-    model.fit(x.flatten(), u_eval, t=t, x_dot=x.flatten())
+    model = SINDy()
+    model.fit(x.flatten(), u=u_eval, t=t, x_dot=x.flatten())
     check_is_fitted(model)
 
-    model = SINDyC()
-    model.fit(x, u_eval, t=t, x_dot=x.flatten())
+    model = SINDy()
+    model.fit(x, u=u_eval, t=t, x_dot=x.flatten())
     check_is_fitted(model)
 
-    model = SINDyC()
-    model.fit(x.flatten(), u_eval.reshape(-1, 1), t=t)
+    model = SINDy()
+    model.fit(x.flatten(), u=u_eval.reshape(-1, 1), t=t)
     check_is_fitted(model)
 
-    model = SINDyC()
-    model.fit(x.flatten(), u_eval.reshape(-1, 1), t=t, x_dot=x.flatten())
+    model = SINDy()
+    model.fit(x.flatten(), u=u_eval.reshape(-1, 1), t=t, x_dot=x.flatten())
     check_is_fitted(model)
 
-    model = SINDyC()
-    model.fit(x, u_eval.reshape(-1, 1), t=t, x_dot=x.flatten())
+    model = SINDy()
+    model.fit(x, u=u_eval.reshape(-1, 1), t=t, x_dot=x.flatten())
     check_is_fitted(model)
 
     # Should fail if x and u have incompatible numbers of rows
     with pytest.raises(ValueError):
-        model.fit(x[:-1, :], u_eval, t=t[:-1])
+        model.fit(x[:-1, :], u=u_eval, t=t[:-1])
 
 
 @pytest.mark.parametrize(
@@ -154,26 +150,26 @@ def test_mixed_inputs(data):
     x, t, u_eval, _ = data
 
     # Scalar t
-    model = SINDyC()
-    model.fit(x, u_eval, t=2)
+    model = SINDy()
+    model.fit(x, u=u_eval, t=2)
     check_is_fitted(model)
 
     # x_dot is passed in
-    model = SINDyC()
-    model.fit(x, u_eval, x_dot=x)
+    model = SINDy()
+    model.fit(x, u=u_eval, x_dot=x)
     check_is_fitted(model)
 
-    model = SINDyC()
-    model.fit(x, u_eval, t, x_dot=x)
+    model = SINDy()
+    model.fit(x, u=u_eval, t=t, x_dot=x)
     check_is_fitted(model)
 
 
 def test_bad_control_input(data_lorenz_c_1d):
     x, t, u_eval, _ = data_lorenz_c_1d
-    model = SINDyC()
+    model = SINDy()
 
     with pytest.raises(TypeError):
-        model.fit(x, set(u_eval), t=t)
+        model.fit(x, u=set(u_eval), t=t)
 
 
 @pytest.mark.parametrize(
@@ -182,34 +178,34 @@ def test_bad_control_input(data_lorenz_c_1d):
 )
 def test_bad_t(data):
     x, t, u_eval, _ = data
-    model = SINDyC()
+    model = SINDy()
 
     # No t
     with pytest.raises(ValueError):
-        model.fit(x, u_eval, t=None)
+        model.fit(x, u=u_eval, t=None)
 
     # Invalid value of t
     with pytest.raises(ValueError):
-        model.fit(x, u_eval, t=-1)
+        model.fit(x, u=u_eval, t=-1)
 
     # t is a list
     with pytest.raises(ValueError):
-        model.fit(x, u_eval, list(t))
+        model.fit(x, u=u_eval, t=list(t))
 
     # Wrong number of time points
     with pytest.raises(ValueError):
-        model.fit(x, u_eval, t[:-1])
+        model.fit(x, u=u_eval, t=t[:-1])
 
     # Two points in t out of order
     t[2], t[4] = t[4], t[2]
     with pytest.raises(ValueError):
-        model.fit(x, u_eval, t)
+        model.fit(x, u=u_eval, t=t)
     t[2], t[4] = t[4], t[2]
 
     # Two matching times in t
     t[3] = t[5]
     with pytest.raises(ValueError):
-        model.fit(x, u_eval, t)
+        model.fit(x, u=u_eval, t=t)
 
 
 @pytest.mark.parametrize(
@@ -227,9 +223,9 @@ def test_bad_t(data):
 )
 def test_predict(data, optimizer):
     x, t, u_eval, _ = data
-    model = SINDyC(optimizer=optimizer)
-    model.fit(x, u_eval, t)
-    x_dot = model.predict(x, u_eval)
+    model = SINDy(optimizer=optimizer)
+    model.fit(x, u=u_eval, t=t)
+    x_dot = model.predict(x, u=u_eval)
 
     assert x.shape == x_dot.shape
 
@@ -240,9 +236,9 @@ def test_predict(data, optimizer):
 )
 def test_simulate(data):
     x, t, u_eval, u = data
-    model = SINDyC()
-    model.fit(x, u_eval, t)
-    x1 = model.simulate(x[0], u, t)
+    model = SINDy()
+    model.fit(x, u=u_eval, t=t)
+    x1 = model.simulate(x[0], t=t, u=u)
 
     assert len(x1) == len(t)
 
@@ -253,25 +249,25 @@ def test_simulate(data):
 )
 def test_score(data):
     x, t, u_eval, _ = data
-    model = SINDyC()
-    model.fit(x, u_eval, t)
+    model = SINDy()
+    model.fit(x, u=u_eval, t=t)
 
-    assert model.score(x, u_eval) <= 1
+    assert model.score(x, u=u_eval) <= 1
 
-    assert model.score(x, u_eval, t=t) <= 1
+    assert model.score(x, u=u_eval, t=t) <= 1
 
-    assert model.score(x, u_eval, x_dot=x) <= 1
+    assert model.score(x, u=u_eval, x_dot=x) <= 1
 
-    assert model.score(x, u_eval, t=t, x_dot=x) <= 1
+    assert model.score(x, u=u_eval, t=t, x_dot=x) <= 1
 
 
 def test_parallel(data_lorenz_c_1d):
     x, t, u_eval, _ = data_lorenz_c_1d
-    model = SINDyC(n_jobs=4)
-    model.fit(x, u_eval, t)
+    model = SINDy(n_jobs=4)
+    model.fit(x, u=u_eval, t=t)
 
-    x_dot = model.predict(x, u_eval)
-    s = model.score(x, u_eval, x_dot=x_dot)
+    x_dot = model.predict(x, u=u_eval)
+    s = model.score(x, u=u_eval, x_dot=x_dot)
     assert s >= 0.95
 
 
@@ -279,35 +275,35 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
     x, t = data_multiple_trajctories
     u_eval = [np.ones((xi.shape[0], 2)) for xi in x]
 
-    model = SINDyC()
+    model = SINDy()
 
     # Should fail if multiple_trajectories flag is not set
     with pytest.raises(ValueError):
-        model.fit(x, u_eval, t=t)
+        model.fit(x, u=u_eval, t=t)
 
     # Should fail if either x or u_eval is not a list
     with pytest.raises(ValueError):
-        model.fit(x, u_eval[0], multiple_trajectories=True)
+        model.fit(x, u=u_eval[0], multiple_trajectories=True)
 
     with pytest.raises(ValueError):
-        model.fit(x[0], u_eval, multiple_trajectories=True)
+        model.fit(x[0], u=u_eval, multiple_trajectories=True)
 
     # x and u_eval should be lists of the same length
     with pytest.raises(ValueError):
-        model.fit([x[:-1]], u_eval, multiple_trajectories=True)
+        model.fit([x[:-1]], u=u_eval, multiple_trajectories=True)
 
-    model.fit(x, u_eval, multiple_trajectories=True)
+    model.fit(x, u=u_eval, multiple_trajectories=True)
     check_is_fitted(model)
 
-    model.fit(x, u_eval, t=t, multiple_trajectories=True)
-    assert model.score(x, u_eval, t=t, multiple_trajectories=True) > 0.8
+    model.fit(x, u=u_eval, t=t, multiple_trajectories=True)
+    assert model.score(x, u=u_eval, t=t, multiple_trajectories=True) > 0.8
 
-    model = SINDyC()
-    model.fit(x, u_eval, x_dot=x, multiple_trajectories=True)
+    model = SINDy()
+    model.fit(x, u=u_eval, x_dot=x, multiple_trajectories=True)
     check_is_fitted(model)
 
-    model = SINDyC()
-    model.fit(x, u_eval, t=t, x_dot=x, multiple_trajectories=True)
+    model = SINDy()
+    model.fit(x, u=u_eval, t=t, x_dot=x, multiple_trajectories=True)
     check_is_fitted(model)
 
 
@@ -315,14 +311,14 @@ def test_predict_multiple_trajectories(data_multiple_trajctories):
     x, t = data_multiple_trajctories
     u_eval = [np.ones((xi.shape[0], 2)) for xi in x]
 
-    model = SINDyC()
-    model.fit(x, u_eval, t=t, multiple_trajectories=True)
+    model = SINDy()
+    model.fit(x, u=u_eval, t=t, multiple_trajectories=True)
 
     # Should fail if multiple_trajectories flag is not set
     with pytest.raises(ValueError):
-        model.predict(x, u_eval)
+        model.predict(x, u=u_eval)
 
-    p = model.predict(x, u_eval, multiple_trajectories=True)
+    p = model.predict(x, u=u_eval, multiple_trajectories=True)
     assert len(p) == len(x)
 
 
@@ -330,44 +326,44 @@ def test_score_multiple_trajectories(data_multiple_trajctories):
     x, t = data_multiple_trajctories
     u_eval = [np.ones((xi.shape[0], 2)) for xi in x]
 
-    model = SINDyC()
-    model.fit(x, u_eval, t=t, multiple_trajectories=True)
+    model = SINDy()
+    model.fit(x, u=u_eval, t=t, multiple_trajectories=True)
 
     # Should fail if multiple_trajectories flag is not set
     with pytest.raises(ValueError):
-        model.score(x, u_eval)
+        model.score(x, u=u_eval)
 
-    s = model.score(x, u_eval, multiple_trajectories=True)
+    s = model.score(x, u=u_eval, multiple_trajectories=True)
     assert s <= 1
 
-    s = model.score(x, u_eval, t=t, multiple_trajectories=True)
+    s = model.score(x, u=u_eval, t=t, multiple_trajectories=True)
     assert s <= 1
 
-    s = model.score(x, u_eval, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, u=u_eval, x_dot=x, multiple_trajectories=True)
     assert s <= 1
 
-    s = model.score(x, u_eval, t=t, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, u=u_eval, t=t, x_dot=x, multiple_trajectories=True)
     assert s <= 1
 
 
 def test_fit_discrete_time(data_discrete_time_c):
     x, u_eval = data_discrete_time_c
 
-    model = SINDyC(discrete_time=True)
-    model.fit(x, u_eval)
+    model = SINDy(discrete_time=True)
+    model.fit(x, u=u_eval)
     check_is_fitted(model)
 
-    model = SINDyC(discrete_time=True)
-    model.fit(x[:-1], u_eval[:-1], x_dot=x[1:])
+    model = SINDy(discrete_time=True)
+    model.fit(x[:-1], u=u_eval[:-1], x_dot=x[1:])
     check_is_fitted(model)
 
 
 def test_simulate_discrete_time(data_discrete_time_c):
     x, u_eval = data_discrete_time_c
-    model = SINDyC(discrete_time=True)
-    model.fit(x, u_eval)
+    model = SINDy(discrete_time=True)
+    model.fit(x, u=u_eval)
     n_steps = x.shape[0]
-    x1 = model.simulate(x[0], u_eval, n_steps)
+    x1 = model.simulate(x[0], t=n_steps, u=u_eval)
 
     assert len(x1) == n_steps
 
@@ -376,17 +372,17 @@ def test_simulate_discrete_time(data_discrete_time_c):
 
 def test_predict_discrete_time(data_discrete_time_c):
     x, u_eval = data_discrete_time_c
-    model = SINDyC(discrete_time=True)
-    model.fit(x, u_eval)
-    assert len(model.predict(x, u_eval)) == len(x)
+    model = SINDy(discrete_time=True)
+    model.fit(x, u=u_eval)
+    assert len(model.predict(x, u=u_eval)) == len(x)
 
 
 def test_score_discrete_time(data_discrete_time_c):
     x, u_eval = data_discrete_time_c
-    model = SINDyC(discrete_time=True)
-    model.fit(x, u_eval)
-    assert model.score(x, u_eval) > 0.75
-    assert model.score(x, u_eval, x_dot=x) < 1
+    model = SINDy(discrete_time=True)
+    model.fit(x, u=u_eval)
+    assert model.score(x, u=u_eval) > 0.75
+    assert model.score(x, u=u_eval, x_dot=x) < 1
 
 
 def test_fit_discrete_time_multiple_trajectories(
@@ -395,15 +391,15 @@ def test_fit_discrete_time_multiple_trajectories(
     x, u_eval = data_discrete_time_multiple_trajectories_c
 
     # Should fail if multiple_trajectories flag is not set
-    model = SINDyC(discrete_time=True)
+    model = SINDy(discrete_time=True)
     with pytest.raises(ValueError):
-        model.fit(x, u_eval)
+        model.fit(x, u=u_eval)
 
-    model.fit(x, u_eval, multiple_trajectories=True)
+    model.fit(x, u=u_eval, multiple_trajectories=True)
     check_is_fitted(model)
 
-    model = SINDyC(discrete_time=True)
-    model.fit(x, u_eval, x_dot=x, multiple_trajectories=True)
+    model = SINDy(discrete_time=True)
+    model.fit(x, u=u_eval, x_dot=x, multiple_trajectories=True)
     check_is_fitted(model)
 
 
@@ -411,14 +407,14 @@ def test_predict_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories_c,
 ):
     x, u_eval = data_discrete_time_multiple_trajectories_c
-    model = SINDyC(discrete_time=True)
-    model.fit(x, u_eval, multiple_trajectories=True)
+    model = SINDy(discrete_time=True)
+    model.fit(x, u=u_eval, multiple_trajectories=True)
 
     # Should fail if multiple_trajectories flag is not set
     with pytest.raises(ValueError):
-        model.predict(x, u_eval)
+        model.predict(x, u=u_eval)
 
-    y = model.predict(x, u_eval, multiple_trajectories=True)
+    y = model.predict(x, u=u_eval, multiple_trajectories=True)
     assert len(y) == len(x)
 
 
@@ -426,32 +422,32 @@ def test_score_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories_c,
 ):
     x, u_eval = data_discrete_time_multiple_trajectories_c
-    model = SINDyC(discrete_time=True)
-    model.fit(x, u_eval, multiple_trajectories=True)
+    model = SINDy(discrete_time=True)
+    model.fit(x, u=u_eval, multiple_trajectories=True)
 
     # Should fail if multiple_trajectories flag is not set
     with pytest.raises(ValueError):
-        model.score(x, u_eval)
+        model.score(x, u=u_eval)
 
-    s = model.score(x, u_eval, multiple_trajectories=True)
+    s = model.score(x, u=u_eval, multiple_trajectories=True)
     assert s > 0.75
 
     # x is not its own derivative, so we expect bad performance here
-    s = model.score(x, u_eval, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, u=u_eval, x_dot=x, multiple_trajectories=True)
     assert s < 1
 
 
 def test_simulate_errors(data_lorenz_c_1d):
     x, t, u_eval, u = data_lorenz_c_1d
-    model = SINDyC()
-    model.fit(x, u_eval, t)
+    model = SINDy()
+    model.fit(x, u=u_eval, t=t)
 
     with pytest.raises(ValueError):
-        model.simulate(x[0], u, t=1)
+        model.simulate(x[0], t=1, u=u_eval)
 
-    model = SINDyC(discrete_time=True)
+    model = SINDy(discrete_time=True)
     with pytest.raises(ValueError):
-        model.simulate(x[0], u, t=[1, 2])
+        model.simulate(x[0], t=[1, 2], u=u_eval)
 
 
 @pytest.mark.parametrize(
@@ -460,12 +456,58 @@ def test_simulate_errors(data_lorenz_c_1d):
 )
 def test_fit_warn(data_lorenz_c_1d, params, warning):
     x, t, u_eval, _ = data_lorenz_c_1d
-    model = SINDyC(optimizer=STLSQ(**params))
+    model = SINDy(optimizer=STLSQ(**params))
 
     with pytest.warns(warning):
-        model.fit(x, u_eval, t)
+        model.fit(x, u=u_eval, t=t)
 
     with pytest.warns(None) as warn_record:
-        model.fit(x, u_eval, t, quiet=True)
+        model.fit(x, u=u_eval, t=t, quiet=True)
 
     assert len(warn_record) == 0
+
+
+def test_u_omitted(data_lorenz_c_1d):
+    x, t, u_eval, _ = data_lorenz_c_1d
+    model = SINDy()
+
+    model.fit(x, u=u_eval, t=t)
+
+    with pytest.raises(TypeError):
+        model.predict(x)
+
+    with pytest.raises(TypeError):
+        model.score(x)
+
+    with pytest.raises(TypeError):
+        model.simulate(x[0], t=t)
+
+
+def test_extra_u_warn(data_lorenz_c_1d):
+    x, t, u_eval, _ = data_lorenz_c_1d
+    model = SINDy()
+    model.fit(x, t=t)
+
+    with pytest.warns(UserWarning):
+        model.predict(x, u=u_eval)
+
+    with pytest.warns(UserWarning):
+        model.score(x, u=u_eval)
+
+    with pytest.warns(UserWarning):
+        model.simulate(x[0], t=t, u=u_eval)
+
+
+def test_extra_u_warn_discrete(data_discrete_time_c):
+    x, u_eval = data_discrete_time_c
+    model = SINDy(discrete_time=True)
+    model.fit(x)
+
+    with pytest.warns(UserWarning):
+        model.predict(x, u=u_eval)
+
+    with pytest.warns(UserWarning):
+        model.score(x, u=u_eval)
+
+    with pytest.warns(UserWarning):
+        model.simulate(x[0], u=u_eval, t=10)

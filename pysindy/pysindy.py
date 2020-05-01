@@ -304,10 +304,15 @@ class SINDy(BaseEstimator):
             Predicted time derivatives
         """
         check_is_fitted(self, "model")
-        if u is None:
+        if u is None or self.n_control_features_ == 0:
             if self.n_control_features_ > 0:
                 raise TypeError(
                     "Model was fit using control variables, so u is required"
+                )
+            elif u is not None:
+                warnings.warn(
+                    "Control variables u were ignored because control variables were"
+                    " not used when the model was fit"
                 )
             if multiple_trajectories:
                 x = [validate_input(xi) for xi in x]
@@ -427,10 +432,15 @@ class SINDy(BaseEstimator):
         score: float
             Metric function value for the model prediction of x_dot.
         """
-        if u is None:
+        if u is None or self.n_control_features_ == 0:
             if self.n_control_features_ > 0:
                 raise TypeError(
                     "Model was fit using control variables, so u is required"
+                )
+            elif u is not None:
+                warnings.warn(
+                    "Control variables u were ignored because control variables were"
+                    " not used when the model was fit"
                 )
         else:
             trim_last_point = self.discrete_time and (x_dot is None)
@@ -458,7 +468,7 @@ class SINDy(BaseEstimator):
             x_dot = x_dot.reshape(-1, 1)
 
         # Append control variables
-        if u is not None:
+        if u is not None and self.n_control_features_ > 0:
             x = concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known (usually endpoints)
@@ -627,7 +637,12 @@ class SINDy(BaseEstimator):
             x = zeros((t, self.n_input_features_ - self.n_control_features_))
             x[0] = x0
 
-            if u is None:
+            if u is None or self.n_control_features_ == 0:
+                if u is not None:
+                    warnings.warn(
+                        "Control variables u were ignored because control variables"
+                        " were not used when the model was fit"
+                    )
                 for i in range(1, t):
                     x[i] = self.predict(x[i - 1 : i])
                     if check_stop_condition(x[i]):
@@ -645,7 +660,12 @@ class SINDy(BaseEstimator):
                     " points at which to simulate"
                 )
 
-            if u is None:
+            if u is None or self.n_control_features_ == 0:
+                if u is not None:
+                    warnings.warn(
+                        "Control variables u were ignored because control variables"
+                        " were not used when the model was fit"
+                    )
 
                 def rhs(x, t):
                     return self.predict(x[newaxis, :])[0]

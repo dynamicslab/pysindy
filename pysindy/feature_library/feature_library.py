@@ -5,6 +5,7 @@ import abc
 
 import numpy as np
 from sklearn.base import TransformerMixin
+from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 
@@ -131,6 +132,8 @@ class ConcatLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
+        _, n_features = check_array(X).shape
+        self.n_input_features_ = n_features
 
         # first fit all libs provided below
         fitted_libs = [lib.fit(X, y) for lib in self.libraries_]
@@ -158,7 +161,8 @@ class ConcatLibrary(BaseFeatureLibrary):
             generated from applying the custom functions to the inputs.
 
         """
-
+        for lib in self.libraries_:
+            check_is_fitted(lib)
         n_samples = X.shape[0]
 
         # preallocate matrix

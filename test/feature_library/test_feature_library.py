@@ -186,3 +186,20 @@ def test_concat():
     poly_lib = PolynomialLibrary()
     concat_lib = ident_lib + poly_lib
     assert isinstance(concat_lib, ConcatLibrary)
+
+
+@pytest.mark.parametrize(
+    "library",
+    [
+        IdentityLibrary(),
+        PolynomialLibrary(),
+        FourierLibrary(),
+        PolynomialLibrary() + FourierLibrary(),
+        pytest.lazy_fixture("data_custom_library"),
+    ],
+)
+def test_not_fitted(data_lorenz, library):
+    x, t = data_lorenz
+
+    with pytest.raises(NotFittedError):
+        library.transform(x)

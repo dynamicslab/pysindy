@@ -17,8 +17,8 @@ class SR3(BaseOptimizer):
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + lambda \\times R(v)
-        + (0.5 / nu)\\|w-v\\|^2_2
+        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
+        + (0.5 / \\nu)\\|w-v\\|^2_2
 
     where :math:`R(v)` is a regularization function. See the following reference
     for more details:
@@ -73,6 +73,11 @@ class SR3(BaseOptimizer):
     coef_full_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
+
+    history_ : list
+        History of sparse coefficients. ``history_[k]`` contains the
+        sparse coefficients (v in the optimization objective function)
+        at iteration k.
 
     Examples
     --------

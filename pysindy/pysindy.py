@@ -62,6 +62,13 @@ class SINDy(BaseEstimator):
     model : sklearn.multioutput.MultiOutputRegressor object
         The fitted SINDy model.
 
+    n_input_features_ : int
+        The total number of input features.
+
+    n_output_features_ : int
+        The total number of output features. This number is a function of
+        ``self.n_input_features`` and the feature library being used.
+
     Examples
     --------
     >>> import numpy as np
@@ -203,10 +210,10 @@ class SINDy(BaseEstimator):
         unbias: boolean, optional (default True)
             Whether to perform an extra step of unregularized linear regression to
             unbias the coefficients for the identified support.
-            If the optimizer (`SINDy.optimizer`) applies any type of regularization,
+            If the optimizer (``SINDy.optimizer``) applies any type of regularization,
             that regularization may bias coefficients toward particular values,
             improving the conditioning of the problem but harming the quality of the
-            fit. Setting `unbias=True` enables an extra step wherein unregularized
+            fit. Setting ``unbias=True`` enables an extra step wherein unregularized
             linear regression is applied, but only for the coefficients in the support
             identified by the optimizer. This helps to remove the bias introduced by
             regularization.
@@ -290,7 +297,7 @@ class SINDy(BaseEstimator):
 
         u: array-like or list of array-like, shape(n_samples, n_control_features), \
                 (default None)
-            Control variables. If `multiple_trajectories=True` then u
+            Control variables. If ``multiple_trajectories=True`` then u
             must be a list of control variable data from each trajectory. If the
             model was fit with control variables then u is not optional.
 
@@ -412,7 +419,7 @@ class SINDy(BaseEstimator):
 
         u: array-like or list of array-like, shape(n_samples, n_control_features), \
                 optional (default None)
-            Control variables. If `multiple_trajectories=True` then u
+            Control variables. If ``multiple_trajectories=True`` then u
             must be a list of control variable data from each trajectory.
             If the model was fit with control variables then u is not optional.
 
@@ -591,12 +598,12 @@ class SINDy(BaseEstimator):
         u: function from R^1 to R^{n_control_features} or list/array, optional \
             (default None)
             Control input function.
-            If the model is continuous time, i.e. `self.discrete_time == False`,
+            If the model is continuous time, i.e. ``self.discrete_time == False``,
             this function should take in a time and output the values of each of
             the n_control_features control features as a list or numpy array.
-            If the model is discrete time, i.e. `self.discrete_time == True`,
-            u should be a list (with `len(u) == t`) or array (with `u.shape[0] == 1`)
-            giving the control inputs at each step.
+            If the model is discrete time, i.e. ``self.discrete_time == True``,
+            u should be a list (with ``len(u) == t``) or array (with
+            ``u.shape[0] == 1``) giving the control inputs at each step.
 
         integrator: function object, optional
             Function to use to integrate the system. Default is scipy's odeint.

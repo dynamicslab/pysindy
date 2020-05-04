@@ -6,7 +6,8 @@ from .feature_library import BaseFeatureLibrary
 
 class IdentityLibrary(BaseFeatureLibrary):
     """
-    Generate an identity library.
+    Generate an identity library which maps all input features to
+    themselves.
 
     Attributes
     ----------

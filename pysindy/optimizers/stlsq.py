@@ -12,7 +12,7 @@ class STLSQ(BaseOptimizer):
     """Sequentially thresholded least squares algorithm.
 
     Attempts to minimize the objective function
-    :math:`\\|y - Xw\\|^2_2 + alpha \\times \\|w\\|^2_2`
+    :math:`\\|y - Xw\\|^2_2 + \\alpha \\|w\\|^2_2`
     by iteratively performing least squares and masking out
     elements of the weight that are below a given threshold.
 
@@ -47,11 +47,15 @@ class STLSQ(BaseOptimizer):
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
-        Weight vector(s)
+        Weight vector(s).
 
     ind_ : array, shape (n_features,) or (n_targets, n_features)
         Array of 0s and 1s indicating which coefficients of the
         weight vector have not been masked out.
+
+    history_ : list
+        History of ``coef_``. ``history_[k]`` contains the values of
+        ``coef_`` at iteration k of sequentially thresholded least-squares.
 
     Examples
     --------

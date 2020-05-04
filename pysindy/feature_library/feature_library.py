@@ -96,10 +96,13 @@ class ConcatLibrary(BaseFeatureLibrary):
     libraries_ : list of libraries
         Library instances to be applied to the input matrix.
 
+    n_input_features_ : int
+        The total number of input features.
+
     n_output_features_ : int
         The total number of output features. The number of output features
-        is the product of the number of library functions and the number of
-        input features.
+        is the sum of the numbers of output features for each of the
+        concatenated libraries.
 
     Examples
     --------
@@ -135,13 +138,13 @@ class ConcatLibrary(BaseFeatureLibrary):
         _, n_features = check_array(X).shape
         self.n_input_features_ = n_features
 
-        # first fit all libs provided below
+        # First fit all libs provided below
         fitted_libs = [lib.fit(X, y) for lib in self.libraries_]
 
-        # calculate the sum of output features
+        # Calculate the sum of output features
         self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
 
-        # save fitted libs
+        # Save fitted libs
         self.libraries_ = fitted_libs
 
         return self

@@ -682,9 +682,16 @@ class SINDy(BaseEstimator):
                     return self.predict(x[newaxis, :])[0]
 
             else:
+                if ndim(u(1)) == 1:
 
-                def rhs(x, t):
-                    return self.predict(x[newaxis, :], u(t))[0]
+                    def rhs(x, t):
+                        print(t)
+                        return self.predict(x[newaxis, :], u(t).reshape(1, -1))[0]
+
+                else:
+
+                    def rhs(x, t):
+                        return self.predict(x[newaxis, :], u(t))[0]
 
             return integrator(rhs, x0, t, **integrator_kws)
 

@@ -2,6 +2,7 @@
 import numpy as np
 import pytest
 from scipy.integrate import odeint
+from scipy.interpolate import interp1d
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
@@ -126,15 +127,15 @@ def test_improper_shape_input(data_1d):
     check_is_fitted(model)
 
     model = SINDy()
-    model.fit(x.flatten(), u=u.reshape(-1, 1), t=t)
+    model.fit(x.flatten(), u=u.flatten(), t=t)
     check_is_fitted(model)
 
     model = SINDy()
-    model.fit(x.flatten(), u=u.reshape(-1, 1), t=t, x_dot=x.flatten())
+    model.fit(x.flatten(), u=u.flatten(), t=t, x_dot=x.flatten())
     check_is_fitted(model)
 
     model = SINDy()
-    model.fit(x, u=u.reshape(-1, 1), t=t, x_dot=x.flatten())
+    model.fit(x, u=u.flatten(), t=t, x_dot=x.flatten())
     check_is_fitted(model)
 
     # Should fail if x and u have incompatible numbers of rows
@@ -241,6 +242,21 @@ def test_simulate(data):
     x1 = model.simulate(x[0], t=t, u=u_fun)
 
     assert len(x1) == len(t)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [pytest.lazy_fixture("data_lorenz_c_1d"), pytest.lazy_fixture("data_lorenz_c_2d")],
+)
+def test_simulate_with_interp(data):
+    x, t, u, _ = data
+    model = SINDy()
+    model.fit(x, u=u, t=t)
+
+    u_fun = interp1d(t, u, axis=0)
+    x1 = model.simulate(x[0], t=t[:-1], u=u_fun)
+
+    assert len(x1) == len(t) - 1
 
 
 @pytest.mark.parametrize(

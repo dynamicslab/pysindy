@@ -33,25 +33,29 @@ class SINDy(BaseEstimator):
     ----------
     optimizer : optimizer object, optional
         Optimization method used to fit the SINDy model. This must be an object
-        that extends the sindy.optimizers.BaseOptimizer class. Default is
+        extending the ``sindy.optimizers.BaseOptimizer`` class. Default is
         sequentially thresholded least squares with a threshold of 0.1.
 
     feature_library : feature library object, optional
+        Feature library object used to specify candidate right-hand side features.
+        This must be an object extending the
+        ``sindy.feature_library.BaseFeatureLibrary`` class.
         Default is polynomial features of degree 2.
 
     differentiation_method : differentiation object, optional
-        Method for differentiating the data. This must be an object that
-        extends the sindy.differentiation_methods.BaseDifferentiation class.
+        Method for differentiating the data. This must be an object extending
+        the ``sindy.differentiation_methods.BaseDifferentiation`` class.
         Default is centered difference.
 
     feature_names : list of string, length n_input_features, optional
-        Names for the input features. If None, will use ['x0','x1',...].
+        Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
+        ``['x0', 'x1', ...]``.
 
     discrete_time : boolean, optional (default False)
         If True, dynamical system is treated as a map. Rather than predicting
         derivatives, the right hand side functions step the system forward by
         one time step. If False, dynamical system is assumed to be a flow
-        (right hand side functions predict continuous time derivatives).
+        (right-hand side functions predict continuous time derivatives).
 
     n_jobs : int, optional (default 1)
         The number of parallel jobs to use when fitting, predicting with, and

@@ -595,8 +595,8 @@ class SINDy(BaseEstimator):
             this function should take in a time and output the values of each of
             the n_control_features control features as a list or numpy array.
             If the model is discrete time, i.e. ``self.discrete_time == True``,
-            u should be a list (with ``len(u) == t``) or array (with ``u.shape[0] == 1``)
-            giving the control inputs at each step.
+            u should be a list (with ``len(u) == t``) or array (with
+            ``u.shape[0] == 1``) giving the control inputs at each step.
 
         integrator: function object, optional
             Function to use to integrate the system. Default is scipy's odeint.

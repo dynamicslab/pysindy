@@ -17,9 +17,9 @@ class SINDyOptimizer(BaseEstimator):
     Parameters
     ----------
     optimizer: estimator object
-        The optimizer/sparse regressor to be wrapped, implementing ``fit`` and ``predict``.
-        ``optimizer`` should also have the attributes ``coef_``, ``fit_intercept``,
-        ``normalize``, and ``intercept_``.
+        The optimizer/sparse regressor to be wrapped, implementing ``fit`` and
+        ``predict``. ``optimizer`` should also have the attributes ``coef_``,
+        ``fit_intercept``, ``normalize``, and ``intercept_``.
 
     unbias : boolean, optional (default True)
         Whether to perform an extra step of unregularized linear regression to unbias

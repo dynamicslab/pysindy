@@ -62,6 +62,13 @@ class SINDy(BaseEstimator):
     model : sklearn.multioutput.MultiOutputRegressor object
         The fitted SINDy model.
 
+    n_input_features_ : int
+        The total number of input features.
+
+    n_output_features_ : int
+        The total number of output features. This number is a function of
+        ``self.n_input_features`` and the feature library being used.
+
     Examples
     --------
     >>> import numpy as np

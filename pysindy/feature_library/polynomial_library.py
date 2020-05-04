@@ -42,6 +42,13 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     ----------
     powers_ : array, shape (n_output_features, n_input_features)
         powers_[i, j] is the exponent of the jth input in the ith output.
+
+    n_input_features_ : int
+        The total number of input features.
+
+    n_output_features_ : int
+        The total number of output features. This number is computed by
+        iterating over all appropriately sized combinations of input features.
     """
 
     def __init__(

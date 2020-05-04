@@ -17,8 +17,8 @@ class SR3(BaseOptimizer):
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + lambda \\times R(v)
-        + (0.5 / nu)\\|w-v\\|^2_2
+        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
+        + (0.5 / \\nu)\\|w-v\\|^2_2
 
     where :math:`R(v)` is a regularization function. See the following reference
     for more details:

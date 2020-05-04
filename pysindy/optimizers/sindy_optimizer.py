@@ -24,10 +24,10 @@ class SINDyOptimizer(BaseEstimator):
     unbias : boolean, optional (default True)
         Whether to perform an extra step of unregularized linear regression to unbias
         the coefficients for the identified support.
-        For example, if `optimizer=STLSQ(alpha=0.1)` is used then the learned
+        For example, if ``optimizer=STLSQ(alpha=0.1)`` is used then the learned
         coefficients will be biased toward 0 due to the L2 regularization.
-        Setting `unbias=True` will trigger an additional step wherein the nonzero
-        coefficients learned by the `STLSQ` object will be updated using an
+        Setting ``unbias=True`` will trigger an additional step wherein the nonzero
+        coefficients learned by the optimizer object will be updated using an
         unregularized least-squares fit.
     """
 

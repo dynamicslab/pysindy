@@ -47,11 +47,15 @@ class STLSQ(BaseOptimizer):
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
-        Weight vector(s)
+        Weight vector(s).
 
     ind_ : array, shape (n_features,) or (n_targets, n_features)
         Array of 0s and 1s indicating which coefficients of the
         weight vector have not been masked out.
+
+    history_ : list
+        History of ``coef_``. ``history_[k]`` contains the values of
+        ``coef_`` at iteration k of sequentially thresholded least-squares.
 
     Examples
     --------

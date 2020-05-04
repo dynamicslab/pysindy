@@ -74,6 +74,11 @@ class SR3(BaseOptimizer):
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
 
+    history_ : list
+        History of sparse coefficients. ``history_[k]`` contains the
+        sparse coefficients (v in the optimization objective function)
+        at iteration k.
+
     Examples
     --------
     >>> import numpy as np

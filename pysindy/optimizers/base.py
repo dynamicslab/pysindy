@@ -49,6 +49,18 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
+
+    Attributes
+    ----------
+    coef_ : array, shape (n_features,) or (n_targets, n_features)
+        Weight vector(s).
+
+    ind_ : array, shape (n_features,) or (n_targets, n_features)
+        Array of 0s and 1s indicating which coefficients of the
+        weight vector have not been masked out.
+
+    history_ : list
+        History of ``coef_`` over iterations of the optimization algorithm.
     """
 
     def __init__(self, max_iter=20, normalize=False, fit_intercept=False, copy_X=True):

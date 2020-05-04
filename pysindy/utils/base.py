@@ -44,7 +44,7 @@ def validate_control_variables(
 ):
     """
     Ensure that control variables u are compatible with the data x.
-    If `return_array` and `multiple_trajectories` are True, convert u from a list
+    If ``return_array`` and ``multiple_trajectories`` are True, convert u from a list
     into an array (of concatenated list entries).
     """
     if multiple_trajectories:

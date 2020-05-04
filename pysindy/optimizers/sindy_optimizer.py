@@ -12,14 +12,14 @@ class SINDyOptimizer(BaseEstimator):
 
     Enables single target regressors (i.e. those whose predictions are 1-dimensional)
     to perform multi target regression (i.e. predictions are 2-dimensional).
-    Also enhances an `_unbias` function to reduce bias when regularization is used.
+    Also enhances an ``_unbias`` function to reduce bias when regularization is used.
 
     Parameters
     ----------
     optimizer: estimator object
-        The optimizer/sparse regressor to be wrapped, implementing `fit` and `predict`.
-        `optimizer` should also have the attributes `coef_`, `fit_intercept`,
-        `normalize`, and `intercept_`.
+        The optimizer/sparse regressor to be wrapped, implementing ``fit`` and ``predict``.
+        ``optimizer`` should also have the attributes ``coef_``, ``fit_intercept``,
+        ``normalize``, and ``intercept_``.
 
     unbias : boolean, optional (default True)
         Whether to perform an extra step of unregularized linear regression to unbias

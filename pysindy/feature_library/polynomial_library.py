@@ -25,11 +25,11 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         The degree of the polynomial features.
     include_interaction : boolean, optional (default True)
         Determines whether interaction features are produced.
-        If false, features are all of the form `x[i] ** k`.
+        If false, features are all of the form ``x[i] ** k``.
     interaction_only : boolean, optional (default False)
         If true, only interaction features are produced: features that are
-        products of at most `degree` *distinct* input features (so not
-        `x[1] ** 2`, `x[0] * x[2] ** 3`, etc.).
+        products of at most ``degree`` *distinct* input features (so not
+        ``x[1] ** 2``, ``x[0] * x[2] ** 3``, etc.).
     include_bias : boolean, optional (default True)
         If True (default), then include a bias column, the feature in which
         all polynomial powers are zero (i.e. a column of ones - acts as an

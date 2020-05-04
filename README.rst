@@ -191,7 +191,7 @@ References
 -  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
    *Sparse identification of nonlinear dynamics with control (SINDYc).*
    IFAC-PapersOnLine 49.18 (2016): 710-715.
-   `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`
+   `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
 
 
 .. |BuildCI| image:: https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg

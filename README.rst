@@ -160,6 +160,8 @@ you can run the following to automatically reformat your staged code
 
     pre-commit -a -v
 
+Note that you will then need to re-stage any changes `pre-commit` made to your code.
+
 Reporting issues or bugs
 ^^^^^^^^^^^^^^^^^^^^^^^^
 If you find a bug in the code or want to request a new feature, please open an issue.

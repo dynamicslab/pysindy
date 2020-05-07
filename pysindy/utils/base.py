@@ -1,13 +1,11 @@
 from itertools import repeat
-from typing import Sequence
-
 import numpy as np
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
 
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default
-# value of t to be None, but it is possible for the user
+# value of t to be None, but it is possile for the user
 # to pass in None, in which case validate_input performs
 # no checks on t.
 T_DEFAULT = object()
@@ -37,60 +35,6 @@ def validate_input(x, t=T_DEFAULT):
             raise ValueError("t must be a scalar or array-like.")
 
     return x
-
-
-def validate_control_variables(
-    x, u, multiple_trajectories=False, trim_last_point=False, return_array=True
-):
-    """
-    Ensure that control variables u are compatible with the data x.
-    If ``return_array`` and ``multiple_trajectories`` are True, convert u from a list
-    into an array (of concatenated list entries).
-    """
-    if multiple_trajectories:
-        if not isinstance(x, Sequence):
-            raise ValueError("x must be a list when multiple_trajectories is True")
-        if not isinstance(u, Sequence):
-            raise ValueError("u must be a list when multiple_trajectories is True")
-        if len(x) != len(u):
-            raise ValueError(
-                "x and u must be lists of the same length when "
-                "multiple_trajectories is True"
-            )
-
-        u_arr = [_check_control_shape(xi, ui, trim_last_point) for xi, ui in zip(x, u)]
-
-        if return_array:
-            u_arr = np.vstack(u_arr)
-
-    else:
-        u_arr = _check_control_shape(x, u, trim_last_point)
-
-    return u_arr
-
-
-def _check_control_shape(x, u, trim_last_point):
-    """
-    Convert control variables u to np.array(dtype=float64) and compare
-    its shape against x. Assumes x is array-like.
-    """
-    try:
-        u = np.array(u, dtype="float64")
-    except TypeError as e:
-        raise e(
-            "control variables u could not be converted to np.ndarray(dtype=float64)"
-        )
-    if np.ndim(u) == 0:
-        u = u[np.newaxis]
-    if len(x) != u.shape[0]:
-        raise ValueError(
-            "control variables u must have same number of rows as x. "
-            "u has {} rows and x has {} rows".format(u.shape[0], len(x))
-        )
-
-    if np.ndim(u) == 1:
-        u = u.reshape(-1, 1)
-    return u[:-1] if trim_last_point else u
 
 
 def drop_nan_rows(x, x_dot):
@@ -142,6 +86,19 @@ def get_prox(regularization):
         return prox_cad
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
+
+
+def get_reg(regularization):
+    if regularization.lower() == "l0":
+        return lambda x,lam : lam*np.count_nonzero(x)
+    elif regularization.lower() == "l1":
+        return lambda x,lam : lam*np.sum(np.abs(x))
+    # elif regularization.lower() == "cad":
+    #     return prox_cad
+    else:
+        raise NotImplementedError(
+            "{} has not been implemented".format(regularization)
+        )
 
 
 def print_model(
@@ -208,7 +165,7 @@ def equations(pipeline, input_features=None, precision=3, input_fmt=None):
 
 
 def supports_multiple_targets(estimator):
-    """Checkes whether estimator supports mutliple targets."""
+    """Checkes whether estimator support mutliple targets."""
     if isinstance(estimator, MultiOutputMixin):
         return True
     try:

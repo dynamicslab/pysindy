@@ -151,6 +151,10 @@ class constrained_SR3(BaseOptimizer):
         self.thresholder = thresholder
         self.prox = get_prox(thresholder)
         self.reg = get_reg(thresholder)
+        if thresholder[0].lower() == "w" and thresholds is None:
+            raise ValueError("weighted thresholder can only be used with a matrix of thresholds")
+        if thresholder[0].lower() != "w" and thresholds is not None:
+            raise ValueError("matrix of thresholds requires a weighted thresholder")
         if trimming_fraction == 0.0:
             self.use_trimming = False
         else:
@@ -195,9 +199,10 @@ class constrained_SR3(BaseOptimizer):
         """Update the regularized weight vector
         """
         coef_sparse = np.zeros(np.shape(coef_full))
-        for i in range(self.thresholds.shape[0]):
-            for j in range(self.thresholds.shape[1]):
-                coef_sparse[i,j] = self.prox(coef_full[i,j], self.thresholds[i,j])
+        if self.thresholds is None:
+            coef_sparse = self.prox(coef_full,self.threshold)
+        else:
+            coef_sparse = self.prox(coef_full,self.thresholds)
         self.history_.append(coef_sparse.T)
         return coef_sparse
 
@@ -219,8 +224,10 @@ class constrained_SR3(BaseOptimizer):
         if self.use_trimming:
             assert trimming_array is not None
             R2 *= trimming_array.reshape(x.shape[0],1)
-
-        return 0.5*np.sum(R2) + self.reg(coef_full, .5*self.threshold**2/self.nu) + 0.5*np.sum(D2)/self.nu
+        if self.thresholds is None:
+            return 0.5*np.sum(R2) + self.reg(coef_full, .5*self.threshold**2/self.nu) + 0.5*np.sum(D2)/self.nu
+        else:
+            return 0.5*np.sum(R2) + self.reg(coef_full, .5*self.thresholds**2/self.nu) + 0.5*np.sum(D2)/self.nu
 
     def _convergence_criterion(self):
         """Calculate the convergence criterion for the optimization

@@ -100,11 +100,21 @@ def prox_l0(x, threshold):
     """Proximal operator for l0 regularization."""
     return x * (np.abs(x) > threshold)
 
+def prox_weighted_l0(x, thresholds):
+    """Proximal operator for weighted l0 regularization."""
+    y = np.zeros(np.shape(x))
+    for i in range(thresholds.shape[0]):
+        for j in range(thresholds.shape[1]):
+            y[i,j] = x[i,j] * (np.abs(x[i,j]) > thresholds[i,j])
+    return y
 
 def prox_l1(x, threshold):
     """Proximal operator for l1 regularization."""
     return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
 
+def prox_weighted_l1(x, thresholds):
+    """Proximal operator for weighted l1 regularization."""
+    return np.sign(x) * np.maximum(np.abs(x) - thresholds, np.ones(x.shape))
 
 # TODO: replace code block with proper math block
 def prox_cad(x, lower_threshold):
@@ -133,8 +143,12 @@ def prox_cad(x, lower_threshold):
 def get_prox(regularization):
     if regularization.lower() == "l0":
         return prox_l0
+    elif regularization.lower() == "weighted_l0":
+        return prox_weighted_l0
     elif regularization.lower() == "l1":
         return prox_l1
+    elif regularization.lower() == "weighted_l1":
+        return prox_weighted_l1
     elif regularization.lower() == "cad":
         return prox_cad
     else:
@@ -144,8 +158,12 @@ def get_prox(regularization):
 def get_reg(regularization):
     if regularization.lower() == "l0":
         return lambda x,lam : lam*np.count_nonzero(x)
+    elif regularization.lower() == "weighted_l0":
+        return lambda x,lam : np.sum(np.sum(lam[np.nonzero(x)]))
     elif regularization.lower() == "l1":
         return lambda x,lam : lam*np.sum(np.abs(x))
+    elif regularization.lower() == "weighted_l1":
+        return lambda x,lam : np.sum(np.abs(lam@x))
     # elif regularization.lower() == "cad":
     #     return prox_cad
     else:

@@ -1,17 +1,14 @@
 import warnings
-
 import numpy as np
 from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
 from scipy.optimize import bisect
 from sklearn.exceptions import ConvergenceWarning
-
 from pysindy.optimizers import BaseOptimizer
 from pysindy.utils import get_prox
 from pysindy.utils import get_reg
 
-
-class SR3Enhanced(BaseOptimizer):
+class constrained_SR3(BaseOptimizer):
     """
     Sparse relaxed regularized regression.
 
@@ -65,6 +62,11 @@ class SR3Enhanced(BaseOptimizer):
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
+
+    initial_guess : 2D numpy array of floats (default optional)
+        If user does not pass this, the initial guess for the optimization is
+        a naive lstsq (see below). If passes, the optimization starts
+        with this matrix as the initial starting point. 
 
     unbias : boolean, optional (default True)
         Whether to perform an extra step of unregularized linear regression to unbias
@@ -122,7 +124,7 @@ class SR3Enhanced(BaseOptimizer):
         copy_X=True,
         initial_guess=None,
     ):
-        super(SR3Enhanced, self).__init__(
+        super(constrained_SR3, self).__init__(
             max_iter=max_iter,
             normalize=normalize,
             fit_intercept=fit_intercept,
@@ -274,10 +276,9 @@ class SR3Enhanced(BaseOptimizer):
         Iterates the thresholding. Assumes an initial guess
         is saved in self.coef_ and self.ind_
         """
-        r = self.initial_guess.shape[0]
+        if self.initial_guess is not None:
+            self.coef_ = self.initial_guess.T
         coef_sparse = self.coef_.T
-        coef_sparse[0:r,0:r] = self.initial_guess.T[0:r,0:r]
-        print('Printing coef: ',coef_sparse[0:r,0:r])
         n_samples, n_features = x.shape
 
         if self.use_trimming:

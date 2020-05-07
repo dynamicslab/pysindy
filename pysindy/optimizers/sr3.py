@@ -64,6 +64,11 @@ class SR3(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
+    initial_guess : 2D numpy array of floats (default optional)
+        If user does not pass this, the initial guess for the optimization is
+        a naive lstsq (see below). If passes, the optimization starts
+        with this matrix as the initial starting point. 
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -109,6 +114,7 @@ class SR3(BaseOptimizer):
         normalize=False,
         fit_intercept=False,
         copy_X=True,
+        initial_guess=None,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
@@ -129,6 +135,7 @@ class SR3(BaseOptimizer):
         self.tol = tol
         self.thresholder = thresholder
         self.prox = get_prox(thresholder)
+        self.initial_guess = initial_guess
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
         """Update the unregularized weight vector
@@ -160,6 +167,9 @@ class SR3(BaseOptimizer):
         Iterates the thresholding. Assumes an initial guess
         is saved in self.coef_ and self.ind_
         """
+        if self.initial_guess is not None:
+            self.coef_ = self.initial_guess.T
+ 
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 

@@ -34,6 +34,11 @@ class constrained_STLSQ(BaseOptimizer):
     ridge_kw : dict, optional
         Optional keyword arguments to pass to the ridge regression.
 
+    initial_guess : 2D numpy array of floats (default None)
+        If user does not pass this, the initial guess for the optimization is
+        a naive lstsq (see below). If passes, the optimization starts
+        with this matrix as the initial starting point. 
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -63,7 +68,15 @@ class constrained_STLSQ(BaseOptimizer):
     x2' = -2.666 x1 + 1.000 1 x0
     """
 
-    def __init__(self, threshold=0.1, alpha=0.0, max_iter=20, ridge_kw=None, **kwargs):
+    def __init__(
+        self, 
+        threshold=0.1, 
+        alpha=0.0, 
+        max_iter=20, 
+        ridge_kw=None, 
+        initial_guess=None,
+        **kwargs,
+    ):
         super(constrained_STLSQ, self).__init__(**kwargs)
 
         if threshold < 0:
@@ -77,6 +90,7 @@ class constrained_STLSQ(BaseOptimizer):
         self.alpha = alpha
         self.max_iter = max_iter
         self.ridge_kw = ridge_kw
+        self.initial_guess = initial_guess
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):
         """Perform thresholding of the weight vector(s)
@@ -111,6 +125,9 @@ class constrained_STLSQ(BaseOptimizer):
         Iterates the thresholding. Assumes an initial guess is saved in
         self.coef_ and self.ind_
         """
+        if self.initial_guess is not None:
+            self.coef_ = self.initial_guess.T
+ 
         ind = self.ind_
         n_samples, n_features = x.shape
         n_features_selected = sum(ind)

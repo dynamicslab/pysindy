@@ -86,6 +86,8 @@ def _check_control_shape(x, u, trim_last_point):
         )
 
     if np.ndim(u) == 1:
+        u = u.reshape(-1, 1)
+    return u[:-1] if trim_last_point else u
 
 def drop_nan_rows(x, x_dot):
     x = x[~np.isnan(x_dot).any(axis=1)]

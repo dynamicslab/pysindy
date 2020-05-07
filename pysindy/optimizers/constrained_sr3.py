@@ -144,7 +144,7 @@ class constrained_SR3(BaseOptimizer):
             raise ValueError("tol must be positive")
 
         self.threshold = threshold
-        #self.thresholds = thresholds
+        self.thresholds = thresholds
         self.nu = nu
         self.tol = tol
         self.initial_guess = initial_guess
@@ -194,9 +194,10 @@ class constrained_SR3(BaseOptimizer):
     def _update_sparse_coef(self, coef_full):
         """Update the regularized weight vector
         """
-        r = coef_full.shape[1]
         coef_sparse = np.zeros(np.shape(coef_full))
-        coef_sparse = self.prox(coef_full, self.threshold)
+        for i in range(self.thresholds.shape[0]):
+            for j in range(self.thresholds.shape[1]):
+                coef_sparse[i,j] = self.prox(coef_full[i,j], self.thresholds[i,j])
         self.history_.append(coef_sparse.T)
         return coef_sparse
 

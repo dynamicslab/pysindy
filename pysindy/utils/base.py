@@ -1,4 +1,5 @@
 from itertools import repeat
+from typing import Sequence
 import numpy as np
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array

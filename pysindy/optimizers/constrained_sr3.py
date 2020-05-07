@@ -76,6 +76,10 @@ class constrained_SR3(BaseOptimizer):
         Setting `unbias=True` will trigger an additional step wherein the nonzero
         coefficients learned by the `STLSQ` object will be updated using an
         unregularized least-squares fit.
+    
+    thresholds : 2D array of floats, optional (default None)
+        Optional threshold matrix to provide different thresholds
+        for different terms in the optimization process
 
     Attributes
     ----------
@@ -123,6 +127,7 @@ class constrained_SR3(BaseOptimizer):
         fit_intercept=False,
         copy_X=True,
         initial_guess=None,
+        thresholds=None,
     ):
         super(constrained_SR3, self).__init__(
             max_iter=max_iter,
@@ -139,6 +144,7 @@ class constrained_SR3(BaseOptimizer):
             raise ValueError("tol must be positive")
 
         self.threshold = threshold
+        #self.thresholds = thresholds
         self.nu = nu
         self.tol = tol
         self.initial_guess = initial_guess
@@ -190,44 +196,7 @@ class constrained_SR3(BaseOptimizer):
         """
         r = coef_full.shape[1]
         coef_sparse = np.zeros(np.shape(coef_full))
-        #coef_sparse[0:r,0:r] = self.prox(coef_full[0:r,0:r], self.threshold)
-        #coef_sparse[0:r,0:r] = self.prox(coef_full[0:r,0:r], self.threshold)
-        #coef_sparse[r-2:r,r-2:r] = self.prox(coef_full[r-2:r,r-2:r], 0.0)
-        #coef_sparse[r-2:r,0:r] = self.prox(coef_full[r-2:r,0:r], 0.0)
-        #coef_sparse[r:,0:r] = self.prox(coef_full[r:,0:r], 30*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,0:r] = self.prox(coef_full[r:,0:r], 10*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,0:r-2] = self.prox(coef_full[r:,0:r-2], 2*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,r-2:r] = self.prox(coef_full[r:,r-2:r],2*self.threshold) #30.0 or 22.5
-        #tfac = 0.8 good performance
-        #coef_sparse = self.prox(coef_full, self.threshold)
-        #coef_sparse[0:r,2:r] = self.prox(coef_full[0:r,2:r], self.threshold)
-        #coef_sparse[r:,0:r] = self.prox(coef_full[r:,0:r], 6*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,4:6] = self.prox(coef_full[r:,4:6], 3*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,6] = self.prox(coef_full[r:,6], self.threshold) 
         coef_sparse = self.prox(coef_full, self.threshold)
-        coef_sparse[0:r,0:r] = self.prox(coef_full[0:r,0:r], self.threshold)
-        #coef_sparse[0:r,2:r] = self.prox(coef_full[0:r,2:r], 20*self.threshold)
-        coef_sparse[r:,0:r] = self.prox(coef_full[r:,0:r],5*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,0:r] = self.prox(coef_full[r:,0:r], 6*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,4] = self.prox(coef_full[r:,4], 5*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,5] = self.prox(coef_full[r:,5], 5*self.threshold) #30.0 or 22.5
-        coef_sparse[r:,6] = self.prox(coef_full[r:,6], 4*self.threshold) 
-        coef_sparse[0,1] = -0.091
-        coef_sparse[1,0] = 0.091
-        coef_sparse[2,3] = -0.182
-        coef_sparse[3,2] = 0.182
-        coef_sparse[5,4] = 3*0.091
-        coef_sparse[4,5] = -3*0.091
-        #coef_sparse[r:,7:9] = self.prox(coef_full[r:,7:9], 30*self.threshold) 
-        #coef_sparse = self.prox(coef_full, self.threshold)
-        #coef_sparse[0:r,2:r] = self.prox(coef_full[0:r,2:r], 20*self.threshold)
-        #coef_sparse[r:,0:r] = self.prox(coef_full[r:,0:r], 18*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,4:6] = self.prox(coef_full[r:,4:6], 4*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,6] = self.prox(coef_full[r:,6], 6*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,r-2:r] = self.prox(coef_full[r:,r-2:r], 6*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,7] = self.prox(coef_full[r:,7], 2*self.threshold) #30.0 or 22.5
-        #coef_sparse[r:,r-2:r] = self.prox(coef_full[r:,r-2:r], self.threshold) #30.0 or 22.5
-        #coef_sparse[r-2:r,r-2:r] = self.prox(coef_full[r-2:r,r-2:r], 0.0)
         self.history_.append(coef_sparse.T)
         return coef_sparse
 

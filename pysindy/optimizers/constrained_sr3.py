@@ -155,6 +155,8 @@ class constrained_SR3(BaseOptimizer):
             raise ValueError("weighted thresholder can only be used with a matrix of thresholds")
         if thresholder[0].lower() != "w" and thresholds is not None:
             raise ValueError("matrix of thresholds requires a weighted thresholder")
+        if thresholds is not None and not np.all(thresholds >= 0.0):
+            raise ValueError("matrix of thresholds must contain non-negative entries only")
         if trimming_fraction == 0.0:
             self.use_trimming = False
         else:

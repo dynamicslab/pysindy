@@ -1,5 +1,6 @@
 from itertools import repeat
 from typing import Sequence
+
 import numpy as np
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
@@ -36,6 +37,7 @@ def validate_input(x, t=T_DEFAULT):
             raise ValueError("t must be a scalar or array-like.")
 
     return x
+
 
 def validate_control_variables(
     x, u, multiple_trajectories=False, trim_last_point=False, return_array=True
@@ -90,6 +92,7 @@ def _check_control_shape(x, u, trim_last_point):
         u = u.reshape(-1, 1)
     return u[:-1] if trim_last_point else u
 
+
 def drop_nan_rows(x, x_dot):
     x = x[~np.isnan(x_dot).any(axis=1)]
     x_dot = x_dot[~np.isnan(x_dot).any(axis=1)]
@@ -100,21 +103,25 @@ def prox_l0(x, threshold):
     """Proximal operator for L0 regularization."""
     return x * (np.abs(x) > threshold)
 
+
 def prox_weighted_l0(x, thresholds):
     """Proximal operator for weighted l0 regularization."""
     y = np.zeros(np.shape(x))
     for i in range(thresholds.shape[0]):
         for j in range(thresholds.shape[1]):
-            y[i,j] = x[i,j] * (np.abs(x[i,j]) > thresholds[i,j])
+            y[i, j] = x[i, j] * (np.abs(x[i, j]) > thresholds[i, j])
     return y
+
 
 def prox_l1(x, threshold):
     """Proximal operator for L1 regularization."""
     return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
 
+
 def prox_weighted_l1(x, thresholds):
     """Proximal operator for weighted l1 regularization."""
     return np.sign(x) * np.maximum(np.abs(x) - thresholds, np.ones(x.shape))
+
 
 # TODO: replace code block with proper math block
 def prox_cad(x, lower_threshold):
@@ -157,19 +164,17 @@ def get_prox(regularization):
 
 def get_reg(regularization):
     if regularization.lower() == "l0":
-        return lambda x,lam : lam*np.count_nonzero(x)
+        return lambda x, lam: lam * np.count_nonzero(x)
     elif regularization.lower() == "weighted_l0":
-        return lambda x,lam : np.sum(lam[np.nonzero(x)])
+        return lambda x, lam: np.sum(lam[np.nonzero(x)])
     elif regularization.lower() == "l1":
-        return lambda x,lam : lam*np.sum(np.abs(x))
+        return lambda x, lam: lam * np.sum(np.abs(x))
     elif regularization.lower() == "weighted_l1":
-        return lambda x,lam : np.sum(np.abs(lam@x))
+        return lambda x, lam: np.sum(np.abs(lam @ x))
     # elif regularization.lower() == "cad":
     #     return prox_cad
     else:
-        raise NotImplementedError(
-            "{} has not been implemented".format(regularization)
-        )
+        raise NotImplementedError("{} has not been implemented".format(regularization))
 
 
 def print_model(

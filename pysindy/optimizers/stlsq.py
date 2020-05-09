@@ -55,7 +55,7 @@ class STLSQ(BaseOptimizer):
     initial_guess : 2D numpy array of floats (default None)
         If user does not pass this, the initial guess for the optimization is
         a naive lstsq (see below). If passes, the optimization starts
-        with this matrix as the initial starting point. 
+        with this matrix as the initial starting point.
 
     Attributes
     ----------
@@ -151,7 +151,7 @@ class STLSQ(BaseOptimizer):
         """
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess.T
- 
+
         ind = self.ind_
         n_samples, n_features = x.shape
         n_targets = y.shape[1]

@@ -7,7 +7,7 @@ from sklearn.linear_model import ridge_regression
 from pysindy.optimizers import BaseOptimizer
 
 
-class constrained_STLSQ(BaseOptimizer):
+class ConstrainedSTLSQ(BaseOptimizer):
     """
     Sequentially thresholded least squares algorithm.
 
@@ -35,9 +35,10 @@ class constrained_STLSQ(BaseOptimizer):
         Optional keyword arguments to pass to the ridge regression.
 
     initial_guess : 2D numpy array of floats (default None)
-        If user does not pass this, the initial guess for the optimization is
-        a naive lstsq (see below). If passes, the optimization starts
-        with this matrix as the initial starting point. 
+        If user does not pass this, the initial guess for the
+        optimization is a naive lstsq (see below). If passes,
+        the optimization starts with this matrix as the initial
+        starting point.
 
     Attributes
     ----------
@@ -53,13 +54,13 @@ class constrained_STLSQ(BaseOptimizer):
     >>> import numpy as np
     >>> from scipy.integrate import odeint
     >>> from pysindy import SINDy
-    >>> from pysindy.optimizers import constrained_STLSQ
+    >>> from pysindy.optimizers import ConstrainedSTLSQ
     >>> lorenz = lambda z,t : [10*(z[1] - z[0]),
     >>>                        z[0]*(28 - z[2]) - z[1],
     >>>                        z[0]*z[1] - 8/3*z[2]]
     >>> t = np.arange(0,2,.002)
     >>> x = odeint(lorenz, [-8,8,27], t)
-    >>> opt = constrained_STLSQ(threshold=.1, alpha=.5)
+    >>> opt = ConstrainedSTLSQ(threshold=.1, alpha=.5)
     >>> model = SINDy(optimizer=opt)
     >>> model.fit(x, t=t[1]-t[0])
     >>> model.print()
@@ -69,15 +70,15 @@ class constrained_STLSQ(BaseOptimizer):
     """
 
     def __init__(
-        self, 
-        threshold=0.1, 
-        alpha=0.0, 
-        max_iter=20, 
-        ridge_kw=None, 
+        self,
+        threshold=0.1,
+        alpha=0.0,
+        max_iter=20,
+        ridge_kw=None,
         initial_guess=None,
         **kwargs,
     ):
-        super(constrained_STLSQ, self).__init__(**kwargs)
+        super(ConstrainedSTLSQ, self).__init__(**kwargs)
 
         if threshold < 0:
             raise ValueError("threshold cannot be negative")
@@ -127,7 +128,7 @@ class constrained_STLSQ(BaseOptimizer):
         """
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess.T
- 
+
         ind = self.ind_
         n_samples, n_features = x.shape
         n_features_selected = sum(ind)
@@ -151,7 +152,7 @@ class constrained_STLSQ(BaseOptimizer):
                 break
         else:
             warnings.warn(
-                "constrained_STLSQ._reduce did not converge after {} iterations.".format(
+                "ConstrainedSTLSQ._reduce did not converge after {} iterations.".format(
                     self.max_iter
                 ),
                 ConvergenceWarning,
@@ -161,7 +162,7 @@ class constrained_STLSQ(BaseOptimizer):
             except NameError:
                 coef = self.coef_
                 warnings.warn(
-                    "constrained_STLSQ._reduce has no iterations left to determine coef",
+                    "ConstrainedSTLSQ._reduce has no iterations left to determine coef",
                     ConvergenceWarning,
                 )
         self.coef_ = coef

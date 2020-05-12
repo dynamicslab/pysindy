@@ -40,7 +40,7 @@ For a more in-depth look at the mathematical foundations of SINDy, please see ou
 
 Relation to PySINDy
 ^^^^^^^^^^^^^^^^^^^
-The PySINDy class revolves around the ``SINDy`` class which consists of three primary components; one for each term in the above matrix approximation problem.
+The PySINDy package revolves around the ``SINDy`` class which consists of three primary components; one for each term in the above matrix approximation problem.
 
 * ``differentiation_method``: computes ``X'``, though if derivatives are known or measured directly, they can be used instead
 * ``feature_library``: specifies the candidate basis functions to be used to construct ``Theta(X)``

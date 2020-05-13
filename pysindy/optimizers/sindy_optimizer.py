@@ -6,6 +6,9 @@ from pysindy.optimizers.base import _MultiTargetLinearRegressor
 from pysindy.utils.base import supports_multiple_targets
 
 
+COEF_THRESHOLD = 1e-14
+
+
 class SINDyOptimizer(BaseEstimator):
     """
     Wrapper class for optimizers/sparse regression methods passed into the SINDy object.
@@ -49,7 +52,7 @@ class SINDyOptimizer(BaseEstimator):
         self.optimizer.fit(x, y)
         if not hasattr(self.optimizer, "coef_"):
             raise AttributeError("optimizer has no attribute coef_")
-        self.ind_ = np.abs(self.coef_) > 1e-14
+        self.ind_ = np.abs(self.coef_) > COEF_THRESHOLD
 
         if self.unbias:
             self._unbias(x, y)

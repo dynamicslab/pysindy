@@ -227,6 +227,7 @@ class SR3(BaseOptimizer):
 
     def _reduce(self, x, y):
         """
+<<<<<<< HEAD
         Perform ``self.max_iter`` iterations of the SR3 algorithm.
 
         Assumes initial guess for coefficients is stored in ``self.coef_``.

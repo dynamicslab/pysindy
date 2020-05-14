@@ -3,20 +3,21 @@ import warnings
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ridge_regression
+from sklearn.utils.validation import check_is_fitted
 
 from pysindy.optimizers import BaseOptimizer
 
 
 class ConstrainedSTLSQ(BaseOptimizer):
     """
-    Sequentially thresholded least squares algorithm.
+    Sequentially thresholded least squares algorithm with
+    linear equality constraints.
 
     Attempts to minimize the objective function
-    ||y - Xw||^2_2 + alpha * ||w||^2_2 by iteratively performing
-    least squares and masking out elements of the weight that are
-    below a given threshold.
-
-    subject to  Cw = d (equality constraints)
+    :math:`\\|y - Xw\\|^2_2 + \\alpha * \\|w\\|^2_2`
+    subject to the (linear) equality constraints :math:`Cw = d`
+    by iteratively performing least squares and masking out
+    elements of the weight that are below a given threshold.
 
     Parameters
     ----------
@@ -47,7 +48,7 @@ class ConstrainedSTLSQ(BaseOptimizer):
 
     ind_ : array, shape (n_features,) or (n_targets, n_features)
         Array of 0s and 1s indicating which coefficients of the
-        weight vector have not been masked out.
+        weight vector that have not been masked out.
 
     Examples
     --------
@@ -75,17 +76,22 @@ class ConstrainedSTLSQ(BaseOptimizer):
         alpha=0.0,
         max_iter=20,
         ridge_kw=None,
+        normalize=False,
+        fit_intercept=False,
+        copy_X=True,
         initial_guess=None,
-        **kwargs,
     ):
-        super(ConstrainedSTLSQ, self).__init__(**kwargs)
+        super(ConstrainedSTLSQ, self).__init__(
+            max_iter=max_iter,
+            normalize=normalize,
+            fit_intercept=fit_intercept,
+            copy_X=copy_X,
+        )
 
         if threshold < 0:
             raise ValueError("threshold cannot be negative")
         if alpha < 0:
             raise ValueError("alpha cannot be negative")
-        if max_iter <= 0:
-            raise ValueError("max_iter must be positive")
 
         self.threshold = threshold
         self.alpha = alpha
@@ -167,3 +173,11 @@ class ConstrainedSTLSQ(BaseOptimizer):
                 )
         self.coef_ = coef
         self.ind_ = ind
+
+    @property
+    def complexity(self):
+        check_is_fitted(self)
+
+        return np.count_nonzero(self.coef_) + np.count_nonzero(
+            [abs(self.intercept_) >= self.threshold]
+        )

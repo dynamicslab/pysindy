@@ -7,7 +7,7 @@ from sklearn.utils.validation import check_array
 
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default
-# value of t to be None, but it is possile for the user
+# value of t to be None, but it is possible for the user
 # to pass in None, in which case validate_input performs
 # no checks on t.
 T_DEFAULT = object()
@@ -242,7 +242,7 @@ def equations(pipeline, input_features=None, precision=3, input_fmt=None):
 
 
 def supports_multiple_targets(estimator):
-    """Checkes whether estimator support mutliple targets."""
+    """Checks whether estimator supports multiple targets."""
     if isinstance(estimator, MultiOutputMixin):
         return True
     try:

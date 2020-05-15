@@ -165,7 +165,7 @@ class SR3(BaseOptimizer):
     def _reduce(self, x, y):
         """
         Iterates the thresholding. Assumes an initial guess
-        is saved in self.coef_ and self.ind_
+        is saved in self.coef_
         """
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess

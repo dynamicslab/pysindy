@@ -56,7 +56,7 @@ class STLSQ(BaseOptimizer):
 
     ind_ : array, shape (n_features,) or (n_targets, n_features)
         Array of 0s and 1s indicating which coefficients of the
-        weight vector have not been masked out.
+        weight vector that have not been masked out.
 
     history_ : list
         History of ``coef_``. ``history_[k]`` contains the values of

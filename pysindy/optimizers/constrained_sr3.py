@@ -226,8 +226,7 @@ class ConstrainedSR3(BaseOptimizer):
         return inv1.dot(rhs)
 
     def _update_sparse_coef(self, coef_full):
-        """Update the regularized weight vector
-        """
+        """Update the regularized weight vector"""
         coef_sparse = np.zeros(np.shape(coef_full))
         if self.thresholds is None:
             coef_sparse = self.prox(coef_full, self.threshold)
@@ -238,17 +237,19 @@ class ConstrainedSR3(BaseOptimizer):
 
     def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):
         trimming_array = trimming_array - self.trimming_step_size * trimming_grad
-        trimming_array = self.cSimplexProj(trimming_array, self.trimming_fraction)
+        trimming_array = self.capped_simplex_proj(
+            trimming_array, self.trimming_fraction
+        )
         self.history_trimming_.append(trimming_array)
         return trimming_array
 
     def _trimming_grad(self, x, y, coef_full, trimming_array):
-        """gradient for the trimming variable"""
+        """Gradient for the trimming variable"""
         R2 = (y - x.dot(coef_full)) ** 2
         return 0.5 * np.sum(R2, axis=1)
 
     def _objective(self, x, y, coef_full, coef_sparse, trimming_array=None):
-        """objective function"""
+        """Objective function"""
         R2 = (y - np.dot(x, coef_full)) ** 2
         D2 = (coef_full - coef_sparse) ** 2
         if self.use_trimming:
@@ -268,8 +269,7 @@ class ConstrainedSR3(BaseOptimizer):
             )
 
     def _convergence_criterion(self):
-        """Calculate the convergence criterion for the optimization
-        """
+        """Calculate the convergence criterion for the optimization"""
         this_coef = self.history_[-1]
         if len(self.history_) > 1:
             last_coef = self.history_[-2]
@@ -292,7 +292,7 @@ class ConstrainedSR3(BaseOptimizer):
     def _reduce(self, x, y):
         """
         Iterates the thresholding. Assumes an initial guess
-        is saved in self.coef_ and self.ind_
+        is saved in self.coef_
         """
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess
@@ -357,7 +357,7 @@ class ConstrainedSR3(BaseOptimizer):
             else:
                 obj_his.append(self._objective(x, y, coef_full, coef_sparse))
             if self._convergence_criterion() < self.tol:
-                # NOTE: HAVEN'T UPDATED THIS FOR TRIMMING/CONSTRAINTS YET
+                # TODO: Update this for trimming/constraints
                 break
         else:
             warnings.warn(
@@ -374,8 +374,8 @@ class ConstrainedSR3(BaseOptimizer):
         self.obj_his = obj_his
 
     @staticmethod
-    def cSimplexProj(trimming_array, trimming_fraction):
-        """projected onto the capped simplex"""
+    def capped_simplex_proj(trimming_array, trimming_fraction):
+        """Project onto the capped simplex"""
         a = np.min(trimming_array) - 1.0
         b = np.max(trimming_array) - 0.0
 

@@ -13,7 +13,7 @@ from pysindy.utils import get_reg
 
 class ConstrainedSR3(BaseOptimizer):
     """
-    Sparse relaxed regularized regression.
+    Sparse relaxed regularized regression with linear inequality constraints.
 
     Attempts to minimize the objective function
 
@@ -22,7 +22,13 @@ class ConstrainedSR3(BaseOptimizer):
         0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
         + (0.5 / nu)\\|w-v\\|^2_2
 
-    where :math:`R(v)` is a regularization function. See the following reference
+        subject to 
+
+    .. math:: 
+
+        Cw <= d
+
+    where :math:`R(v)` is a regularization function, C is a constraint matrix, and d is a vector of values. See the following reference
     for more details:
 
         Zheng, Peng, et al. "A unified framework for sparse relaxed
@@ -58,6 +64,12 @@ class ConstrainedSR3(BaseOptimizer):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
+    constraint_lhs : 2D numpy array, shape (n_constraints, n_features*n_targets)
+        The left hand side matrix C of Cx <= d.
+
+    constraint_rhs: 1D numpy array, shape (n_constraints,) 
+        The right hand side vector d of Cx <= d
+
     normalize : boolean, optional (default False)
         This parameter is ignored when fit_intercept is set to False. If True,
         the regressors X will be normalized before regression by subtracting
@@ -66,10 +78,10 @@ class ConstrainedSR3(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : 2D numpy array of floats (default optional)
+    initial_guess : 2D numpy array of floats, shape (n_targets, n_features)
         If user does not pass this, the initial guess for the optimization is
-        a naive lstsq (see below). If passes, the optimization starts
-        with this matrix as the initial starting point.
+        a naive lstsq. If passed, the optimization starts with this matrix 
+        as the initial starting point.
 
     unbias : boolean, optional (default True)
         Whether to perform an extra step of unregularized linear regression to unbias
@@ -78,11 +90,14 @@ class ConstrainedSR3(BaseOptimizer):
         be biased toward 0 due to the L2 regularization.
         Setting `unbias=True` will trigger an additional step wherein the nonzero
         coefficients learned by the `STLSQ` object will be updated using an
-        unregularized least-squares fit.
+        unregularized least-squares fit. If a constraint is used, this
+        term is default set to False, since this will currently  
+        not work properly with a constraint. 
 
-    thresholds : 2D array of floats, optional (default None)
-        Optional threshold matrix to provide different thresholds
-        for different terms in the optimization process
+    thresholds : 2D array of floats, shape (n_targets, n_features)
+        Threshold matrix to provide different thresholds
+        for different terms in the optimization process. Defaults
+        to None, which is then ignored.
 
     Attributes
     ----------
@@ -178,6 +193,7 @@ class ConstrainedSR3(BaseOptimizer):
             self.n_constraints = constraint_lhs.shape[0]
             self.constraint_lhs = constraint_lhs
             self.constraint_rhs = constraint_rhs
+            self.unbias = False
 
     def enable_trimming(self, trimming_fraction):
         self.use_trimming = True
@@ -279,7 +295,7 @@ class ConstrainedSR3(BaseOptimizer):
         is saved in self.coef_
         """
         if self.initial_guess is not None:
-            self.coef_ = self.initial_guess.T
+            self.coef_ = self.initial_guess
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 

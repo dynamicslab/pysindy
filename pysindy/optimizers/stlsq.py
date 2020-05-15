@@ -150,7 +150,7 @@ class STLSQ(BaseOptimizer):
         ``self.coef_`` and ``self.ind_``.
         """
         if self.initial_guess is not None:
-            self.coef_ = self.initial_guess.T
+            self.coef_ = self.initial_guess
 
         ind = self.ind_
         n_samples, n_features = x.shape

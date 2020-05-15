@@ -168,7 +168,7 @@ class SR3(BaseOptimizer):
         is saved in self.coef_ and self.ind_
         """
         if self.initial_guess is not None:
-            self.coef_ = self.initial_guess.T
+            self.coef_ = self.initial_guess
 
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape

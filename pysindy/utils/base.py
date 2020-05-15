@@ -107,9 +107,10 @@ def prox_l0(x, threshold):
 def prox_weighted_l0(x, thresholds):
     """Proximal operator for weighted l0 regularization."""
     y = np.zeros(np.shape(x))
-    for i in range(thresholds.shape[0]):
-        for j in range(thresholds.shape[1]):
-            y[i, j] = x[i, j] * (np.abs(x[i, j]) > thresholds[i, j])
+    transp_thresholds = thresholds.T
+    for i in range(transp_thresholds.shape[0]):
+        for j in range(transp_thresholds.shape[1]):
+            y[i, j] = x[i, j] * (np.abs(x[i, j]) > transp_thresholds[i, j])
     return y
 
 
@@ -166,7 +167,7 @@ def get_reg(regularization):
     if regularization.lower() == "l0":
         return lambda x, lam: lam * np.count_nonzero(x)
     elif regularization.lower() == "weighted_l0":
-        return lambda x, lam: np.sum(lam[np.nonzero(x)])
+        return lambda x, lam: np.sum(lam.T[np.nonzero(x)])
     elif regularization.lower() == "l1":
         return lambda x, lam: lam * np.sum(np.abs(x))
     elif regularization.lower() == "weighted_l1":

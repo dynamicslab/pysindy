@@ -170,6 +170,32 @@ Getting help
 ^^^^^^^^^^^^
 For help using PySINDy please consult the `documentation <https://pysindy.readthedocs.io/en/latest/>`__ and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/examples>`__, or create an issue.
 
+Citing PySINDy
+--------------
+PySINDy has been published in the Journal of Open Source Software (JOSS). The paper can be found [here]().
+
+If you use PySINDy in your work, please remember to cite it using:
+
+``de Silva et al., (2020). PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data. Journal of Open Source Software, 5(49), 2104, https://doi.org/10.21105/joss.02104``
+
+Bibtex:
+
+.. code-block:: text
+
+    @article{de Silva2020,
+    doi = {10.21105/joss.02104},
+    url = {https://doi.org/10.21105/joss.02104},
+    year = {2020},
+    publisher = {The Open Journal},
+    volume = {5},
+    number = {49},
+    pages = {2104},
+    author = {Brian de Silva and Kathleen Champion and Markus Quade and Jean-Christophe Loiseau and J. Kutz and Steven Brunton},
+    title = {PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data},
+    journal = {Journal of Open Source Software}
+    }
+
+
 References
 ----------------------
 -  de Silva, Brian M., Kathleen Champion, Markus Quade,

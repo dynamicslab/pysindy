@@ -172,7 +172,7 @@ For help using PySINDy please consult the `documentation <https://pysindy.readth
 
 Citing PySINDy
 --------------
-PySINDy has been published in the Journal of Open Source Software (JOSS). The paper can be found [here]().
+PySINDy has been published in the Journal of Open Source Software (JOSS). The paper can be found `here <https://joss.theoj.org/papers/10.21105/joss.02104>`__.
 
 If you use PySINDy in your work, please remember to cite it using:
 
@@ -182,7 +182,7 @@ Bibtex:
 
 .. code-block:: text
 
-    @article{de Silva2020,
+    @article{desilva2020,
     doi = {10.21105/joss.02104},
     url = {https://doi.org/10.21105/joss.02104},
     year = {2020},

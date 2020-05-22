@@ -6,7 +6,10 @@ import pytest
 from numpy.linalg import norm
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
+<<<<<<< HEAD
 from sklearn.exceptions import NotFittedError
+=======
+>>>>>>> Add some unit tests for ConstrainedSR3
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
@@ -217,6 +220,24 @@ def test_sr3_prox_functions(data_derivative_1d, thresholder):
     check_is_fitted(model)
 
 
+@pytest.mark.parametrize("thresholder", ["L0", "l1"])
+def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
+    x, x_dot = data_derivative_1d
+    x = x.reshape(-1, 1)
+    model = ConstrainedSR3(thresholder=thresholder)
+    model.fit(x, x_dot)
+    check_is_fitted(model)
+
+
+@pytest.mark.parametrize("thresholder", ["weighted_l0", "weighted_l1"])
+def test_weighted_prox_functions(data_derivative_1d, thresholder):
+    x, x_dot = data_derivative_1d
+    x = x.reshape(-1, 1)
+    thresholds = np.ones((x_dot.shape[0], 1))
+    model = ConstrainedSR3(thresholder=thresholder, thresholds=thresholds)
+    check_is_fitted(model)
+
+
 def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
@@ -314,3 +335,14 @@ def test_sr3_warn(data_linear_oscillator_corrupted):
 
     with pytest.warns(ConvergenceWarning):
         model.fit(x, x_dot)
+
+
+@pytest.mark.parametrize(
+    "optimizer", [STLSQ(max_iter=1), SR3(max_iter=1), ConstrainedSR3(max_iter=1)],
+)
+def test_fit_warn(data_derivative_1d, optimizer):
+    x, x_dot = data_derivative_1d
+    x = x.reshape(-1, 1)
+
+    with pytest.warns(ConvergenceWarning):
+        optimizer.fit(x, x_dot)

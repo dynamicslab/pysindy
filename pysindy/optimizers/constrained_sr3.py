@@ -55,8 +55,9 @@ class ConstrainedSR3(BaseOptimizer):
 
     thresholder : string, optional (default 'l0')
         Regularization function to use. Currently implemented options
-        are 'l0' (l0 norm), 'l1' (l1 norm), and 'cad' (clipped
-        absolute deviation).
+        are 'l0' (l0 norm), 'l1' (l1 norm), 'cad' (clipped
+        absolute deviation), 'weighted_l0' (weighted l0 norm), and
+        'weighted_l1' (weighted l1 norm).
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -155,6 +156,7 @@ class ConstrainedSR3(BaseOptimizer):
         self.thresholder = thresholder
         self.prox = get_prox(thresholder)
         self.reg = get_reg(thresholder)
+
         if thresholder[0].lower() == "w" and thresholds is None:
             raise ValueError(
                 "weighted thresholder can only be used with a matrix of thresholds"

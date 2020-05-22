@@ -147,6 +147,16 @@ class ConstrainedSR3(BaseOptimizer):
             raise ValueError("nu must be positive")
         if tol <= 0:
             raise ValueError("tol must be positive")
+        if thresholder[:8].lower() == "weighted" and thresholds is None:
+            raise ValueError(
+                "weighted thresholder can only be used with a matrix of thresholds"
+            )
+        if thresholder[:8].lower() != "weighted" and thresholds is not None:
+            raise ValueError("matrix of thresholds requires a weighted thresholder")
+        if thresholds is not None and not np.all(thresholds >= 0.0):
+            raise ValueError(
+                "matrix of thresholds must contain non-negative entries only"
+            )
 
         self.threshold = threshold
         self.thresholds = thresholds
@@ -156,17 +166,16 @@ class ConstrainedSR3(BaseOptimizer):
         self.thresholder = thresholder
         self.prox = get_prox(thresholder)
         self.reg = get_reg(thresholder)
+        self.use_constraints = (constraint_lhs is not None) and (
+            constraint_rhs is not None
+        )
 
-        if thresholder[0].lower() == "w" and thresholds is None:
-            raise ValueError(
-                "weighted thresholder can only be used with a matrix of thresholds"
-            )
-        if thresholder[0].lower() != "w" and thresholds is not None:
-            raise ValueError("matrix of thresholds requires a weighted thresholder")
-        if thresholds is not None and not np.all(thresholds >= 0.0):
-            raise ValueError(
-                "matrix of thresholds must contain non-negative entries only"
-            )
+        if self.use_constraints:
+            self.n_constraints = constraint_lhs.shape[0]
+            self.constraint_lhs = constraint_lhs
+            self.constraint_rhs = constraint_rhs
+            self.unbias = False
+
         if trimming_fraction == 0.0:
             self.use_trimming = False
         else:
@@ -174,14 +183,6 @@ class ConstrainedSR3(BaseOptimizer):
             self.trimming_fraction = trimming_fraction
             self.trimming_initialization = trimming_initialization
             self.trimming_step_size = trimming_step_size
-        self.use_constraints = (constraint_lhs is not None) and (
-            constraint_rhs is not None
-        )
-        if self.use_constraints:
-            self.n_constraints = constraint_lhs.shape[0]
-            self.constraint_lhs = constraint_lhs
-            self.constraint_rhs = constraint_rhs
-            self.unbias = False
 
     def enable_trimming(self, trimming_fraction):
         self.use_trimming = True

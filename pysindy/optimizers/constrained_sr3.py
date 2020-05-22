@@ -22,14 +22,15 @@ class ConstrainedSR3(BaseOptimizer):
         0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
         + (0.5 / nu)\\|w-v\\|^2_2
 
-        subject to 
+        subject to
 
-    .. math:: 
+    .. math::
 
         Cw <= d
 
-    where :math:`R(v)` is a regularization function, C is a constraint matrix, and d is a vector of values. See the following reference
-    for more details:
+    over v and w where :math:`R(v)` is a regularization function, C is a
+    constraint matrix, and d is a vector of values. See the following
+    reference for more details:
 
         Zheng, Peng, et al. "A unified framework for sparse relaxed
         regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
@@ -64,10 +65,10 @@ class ConstrainedSR3(BaseOptimizer):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    constraint_lhs : 2D numpy array, shape (n_constraints, n_features*n_targets)
+    constraint_lhs : 2D numpy array, shape (n_constraints, n_features * n_targets)
         The left hand side matrix C of Cx <= d.
 
-    constraint_rhs: 1D numpy array, shape (n_constraints,) 
+    constraint_rhs : 1D numpy array, shape (n_constraints,)
         The right hand side vector d of Cx <= d
 
     normalize : boolean, optional (default False)
@@ -78,10 +79,10 @@ class ConstrainedSR3(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : 2D numpy array of floats, shape (n_targets, n_features)
-        If user does not pass this, the initial guess for the optimization is
-        a naive lstsq. If passed, the optimization starts with this matrix 
-        as the initial starting point.
+    initial_guess : 2D numpy array of floats, shape (n_targets, n_features), \
+            optional (default None)
+        Initial guess for v.
+        If None, the initial guess is obtained via a standard least squares fit.
 
     unbias : boolean, optional (default True)
         Whether to perform an extra step of unregularized linear regression to unbias
@@ -90,14 +91,18 @@ class ConstrainedSR3(BaseOptimizer):
         be biased toward 0 due to the L2 regularization.
         Setting `unbias=True` will trigger an additional step wherein the nonzero
         coefficients learned by the `STLSQ` object will be updated using an
-        unregularized least-squares fit. If a constraint is used, this
-        term is default set to False, since this will currently  
-        not work properly with a constraint. 
+        unregularized least-squares fit.
+        `unbias` is automatically set to False if a constraint is used.
 
-    thresholds : 2D array of floats, shape (n_targets, n_features)
-        Threshold matrix to provide different thresholds
-        for different terms in the optimization process. Defaults
-        to None, which is then ignored.
+    thresholds : 2D array of floats, shape (n_targets, n_features), optional \
+            (default None)
+        Array of thresholds for each library function coefficient.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        `thresholds[i, j]` should specify the threshold to be used for the
+        (i + 1, j + 1) entry of :math:`\\Xi`. That is to say it should give the
+        threshold to be used for the (i + 1)st library function in the equation
+        for the (j + 1)st measurement variable.
 
     Attributes
     ----------
@@ -108,25 +113,6 @@ class ConstrainedSR3(BaseOptimizer):
     coef_full_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> from scipy.integrate import odeint
-    >>> from pysindy import SINDy
-    >>> from pysindy.optimizers import SR3
-    >>> lorenz = lambda z,t : [10*(z[1] - z[0]),
-    >>>                        z[0]*(28 - z[2]) - z[1],
-    >>>                        z[0]*z[1] - 8/3*z[2]]
-    >>> t = np.arange(0,2,.002)
-    >>> x = odeint(lorenz, [-8,8,27], t)
-    >>> opt = SR3(threshold=0.1, nu=1)
-    >>> model = SINDy(optimizer=opt)
-    >>> model.fit(x, t=t[1]-t[0])
-    >>> model.print()
-    x0' = -10.004 1 + 10.004 x0
-    x1' = 27.994 1 + -0.993 x0 + -1.000 1 x1
-    x2' = -2.662 x1 + 1.000 1 x0
     """
 
     def __init__(

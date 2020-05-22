@@ -172,8 +172,6 @@ def get_reg(regularization):
         return lambda x, lam: lam * np.sum(np.abs(x))
     elif regularization.lower() == "weighted_l1":
         return lambda x, lam: np.sum(np.abs(lam @ x))
-    # elif regularization.lower() == "cad":
-    #     return prox_cad
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
 

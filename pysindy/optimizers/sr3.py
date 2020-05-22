@@ -64,10 +64,10 @@ class SR3(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : 2D numpy array of floats (default optional)
-        If user does not pass this, the initial guess for the optimization is
-        a naive lstsq (see below). If passes, the optimization starts
-        with this matrix as the initial starting point.
+    initial_guess : 2D numpy array of floats, shape (n_targets, n_features), \
+            optional (default None)
+        Initial guess for v.
+        If None, the initial guess is obtained via a standard least squares fit.
 
     Attributes
     ----------

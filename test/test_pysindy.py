@@ -24,6 +24,7 @@ from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
+from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
 
@@ -150,6 +151,8 @@ def test_bad_t(data):
         (pytest.lazy_fixture("data_lorenz"), STLSQ()),
         (pytest.lazy_fixture("data_1d"), SR3()),
         (pytest.lazy_fixture("data_lorenz"), SR3()),
+        (pytest.lazy_fixture("data_1d"), ConstrainedSR3()),
+        (pytest.lazy_fixture("data_lorenz"), ConstrainedSR3()),
         (pytest.lazy_fixture("data_1d"), Lasso(fit_intercept=False)),
         (pytest.lazy_fixture("data_lorenz"), Lasso(fit_intercept=False)),
         (pytest.lazy_fixture("data_1d"), ElasticNet(fit_intercept=False)),

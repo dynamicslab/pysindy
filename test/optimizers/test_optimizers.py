@@ -9,6 +9,7 @@ from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
 
+from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
@@ -45,7 +46,13 @@ class DummyModelNoCoef(BaseEstimator):
 
 @pytest.mark.parametrize(
     "cls, support",
-    [(Lasso, True), (STLSQ, True), (SR3, True), (DummyLinearModel, False)],
+    [
+        (Lasso, True),
+        (STLSQ, True),
+        (SR3, True),
+        (ConstrainedSR3, True),
+        (DummyLinearModel, False),
+    ],
 )
 def test_supports_multiple_targets(cls, support):
     assert supports_multiple_targets(cls()) == support
@@ -61,6 +68,7 @@ def data(request):
     [
         STLSQ(),
         SR3(),
+        ConstrainedSR3(),
         Lasso(fit_intercept=False),
         ElasticNet(fit_intercept=False),
         DummyLinearModel(),
@@ -95,8 +103,7 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
     check_is_fitted(model)
 
 
-def test_bad_parameters(data_derivative_1d):
-    x, x_dot = data_derivative_1d
+def test_bad_parameters():
 
     with pytest.raises(ValueError):
         STLSQ(threshold=-1)
@@ -116,11 +123,37 @@ def test_bad_parameters(data_derivative_1d):
     with pytest.raises(ValueError):
         SR3(tol=0)
 
+    with pytest.raises(ValueError):
+        SR3(max_iter=0)
+
     with pytest.raises(NotImplementedError):
         SR3(thresholder="l2")
 
     with pytest.raises(ValueError):
-        SR3(max_iter=0)
+        ConstrainedSR3(threshold=-1)
+
+    with pytest.raises(ValueError):
+        ConstrainedSR3(nu=0)
+
+    with pytest.raises(ValueError):
+        ConstrainedSR3(tol=0)
+
+    with pytest.raises(ValueError):
+        ConstrainedSR3(max_iter=0)
+
+    with pytest.raises(NotImplementedError):
+        ConstrainedSR3(thresholder="l2")
+
+    with pytest.raises(ValueError):
+        ConstrainedSR3(thresholder="weighted_l0", thresholds=None)
+
+    with pytest.raises(ValueError):
+        ConstrainedSR3(thresholder="l0", thresholds=np.ones((5, 5)))
+
+    with pytest.raises(ValueError):
+        thresholds = np.ones((5, 5))
+        thresholds[0, 0] = -1
+        ConstrainedSR3(thresholds=thresholds)
 
 
 def test_bad_optimizers(data_derivative_1d):

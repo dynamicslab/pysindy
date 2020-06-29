@@ -76,7 +76,7 @@ class IdentityLibrary(BaseFeatureLibrary):
         return self
 
     def transform(self, X):
-        """Transform data to Fourier features
+        """Perform identity transformation (return a copy of the input).
 
         Parameters
         ----------

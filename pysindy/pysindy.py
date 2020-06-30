@@ -486,7 +486,7 @@ class SINDy(BaseEstimator):
         x, x_dot = drop_nan_rows(x, x_dot)
 
         x_dot_predict = self.model.predict(x)
-        return metric(x_dot_predict, x_dot, **metric_kws)
+        return metric(x_dot, x_dot_predict, **metric_kws)
 
     def process_multiple_trajectories(self, x, t, x_dot, return_array=True):
         """

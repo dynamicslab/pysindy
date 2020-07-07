@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from numpy.linalg import norm
 from sklearn.base import BaseEstimator
+from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
@@ -79,6 +80,22 @@ def test_fit(data, optimizer):
         assert opt.coef_.shape == (x.shape[1], x_dot.shape[1])
     else:
         assert opt.coef_.shape == (1, x.shape[1])
+
+
+@pytest.mark.parametrize(
+    "optimizer", [STLSQ(), SR3()],
+)
+def test_not_fitted(optimizer):
+    with pytest.raises(NotFittedError):
+        optimizer.predict(np.ones((1, 3)))
+
+
+@pytest.mark.parametrize(
+    "optimizer", [STLSQ(), SR3()],
+)
+def test_complexity_not_fitted(optimizer):
+    with pytest.raises(NotFittedError):
+        optimizer.complexity
 
 
 @pytest.mark.parametrize(

@@ -8,6 +8,7 @@ from scipy import sparse
 from sklearn.linear_model import LinearRegression
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.utils.extmath import safe_sparse_dot
+from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 
@@ -27,6 +28,7 @@ def _rescale_data(X, y, sample_weight):
 class ComplexityMixin:
     @property
     def complexity(self):
+        check_is_fitted(self)
         return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)
 
 
@@ -73,9 +75,6 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         self.max_iter = max_iter
         self.iters = 0
-        self.coef_ = None
-        self.ind_ = None
-        self.history_ = []
 
     # Force subclasses to implement this
     @abc.abstractmethod
@@ -127,7 +126,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self.iters = 0
         self.ind_ = np.ones((y.shape[1], x.shape[1]), dtype=bool)
         self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0].T  # initial guess
-        self.history_.append(self.coef_)
+        self.history_ = [self.coef_]
 
         self._reduce(x, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14

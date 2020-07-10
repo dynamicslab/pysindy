@@ -24,7 +24,7 @@ def validate_input(x, t=T_DEFAULT):
         if t is None:
             raise ValueError("t must be a scalar or array-like.")
         # Apply this check if t is a scalar
-        elif np.ndim(t) == 0:
+        elif np.ndim(t) == 0 and (isinstance(t, int) or isinstance(t, float)):
             if t <= 0:
                 raise ValueError("t must be positive")
         # Only apply these tests if t is array-like

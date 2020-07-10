@@ -115,9 +115,9 @@ def test_bad_t(data):
     x, t = data
     model = SINDy()
 
-    # No t
+    # Wrong type
     with pytest.raises(ValueError):
-        model.fit(x, t=None)
+        model.fit(x, t="1")
 
     # Invalid value of t
     with pytest.raises(ValueError):
@@ -141,6 +141,26 @@ def test_bad_t(data):
     t[3] = t[5]
     with pytest.raises(ValueError):
         model.fit(x, t)
+
+
+@pytest.mark.parametrize(
+    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
+)
+def test_t_default(data):
+    x, t = data
+    dt = t[1] - t[0]
+
+    model = SINDy()
+    model.fit(x, dt)
+
+    model_t_default = SINDy(t_default=dt)
+    model_t_default.fit(x)
+
+    np.testing.assert_allclose(model.coefficients(), model_t_default.coefficients())
+    np.testing.assert_almost_equal(model.score(x, t=dt), model_t_default.score(x))
+    np.testing.assert_almost_equal(
+        model.differentiate(x, t=dt), model_t_default.differentiate(x)
+    )
 
 
 @pytest.mark.parametrize(

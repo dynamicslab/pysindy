@@ -13,10 +13,10 @@ from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy.differentiation import FiniteDifference
+from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import STLSQ
 from pysindy.utils.base import drop_nan_rows
@@ -152,7 +152,7 @@ class SINDy(BaseEstimator):
             optimizer = STLSQ()
         self.optimizer = optimizer
         if feature_library is None:
-            feature_library = PolynomialFeatures()
+            feature_library = PolynomialLibrary()
         self.feature_library = feature_library
         if differentiation_method is None:
             differentiation_method = FiniteDifference()

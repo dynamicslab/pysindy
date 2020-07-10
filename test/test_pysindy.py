@@ -480,17 +480,17 @@ def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_t
 
     model = SINDy()
     with pytest.raises(TypeError):
-        model.process_multiple_trajectories(np.array(x), t, x)
+        model._process_multiple_trajectories(np.array(x), t, x)
     with pytest.raises(TypeError):
-        model.process_multiple_trajectories(x, t, np.array(x))
+        model._process_multiple_trajectories(x, t, np.array(x))
 
     # Test an option that doesn't get tested elsewhere
-    model.process_multiple_trajectories(x, t, x, return_array=False)
+    model._process_multiple_trajectories(x, t, x, return_array=False)
 
     x = data_discrete_time
     model = SINDy(discrete_time=True)
     with pytest.raises(TypeError):
-        model.process_multiple_trajectories(x, t, np.array(x))
+        model._process_multiple_trajectories(x, t, np.array(x))
 
 
 def test_simulate_errors(data_lorenz):

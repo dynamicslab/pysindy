@@ -254,7 +254,7 @@ class SINDy(BaseEstimator):
             self.n_control_features_ = u.shape[1]
 
         if multiple_trajectories:
-            x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
+            x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         else:
             x = validate_input(x, t)
 
@@ -478,7 +478,7 @@ class SINDy(BaseEstimator):
             )
 
         if multiple_trajectories:
-            x, x_dot = self.process_multiple_trajectories(
+            x, x_dot = self._process_multiple_trajectories(
                 x, t, x_dot, return_array=True
             )
         else:
@@ -503,7 +503,7 @@ class SINDy(BaseEstimator):
         x_dot_predict = self.model.predict(x)
         return metric(x_dot, x_dot_predict, **metric_kws)
 
-    def process_multiple_trajectories(self, x, t, x_dot, return_array=True):
+    def _process_multiple_trajectories(self, x, t, x_dot, return_array=True):
         """
         Handle input data that contains multiple trajectories by doing the
         necessary validation, reshaping, and computation of derivatives.
@@ -581,7 +581,9 @@ class SINDy(BaseEstimator):
             raise RuntimeError("No differentiation implemented for discrete time model")
 
         if multiple_trajectories:
-            return self.process_multiple_trajectories(x, t, None, return_array=False)[1]
+            return self._process_multiple_trajectories(x, t, None, return_array=False)[
+                1
+            ]
         else:
             x = validate_input(x, t)
             return self.differentiation_method(x, t)

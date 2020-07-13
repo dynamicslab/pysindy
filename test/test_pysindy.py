@@ -150,6 +150,11 @@ def test_t_default(data):
     x, t = data
     dt = t[1] - t[0]
 
+    with pytest.raises(ValueError):
+        model = SINDy(t_default=0)
+    with pytest.raises(ValueError):
+        model = SINDy(t_default="1")
+
     model = SINDy()
     model.fit(x, dt)
 
@@ -273,6 +278,11 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
     model = SINDy()
     model.fit(x, t=t, x_dot=x, multiple_trajectories=True)
     check_is_fitted(model)
+
+    # Test validate_input
+    t[0] = None
+    with pytest.raises(ValueError):
+        model.fit(x, t=t, multiple_trajectories=True)
 
 
 def test_predict_multiple_trajectories(data_multiple_trajctories):

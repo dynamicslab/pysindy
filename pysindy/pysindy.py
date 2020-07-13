@@ -648,7 +648,7 @@ class SINDy(BaseEstimator):
             raise TypeError("Model was fit using control variables, so u is required")
 
         if self.discrete_time:
-            if not isinstance(t, int):
+            if not isinstance(t, int) or t <= 0:
                 raise ValueError(
                     "For discrete time model, t must be an integer (indicating"
                     "the number of steps to predict)"

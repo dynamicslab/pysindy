@@ -134,6 +134,10 @@ The documentation site for PySINDy can be found `here <https://pysindy.readthedo
 Community guidelines
 --------------------
 
+Contributing examples
+^^^^^^^^^^^^^^^^^^^^^
+We love seeing examples of PySINDy being used to solve interesting problems! If you would like to contribute an example, reach out to us by creating an issue.
+
 Contributing code
 ^^^^^^^^^^^^^^^^^
 We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To get started we recommend installing the packages in ``requirements-dev.txt`` via

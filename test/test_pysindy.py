@@ -115,9 +115,9 @@ def test_bad_t(data):
     x, t = data
     model = SINDy()
 
-    # No t
+    # Wrong type
     with pytest.raises(ValueError):
-        model.fit(x, t=None)
+        model.fit(x, t="1")
 
     # Invalid value of t
     with pytest.raises(ValueError):
@@ -141,6 +141,31 @@ def test_bad_t(data):
     t[3] = t[5]
     with pytest.raises(ValueError):
         model.fit(x, t)
+
+
+@pytest.mark.parametrize(
+    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
+)
+def test_t_default(data):
+    x, t = data
+    dt = t[1] - t[0]
+
+    with pytest.raises(ValueError):
+        model = SINDy(t_default=0)
+    with pytest.raises(ValueError):
+        model = SINDy(t_default="1")
+
+    model = SINDy()
+    model.fit(x, dt)
+
+    model_t_default = SINDy(t_default=dt)
+    model_t_default.fit(x)
+
+    np.testing.assert_allclose(model.coefficients(), model_t_default.coefficients())
+    np.testing.assert_almost_equal(model.score(x, t=dt), model_t_default.score(x))
+    np.testing.assert_almost_equal(
+        model.differentiate(x, t=dt), model_t_default.differentiate(x)
+    )
 
 
 @pytest.mark.parametrize(
@@ -253,6 +278,11 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
     model = SINDy()
     model.fit(x, t=t, x_dot=x, multiple_trajectories=True)
     check_is_fitted(model)
+
+    # Test validate_input
+    t[0] = None
+    with pytest.raises(ValueError):
+        model.fit(x, t=t, multiple_trajectories=True)
 
 
 def test_predict_multiple_trajectories(data_multiple_trajctories):
@@ -460,17 +490,17 @@ def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_t
 
     model = SINDy()
     with pytest.raises(TypeError):
-        model.process_multiple_trajectories(np.array(x), t, x)
+        model._process_multiple_trajectories(np.array(x), t, x)
     with pytest.raises(TypeError):
-        model.process_multiple_trajectories(x, t, np.array(x))
+        model._process_multiple_trajectories(x, t, np.array(x))
 
     # Test an option that doesn't get tested elsewhere
-    model.process_multiple_trajectories(x, t, x, return_array=False)
+    model._process_multiple_trajectories(x, t, x, return_array=False)
 
     x = data_discrete_time
     model = SINDy(discrete_time=True)
     with pytest.raises(TypeError):
-        model.process_multiple_trajectories(x, t, np.array(x))
+        model._process_multiple_trajectories(x, t, np.array(x))
 
 
 def test_simulate_errors(data_lorenz):

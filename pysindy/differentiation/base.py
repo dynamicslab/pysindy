@@ -3,10 +3,12 @@ Base class for numerical differentiation methods
 """
 import abc
 
+from sklearn.base import BaseEstimator
+
 from pysindy.utils.base import validate_input
 
 
-class BaseDifferentiation:
+class BaseDifferentiation(BaseEstimator):
     """
     Base class for differentiation methods.
 

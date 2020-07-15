@@ -13,10 +13,10 @@ from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy.differentiation import FiniteDifference
+from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import STLSQ
 from pysindy.utils.base import drop_nan_rows
@@ -50,6 +50,9 @@ class SINDy(BaseEstimator):
     feature_names : list of string, length n_input_features, optional
         Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
         ``['x0', 'x1', ...]``.
+
+    t_default : float, optional (default 1)
+        Default value for the time step.
 
     discrete_time : boolean, optional (default False)
         If True, dynamical system is treated as a map. Rather than predicting
@@ -141,6 +144,7 @@ class SINDy(BaseEstimator):
         feature_library=None,
         differentiation_method=None,
         feature_names=None,
+        t_default=1,
         discrete_time=False,
         n_jobs=1,
     ):
@@ -148,11 +152,17 @@ class SINDy(BaseEstimator):
             optimizer = STLSQ()
         self.optimizer = optimizer
         if feature_library is None:
-            feature_library = PolynomialFeatures()
+            feature_library = PolynomialLibrary()
         self.feature_library = feature_library
         if differentiation_method is None:
             differentiation_method = FiniteDifference()
         self.differentiation_method = differentiation_method
+        if not isinstance(t_default, float) and not isinstance(t_default, int):
+            raise ValueError("t_default must be a positive number")
+        elif t_default <= 0:
+            raise ValueError("t_default must be a positive number")
+        else:
+            self.t_default = t_default
         self.feature_names = feature_names
         self.discrete_time = discrete_time
         self.n_jobs = n_jobs
@@ -160,7 +170,7 @@ class SINDy(BaseEstimator):
     def fit(
         self,
         x,
-        t=1,
+        t=None,
         x_dot=None,
         u=None,
         multiple_trajectories=False,
@@ -178,7 +188,7 @@ class SINDy(BaseEstimator):
             trajectories may contain different numbers of samples.
 
         t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
-                (default 1)
+                (default None)
             If t is a float, it specifies the timestep between each sample.
             If array-like, it specifies the time at which each sample was
             collected.
@@ -186,7 +196,7 @@ class SINDy(BaseEstimator):
             In the case of multi-trajectory training data, t may also be a list
             of arrays containing the collection times for each individual
             trajectory.
-            Default value is a timestep of 1 between samples.
+            If None, the default time step ``t_default`` will be used.
 
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
                 optional (default None)
@@ -229,6 +239,8 @@ class SINDy(BaseEstimator):
         -------
         self: returns an instance of self
         """
+        if t is None:
+            t = self.t_default
         if u is None:
             self.n_control_features_ = 0
         else:
@@ -242,7 +254,7 @@ class SINDy(BaseEstimator):
             self.n_control_features_ = u.shape[1]
 
         if multiple_trajectories:
-            x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
+            x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         else:
             x = validate_input(x, t)
 
@@ -393,7 +405,7 @@ class SINDy(BaseEstimator):
     def score(
         self,
         x,
-        t=1,
+        t=None,
         x_dot=None,
         u=None,
         multiple_trajectories=False,
@@ -409,10 +421,11 @@ class SINDy(BaseEstimator):
             Samples
 
         t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
-                (default 1)
+                (default None)
             Time step between samples or array of collection times. Optional,
             used to compute the time derivatives of the samples if x_dot is not
             provided.
+            If None, the default time step ``t_default`` will be used.
 
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
                 optional (default None)
@@ -443,6 +456,8 @@ class SINDy(BaseEstimator):
         score: float
             Metric function value for the model prediction of x_dot.
         """
+        if t is None:
+            t = self.t_default
         if u is None or self.n_control_features_ == 0:
             if self.n_control_features_ > 0:
                 raise TypeError(
@@ -463,7 +478,7 @@ class SINDy(BaseEstimator):
             )
 
         if multiple_trajectories:
-            x, x_dot = self.process_multiple_trajectories(
+            x, x_dot = self._process_multiple_trajectories(
                 x, t, x_dot, return_array=True
             )
         else:
@@ -488,7 +503,7 @@ class SINDy(BaseEstimator):
         x_dot_predict = self.model.predict(x)
         return metric(x_dot, x_dot_predict, **metric_kws)
 
-    def process_multiple_trajectories(self, x, t, x_dot, return_array=True):
+    def _process_multiple_trajectories(self, x, t, x_dot, return_array=True):
         """
         Handle input data that contains multiple trajectories by doing the
         necessary validation, reshaping, and computation of derivatives.
@@ -536,7 +551,7 @@ class SINDy(BaseEstimator):
         else:
             return x, x_dot
 
-    def differentiate(self, x, t=1, multiple_trajectories=False):
+    def differentiate(self, x, t=None, multiple_trajectories=False):
         """
         Apply the model's differentiation method to data.
 
@@ -546,9 +561,9 @@ class SINDy(BaseEstimator):
             Data to be differentiated.
 
         t: int, numpy array of shape [n_samples], or list of numpy arrays, optional \
-                (default 1)
-            Time step between samples or array of collection times. Default is
-            a time step of 1 between samples.
+                (default None)
+            Time step between samples or array of collection times.
+            If None, the default time step ``t_default`` will be used.
 
         multiple_trajectories: boolean, optional (default False)
             If True, x contains multiple trajectories and must be a list of
@@ -560,11 +575,15 @@ class SINDy(BaseEstimator):
             Time derivatives computed by using the model's differentiation
             method
         """
+        if t is None:
+            t = self.t_default
         if self.discrete_time:
             raise RuntimeError("No differentiation implemented for discrete time model")
 
         if multiple_trajectories:
-            return self.process_multiple_trajectories(x, t, None, return_array=False)[1]
+            return self._process_multiple_trajectories(x, t, None, return_array=False)[
+                1
+            ]
         else:
             x = validate_input(x, t)
             return self.differentiation_method(x, t)
@@ -629,7 +648,7 @@ class SINDy(BaseEstimator):
             raise TypeError("Model was fit using control variables, so u is required")
 
         if self.discrete_time:
-            if not isinstance(t, int):
+            if not isinstance(t, int) or t <= 0:
                 raise ValueError(
                     "For discrete time model, t must be an integer (indicating"
                     "the number of steps to predict)"

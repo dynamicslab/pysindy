@@ -1,3 +1,4 @@
 scikit-learn[alldeps]>=0.23
 numpy
 scipy
+derivative

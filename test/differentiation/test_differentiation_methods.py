@@ -5,7 +5,12 @@ import numpy as np
 import pytest
 
 from pysindy.differentiation import FiniteDifference
+from pysindy.differentiation import FiniteDifferenceDifferentiator
+from pysindy.differentiation import SavitzkyGolayDifferentiator
 from pysindy.differentiation import SmoothedFiniteDifference
+from pysindy.differentiation import SpectralDifferentiator
+from pysindy.differentiation import SplineDifferentiator
+from pysindy.differentiation import TrendFilteredDifferentiator
 from pysindy.differentiation.base import BaseDifferentiation
 
 
@@ -73,29 +78,18 @@ def test_centered_difference_2d(data_derivative_2d):
 
 # Alternative implementation of the four tests above using parametrization
 @pytest.mark.parametrize(
-    "data",
+    "data, order",
     [
-        pytest.lazy_fixture("data_derivative_1d"),
-        pytest.lazy_fixture("data_derivative_2d"),
+        (pytest.lazy_fixture("data_derivative_1d"), 1),
+        (pytest.lazy_fixture("data_derivative_2d"), 1),
+        (pytest.lazy_fixture("data_derivative_1d"), 2),
+        (pytest.lazy_fixture("data_derivative_2d"), 2),
     ],
 )
-def test_forward_difference(data):
+def test_finite_difference(data, order):
     x, x_dot = data
-    forward_difference = FiniteDifference(order=1)
-    np.testing.assert_allclose(forward_difference(x), x_dot)
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        pytest.lazy_fixture("data_derivative_1d"),
-        pytest.lazy_fixture("data_derivative_2d"),
-    ],
-)
-def test_centered_difference(data):
-    x, x_dot = data
-    centered_difference = FiniteDifference(order=2)
-    np.testing.assert_allclose(centered_difference(x), x_dot)
+    method = FiniteDifference(order=order)
+    np.testing.assert_allclose(method(x), x_dot)
 
 
 # pytest can also check that methods throw errors when appropriate
@@ -138,3 +132,44 @@ def test_smoothed_finite_difference(data):
     x, x_dot = data
     smoothed_centered_difference = SmoothedFiniteDifference()
     np.testing.assert_allclose(smoothed_centered_difference(x), x_dot)
+
+
+@pytest.mark.parametrize(
+    "data, method",
+    [
+        (pytest.lazy_fixture("data_derivative_1d"), SpectralDifferentiator()),
+        (pytest.lazy_fixture("data_derivative_2d"), SpectralDifferentiator()),
+        (pytest.lazy_fixture("data_derivative_1d"), SplineDifferentiator(s=1e-2)),
+        (pytest.lazy_fixture("data_derivative_2d"), SplineDifferentiator(s=1e-2)),
+        (
+            pytest.lazy_fixture("data_derivative_1d"),
+            TrendFilteredDifferentiator(order=0, alpha=1e-2),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_2d"),
+            TrendFilteredDifferentiator(order=0, alpha=1e-2),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_1d"),
+            FiniteDifferenceDifferentiator(k=1),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_2d"),
+            FiniteDifferenceDifferentiator(k=1),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_1d"),
+            SavitzkyGolayDifferentiator(order=3, left=1, right=1),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_2d"),
+            SavitzkyGolayDifferentiator(order=3, left=1, right=1),
+        ),
+    ],
+)
+def test_derivative_inputs(data, method):
+    x, x_dot = data
+    t = np.arange(x.shape[0])
+
+    assert x_dot.shape == method(x).shape
+    assert x_dot.shape == method(x, t).shape

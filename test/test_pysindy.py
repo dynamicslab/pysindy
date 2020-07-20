@@ -22,6 +22,12 @@ from sklearn.utils.validation import check_is_fitted
 
 from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
+from pysindy.differentiation import FiniteDifferenceDifferentiator
+from pysindy.differentiation import SavitzkyGolayDifferentiator
+from pysindy.differentiation import SmoothedFiniteDifference
+from pysindy.differentiation import SpectralDifferentiator
+from pysindy.differentiation import SplineDifferentiator
+from pysindy.differentiation import TrendFilteredDifferentiator
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import SR3
@@ -223,6 +229,25 @@ def test_libraries(data_lorenz, library):
 
     s = model.score(x, t)
     assert s <= 1
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        SmoothedFiniteDifference(),
+        SpectralDifferentiator(),
+        SplineDifferentiator(s=1e-2),
+        TrendFilteredDifferentiator(order=0, alpha=1e-2),
+        FiniteDifferenceDifferentiator(k=1),
+        SavitzkyGolayDifferentiator(order=3, left=1, right=1),
+    ],
+)
+def test_differentiation_methods(data_lorenz, method):
+    x, t = data_lorenz
+    model = SINDy(differentiation_method=method)
+    model.fit(x, t=t)
+
+    check_is_fitted(model)
 
 
 @pytest.mark.parametrize(

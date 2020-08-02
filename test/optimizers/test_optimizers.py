@@ -112,9 +112,7 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
     check_is_fitted(model)
 
 
-def test_bad_parameters(data_derivative_1d):
-    x, x_dot = data_derivative_1d
-
+def test_bad_parameters():
     with pytest.raises(ValueError):
         STLSQ(threshold=-1)
 

@@ -8,7 +8,14 @@ except DistributionNotFound:
 
 
 from .pysindy import SINDy
-from pysindy.differentiation import *
-from pysindy.optimizers import *
-from pysindy.feature_library import *
-from pysindy.utils import *
+from . import differentiation
+from . import feature_library
+from . import optimizers
+from . import utils
+
+
+__all__ = ["SINDy"]
+__all__.extend(differentiation.__all__)
+__all__.extend(feature_library.__all__)
+__all__.extend(optimizers.__all__)
+__all__.extend(utils.__all__)

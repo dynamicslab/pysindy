@@ -228,7 +228,8 @@ def test_sr3_trimming(data_linear_oscillator_corrupted):
     )
 
     # Check that the coefficients found by the optimizer with trimming are closer to
-    # the true coefficients than the coefficients found by the optimizer without trimming
+    # the true coefficients than the coefficients found by the optimizer without
+    # trimming
     true_coef = np.array([[-2.0, 0.0], [0.0, 1.0]])
     assert norm(true_coef - optimizer_trimming.coef_) < norm(
         true_coef - optimizer_without_trimming.coef_

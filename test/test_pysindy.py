@@ -14,6 +14,10 @@ pytest file_to_test.py
 """
 import numpy as np
 import pytest
+from derivative.dglobal import Spectral
+from derivative.dglobal import Spline
+from derivative.dglobal import TrendFiltered
+from derivative.dlocal import SavitzkyGolay
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
@@ -22,16 +26,14 @@ from sklearn.utils.validation import check_is_fitted
 
 from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
-from pysindy.differentiation import FiniteDifferenceDifferentiator
-from pysindy.differentiation import SavitzkyGolayDifferentiator
 from pysindy.differentiation import SmoothedFiniteDifference
-from pysindy.differentiation import SpectralDifferentiator
-from pysindy.differentiation import SplineDifferentiator
-from pysindy.differentiation import TrendFilteredDifferentiator
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
+
+# TODO
+# from derivative.dlocal import FiniteDifference
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -235,11 +237,11 @@ def test_libraries(data_lorenz, library):
     "method",
     [
         SmoothedFiniteDifference(),
-        SpectralDifferentiator(),
-        SplineDifferentiator(s=1e-2),
-        TrendFilteredDifferentiator(order=0, alpha=1e-2),
-        FiniteDifferenceDifferentiator(k=1),
-        SavitzkyGolayDifferentiator(order=3, left=1, right=1),
+        Spectral(),
+        Spline(s=1e-2),
+        TrendFiltered(order=0, alpha=1e-2),
+        # FiniteDifference(k=1),
+        SavitzkyGolay(order=3, left=1, right=1),
     ],
 )
 def test_differentiation_methods(data_lorenz, method):

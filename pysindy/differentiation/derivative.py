@@ -6,6 +6,7 @@ Some default values used here may differ from those used in `derivative`.
 from derivative.dglobal import Spectral
 from derivative.dglobal import Spline
 from derivative.dglobal import TrendFiltered
+from derivative.differentiation import Derivative
 from derivative.dlocal import FiniteDifference
 from derivative.dlocal import SavitzkyGolay
 from numpy import arange
@@ -30,6 +31,36 @@ class DifferentiationMixin:
 
     def __call__(self, x, t=1):
         x = validate_input(x)
+        return self._differentiate(x, t)
+
+
+class SINDyDerivative(BaseEstimator):
+    """
+    Wrapper class for differentiation classes from the ``derivative`` package.
+
+    Imbues the class with ``_differentiate`` and ``__call__`` methods which are
+    used by PySINDy.
+
+    Parameters
+    ----------
+    derivative_class: subclass of ``derivative.Derivative``
+        The derivative class to be wrapped.
+        Must be inherit from the ``Derivative`` class of the ``derivative`` package.
+    """
+
+    def __init__(self, derivative_class):
+        if isinstance(derivative_class, Derivative):
+            self.derivative_class = derivative_class
+
+    def _differentiate(self, x, t=1):
+        if isinstance(t, (int, float)):
+            if t < 0:
+                raise ValueError("t must be a positive constant or an array")
+            t = arange(x.shape[0]) * t
+        return self.derivative_class.d(x, t, axis=0)
+
+    def __call__(self, x, t=1):
+        x = validate_input(x, t=t)
         return self._differentiate(x, t)
 
 

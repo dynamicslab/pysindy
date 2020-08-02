@@ -1,8 +1,12 @@
 from .base import BaseDifferentiation
-from .derivative import FiniteDifferenceDifferentiator
-from .derivative import SavitzkyGolayDifferentiator
-from .derivative import SpectralDifferentiator
-from .derivative import SplineDifferentiator
-from .derivative import TrendFilteredDifferentiator
+from .derivative import SINDyDerivative
 from .finite_difference import FiniteDifference
 from .smoothed_finite_difference import SmoothedFiniteDifference
+
+
+__all__ = [
+    "BaseDifferentiation",
+    "SINDyDerivative",
+    "FiniteDifference",
+    "SmoothedFiniteDifference",
+]

@@ -1,6 +1,7 @@
 import warnings
 from typing import Sequence
 
+from derivative.differentiation import Derivative
 from numpy import concatenate
 from numpy import isscalar
 from numpy import ndim
@@ -15,14 +16,15 @@ from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy.differentiation import FiniteDifference
-from pysindy.feature_library import PolynomialLibrary
-from pysindy.optimizers import SINDyOptimizer
-from pysindy.optimizers import STLSQ
-from pysindy.utils.base import drop_nan_rows
-from pysindy.utils.base import equations
-from pysindy.utils.base import validate_control_variables
-from pysindy.utils.base import validate_input
+from .differentiation import FiniteDifference
+from .differentiation import SINDyDerivative
+from .feature_library import PolynomialLibrary
+from .optimizers import SINDyOptimizer
+from .optimizers import STLSQ
+from .utils.base import drop_nan_rows
+from .utils.base import equations
+from .utils.base import validate_control_variables
+from .utils.base import validate_input
 
 
 class SINDy(BaseEstimator):
@@ -156,6 +158,8 @@ class SINDy(BaseEstimator):
         self.feature_library = feature_library
         if differentiation_method is None:
             differentiation_method = FiniteDifference()
+        elif isinstance(differentiation_method, Derivative):
+            differentiation_method = SINDyDerivative(differentiation_method)
         self.differentiation_method = differentiation_method
         if not isinstance(t_default, float) and not isinstance(t_default, int):
             raise ValueError("t_default must be a positive number")

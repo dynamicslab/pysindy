@@ -52,12 +52,7 @@ def test_supports_multiple_targets(cls, support):
     assert supports_multiple_targets(cls()) == support
 
 
-@pytest.fixture(
-    params=[
-        "data_derivative_1d",
-        "data_derivative_2d",
-    ]
-)
+@pytest.fixture(params=["data_derivative_1d", "data_derivative_2d"])
 def data(request):
     return request.getfixturevalue(request.param)
 

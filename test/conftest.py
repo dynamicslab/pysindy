@@ -5,8 +5,8 @@ import numpy as np
 import pytest
 from scipy.integrate import odeint
 
-from pysindy.feature_library import CustomLibrary
 from pysindy.differentiation import FiniteDifference
+from pysindy.feature_library import CustomLibrary
 
 
 @pytest.fixture

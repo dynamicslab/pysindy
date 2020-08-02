@@ -131,13 +131,13 @@ def data_linear_oscillator_corrupted():
     x = 3 * np.exp(-2 * t)
     y = 0.5 * np.exp(t)
     np.random.seed(1)
-    corrupt_idxs = np.random.choice(np.arange(1, t.size-1), t.size//20)
+    corrupt_idxs = np.random.choice(np.arange(1, t.size - 1), t.size // 20)
     x[corrupt_idxs] = 0
     X = np.stack((x, y), axis=-1)
     X_dot = FiniteDifference(order=2)(X, t)
 
     # build an array of the indices of samples that should be trimmed
-    trimmed_idxs = np.concatenate((corrupt_idxs-1, corrupt_idxs, corrupt_idxs+1))
+    trimmed_idxs = np.concatenate((corrupt_idxs - 1, corrupt_idxs, corrupt_idxs + 1))
     trimming_array = np.ones(X.shape[0])
     trimming_array[trimmed_idxs] = 0.0
 

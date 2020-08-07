@@ -10,6 +10,7 @@ except DistributionNotFound:
 from . import differentiation
 from . import feature_library
 from . import optimizers
+from . import scikit_time
 from . import utils
 from .pysindy import SINDy
 from .differentiation import BaseDifferentiation
@@ -31,3 +32,4 @@ __all__.extend(differentiation.__all__)
 __all__.extend(feature_library.__all__)
 __all__.extend(optimizers.__all__)
 __all__.extend(["utils"])
+__all__.extend(["scikit_time"])

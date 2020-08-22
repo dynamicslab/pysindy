@@ -14,10 +14,6 @@ pytest file_to_test.py
 """
 import numpy as np
 import pytest
-from derivative.dglobal import Spectral
-from derivative.dglobal import Spline
-from derivative.dglobal import TrendFiltered
-from derivative.dlocal import SavitzkyGolay
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
@@ -26,6 +22,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
+from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
@@ -233,20 +230,28 @@ def test_libraries(data_lorenz, library):
     assert s <= 1
 
 
+def test_integration_smoothed_finite_difference(data_lorenz):
+    x, t = data_lorenz
+    model = SINDy(differentiation_method=SmoothedFiniteDifference())
+
+    model.fit(x, t=t)
+
+    check_is_fitted(model)
+
+
 @pytest.mark.parametrize(
-    "method",
+    "derivative_kws",
     [
-        SmoothedFiniteDifference(),
-        Spectral(),
-        Spline(s=1e-2),
-        TrendFiltered(order=0, alpha=1e-2),
-        # FiniteDifference(k=1),
-        SavitzkyGolay(order=3, left=1, right=1),
+        dict(kind="finite_difference", k=1),
+        dict(kind="spectral"),
+        dict(kind="spline", s=1e-2),
+        dict(kind="trend_filtered", order=0, alpha=1e-2),
+        dict(kind="savitzky_golay", order=3, left=1, right=1),
     ],
 )
-def test_differentiation_methods(data_lorenz, method):
+def test_integration_derivative_methods(data_lorenz, derivative_kws):
     x, t = data_lorenz
-    model = SINDy(differentiation_method=method)
+    model = SINDy(differentiation_method=SINDyDerivative(**derivative_kws))
     model.fit(x, t=t)
 
     check_is_fitted(model)

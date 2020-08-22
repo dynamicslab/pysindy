@@ -3,14 +3,11 @@ Unit tests for differentiation methods.
 """
 import numpy as np
 import pytest
+from derivative import dxdt
 
 from pysindy.differentiation import FiniteDifference
-from pysindy.differentiation import FiniteDifferenceDifferentiator
-from pysindy.differentiation import SavitzkyGolayDifferentiator
+from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
-from pysindy.differentiation import SpectralDifferentiator
-from pysindy.differentiation import SplineDifferentiator
-from pysindy.differentiation import TrendFilteredDifferentiator
 from pysindy.differentiation.base import BaseDifferentiation
 
 
@@ -135,41 +132,92 @@ def test_smoothed_finite_difference(data):
 
 
 @pytest.mark.parametrize(
-    "data, method",
+    "data, derivative_kws",
     [
-        (pytest.lazy_fixture("data_derivative_1d"), SpectralDifferentiator()),
-        (pytest.lazy_fixture("data_derivative_2d"), SpectralDifferentiator()),
-        (pytest.lazy_fixture("data_derivative_1d"), SplineDifferentiator(s=1e-2)),
-        (pytest.lazy_fixture("data_derivative_2d"), SplineDifferentiator(s=1e-2)),
+        (pytest.lazy_fixture("data_derivative_1d"), dict(kind="spectral")),
+        (pytest.lazy_fixture("data_derivative_2d"), dict(kind="spectral")),
+        (pytest.lazy_fixture("data_derivative_1d"), dict(kind="spline", s=1e-2)),
+        (pytest.lazy_fixture("data_derivative_2d"), dict(kind="spline", s=1e-2)),
         (
             pytest.lazy_fixture("data_derivative_1d"),
-            TrendFilteredDifferentiator(order=0, alpha=1e-2),
+            dict(kind="trend_filtered", order=0, alpha=1e-2),
         ),
         (
             pytest.lazy_fixture("data_derivative_2d"),
-            TrendFilteredDifferentiator(order=0, alpha=1e-2),
+            dict(kind="trend_filtered", order=0, alpha=1e-2),
         ),
         (
             pytest.lazy_fixture("data_derivative_1d"),
-            FiniteDifferenceDifferentiator(k=1),
+            dict(kind="finite_difference", k=1),
         ),
         (
             pytest.lazy_fixture("data_derivative_2d"),
-            FiniteDifferenceDifferentiator(k=1),
+            dict(kind="finite_difference", k=1),
         ),
         (
             pytest.lazy_fixture("data_derivative_1d"),
-            SavitzkyGolayDifferentiator(order=3, left=1, right=1),
+            dict(kind="savitzky_golay", order=3, left=1, right=1),
         ),
         (
             pytest.lazy_fixture("data_derivative_2d"),
-            SavitzkyGolayDifferentiator(order=3, left=1, right=1),
+            dict(kind="savitzky_golay", order=3, left=1, right=1),
         ),
     ],
 )
-def test_derivative_inputs(data, method):
+def test_wrapper_equivalence_with_dxdt(data, derivative_kws):
+    x, _ = data
+    t = np.arange(x.shape[0])
+
+    if np.ndim(x) == 1:
+        np.testing.assert_allclose(
+            dxdt(x.reshape(-1, 1), t, axis=0, **derivative_kws),
+            SINDyDerivative(**derivative_kws)(x, t),
+        )
+    else:
+        np.testing.assert_allclose(
+            dxdt(x, t, axis=0, **derivative_kws),
+            SINDyDerivative(**derivative_kws)(x, t),
+        )
+
+
+@pytest.mark.parametrize(
+    "data, derivative_kws",
+    [
+        (pytest.lazy_fixture("data_derivative_1d"), dict(kind="spectral")),
+        (pytest.lazy_fixture("data_derivative_2d"), dict(kind="spectral")),
+        (pytest.lazy_fixture("data_derivative_1d"), dict(kind="spline", s=1e-2)),
+        (pytest.lazy_fixture("data_derivative_2d"), dict(kind="spline", s=1e-2)),
+        (
+            pytest.lazy_fixture("data_derivative_1d"),
+            dict(kind="trend_filtered", order=0, alpha=1e-2),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_2d"),
+            dict(kind="trend_filtered", order=0, alpha=1e-2),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_1d"),
+            dict(kind="finite_difference", k=1),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_2d"),
+            dict(kind="finite_difference", k=1),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_1d"),
+            dict(kind="savitzky_golay", order=3, left=1, right=1),
+        ),
+        (
+            pytest.lazy_fixture("data_derivative_2d"),
+            dict(kind="savitzky_golay", order=3, left=1, right=1),
+        ),
+    ],
+)
+def test_derivative_output_shape(data, derivative_kws):
     x, x_dot = data
     t = np.arange(x.shape[0])
+
+    method = SINDyDerivative(**derivative_kws)
 
     assert x_dot.shape == method(x).shape
     assert x_dot.shape == method(x, t).shape

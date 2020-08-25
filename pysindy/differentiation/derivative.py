@@ -1,7 +1,7 @@
 """
-Wrapper classes for differentiation methods from the `derivative` package.
+Wrapper classes for differentiation methods from the :doc:`derivative:index` package.
 
-Some default values used here may differ from those used in `derivative`.
+Some default values used here may differ from those used in :doc:`derivative:index`.
 """
 from derivative import dxdt
 from numpy import arange
@@ -12,7 +12,7 @@ from pysindy.utils.base import validate_input
 
 class SINDyDerivative(BaseEstimator):
     """
-    Wrapper class for differentiation classes from the ``derivative`` package.
+    Wrapper class for differentiation classes from the :doc:`derivative:index` package.
 
     Imbues the class with ``_differentiate`` and ``__call__`` methods which are
     used by PySINDy.
@@ -20,7 +20,10 @@ class SINDyDerivative(BaseEstimator):
     Parameters
     ----------
     derivative_kws: dictionary, optional
-        Keyword arguments to be passed to the ``derivative.dxdt`` method.
+        Keyword arguments to be passed to the
+        `dxdt <https://derivative.readthedocs.io/en/latest/api.html\
+        #derivative.differentiation.dxdt>`_
+        method.
 
     Notes
     -----

@@ -1,12 +1,12 @@
 from .base import BaseDifferentiation
-from .derivative import SINDyDerivative
 from .finite_difference import FiniteDifference
+from .sindy_derivative import SINDyDerivative
 from .smoothed_finite_difference import SmoothedFiniteDifference
 
 
 __all__ = [
     "BaseDifferentiation",
-    "SINDyDerivative",
     "FiniteDifference",
+    "SINDyDerivative",
     "SmoothedFiniteDifference",
 ]

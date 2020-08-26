@@ -13,8 +13,11 @@ from pysindy.utils.base import validate_input
 class SINDyDerivative(BaseEstimator):
     """
     Wrapper class for differentiation classes from the :doc:`derivative:index` package.
+    This class is meant to provide all the same functionality as the
+    `dxdt <https://derivative.readthedocs.io/en/latest/api.html\
+        #derivative.differentiation.dxdt>`_ method.
 
-    Imbues the class with ``_differentiate`` and ``__call__`` methods which are
+    This class also has ``_differentiate`` and ``__call__`` methods which are
     used by PySINDy.
 
     Parameters

@@ -221,3 +221,15 @@ def test_derivative_output_shape(data, derivative_kws):
 
     assert x_dot.shape == method(x).shape
     assert x_dot.shape == method(x, t).shape
+
+
+def test_bad_t_values(data_derivative_1d):
+    x, x_dot = data_derivative_1d
+
+    method = SINDyDerivative(kind="finite_difference", k=1)
+
+    with pytest.raises(ValueError):
+        method(x, t=-1)
+
+    with pytest.raises(ValueError):
+        method._differentiate(x, t=-1)

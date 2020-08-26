@@ -18,6 +18,8 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import SINDy
@@ -28,9 +30,6 @@ from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
-
-# TODO
-# from derivative.dlocal import FiniteDifference
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -563,3 +562,27 @@ def test_fit_warn(data_lorenz, params, warning):
         model.fit(x, t, quiet=True)
 
     assert len(warn_record) == 0
+
+
+def test_cross_validation(data_lorenz):
+    x, t = data_lorenz
+    dt = t[1] - t[0]
+
+    model = SINDy(
+        t_default=dt, differentiation_method=SINDyDerivative(kind="spline", s=1e-2)
+    )
+
+    param_grid = {
+        "optimizer__threshold": [0.01, 0.1],
+        "differentiation_method__kwargs": [
+            {"kind": "spline", "s": 1e-2},
+            {"kind": "finite_difference", "k": 1},
+        ],
+        "feature_library__degree": [1, 2],
+    }
+
+    search = RandomizedSearchCV(
+        model, param_grid, cv=TimeSeriesSplit(n_splits=3), n_iter=5
+    )
+    search.fit(x)
+    check_is_fitted(search)

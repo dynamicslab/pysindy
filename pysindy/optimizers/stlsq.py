@@ -104,8 +104,7 @@ class STLSQ(BaseOptimizer):
         self.ridge_kw = ridge_kw
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):
-        """Perform thresholding of the weight vector(s)
-        """
+        """Perform thresholding of the weight vector(s)"""
         c = np.zeros(dim)
         c[ind] = coef
         big_ind = np.abs(c) >= threshold
@@ -113,16 +112,14 @@ class STLSQ(BaseOptimizer):
         return c, big_ind
 
     def _regress(self, x, y):
-        """Perform the ridge regression
-        """
+        """Perform the ridge regression"""
         kw = self.ridge_kw or {}
         coef = ridge_regression(x, y, self.alpha, **kw)
         self.iters += 1
         return coef
 
     def _no_change(self):
-        """Check if the coefficient mask has changed after thresholding
-        """
+        """Check if the coefficient mask has changed after thresholding"""
         this_coef = self.history_[-1].flatten()
         if len(self.history_) > 1:
             last_coef = self.history_[-2].flatten()

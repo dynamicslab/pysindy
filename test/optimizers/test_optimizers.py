@@ -83,7 +83,8 @@ def test_fit(data, optimizer):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [STLSQ(), SR3()],
+    "optimizer",
+    [STLSQ(), SR3()],
 )
 def test_not_fitted(optimizer):
     with pytest.raises(NotFittedError):
@@ -91,7 +92,8 @@ def test_not_fitted(optimizer):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [STLSQ(), SR3()],
+    "optimizer",
+    [STLSQ(), SR3()],
 )
 def test_complexity_not_fitted(optimizer):
     with pytest.raises(NotFittedError):

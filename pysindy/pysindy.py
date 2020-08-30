@@ -15,14 +15,14 @@ from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy.differentiation import FiniteDifference
-from pysindy.feature_library import PolynomialLibrary
-from pysindy.optimizers import SINDyOptimizer
-from pysindy.optimizers import STLSQ
-from pysindy.utils.base import drop_nan_rows
-from pysindy.utils.base import equations
-from pysindy.utils.base import validate_control_variables
-from pysindy.utils.base import validate_input
+from .differentiation import FiniteDifference
+from .feature_library import PolynomialLibrary
+from .optimizers import SINDyOptimizer
+from .optimizers import STLSQ
+from .utils.base import drop_nan_rows
+from .utils.base import equations
+from .utils.base import validate_control_variables
+from .utils.base import validate_input
 
 
 class SINDy(BaseEstimator):
@@ -589,14 +589,12 @@ class SINDy(BaseEstimator):
             return self.differentiation_method(x, t)
 
     def coefficients(self):
-        """Return a list of the coefficients learned by SINDy model.
-        """
+        """Return a list of the coefficients learned by SINDy model."""
         check_is_fitted(self, "model")
         return self.model.steps[-1][1].coef_
 
     def get_feature_names(self):
-        """Return a list of names of features used by SINDy model.
-        """
+        """Return a list of names of features used by SINDy model."""
         check_is_fitted(self, "model")
         return self.model.steps[0][1].get_feature_names(
             input_features=self.feature_names

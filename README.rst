@@ -5,6 +5,8 @@ PySINDy
 
 **PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016a), including the unified optimization approach of Champion et al. (2019) and SINDy with control from Brunton et al. (2016b). A comprehensive literature review is given in de Silva et al. (2020).
 
+.. contents:: Table of contents
+
 System identification
 ---------------------
 System identification refers to the process of leveraging measurement data to infer governing equations, in the form of dynamical systems, describing the data. Once discovered, these equations can make predictions about future states, can inform control inputs, or can enable the theoretical study using analytical techniques.
@@ -111,7 +113,7 @@ First clone this repository:
 
 .. code-block:: bash
 
-  git clone https://github.com/dynamicslab/pysindy
+  git clone https://github.com/dynamicslab/pysindy.git
 
 Then, to install the package, run
 
@@ -164,7 +166,7 @@ you can run the following to automatically reformat your staged code
 
     pre-commit -a -v
 
-Note that you will then need to re-stage any changes `pre-commit` made to your code.
+Note that you will then need to re-stage any changes ``pre-commit`` made to your code.
 
 Reporting issues or bugs
 ^^^^^^^^^^^^^^^^^^^^^^^^

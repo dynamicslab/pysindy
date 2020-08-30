@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
+from scipy.optimize import bisect
 from sklearn.exceptions import ConvergenceWarning
 
 from pysindy.optimizers import BaseOptimizer
@@ -48,6 +49,14 @@ class SR3(BaseOptimizer):
         Regularization function to use. Currently implemented options
         are 'l0' (l0 norm), 'l1' (l1 norm), and 'cad' (clipped
         absolute deviation).
+
+    trimming_fraction : float, optional (default 0.0)
+        Fraction of the data samples to trim during fitting. Should
+        be a float between 0.0 and 1.0. If 0.0, trimming is not
+        performed.
+
+    trimming_step_size : float, optional (default 1.0)
+        Step size to use in the trimming optimization procedure.
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -105,6 +114,8 @@ class SR3(BaseOptimizer):
         nu=1.0,
         tol=1e-5,
         thresholder="l0",
+        trimming_fraction=0.0,
+        trimming_step_size=1.0,
         max_iter=30,
         normalize=False,
         fit_intercept=False,
@@ -123,12 +134,28 @@ class SR3(BaseOptimizer):
             raise ValueError("nu must be positive")
         if tol <= 0:
             raise ValueError("tol must be positive")
+        if (trimming_fraction < 0) or (trimming_fraction > 1):
+            raise ValueError("trimming fraction must be between 0 and 1")
 
         self.threshold = threshold
         self.nu = nu
         self.tol = tol
         self.thresholder = thresholder
         self.prox = get_prox(thresholder)
+        if trimming_fraction == 0.0:
+            self.use_trimming = False
+        else:
+            self.use_trimming = True
+        self.trimming_fraction = trimming_fraction
+        self.trimming_step_size = trimming_step_size
+
+    def enable_trimming(self, trimming_fraction):
+        self.use_trimming = True
+        self.trimming_fraction = trimming_fraction
+
+    def disable_trimming(self):
+        self.use_trimming = False
+        self.trimming_fraction = None
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
         """Update the unregularized weight vector"""
@@ -143,6 +170,17 @@ class SR3(BaseOptimizer):
         self.history_.append(coef_sparse.T)
         return coef_sparse
 
+    def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):
+        trimming_array = trimming_array - self.trimming_step_size * trimming_grad
+        trimming_array = self.cSimplexProj(trimming_array, self.trimming_fraction)
+        self.history_trimming_.append(trimming_array)
+        return trimming_array
+
+    def _trimming_grad(self, x, y, coef_full, trimming_array):
+        """gradient for the trimming variable"""
+        R2 = (y - x.dot(coef_full)) ** 2
+        return 0.5 * np.sum(R2, axis=1)
+
     def _convergence_criterion(self):
         """Calculate the convergence criterion for the optimization"""
         this_coef = self.history_[-1]
@@ -150,7 +188,19 @@ class SR3(BaseOptimizer):
             last_coef = self.history_[-2]
         else:
             last_coef = np.zeros_like(this_coef)
-        return np.sum((this_coef - last_coef) ** 2)
+        err_coef = np.sqrt(np.sum((this_coef - last_coef) ** 2)) / self.nu
+        if self.use_trimming:
+            this_trimming_array = self.history_trimming_[-1]
+            if len(self.history_trimming_) > 1:
+                last_trimming_array = self.history_trimming_[-2]
+            else:
+                last_trimming_array = np.zeros_like(this_trimming_array)
+            err_trimming = (
+                np.sqrt(np.sum((this_trimming_array - last_trimming_array) ** 2))
+                / self.trimming_step_size
+            )
+            return err_coef + err_trimming
+        return err_coef
 
     def _reduce(self, x, y):
         """
@@ -160,14 +210,31 @@ class SR3(BaseOptimizer):
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 
+        if self.use_trimming:
+            coef_full = coef_sparse.copy()
+            trimming_array = np.repeat(1.0 - self.trimming_fraction, n_samples)
+            self.history_trimming_ = [trimming_array]
+
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
         cho = cho_factor(np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu)))
         x_transpose_y = np.dot(x.T, y)
 
         for _ in range(self.max_iter):
+            if self.use_trimming:
+                x_weighted = x * trimming_array.reshape(n_samples, 1)
+                cho = cho_factor(
+                    np.dot(x_weighted.T, x)
+                    + np.diag(np.full(x.shape[1], 1.0 / self.nu))
+                )
+                x_transpose_y = np.dot(x_weighted.T, y)
+                trimming_grad = 0.5 * np.sum((y - x.dot(coef_full)) ** 2, axis=1)
             coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
             coef_sparse = self._update_sparse_coef(coef_full)
+            if self.use_trimming:
+                trimming_array = self._update_trimming_array(
+                    coef_full, trimming_array, trimming_grad
+                )
 
             if self._convergence_criterion() < self.tol:
                 # Could not (further) select important features
@@ -182,3 +249,21 @@ class SR3(BaseOptimizer):
 
         self.coef_ = coef_sparse.T
         self.coef_full_ = coef_full.T
+        if self.use_trimming:
+            self.trimming_array = trimming_array
+
+    @staticmethod
+    def cSimplexProj(trimming_array, trimming_fraction):
+        """projected onto the capped simplex"""
+        a = np.min(trimming_array) - 1.0
+        b = np.max(trimming_array) - 0.0
+
+        def f(x):
+            return (
+                np.sum(np.maximum(np.minimum(trimming_array - x, 1.0), 0.0))
+                - (1.0 - trimming_fraction) * trimming_array.size
+            )
+
+        x = bisect(f, a, b)
+
+        return np.maximum(np.minimum(trimming_array - x, 1.0), 0.0)

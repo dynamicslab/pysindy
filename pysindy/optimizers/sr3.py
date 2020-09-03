@@ -31,7 +31,7 @@ class SR3(BaseOptimizer):
     ----------
     threshold : float, optional (default 0.1)
         Determines the strength of the regularization. When the
-        regularization function R is the l0 norm, the regularization
+        regularization function R is the L0 norm, the regularization
         is equivalent to performing hard thresholding, and lambda
         is chosen to threshold at the value given by this parameter.
         This is equivalent to choosing lambda = threshold^2 / (2 * nu).
@@ -45,9 +45,9 @@ class SR3(BaseOptimizer):
         Tolerance used for determining convergence of the optimization
         algorithm.
 
-    thresholder : string, optional (default 'l0')
+    thresholder : string, optional (default 'L0')
         Regularization function to use. Currently implemented options
-        are 'l0' (l0 norm), 'l1' (l1 norm), and 'cad' (clipped
+        are 'L0' (L0 norm), 'L1' (L1 norm), and 'CAD' (clipped
         absolute deviation).
 
     trimming_fraction : float, optional (default 0.0)
@@ -68,7 +68,7 @@ class SR3(BaseOptimizer):
     normalize : boolean, optional (default False)
         This parameter is ignored when fit_intercept is set to False. If True,
         the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the l2-norm.
+        the mean and dividing by the L2-norm.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -113,7 +113,7 @@ class SR3(BaseOptimizer):
         threshold=0.1,
         nu=1.0,
         tol=1e-5,
-        thresholder="l0",
+        thresholder="L0",
         trimming_fraction=0.0,
         trimming_step_size=1.0,
         max_iter=30,

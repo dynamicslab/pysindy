@@ -1,5 +1,5 @@
 """
-Scikit-time wrapper interface for PySINDy.
+`Scikit-time <https://scikit-time.github.io/>`_ wrapper interface for PySINDy.
 """
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
@@ -9,7 +9,9 @@ from ..pysindy import SINDy
 
 class SINDyEstimator(SINDy):
     """
-    Implementation of SINDy conforming to the API of a Scikit-time Estimator.
+    Implementation of SINDy conforming to the API of a Scikit-time
+    `Estimator \
+    <https://scikit-time.github.io/api/generated/sktime.base.Estimator.html>`_.
 
     Parameters
     ----------
@@ -42,10 +44,6 @@ class SINDyEstimator(SINDy):
         one time step. If False, dynamical system is assumed to be a flow
         (right-hand side functions predict continuous time derivatives).
 
-    n_jobs : int, optional (default 1)
-        The number of parallel jobs to use when fitting, predicting with, and
-        scoring the model.
-
     Attributes
     ----------
     model : sklearn.multioutput.MultiOutputRegressor object
@@ -68,7 +66,6 @@ class SINDyEstimator(SINDy):
         feature_names=None,
         t_default=1,
         discrete_time=False,
-        n_jobs=1,
     ):
         super(SINDyEstimator, self).__init__(
             optimizer=optimizer,
@@ -77,7 +74,6 @@ class SINDyEstimator(SINDy):
             feature_names=feature_names,
             t_default=t_default,
             discrete_time=discrete_time,
-            n_jobs=n_jobs,
         )
         self._model = None
 
@@ -95,7 +91,7 @@ class SINDyEstimator(SINDy):
 
     def fetch_model(self):
         """
-        Yields the estimated model. Can be none if :meth:`fit` was not called.
+        Yields the estimated model. Can be none if ``fit`` was not called.
 
         Returns
         -------
@@ -116,7 +112,8 @@ class SINDyEstimator(SINDy):
 
 class SINDyModel(SINDy):
     """
-    Implementation of SINDy conforming to the API of a Scikit-time Model.
+    Implementation of SINDy conforming to the API of a Scikit-time
+    `Model <https://scikit-time.github.io/api/generated/sktime.base.Model.html>`_.
 
     The model is represented as a Scikit-learn pipeline object with two steps:
     1. Map the raw input data to nonlinear features according to the selected
@@ -158,10 +155,6 @@ class SINDyModel(SINDy):
         derivatives, the right hand side functions step the system forward by
         one time step. If False, dynamical system is assumed to be a flow
         (right-hand side functions predict continuous time derivatives).
-
-    n_jobs : int, optional (default 1)
-        The number of parallel jobs to use when fitting, predicting with, and
-        scoring the model.
 
     Attributes
     ----------

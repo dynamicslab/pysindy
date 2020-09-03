@@ -60,10 +60,6 @@ class SINDy(BaseEstimator):
         one time step. If False, dynamical system is assumed to be a flow
         (right-hand side functions predict continuous time derivatives).
 
-    n_jobs : int, optional (default 1)
-        The number of parallel jobs to use when fitting, predicting with, and
-        scoring the model.
-
     Attributes
     ----------
     model : sklearn.multioutput.MultiOutputRegressor object
@@ -146,7 +142,6 @@ class SINDy(BaseEstimator):
         feature_names=None,
         t_default=1,
         discrete_time=False,
-        n_jobs=1,
     ):
         if optimizer is None:
             optimizer = STLSQ()
@@ -165,7 +160,6 @@ class SINDy(BaseEstimator):
             self.t_default = t_default
         self.feature_names = feature_names
         self.discrete_time = discrete_time
-        self.n_jobs = n_jobs
 
     def fit(
         self,

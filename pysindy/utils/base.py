@@ -100,12 +100,12 @@ def drop_nan_rows(x, x_dot):
 
 
 def prox_l0(x, threshold):
-    """Proximal operator for l0 regularization."""
+    """Proximal operator for L0 regularization."""
     return x * (np.abs(x) > threshold)
 
 
 def prox_l1(x, threshold):
-    """Proximal operator for l1 regularization."""
+    """Proximal operator for L1 regularization."""
     return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
 
 

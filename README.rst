@@ -113,7 +113,7 @@ First clone this repository:
 
 .. code-block:: bash
 
-  git clone https://github.com/dynamicslab/pysindy
+  git clone https://github.com/dynamicslab/pysindy.git
 
 Then, to install the package, run
 

@@ -29,3 +29,7 @@ Shows how PySINDy interfaces with various Scikit-learn objects.
 
 * Cross-validation
 * Sparse regressors
+
+`Differentiation <https://github.com/dynamicslab/pysindy/blob/master/examples/5_differentiation.ipynb>`_
+---------------
+Expore the differentiation methods available in PySINDY on pure differentiation problems and as components in the SINDy algorithm.

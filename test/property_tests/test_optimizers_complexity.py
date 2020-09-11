@@ -38,7 +38,13 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
     for rs in randint(low=0, high=2 ** 32 - 1, size=n_datasets):
 
         x, y = make_regression(
-            n_samples, n_features, n_informative, 1, 0, noise=0.1, random_state=rs
+            n_samples=n_samples,
+            n_features=n_features,
+            n_informative=n_informative,
+            n_targets=1,
+            bias=0,
+            noise=0.1,
+            random_state=rs,
         )
         y = y.reshape(-1, 1)
 
@@ -86,7 +92,13 @@ def test_complexity_parameter(
     assume(n_informative <= n_features)
 
     x, y = make_regression(
-        n_samples, n_features, n_informative, 1, 0, noise=0.1, random_state=random_state
+        n_samples=n_samples,
+        n_features=n_features,
+        n_informative=n_informative,
+        n_targets=1,
+        bias=0,
+        noise=0.1,
+        random_state=random_state,
     )
     y = y.reshape(-1, 1)
 

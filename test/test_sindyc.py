@@ -221,16 +221,6 @@ def test_score(data):
     assert model.score(x, u=u, t=t, x_dot=x) <= 1
 
 
-def test_parallel(data_lorenz_c_1d):
-    x, t, u, _ = data_lorenz_c_1d
-    model = SINDy(n_jobs=4)
-    model.fit(x, u=u, t=t)
-
-    x_dot = model.predict(x, u=u)
-    s = model.score(x, u=u, x_dot=x_dot)
-    assert s >= 0.95
-
-
 def test_fit_multiple_trajectores(data_multiple_trajctories):
     x, t = data_multiple_trajctories
     u = [np.ones((xi.shape[0], 2)) for xi in x]

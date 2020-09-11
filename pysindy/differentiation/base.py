@@ -13,7 +13,7 @@ class BaseDifferentiation(BaseEstimator):
     Base class for differentiation methods.
 
     Simply forces differentiation methods to implement a
-    _differentiate function.
+    ``_differentiate`` function.
     """
 
     def __init__(self):

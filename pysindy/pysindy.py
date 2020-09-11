@@ -15,14 +15,14 @@ from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy.differentiation import FiniteDifference
-from pysindy.feature_library import PolynomialLibrary
-from pysindy.optimizers import SINDyOptimizer
-from pysindy.optimizers import STLSQ
-from pysindy.utils.base import drop_nan_rows
-from pysindy.utils.base import equations
-from pysindy.utils.base import validate_control_variables
-from pysindy.utils.base import validate_input
+from .differentiation import FiniteDifference
+from .feature_library import PolynomialLibrary
+from .optimizers import SINDyOptimizer
+from .optimizers import STLSQ
+from .utils.base import drop_nan_rows
+from .utils.base import equations
+from .utils.base import validate_control_variables
+from .utils.base import validate_input
 
 
 class SINDy(BaseEstimator):
@@ -33,18 +33,18 @@ class SINDy(BaseEstimator):
     ----------
     optimizer : optimizer object, optional
         Optimization method used to fit the SINDy model. This must be an object
-        extending the ``sindy.optimizers.BaseOptimizer`` class. Default is
+        extending the ``pysindy.optimizers.BaseOptimizer`` class. Default is
         sequentially thresholded least squares with a threshold of 0.1.
 
     feature_library : feature library object, optional
         Feature library object used to specify candidate right-hand side features.
         This must be an object extending the
-        ``sindy.feature_library.BaseFeatureLibrary`` class.
+        ``pysindy.feature_library.BaseFeatureLibrary`` class.
         Default is polynomial features of degree 2.
 
     differentiation_method : differentiation object, optional
         Method for differentiating the data. This must be an object extending
-        the ``sindy.differentiation_methods.BaseDifferentiation`` class.
+        the ``pysindy.differentiation_methods.BaseDifferentiation`` class.
         Default is centered difference.
 
     feature_names : list of string, length n_input_features, optional
@@ -59,10 +59,6 @@ class SINDy(BaseEstimator):
         derivatives, the right hand side functions step the system forward by
         one time step. If False, dynamical system is assumed to be a flow
         (right-hand side functions predict continuous time derivatives).
-
-    n_jobs : int, optional (default 1)
-        The number of parallel jobs to use when fitting, predicting with, and
-        scoring the model.
 
     Attributes
     ----------
@@ -149,7 +145,6 @@ class SINDy(BaseEstimator):
         feature_names=None,
         t_default=1,
         discrete_time=False,
-        n_jobs=1,
     ):
         if optimizer is None:
             optimizer = STLSQ()
@@ -168,7 +163,6 @@ class SINDy(BaseEstimator):
             self.t_default = t_default
         self.feature_names = feature_names
         self.discrete_time = discrete_time
-        self.n_jobs = n_jobs
 
     def fit(
         self,

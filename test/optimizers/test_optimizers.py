@@ -139,6 +139,12 @@ def test_bad_parameters():
     with pytest.raises(ValueError):
         SR3(max_iter=0)
 
+    with pytest.raises(ValueError):
+        SR3(trimming_fraction=-1)
+
+    with pytest.raises(ValueError):
+        SR3(trimming_fraction=2)
+
 
 def test_bad_optimizers(data_derivative_1d):
     x, x_dot = data_derivative_1d
@@ -202,4 +208,28 @@ def test_unbias_external(data_derivative_1d):
         norm(optimizer_biased.coef_ - optimizer_unbiased.coef_)
         / (norm(optimizer_unbiased.coef_) + 1e-5)
         > 1e-9
+    )
+
+
+def test_sr3_trimming(data_linear_oscillator_corrupted):
+    X, X_dot, trimming_array = data_linear_oscillator_corrupted
+
+    optimizer_without_trimming = SINDyOptimizer(SR3(), unbias=False)
+    optimizer_without_trimming.fit(X, X_dot)
+
+    optimizer_trimming = SINDyOptimizer(SR3(trimming_fraction=0.15), unbias=False)
+    optimizer_trimming.fit(X, X_dot)
+
+    # Check that trimming found the right samples to remove
+    assert (
+        np.sum(np.abs(optimizer_trimming.optimizer.trimming_array - trimming_array))
+        == 0.0
+    )
+
+    # Check that the coefficients found by the optimizer with trimming are closer to
+    # the true coefficients than the coefficients found by the optimizer without
+    # trimming
+    true_coef = np.array([[-2.0, 0.0], [0.0, 1.0]])
+    assert norm(true_coef - optimizer_trimming.coef_) < norm(
+        true_coef - optimizer_without_trimming.coef_
     )

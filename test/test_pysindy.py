@@ -18,10 +18,14 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
+from pysindy.differentiation import SINDyDerivative
+from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import SR3
@@ -225,6 +229,33 @@ def test_libraries(data_lorenz, library):
     assert s <= 1
 
 
+def test_integration_smoothed_finite_difference(data_lorenz):
+    x, t = data_lorenz
+    model = SINDy(differentiation_method=SmoothedFiniteDifference())
+
+    model.fit(x, t=t)
+
+    check_is_fitted(model)
+
+
+@pytest.mark.parametrize(
+    "derivative_kws",
+    [
+        dict(kind="finite_difference", k=1),
+        dict(kind="spectral"),
+        dict(kind="spline", s=1e-2),
+        dict(kind="trend_filtered", order=0, alpha=1e-2),
+        dict(kind="savitzky_golay", order=3, left=1, right=1),
+    ],
+)
+def test_integration_derivative_methods(data_lorenz, derivative_kws):
+    x, t = data_lorenz
+    model = SINDy(differentiation_method=SINDyDerivative(**derivative_kws))
+    model.fit(x, t=t)
+
+    check_is_fitted(model)
+
+
 @pytest.mark.parametrize(
     "data",
     [
@@ -245,16 +276,6 @@ def test_score(data):
     assert model.score(x, x_dot=x) <= 1
 
     assert model.score(x, t, x_dot=x) <= 1
-
-
-def test_parallel(data_lorenz):
-    x, t = data_lorenz
-    model = SINDy(n_jobs=4)
-    model.fit(x, t)
-
-    x_dot = model.predict(x)
-    s = model.score(x, x_dot=x_dot)
-    assert s >= 0.95
 
 
 def test_fit_multiple_trajectores(data_multiple_trajctories):
@@ -490,9 +511,9 @@ def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_t
 
     model = SINDy()
     with pytest.raises(TypeError):
-        model._process_multiple_trajectories(np.array(x), t, x)
+        model._process_multiple_trajectories(np.array(x, dtype=object), t, x)
     with pytest.raises(TypeError):
-        model._process_multiple_trajectories(x, t, np.array(x))
+        model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
 
     # Test an option that doesn't get tested elsewhere
     model._process_multiple_trajectories(x, t, x, return_array=False)
@@ -500,7 +521,7 @@ def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_t
     x = data_discrete_time
     model = SINDy(discrete_time=True)
     with pytest.raises(TypeError):
-        model._process_multiple_trajectories(x, t, np.array(x))
+        model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
 
 
 def test_simulate_errors(data_lorenz):
@@ -531,3 +552,27 @@ def test_fit_warn(data_lorenz, params, warning):
         model.fit(x, t, quiet=True)
 
     assert len(warn_record) == 0
+
+
+def test_cross_validation(data_lorenz):
+    x, t = data_lorenz
+    dt = t[1] - t[0]
+
+    model = SINDy(
+        t_default=dt, differentiation_method=SINDyDerivative(kind="spline", s=1e-2)
+    )
+
+    param_grid = {
+        "optimizer__threshold": [0.01, 0.1],
+        "differentiation_method__kwargs": [
+            {"kind": "spline", "s": 1e-2},
+            {"kind": "finite_difference", "k": 1},
+        ],
+        "feature_library__degree": [1, 2],
+    }
+
+    search = RandomizedSearchCV(
+        model, param_grid, cv=TimeSeriesSplit(n_splits=3), n_iter=5
+    )
+    search.fit(x)
+    check_is_fitted(search)

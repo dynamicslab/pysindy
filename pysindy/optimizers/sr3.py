@@ -131,23 +131,20 @@ class SR3(BaseOptimizer):
         self.prox = get_prox(thresholder)
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
-        """Update the unregularized weight vector
-        """
+        """Update the unregularized weight vector"""
         b = x_transpose_y + coef_sparse / self.nu
         coef_full = cho_solve(cho, b)
         self.iters += 1
         return coef_full
 
     def _update_sparse_coef(self, coef_full):
-        """Update the regularized weight vector
-        """
+        """Update the regularized weight vector"""
         coef_sparse = self.prox(coef_full, self.threshold)
         self.history_.append(coef_sparse.T)
         return coef_sparse
 
     def _convergence_criterion(self):
-        """Calculate the convergence criterion for the optimization
-        """
+        """Calculate the convergence criterion for the optimization"""
         this_coef = self.history_[-1]
         if len(self.history_) > 1:
             last_coef = self.history_[-2]

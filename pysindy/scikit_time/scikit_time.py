@@ -197,7 +197,7 @@ class SINDyModel(SINDy):
         self.n_output_features_ = self.model.steps[0][1].n_output_features_
 
     def copy(self):
-        """ Makes a deep copy of this model.
+        """Makes a deep copy of this model.
         Returns
         -------
         copy: SINDyModel

@@ -589,14 +589,12 @@ class SINDy(BaseEstimator):
             return self.differentiation_method(x, t)
 
     def coefficients(self):
-        """Return a list of the coefficients learned by SINDy model.
-        """
+        """Return a list of the coefficients learned by SINDy model."""
         check_is_fitted(self, "model")
         return self.model.steps[-1][1].coef_
 
     def get_feature_names(self):
-        """Return a list of names of features used by SINDy model.
-        """
+        """Return a list of names of features used by SINDy model."""
         check_is_fitted(self, "model")
         return self.model.steps[0][1].get_feature_names(
             input_features=self.feature_names

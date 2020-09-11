@@ -176,11 +176,6 @@ class SR3(BaseOptimizer):
         self.history_trimming_.append(trimming_array)
         return trimming_array
 
-    def _trimming_grad(self, x, y, coef_full, trimming_array):
-        """gradient for the trimming variable"""
-        R2 = (y - x.dot(coef_full)) ** 2
-        return 0.5 * np.sum(R2, axis=1)
-
     def _convergence_criterion(self):
         """Calculate the convergence criterion for the optimization"""
         this_coef = self.history_[-1]

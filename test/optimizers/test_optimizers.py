@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from numpy.linalg import norm
 from sklearn.base import BaseEstimator
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
@@ -215,9 +216,8 @@ def test_sr3_trimming(data_linear_oscillator_corrupted):
     optimizer_trimming.fit(X, X_dot)
 
     # Check that trimming found the right samples to remove
-    assert (
-        np.sum(np.abs(optimizer_trimming.optimizer.trimming_array - trimming_array))
-        == 0.0
+    np.testing.assert_array_equal(
+        optimizer_trimming.optimizer.trimming_array, trimming_array
     )
 
     # Check that the coefficients found by the optimizer with trimming are closer to
@@ -227,3 +227,37 @@ def test_sr3_trimming(data_linear_oscillator_corrupted):
     assert norm(true_coef - optimizer_trimming.coef_) < norm(
         true_coef - optimizer_without_trimming.coef_
     )
+
+
+def test_sr3_disable_trimming(data_linear_oscillator_corrupted):
+    x, x_dot, _ = data_linear_oscillator_corrupted
+
+    model_plain = SR3()
+    model_plain.fit(x, x_dot)
+
+    model_trimming = SR3(trimming_fraction=0.5)
+    model_trimming.disable_trimming()
+    model_trimming.fit(x, x_dot)
+
+    np.testing.assert_allclose(model_plain.coef_, model_trimming.coef_)
+
+
+def test_sr3_enable_trimming(data_linear_oscillator_corrupted):
+    x, x_dot, _ = data_linear_oscillator_corrupted
+
+    model_plain = SR3()
+    model_plain.enable_trimming(trimming_fraction=0.5)
+    model_plain.fit(x, x_dot)
+
+    model_trimming = SR3(trimming_fraction=0.5)
+    model_trimming.fit(x, x_dot)
+
+    np.testing.assert_allclose(model_plain.coef_, model_trimming.coef_)
+
+
+def test_sr3_warn(data_linear_oscillator_corrupted):
+    x, x_dot, _ = data_linear_oscillator_corrupted
+    model = SINDyOptimizer(SR3(max_iter=1))
+
+    with pytest.warns(ConvergenceWarning):
+        model.fit(x, x_dot)

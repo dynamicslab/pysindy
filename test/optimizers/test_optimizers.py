@@ -90,9 +90,13 @@ def test_not_fitted(optimizer):
 
 
 @pytest.mark.parametrize("optimizer", [STLSQ(), SR3()])
-def test_complexity_not_fitted(optimizer):
+def test_complexity_not_fitted(optimizer, data_derivative_2d):
     with pytest.raises(NotFittedError):
         optimizer.complexity
+
+    x, _ = data_derivative_2d
+    optimizer.fit(x, x)
+    assert optimizer.complexity > 0
 
 
 @pytest.mark.parametrize(
@@ -257,7 +261,7 @@ def test_sr3_enable_trimming(data_linear_oscillator_corrupted):
 
 def test_sr3_warn(data_linear_oscillator_corrupted):
     x, x_dot, _ = data_linear_oscillator_corrupted
-    model = SINDyOptimizer(SR3(max_iter=1))
+    model = SR3(max_iter=1, tol=1e-10)
 
     with pytest.warns(ConvergenceWarning):
         model.fit(x, x_dot)

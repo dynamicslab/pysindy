@@ -29,7 +29,7 @@ class STLSQ(BaseOptimizer):
     max_iter : int, optional (default 20)
         Maximum iterations of the optimization algorithm.
 
-    ridge_kw : dict, optional
+    ridge_kw : dict, optional (default None)
         Optional keyword arguments to pass to the ridge regression.
 
     fit_intercept : boolean, optional (default False)

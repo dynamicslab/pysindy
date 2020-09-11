@@ -181,7 +181,7 @@ class SINDy(BaseEstimator):
             x should be a list containing data for each trajectory. Individual
             trajectories may contain different numbers of samples.
 
-        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
+        t: float, numpy array of shape (n_samples,), or list of numpy arrays, optional \
                 (default None)
             If t is a float, it specifies the timestep between each sample.
             If array-like, it specifies the time at which each sample was
@@ -414,7 +414,7 @@ class SINDy(BaseEstimator):
         x: array-like or list of array-like, shape (n_samples, n_input_features)
             Samples
 
-        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
+        t: float, numpy array of shape (n_samples,), or list of numpy arrays, optional \
                 (default None)
             Time step between samples or array of collection times. Optional,
             used to compute the time derivatives of the samples if x_dot is not
@@ -554,7 +554,7 @@ class SINDy(BaseEstimator):
         x: array-like or list of array-like, shape (n_samples, n_input_features)
             Data to be differentiated.
 
-        t: int, numpy array of shape [n_samples], or list of numpy arrays, optional \
+        t: int, numpy array of shape (n_samples,), or list of numpy arrays, optional \
                 (default None)
             Time step between samples or array of collection times.
             If None, the default time step ``t_default`` will be used.

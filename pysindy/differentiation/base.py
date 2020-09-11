@@ -31,7 +31,7 @@ class BaseDifferentiation(BaseEstimator):
             Data to be differentiated. Rows of x should correspond to the same
             point in time.
 
-        t: float or numpy array of shape [n_samples]
+        t: float or numpy array of shape (n_samples,)
             If t is a float, it is interpreted as the timestep between
             samples in x.
             If t is a numpy array, it specifies the times corresponding

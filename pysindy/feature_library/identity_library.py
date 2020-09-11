@@ -22,9 +22,9 @@ class IdentityLibrary(BaseFeatureLibrary):
     --------
     >>> import numpy as np
     >>> from pysindy.feature_library import IdentityLibrary
-    >>> X = np.array([[0,-1],[0.5,-1.5],[1.,-2.]])
-    >>> lib = IdentityLibrary().fit(X)
-    >>> lib.transform(X)
+    >>> x = np.array([[0,-1],[0.5,-1.5],[1.,-2.]])
+    >>> lib = IdentityLibrary().fit(x)
+    >>> lib.transform(x)
     array([[ 0. , -1. ],
            [ 0.5, -1.5],
            [ 1. , -2. ]])
@@ -57,44 +57,44 @@ class IdentityLibrary(BaseFeatureLibrary):
                 raise ValueError("input features list is not the right length")
         return ["x%d" % i for i in range(self.n_input_features_)]
 
-    def fit(self, X, y=None):
+    def fit(self, x, y=None):
         """
         Compute number of output features.
 
         Parameters
         ----------
-        X : array-like, shape (n_samples, n_features)
+        x : array-like, shape (n_samples, n_features)
             The data.
 
         Returns
         -------
         self : instance
         """
-        n_samples, n_features = check_array(X).shape
+        n_samples, n_features = check_array(x).shape
         self.n_input_features_ = n_features
         self.n_output_features_ = n_features
         return self
 
-    def transform(self, X):
+    def transform(self, x):
         """Perform identity transformation (return a copy of the input).
 
         Parameters
         ----------
-        X : array-like, shape [n_samples, n_features]
+        x : array-like, shape (n_samples, n_features)
             The data to transform, row by row.
 
         Returns
         -------
-        X : np.ndarray, shape [n_samples, n_features]
+        x : np.ndarray, shape (n_samples, n_features)
             The matrix of features, which is just a copy of the input data.
         """
         check_is_fitted(self)
 
-        X = check_array(X)
+        x = check_array(x)
 
-        n_samples, n_features = X.shape
+        n_samples, n_features = x.shape
 
         if n_features != self.n_input_features_:
-            raise ValueError("X shape does not match training shape")
+            raise ValueError("x shape does not match training shape")
 
-        return X.copy()
+        return x.copy()

@@ -228,6 +228,20 @@ References
    `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
 
 
+Contributors
+------------
+Thanks to the members of the community who have contributed to PySINDy!
+
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `billtubbs <https://github.com/kopytjuk>`_            | Bug fix `#68 <https://github.com/dynamicslab/pysindy/issues/68>`_                                                                                          |
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `kopytjuk <https://github.com/kopytjuk>`_             | Concatenation feature for libraries `#72 <https://github.com/dynamicslab/pysindy/pull/72>`_                                                                |
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `akaptano <https://github.com/akaptano>`_             | Constrained SR3 and plasma physics example notebook `#78 <https://github.com/dynamicslab/pysindy/pull/78>`_                                                |
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `andgoldschmidt <https://github.com/andgoldschmidt>`_ | `derivative <https://derivative.readthedocs.io/en/latest/>`_ package for numerical differentiation `#85 <https://github.com/dynamicslab/pysindy/pull/85>`_ |
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
 .. |BuildCI| image:: https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg
     :target: https://github.com/dynamicslab/pysindy/actions?query=workflow%3A%22Build+CI%22
 

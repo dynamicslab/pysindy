@@ -78,6 +78,9 @@ class SINDyEstimator(SINDy):
         self._model = None
 
     def fit(self, x, **kwargs):
+        """
+        TODO
+        """
         super(SINDyEstimator, self).fit(x, **kwargs)
         self._model = SINDyModel(
             feature_library=self.model.steps[0][1],

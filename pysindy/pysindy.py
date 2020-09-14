@@ -8,6 +8,7 @@ from numpy import newaxis
 from numpy import vstack
 from numpy import zeros
 from scipy.integrate import odeint
+from scipy.interpolate import interp1d
 from scipy.linalg import LinAlgWarning
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
@@ -598,7 +599,15 @@ class SINDy(BaseEstimator):
         )
 
     def simulate(
-        self, x0, t, u=None, integrator=odeint, stop_condition=None, **integrator_kws
+        self,
+        x0,
+        t,
+        u=None,
+        integrator=odeint,
+        stop_condition=None,
+        interpolator=None,
+        integrator_kws={},
+        interpolator_kws={},
     ):
         """
         Simulate the SINDy model forward in time.
@@ -615,23 +624,34 @@ class SINDy(BaseEstimator):
 
         u: function from R^1 to R^{n_control_features} or list/array, optional \
             (default None)
-            Control input function.
+            Control inputs.
             If the model is continuous time, i.e. ``self.discrete_time == False``,
             this function should take in a time and output the values of each of
             the n_control_features control features as a list or numpy array.
+            Alternatively, if the model is continuous time, ``u`` can also be an
+            array of control inputs at each time step. In this case the array is
+            fit with the interpolator specified by ``interpolator``.
             If the model is discrete time, i.e. ``self.discrete_time == True``,
             u should be a list (with ``len(u) == t``) or array (with
             ``u.shape[0] == 1``) giving the control inputs at each step.
 
-        integrator: function object, optional
-            Function to use to integrate the system. Default is scipy's odeint.
+        integrator: callable, optional (default ``odeint``)
+            Function to use to integrate the system.
+            Default is ``scipy.integrate.odeint``.
 
         stop_condition: function object, optional
             If model is in discrete time, optional function that gives a
             stopping condition for stepping the simulation forward.
 
-        integrator_kws: dict, optional
+        interpolator: callable, optional (default ``interp1d``)
+            Function used to interpolate control inputs if ``u`` is an array.
+            Default is ``scipy.interpolate.interp1d``.
+
+        integrator_kws: dict, optional (default {})
             Optional keyword arguments to pass to the integrator
+
+        interpolator_kws: dict, optional (default {})
+            Optional keyword arguments to pass to the control input interpolator
 
         Returns
         -------
@@ -696,15 +716,30 @@ class SINDy(BaseEstimator):
                     return self.predict(x[newaxis, :])[0]
 
             else:
-                if ndim(u(1)) == 1:
+                if not callable(u):
+                    if interpolator is None:
+                        u_fun = interp1d(t, u, axis=0, kind="cubic")
+                    else:
+                        u_fun = interpolator(t, u, **interpolator_kws)
+
+                    t = t[:-1]
+                    warnings.warn(
+                        "Last time point dropped in simulation because interpolation"
+                        " of control input was used. To avoid this, pass in a callable"
+                        " for u."
+                    )
+                else:
+                    u_fun = u
+
+                if ndim(u_fun(1)) == 1:
 
                     def rhs(x, t):
-                        return self.predict(x[newaxis, :], u(t).reshape(1, -1))[0]
+                        return self.predict(x[newaxis, :], u_fun(t).reshape(1, -1))[0]
 
                 else:
 
                     def rhs(x, t):
-                        return self.predict(x[newaxis, :], u(t))[0]
+                        return self.predict(x[newaxis, :], u_fun(t))[0]
 
             return integrator(rhs, x0, t, **integrator_kws)
 

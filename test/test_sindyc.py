@@ -207,6 +207,20 @@ def test_simulate_with_interp(data):
     "data",
     [pytest.lazy_fixture("data_lorenz_c_1d"), pytest.lazy_fixture("data_lorenz_c_2d")],
 )
+def test_simulate_with_vector_control_input(data):
+    x, t, u, _ = data
+    model = SINDy()
+    model.fit(x, u=u, t=t)
+
+    x1 = model.simulate(x[0], t=t, u=u)
+
+    assert len(x1) == len(t) - 1
+
+
+@pytest.mark.parametrize(
+    "data",
+    [pytest.lazy_fixture("data_lorenz_c_1d"), pytest.lazy_fixture("data_lorenz_c_2d")],
+)
 def test_score(data):
     x, t, u, _ = data
     model = SINDy()

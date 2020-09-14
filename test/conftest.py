@@ -142,3 +142,81 @@ def data_linear_oscillator_corrupted():
     trimming_array[trimmed_idxs] = 0.0
 
     return X, X_dot, trimming_array
+
+
+# Datasets with control inputs
+
+
+@pytest.fixture
+def data_lorenz_c_1d():
+    def u_fun(t):
+        return np.sin(2 * t)
+
+    def lorenz(z, t):
+        return [
+            10 * (z[1] - z[0]) + u_fun(t) ** 2,
+            z[0] * (28 - z[2]) - z[1],
+            z[0] * z[1] - 8 / 3 * z[2],
+        ]
+
+    t = np.linspace(0, 5, 500)
+    x0 = [8, 27, -7]
+    x = odeint(lorenz, x0, t)
+    u = u_fun(t)
+
+    return x, t, u, u_fun
+
+
+@pytest.fixture
+def data_lorenz_c_2d():
+    def u_fun(t):
+        return np.column_stack([np.sin(2 * t), t ** 2])
+
+    def lorenz(z, t):
+        u = u_fun(t)
+        return [
+            10 * (z[1] - z[0]) + u[0, 0] ** 2,
+            z[0] * (28 - z[2]) - z[1],
+            z[0] * z[1] - 8 / 3 * z[2] - u[0, 1],
+        ]
+
+    t = np.linspace(0, 5, 500)
+    x0 = [8, 27, -7]
+    x = odeint(lorenz, x0, t)
+    u = u_fun(t)
+
+    return x, t, u, u_fun
+
+
+@pytest.fixture
+def data_discrete_time_c():
+    def logistic_map(x, mu, ui):
+        return mu * x * (1 - x) + ui
+
+    n_steps = 100
+    mu = 3.6
+
+    u = 0.01 * np.random.randn(n_steps)
+    x = np.zeros((n_steps))
+    x[0] = 0.5
+    for i in range(1, n_steps):
+        x[i] = logistic_map(x[i - 1], mu, u[i - 1])
+
+    return x, u
+
+
+@pytest.fixture
+def data_discrete_time_multiple_trajectories_c():
+    def logistic_map(x, mu, ui):
+        return mu * x * (1 - x) + ui
+
+    n_steps = 100
+    mus = [1, 2.3, 3.6]
+    u = [0.001 * np.random.randn(n_steps) for mu in mus]
+    x = [np.zeros((n_steps)) for mu in mus]
+    for i, mu in enumerate(mus):
+        x[i][0] = 0.5
+        for k in range(1, n_steps):
+            x[i][k] = logistic_map(x[i][k - 1], mu, u[i][k - 1])
+
+    return x, u

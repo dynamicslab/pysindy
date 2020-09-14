@@ -72,6 +72,9 @@ class SINDy(BaseEstimator):
         The total number of output features. This number is a function of
         ``self.n_input_features`` and the feature library being used.
 
+    n_control_features_ : int
+        The total number of control input features.
+
     Examples
     --------
     >>> import numpy as np

@@ -83,7 +83,10 @@ def test_fit(data, optimizer):
         assert opt.coef_.shape == (1, x.shape[1])
 
 
-@pytest.mark.parametrize("optimizer", [STLSQ(), SR3()])
+@pytest.mark.parametrize(
+    "optimizer",
+    [STLSQ(), SR3()],
+)
 def test_not_fitted(optimizer):
     with pytest.raises(NotFittedError):
         optimizer.predict(np.ones((1, 3)))

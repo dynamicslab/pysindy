@@ -92,7 +92,6 @@ def test_not_fitted(optimizer):
         optimizer.predict(np.ones((1, 3)))
 
 
-
 @pytest.mark.parametrize("optimizer", [STLSQ(), SR3()])
 def test_complexity_not_fitted(optimizer, data_derivative_2d):
     with pytest.raises(NotFittedError):

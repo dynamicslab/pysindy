@@ -172,14 +172,11 @@ class SR3(BaseOptimizer):
 
     def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):
         trimming_array = trimming_array - self.trimming_step_size * trimming_grad
-        trimming_array = self.cSimplexProj(trimming_array, self.trimming_fraction)
+        trimming_array = self._capped_simplex_projection(
+            trimming_array, self.trimming_fraction
+        )
         self.history_trimming_.append(trimming_array)
         return trimming_array
-
-    def _trimming_grad(self, x, y, coef_full, trimming_array):
-        """gradient for the trimming variable"""
-        R2 = (y - x.dot(coef_full)) ** 2
-        return 0.5 * np.sum(R2, axis=1)
 
     def _convergence_criterion(self):
         """Calculate the convergence criterion for the optimization"""
@@ -253,7 +250,7 @@ class SR3(BaseOptimizer):
             self.trimming_array = trimming_array
 
     @staticmethod
-    def cSimplexProj(trimming_array, trimming_fraction):
+    def _capped_simplex_projection(trimming_array, trimming_fraction):
         """projected onto the capped simplex"""
         a = np.min(trimming_array) - 1.0
         b = np.max(trimming_array) - 0.0

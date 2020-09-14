@@ -79,7 +79,22 @@ class SINDyEstimator(SINDy):
 
     def fit(self, x, **kwargs):
         """
-        TODO
+        Fit the SINDyEstimator to data, learning a dynamical systems model
+        for the data.
+
+        Parameters
+        ----------
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Training data. If training data contains multiple trajectories,
+            x should be a list containing data for each trajectory. Individual
+            trajectories may contain different numbers of samples.
+
+        **kwargs: dict, optional
+            Optional keyword arguments to pass to the ``SINDy.fit`` method.
+
+        Returns
+        -------
+        self: fitted ``SINDyEstimator`` instance
         """
         super(SINDyEstimator, self).fit(x, **kwargs)
         self._model = SINDyModel(
@@ -98,7 +113,7 @@ class SINDyEstimator(SINDy):
 
         Returns
         -------
-        model: SINDyModel or None
+        model: ``SINDyModel`` or None
             The estimated SINDy model or none
         """
         return self._model
@@ -201,6 +216,7 @@ class SINDyModel(SINDy):
 
     def copy(self):
         """Makes a deep copy of this model.
+
         Returns
         -------
         copy: SINDyModel

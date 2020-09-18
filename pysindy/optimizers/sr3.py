@@ -21,11 +21,15 @@ class SR3(BaseOptimizer):
         0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
         + (0.5 / \\nu)\\|w-v\\|^2_2
 
-    where :math:`R(v)` is a regularization function. See the following reference
+    where :math:`R(v)` is a regularization function. See the following references
     for more details:
 
         Zheng, Peng, et al. "A unified framework for sparse relaxed
         regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
+
+        Champion, Kathleen, et al. "A unified sparse optimization framework
+        to learn parsimonious physics-informed models from data."
+        arXiv preprint arXiv:1906.10612 (2019).
 
     Parameters
     ----------

@@ -117,8 +117,18 @@ def data_derivative_2d():
 
 @pytest.fixture
 def data_custom_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-    function_names = [lambda s: str(s), lambda s: str(s) + "^2", lambda s: "0"]
+    library_functions = [
+        lambda x: x,
+        lambda x: x ** 2,
+        lambda x: 0 * x,
+        lambda x, y: x * y,
+    ]
+    function_names = [
+        lambda s: str(s),
+        lambda s: str(s) + "^2",
+        lambda s: "0",
+        lambda s, t: str(s) + " " + str(t),
+    ]
 
     return CustomLibrary(
         library_functions=library_functions, function_names=function_names

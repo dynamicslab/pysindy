@@ -14,7 +14,15 @@ class STLSQ(BaseOptimizer):
     Attempts to minimize the objective function
     :math:`\\|y - Xw\\|^2_2 + \\alpha \\|w\\|^2_2`
     by iteratively performing least squares and masking out
-    elements of the weight that are below a given threshold.
+    elements of the weight array w that are below a given threshold.
+
+    See the following reference for more details:
+
+        Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
+        "Discovering governing equations from data by sparse
+        identification of nonlinear dynamical systems."
+        Proceedings of the national academy of sciences
+        113.15 (2016): 3932-3937.
 
     Parameters
     ----------

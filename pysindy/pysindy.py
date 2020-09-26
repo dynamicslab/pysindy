@@ -387,6 +387,7 @@ class SINDy(BaseEstimator):
         ----------
         lhs: list of strings, optional (default None)
             List of variables to print on the left-hand sides of the learned equations.
+            By defualt :code:`self.input_features` are used.
 
         precision: int, optional (default 3)
             Precision to be used when printing out model coefficients.
@@ -411,7 +412,7 @@ class SINDy(BaseEstimator):
         **metric_kws
     ):
         """
-        Returns a score for the time derivative prediction.
+        Returns a score for the time derivative prediction produced by the model.
 
         Parameters
         ----------
@@ -442,9 +443,12 @@ class SINDy(BaseEstimator):
             If True, x contains multiple trajectories and must be a list of
             data from each trajectory. If False, x is a single trajectory.
 
-        metric: metric function, optional
+        metric: callable, optional
             Metric function with which to score the prediction. Default is the
-            coefficient of determination R^2.
+            R^2 coefficient of determination.
+            See `Scikit-learn \
+            <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
+            for more options.
 
         metric_kws: dict, optional
             Optional keyword arguments to pass to the metric function.

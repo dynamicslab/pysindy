@@ -735,7 +735,7 @@ class SINDy(BaseEstimator):
                 else:
                     u_fun = u
 
-                if ndim(u_fun(1)) == 1:
+                if ndim(u_fun(t[0])) == 1:
 
                     def rhs(x, t):
                         return self.predict(x[newaxis, :], u_fun(t).reshape(1, -1))[0]

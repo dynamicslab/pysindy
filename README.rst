@@ -180,7 +180,7 @@ Citing PySINDy
 --------------
 PySINDy has been published in the Journal of Open Source Software (JOSS). The paper can be found `here <https://joss.theoj.org/papers/10.21105/joss.02104>`__.
 
-If you use PySINDy in your work, please remember to cite it using:
+If you use PySINDy in your work, please cite it using:
 
 ``de Silva et al., (2020). PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data. Journal of Open Source Software, 5(49), 2104, https://doi.org/10.21105/joss.02104``
 
@@ -226,6 +226,13 @@ References
    *Sparse identification of nonlinear dynamics with control (SINDYc).*
    IFAC-PapersOnLine 49.18 (2016): 710-715.
    `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
+
+
+Related packages
+----------------
+* `Scikit-time <https://github.com/scikit-time/scikit-time>`_ - A Python library for the analysis of time series data.
+* `PyDMD <https://github.com/mathLab/PyDMD/>`_ - A Python package using the Dynamic Mode Decomposition (DMD) for a data-driven model simplification based on spatiotemporal coherent structures. DMD is a great alternative to SINDy.
+* `SEED <https://github.com/M-Vause/SEED2.0>`_ - Software for the Extraction of Equations from Data: a GUI for many of the methods provided by PySINDy.
 
 
 Contributors

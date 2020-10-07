@@ -2,8 +2,8 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
 
-from pysindy.optimizers.base import _MultiTargetLinearRegressor
-from pysindy.utils.base import supports_multiple_targets
+from ..utils.base import supports_multiple_targets
+from .base import _MultiTargetLinearRegressor
 
 
 COEF_THRESHOLD = 1e-14

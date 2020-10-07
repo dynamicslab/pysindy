@@ -5,7 +5,7 @@ import abc
 
 from sklearn.base import BaseEstimator
 
-from pysindy.utils.base import validate_input
+from ..utils.base import validate_input
 
 
 class BaseDifferentiation(BaseEstimator):

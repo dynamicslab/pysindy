@@ -20,10 +20,10 @@ from .differentiation import FiniteDifference
 from .feature_library import PolynomialLibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
-from .utils.base import drop_nan_rows
-from .utils.base import equations
-from .utils.base import validate_control_variables
-from .utils.base import validate_input
+from .utils import drop_nan_rows
+from .utils import equations
+from .utils import validate_control_variables
+from .utils import validate_input
 
 
 class SINDy(BaseEstimator):
@@ -235,7 +235,7 @@ class SINDy(BaseEstimator):
 
         Returns
         -------
-        self: returns an instance of self
+        self: a fitted :code:`SINDy` instance
         """
         if t is None:
             t = self.t_default
@@ -363,13 +363,14 @@ class SINDy(BaseEstimator):
         Parameters
         ----------
         precision: int, optional (default 3)
-            Number of decimal points to print for each coefficient in the
+            Number of decimal points to include for each coefficient in the
             equation.
 
         Returns
         -------
         equations: list of strings
-            Strings containing the SINDy model equation for each input feature.
+            List of strings representing the SINDy model equations for each
+            input feature.
         """
         check_is_fitted(self, "model")
         if self.discrete_time:
@@ -417,7 +418,7 @@ class SINDy(BaseEstimator):
         Parameters
         ----------
         x: array-like or list of array-like, shape (n_samples, n_input_features)
-            Samples
+            Samples from which to make predictions.
 
         t: float, numpy array of shape (n_samples,), or list of numpy arrays, optional \
                 (default None)
@@ -509,6 +510,41 @@ class SINDy(BaseEstimator):
         """
         Handle input data that contains multiple trajectories by doing the
         necessary validation, reshaping, and computation of derivatives.
+
+        This method essentially just loops over elements of each list in parallel,
+        validates them, and (optionally) concatenates them together.
+
+        Parameters
+        ----------
+        x: list of np.ndarray
+            List of measurements, with each entry corresponding to a different
+            trajectory.
+
+        t: list of np.ndarray or int
+            List of time points for different trajectories.
+            If a list of ints is passed, each entry is assumed to be the timestep
+            for the corresponding trajectory in x.
+
+        x_dot: list of np.ndarray
+            List of derivative measurements, with each entry corresponding to a
+            different trajectory. If None, the derivatives will be approximated
+            from x.
+
+        return_array: boolean, optional (default True)
+            Whether to return concatenated np.ndarrays.
+            If False, the outputs will be lists with an entry for each trajectory.
+
+        Returns
+        -------
+        x_out: np.ndarray or list
+            Validated version of x. If return_array is True, x_out will be an
+            np.ndarray of concatenated trajectories. If False, x_out will be
+            a list.
+
+        x_dot_out: np.ndarray or list
+            Validated derivative measurements.If return_array is True, x_dot_out
+            will be an np.ndarray of concatenated trajectories.
+            If False, x_out will be a list.
         """
         if not isinstance(x, Sequence):
             raise TypeError("Input x must be a list")
@@ -555,7 +591,8 @@ class SINDy(BaseEstimator):
 
     def differentiate(self, x, t=None, multiple_trajectories=False):
         """
-        Apply the model's differentiation method to data.
+        Apply the model's differentiation method
+        (:code:`self.differentiation_method`) to data.
 
         Parameters
         ----------
@@ -591,12 +628,28 @@ class SINDy(BaseEstimator):
             return self.differentiation_method(x, t)
 
     def coefficients(self):
-        """Return a list of the coefficients learned by SINDy model."""
+        """
+        Get an array of the coefficients learned by SINDy model.
+
+        Returns
+        -------
+        coef: np.ndarray, shape (n_input_features, n_output_features)
+            Learned coefficients of the SINDy model.
+            Equivalent to :math:`\\Xi^\\top` in the literature.
+        """
         check_is_fitted(self, "model")
         return self.model.steps[-1][1].coef_
 
     def get_feature_names(self):
-        """Return a list of names of features used by SINDy model."""
+        """
+        Get a list of names of features used by SINDy model.
+
+        Returns
+        -------
+        feats: list
+            A list of strings giving the names of the features in the feature
+            library, :code:`self.feature_library`.
+        """
         check_is_fitted(self, "model")
         return self.model.steps[0][1].get_feature_names(
             input_features=self.feature_names
@@ -749,4 +802,7 @@ class SINDy(BaseEstimator):
 
     @property
     def complexity(self):
+        """
+        Complexity of the model measured as the number of nonzero parameters.
+        """
         return self.model.steps[-1][1].complexity

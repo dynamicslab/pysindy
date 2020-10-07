@@ -5,7 +5,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ridge_regression
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy.optimizers import BaseOptimizer
+from .base import BaseOptimizer
 
 
 class STLSQ(BaseOptimizer):

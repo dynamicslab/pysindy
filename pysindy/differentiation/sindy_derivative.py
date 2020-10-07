@@ -7,7 +7,7 @@ from derivative import dxdt
 from numpy import arange
 from sklearn.base import BaseEstimator
 
-from pysindy.utils.base import validate_input
+from ..utils.base import validate_input
 
 
 class SINDyDerivative(BaseEstimator):

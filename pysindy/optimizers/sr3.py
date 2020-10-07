@@ -6,8 +6,8 @@ from scipy.linalg import cho_solve
 from scipy.optimize import bisect
 from sklearn.exceptions import ConvergenceWarning
 
-from pysindy.optimizers import BaseOptimizer
-from pysindy.utils import get_prox
+from ..utils import get_prox
+from .base import BaseOptimizer
 
 
 class SR3(BaseOptimizer):

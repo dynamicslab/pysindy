@@ -43,7 +43,7 @@ if (here / "static/custom.css").exists():
     html_static_path = ["static"]
 
     def setup(app):
-        app.add_stylesheet("custom.css")
+        app.add_css_file("custom.css")
 
 
 exclude_patterns = ["build", "_build"]

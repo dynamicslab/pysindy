@@ -17,18 +17,18 @@ class SINDyEstimator(SINDy):
     ----------
     optimizer : optimizer object, optional
         Optimization method used to fit the SINDy model. This must be an object
-        extending the ``sindy.optimizers.BaseOptimizer`` class. Default is
+        extending :class:`pysindy.optimizers.BaseOptimizer`. Default is
         sequentially thresholded least squares with a threshold of 0.1.
 
     feature_library : feature library object, optional
         Feature library object used to specify candidate right-hand side features.
         This must be an object extending the
-        ``sindy.feature_library.BaseFeatureLibrary`` class.
+        :class:`pysindy.feature_library.base.BaseFeatureLibrary`.
         Default is polynomial features of degree 2.
 
     differentiation_method : differentiation object, optional
         Method for differentiating the data. This must be an object extending
-        the ``sindy.differentiation_methods.BaseDifferentiation`` class.
+        the :class:`pysindy.differentiation_methods.base.BaseDifferentiation` class.
         Default is centered difference.
 
     feature_names : list of string, length n_input_features, optional
@@ -90,11 +90,11 @@ class SINDyEstimator(SINDy):
             trajectories may contain different numbers of samples.
 
         **kwargs: dict, optional
-            Optional keyword arguments to pass to the ``SINDy.fit`` method.
+            Optional keyword arguments to pass to :meth:`fit` method.
 
         Returns
         -------
-        self: fitted ``SINDyEstimator`` instance
+        self: fitted :class:`SINDyEstimator` instance
         """
         super(SINDyEstimator, self).fit(x, **kwargs)
         self._model = SINDyModel(
@@ -109,11 +109,11 @@ class SINDyEstimator(SINDy):
 
     def fetch_model(self):
         """
-        Yields the estimated model. Can be none if ``fit`` was not called.
+        Yields the estimated model. Can be none if :meth:`fit` was not called.
 
         Returns
         -------
-        model: ``SINDyModel`` or None
+        model: :class:`SINDyModel` or None
             The estimated SINDy model or none
         """
         return self._model
@@ -140,25 +140,24 @@ class SINDyModel(SINDy):
     in ``optimizer``.
 
     This class expects the feature library and optimizer to already be fit
-    with a ``SINDyEstimator``. It is best to instantiate a ``SINDyModel``
-    object via the ``SINDyEstimator.fetch_model()`` rather than calling
-    the ``SINDyModel`` constructor directly.
+    with a :class:`SINDyEstimator`. It is best to instantiate a :class:`SINDyModel`
+    object via the :meth:`SINDyEstimator.fetch_model()` rather than calling
+    the :class:`SINDyModel` constructor directly.
 
     Parameters
     ----------
     optimizer : optimizer object
         Optimization method used to fit the SINDy model. This must be an
-        (already fit) object extending the ``pysindy.optimizers.BaseOptimizer``
-        class.
+        (already fit) object extending :class:`pysindy.optimizers.BaseOptimizer`.
 
     feature_library : feature library object
         Feature library object used to specify candidate right-hand side features.
-        This must be an (already fit) object extending the
-        ``pysindy.feature_library.BaseFeatureLibrary`` class.
+        This must be an (already fit) object extending
+        :class:`pysindy.feature_library.BaseFeatureLibrary`.
 
     differentiation_method : differentiation object
         Method for differentiating the data. This must be an object extending
-        the ``pysindy.differentiation_methods.BaseDifferentiation`` class.
+        :class:`pysindy.differentiation_methods.BaseDifferentiation`.
         Default is centered difference.
 
     feature_names : list of string, length n_input_features, optional
@@ -219,7 +218,7 @@ class SINDyModel(SINDy):
 
         Returns
         -------
-        copy: SINDyModel
+        copy: :class:`SINDyModel`
             A new copy of this model.
         """
         import copy

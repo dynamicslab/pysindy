@@ -19,7 +19,7 @@ class SmoothedFiniteDifference(FiniteDifference):
         Arguments passed to smoother when it is invoked.
 
     **kwargs: kwargs
-        Addtional parameters passed to the :code:`FiniteDifference.__init__`
+        Addtional parameters passed to the :meth:`pysindy.FiniteDifference.__init__`
         function.
 
     Examples

@@ -13,8 +13,8 @@ class BaseFeatureLibrary(TransformerMixin):
     """
     Base class for feature libraries.
 
-    Forces subclasses to implement `fit`, `transform`,
-    and `get_feature_names` functions.
+    Forces subclasses to implement ``fit``, ``transform``,
+    and ``get_feature_names`` methods.
     """
 
     def __init__(self, **kwargs):

@@ -10,7 +10,7 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import FLOAT_DTYPES
 
-from .feature_library import BaseFeatureLibrary
+from .base import BaseFeatureLibrary
 
 
 class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):

@@ -28,25 +28,26 @@ from .utils import validate_input
 
 class SINDy(BaseEstimator):
     """
-    SINDy model object.
+    Sparse Identification of Nonlinear Dynamical Systems (SINDy).
+    Uses sparse regression to learn a dynamical systems model from measurement data.
 
     Parameters
     ----------
     optimizer : optimizer object, optional
-        Optimization method used to fit the SINDy model. This must be an object
-        extending the ``pysindy.optimizers.BaseOptimizer`` class. Default is
-        sequentially thresholded least squares with a threshold of 0.1.
+        Optimization method used to fit the SINDy model. This must be a class
+        extending :class:`pysindy.optimizers.BaseOptimizer`.
+        The default is sequentially thresholded least squares with a threshold of 0.1.
 
     feature_library : feature library object, optional
         Feature library object used to specify candidate right-hand side features.
-        This must be an object extending the
-        ``pysindy.feature_library.BaseFeatureLibrary`` class.
-        Default is polynomial features of degree 2.
+        This must be a class extending
+        :class:`pysindy.feature_library.base.BaseFeatureLibrary`.
+        The default option is polynomial features of degree 2.
 
     differentiation_method : differentiation object, optional
-        Method for differentiating the data. This must be an object extending
-        the ``pysindy.differentiation_methods.BaseDifferentiation`` class.
-        Default is centered difference.
+        Method for differentiating the data. This must be a class extending
+        :class:`pysindy.differentiation_methods.base.BaseDifferentiation` class.
+        The default option is centered difference.
 
     feature_names : list of string, length n_input_features, optional
         Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
@@ -63,7 +64,7 @@ class SINDy(BaseEstimator):
 
     Attributes
     ----------
-    model : sklearn.multioutput.MultiOutputRegressor object
+    model : ``sklearn.multioutput.MultiOutputRegressor`` object
         The fitted SINDy model.
 
     n_input_features_ : int
@@ -176,7 +177,7 @@ class SINDy(BaseEstimator):
         quiet=False,
     ):
         """
-        Fit the SINDy model.
+        Fit a SINDy model.
 
         Parameters
         ----------
@@ -222,10 +223,10 @@ class SINDy(BaseEstimator):
         unbias: boolean, optional (default True)
             Whether to perform an extra step of unregularized linear regression to
             unbias the coefficients for the identified support.
-            If the optimizer (``SINDy.optimizer``) applies any type of regularization,
+            If the optimizer (``self.optimizer``) applies any type of regularization,
             that regularization may bias coefficients toward particular values,
             improving the conditioning of the problem but harming the quality of the
-            fit. Setting ``unbias=True`` enables an extra step wherein unregularized
+            fit. Setting ``unbias==True`` enables an extra step wherein unregularized
             linear regression is applied, but only for the coefficients in the support
             identified by the optimizer. This helps to remove the bias introduced by
             regularization.
@@ -235,7 +236,7 @@ class SINDy(BaseEstimator):
 
         Returns
         -------
-        self: a fitted :code:`SINDy` instance
+        self: a fitted :class:`SINDy` instance
         """
         if t is None:
             t = self.t_default
@@ -311,7 +312,7 @@ class SINDy(BaseEstimator):
 
         u: array-like or list of array-like, shape(n_samples, n_control_features), \
                 (default None)
-            Control variables. If ``multiple_trajectories=True`` then u
+            Control variables. If ``multiple_trajectories==True`` then u
             must be a list of control variable data from each trajectory. If the
             model was fit with control variables then u is not optional.
 
@@ -436,7 +437,7 @@ class SINDy(BaseEstimator):
 
         u: array-like or list of array-like, shape(n_samples, n_control_features), \
                 optional (default None)
-            Control variables. If ``multiple_trajectories=True`` then u
+            Control variables. If ``multiple_trajectories==True`` then u
             must be a list of control variable data from each trajectory.
             If the model was fit with control variables then u is not optional.
 

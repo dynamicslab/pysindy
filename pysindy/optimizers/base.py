@@ -55,6 +55,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
     initial_guess :  array, shape (n_features,) or (n_targets, n_features), \
             optional (default None)
         Initial guess for coefficients ``coef_``.
+        If None, the initial guess is obtained via a least-squares fit.
 
     Attributes
     ----------

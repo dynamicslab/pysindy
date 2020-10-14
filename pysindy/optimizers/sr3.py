@@ -65,6 +65,10 @@ class SR3(BaseOptimizer):
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
+    initial_guess :  array, shape (n_features) or (n_targets, n_features), \
+            optional (default None)
+        Initial guess for coefficients ``coef_``.
+
     fit_intercept : boolean, optional (default False)
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
@@ -121,12 +125,14 @@ class SR3(BaseOptimizer):
         trimming_fraction=0.0,
         trimming_step_size=1.0,
         max_iter=30,
+        initial_guess=None,
         normalize=False,
         fit_intercept=False,
         copy_X=True,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
+            initial_guess=initial_guess,
             normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
@@ -154,10 +160,20 @@ class SR3(BaseOptimizer):
         self.trimming_step_size = trimming_step_size
 
     def enable_trimming(self, trimming_fraction):
+        """
+        Enable the trimming of potential outliers.
+
+        Parameters
+        ----------
+        trimming_fraction: float
+            The fraction of samples to be trimmed.
+            Must be between 0 and 1.
+        """
         self.use_trimming = True
         self.trimming_fraction = trimming_fraction
 
     def disable_trimming(self):
+        """Disable trimming of potential outliers."""
         self.use_trimming = False
         self.trimming_fraction = None
 
@@ -205,8 +221,9 @@ class SR3(BaseOptimizer):
 
     def _reduce(self, x, y):
         """
-        Iterates the thresholding. Assumes an initial guess
-        is saved in self.coef_ and self.ind_
+        Perform ``self.max_iter`` iterations of the SR3 algorithm.
+
+        Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
@@ -255,7 +272,7 @@ class SR3(BaseOptimizer):
 
     @staticmethod
     def _capped_simplex_projection(trimming_array, trimming_fraction):
-        """projected onto the capped simplex"""
+        """Projection of trimming array onto the capped simplex"""
         a = np.min(trimming_array) - 1.0
         b = np.max(trimming_array) - 0.0
 

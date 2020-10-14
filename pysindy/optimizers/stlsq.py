@@ -136,8 +136,11 @@ class STLSQ(BaseOptimizer):
         return all(bool(i) == bool(j) for i, j in zip(this_coef, last_coef))
 
     def _reduce(self, x, y):
-        """Iterates the thresholding. Assumes an initial guess is saved in
-        self.coef_ and self.ind_
+        """Performs at most ``self.max_iter`` iterations of the
+        sequentially-thresholded least squares algorithm.
+
+        Assumes an initial guess for coefficients and support are saved in
+        ``self.coef_`` and ``self.ind_``.
         """
         ind = self.ind_
         n_samples, n_features = x.shape

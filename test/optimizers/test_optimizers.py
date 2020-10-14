@@ -160,6 +160,18 @@ def test_bad_optimizers(data_derivative_1d):
         opt.fit(x, x_dot)
 
 
+def test_initial_guess_sr3():
+    x = np.random.standard_normal((10, 3))
+    x_dot = np.random.standard_normal((10, 2))
+
+    control_model = SR3(max_iter=1).fit(x, x_dot)
+
+    initial_guess = np.random.standard_normal((x_dot.shape[1], x.shape[1]))
+    guess_model = SR3(max_iter=1, initial_guess=initial_guess).fit(x, x_dot)
+
+    assert np.any(np.not_equal(control_model.coef_, guess_model.coef_))
+
+
 # The different capitalizations are intentional;
 # I want to make sure different versions are recognized
 @pytest.mark.parametrize("thresholder", ["L0", "l1", "CAD"])

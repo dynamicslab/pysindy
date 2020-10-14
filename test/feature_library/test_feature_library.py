@@ -13,7 +13,7 @@ from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import IdentityLibrary
 from pysindy.feature_library import PolynomialLibrary
-from pysindy.feature_library.feature_library import BaseFeatureLibrary
+from pysindy.feature_library.base import BaseFeatureLibrary
 
 
 def test_form_custom_library():

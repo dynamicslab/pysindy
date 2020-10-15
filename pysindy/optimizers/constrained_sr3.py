@@ -2,16 +2,13 @@ import warnings
 
 import numpy as np
 from scipy.linalg import cho_factor
-from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
-from ..utils import capped_simplex_projection
-from ..utils import get_prox
 from ..utils import get_regularization
-from .base import BaseOptimizer
+from .sr3 import SR3
 
 
-class ConstrainedSR3(BaseOptimizer):
+class ConstrainedSR3(SR3):
     """
     Sparse relaxed regularized regression with linear inequality constraints.
 
@@ -136,6 +133,12 @@ class ConstrainedSR3(BaseOptimizer):
         thresholds=None,
     ):
         super(ConstrainedSR3, self).__init__(
+            threshold=threshold,
+            nu=nu,
+            tol=tol,
+            thresholder=thresholder,
+            trimming_fraction=trimming_fraction,
+            trimming_step_size=trimming_step_size,
             max_iter=max_iter,
             initial_guess=initial_guess,
             normalize=normalize,
@@ -143,12 +146,6 @@ class ConstrainedSR3(BaseOptimizer):
             copy_X=copy_X,
         )
 
-        if threshold < 0:
-            raise ValueError("threshold cannot be negative")
-        if nu <= 0:
-            raise ValueError("nu must be positive")
-        if tol <= 0:
-            raise ValueError("tol must be positive")
         if thresholder[:8].lower() == "weighted" and thresholds is None:
             raise ValueError(
                 "weighted thresholder requires the thresholds parameter to be used"
@@ -161,12 +158,7 @@ class ConstrainedSR3(BaseOptimizer):
         if thresholds is not None and np.any(thresholds < 0):
             raise ValueError("thresholds cannot contain negative entries")
 
-        self.threshold = threshold
         self.thresholds = thresholds
-        self.nu = nu
-        self.tol = tol
-        self.thresholder = thresholder
-        self.prox = get_prox(thresholder)
         self.reg = get_regularization(thresholder)
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
@@ -177,38 +169,6 @@ class ConstrainedSR3(BaseOptimizer):
             self.constraint_lhs = constraint_lhs
             self.constraint_rhs = constraint_rhs
             self.unbias = False
-
-        if trimming_fraction == 0.0:
-            self.use_trimming = False
-        else:
-            self.use_trimming = True
-        self.trimming_fraction = trimming_fraction
-        self.trimming_step_size = trimming_step_size
-
-    def enable_trimming(self, trimming_fraction):
-        """
-        Enable the trimming of potential outliers.
-
-        Parameters
-        ----------
-        trimming_fraction: float
-            The fraction of samples to be trimmed.
-            Must be between 0 and 1.
-        """
-        self.use_trimming = True
-        self.trimming_fraction = trimming_fraction
-
-    def disable_trimming(self):
-        """Disable trimming of potential outliers."""
-        self.use_trimming = False
-        self.trimming_fraction = None
-
-    def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
-        """Update the unregularized weight vector"""
-        b = x_transpose_y + coef_sparse / self.nu
-        coef_full = cho_solve(cho, b)
-        self.iters += 1
-        return coef_full
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
         g = x_transpose_y + coef_sparse / self.nu
@@ -226,21 +186,12 @@ class ConstrainedSR3(BaseOptimizer):
 
     def _update_sparse_coef(self, coef_full):
         """Update the regularized weight vector"""
-        coef_sparse = np.zeros(np.shape(coef_full))
         if self.thresholds is None:
-            coef_sparse = self.prox(coef_full, self.threshold)
+            return super(ConstrainedSR3, self)._update_sparse_coef(coef_full)
         else:
             coef_sparse = self.prox(coef_full, self.thresholds)
         self.history_.append(coef_sparse.T)
         return coef_sparse
-
-    def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):
-        trimming_array = trimming_array - self.trimming_step_size * trimming_grad
-        trimming_array = capped_simplex_projection(
-            trimming_array, self.trimming_fraction
-        )
-        self.history_trimming_.append(trimming_array)
-        return trimming_array
 
     def _objective(self, x, y, coef_full, coef_sparse, trimming_array=None):
         """Objective function"""
@@ -261,27 +212,6 @@ class ConstrainedSR3(BaseOptimizer):
                 + self.reg(coef_full, 0.5 * self.thresholds ** 2 / self.nu)
                 + 0.5 * np.sum(D2) / self.nu
             )
-
-    def _convergence_criterion(self):
-        """Calculate the convergence criterion for the optimization"""
-        this_coef = self.history_[-1]
-        if len(self.history_) > 1:
-            last_coef = self.history_[-2]
-        else:
-            last_coef = np.zeros_like(this_coef)
-        err_coef = np.sqrt(np.sum((this_coef - last_coef) ** 2)) / self.nu
-        if self.use_trimming:
-            this_trimming_array = self.history_trimming_[-1]
-            if len(self.history_trimming_) > 1:
-                last_trimming_array = self.history_trimming_[-2]
-            else:
-                last_trimming_array = np.zeros_like(this_trimming_array)
-            err_trimming = (
-                np.sqrt(np.sum((this_trimming_array - last_trimming_array) ** 2))
-                / self.trimming_step_size
-            )
-            return err_coef + err_trimming
-        return err_coef
 
     def _reduce(self, x, y):
         """

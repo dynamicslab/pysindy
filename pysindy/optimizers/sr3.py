@@ -3,9 +3,9 @@ import warnings
 import numpy as np
 from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
-from scipy.optimize import bisect
 from sklearn.exceptions import ConvergenceWarning
 
+from ..utils import capped_simplex_projection
 from ..utils import get_prox
 from .base import BaseOptimizer
 
@@ -65,9 +65,10 @@ class SR3(BaseOptimizer):
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
-    initial_guess :  array, shape (n_features) or (n_targets, n_features), \
+    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
             optional (default None)
         Initial guess for coefficients ``coef_``.
+        If None, least-squares is used to obtain an initial guess.
 
     fit_intercept : boolean, optional (default False)
         Whether to calculate the intercept for this model. If set to false, no
@@ -80,11 +81,6 @@ class SR3(BaseOptimizer):
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
-
-    initial_guess : 2D numpy array of floats, shape (n_targets, n_features), \
-            optional (default None)
-        Initial guess for v.
-        If None, the initial guess is obtained via a standard least squares fit.
 
     Attributes
     ----------
@@ -134,7 +130,6 @@ class SR3(BaseOptimizer):
         normalize=False,
         fit_intercept=False,
         copy_X=True,
-        initial_guess=None,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
@@ -198,7 +193,7 @@ class SR3(BaseOptimizer):
 
     def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):
         trimming_array = trimming_array - self.trimming_step_size * trimming_grad
-        trimming_array = self._capped_simplex_projection(
+        trimming_array = capped_simplex_projection(
             trimming_array, self.trimming_fraction
         )
         self.history_trimming_.append(trimming_array)
@@ -227,14 +222,10 @@ class SR3(BaseOptimizer):
 
     def _reduce(self, x, y):
         """
-<<<<<<< HEAD
-        Perform ``self.max_iter`` iterations of the SR3 algorithm.
+        Perform at most ``self.max_iter`` iterations of the SR3 algorithm.
 
         Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
-        if self.initial_guess is not None:
-            self.coef_ = self.initial_guess
-
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 
@@ -279,19 +270,3 @@ class SR3(BaseOptimizer):
         self.coef_full_ = coef_full.T
         if self.use_trimming:
             self.trimming_array = trimming_array
-
-    @staticmethod
-    def _capped_simplex_projection(trimming_array, trimming_fraction):
-        """Projection of trimming array onto the capped simplex"""
-        a = np.min(trimming_array) - 1.0
-        b = np.max(trimming_array) - 0.0
-
-        def f(x):
-            return (
-                np.sum(np.maximum(np.minimum(trimming_array - x, 1.0), 0.0))
-                - (1.0 - trimming_fraction) * trimming_array.size
-            )
-
-        x = bisect(f, a, b)
-
-        return np.maximum(np.minimum(trimming_array - x, 1.0), 0.0)

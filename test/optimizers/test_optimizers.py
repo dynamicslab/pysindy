@@ -6,10 +6,7 @@ import pytest
 from numpy.linalg import norm
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
-<<<<<<< HEAD
 from sklearn.exceptions import NotFittedError
-=======
->>>>>>> Add some unit tests for ConstrainedSR3
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
@@ -211,30 +208,35 @@ def test_initial_guess_sr3():
 
 # The different capitalizations are intentional;
 # I want to make sure different versions are recognized
-@pytest.mark.parametrize("thresholder", ["L0", "l1", "CAD"])
-def test_sr3_prox_functions(data_derivative_1d, thresholder):
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+@pytest.mark.parametrize("thresholder", ["L0", "l1"])
+def test_prox_functions(data_derivative_1d, optimizer, thresholder):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    model = SR3(thresholder=thresholder)
+    model = optimizer(thresholder=thresholder)
     model.fit(x, x_dot)
     check_is_fitted(model)
 
 
-@pytest.mark.parametrize("thresholder", ["L0", "l1"])
-def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
+def test_cad_prox_function(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    model = ConstrainedSR3(thresholder=thresholder)
+    model = SR3(thresholder="cAd")
     model.fit(x, x_dot)
     check_is_fitted(model)
 
 
 @pytest.mark.parametrize("thresholder", ["weighted_l0", "weighted_l1"])
-def test_weighted_prox_functions(data_derivative_1d, thresholder):
-    x, x_dot = data_derivative_1d
-    x = x.reshape(-1, 1)
-    thresholds = np.ones((x_dot.shape[0], 1))
+def test_weighted_prox_functions(data, thresholder):
+    x, x_dot = data
+    if x.ndim == 1:
+        x = x.reshape(-1, 1)
+        thresholds = np.ones((1, 1))
+    else:
+        thresholds = np.ones((x.shape[1], x_dot.shape[1]))
+
     model = ConstrainedSR3(thresholder=thresholder, thresholds=thresholds)
+    model.fit(x, x_dot)
     check_is_fitted(model)
 
 
@@ -338,7 +340,8 @@ def test_sr3_warn(data_linear_oscillator_corrupted):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [STLSQ(max_iter=1), SR3(max_iter=1), ConstrainedSR3(max_iter=1)],
+    "optimizer",
+    [STLSQ(max_iter=1), SR3(max_iter=1), ConstrainedSR3(max_iter=1)],
 )
 def test_fit_warn(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d

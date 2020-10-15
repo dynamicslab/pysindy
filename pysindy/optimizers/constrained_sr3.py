@@ -3,12 +3,12 @@ import warnings
 import numpy as np
 from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
-from scipy.optimize import bisect
 from sklearn.exceptions import ConvergenceWarning
 
-from pysindy.optimizers import BaseOptimizer
-from pysindy.utils import get_prox
-from pysindy.utils import get_reg
+from ..utils import capped_simplex_projection
+from ..utils import get_prox
+from ..utils import get_regularization
+from .base import BaseOptimizer
 
 
 class ConstrainedSR3(BaseOptimizer):
@@ -80,10 +80,10 @@ class ConstrainedSR3(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : 2D numpy array of floats, shape (n_targets, n_features), \
-            optional (default None)
-        Initial guess for v.
-        If None, the initial guess is obtained via a standard least squares fit.
+    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
+                optional (default None)
+        Initial guess for coefficients ``coef_``, (v in the mathematical equations)
+        If None, least-squares is used to obtain an initial guess.
 
     unbias : boolean, optional (default True)
         Whether to perform an extra step of unregularized linear regression to unbias
@@ -95,15 +95,17 @@ class ConstrainedSR3(BaseOptimizer):
         unregularized least-squares fit.
         `unbias` is automatically set to False if a constraint is used.
 
-    thresholds : 2D array of floats, shape (n_targets, n_features), optional \
+    thresholds : np.ndarray, shape (n_targets, n_features), optional \
             (default None)
         Array of thresholds for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
         Recall that SINDy seeks a matrix :math:`\\Xi` such that
         :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        `thresholds[i, j]` should specify the threshold to be used for the
-        (i + 1, j + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (i + 1)st library function in the equation
-        for the (j + 1)st measurement variable.
+        ``thresholds[i, j]`` should specify the threshold to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        threshold to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
 
     Attributes
     ----------
@@ -136,6 +138,7 @@ class ConstrainedSR3(BaseOptimizer):
     ):
         super(ConstrainedSR3, self).__init__(
             max_iter=max_iter,
+            initial_guess=initial_guess,
             normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
@@ -149,23 +152,23 @@ class ConstrainedSR3(BaseOptimizer):
             raise ValueError("tol must be positive")
         if thresholder[:8].lower() == "weighted" and thresholds is None:
             raise ValueError(
-                "weighted thresholder can only be used with a matrix of thresholds"
+                "weighted thresholder requires the thresholds parameter to be used"
             )
         if thresholder[:8].lower() != "weighted" and thresholds is not None:
-            raise ValueError("matrix of thresholds requires a weighted thresholder")
-        if thresholds is not None and not np.all(thresholds >= 0.0):
             raise ValueError(
-                "matrix of thresholds must contain non-negative entries only"
+                "The thresholds argument cannot be used without a weighted thresholder,"
+                " e.g. thresholder='weighted_l0'"
             )
+        if thresholds is not None and np.any(thresholds < 0):
+            raise ValueError("thresholds cannot contain negative entries")
 
         self.threshold = threshold
         self.thresholds = thresholds
         self.nu = nu
         self.tol = tol
-        self.initial_guess = initial_guess
         self.thresholder = thresholder
         self.prox = get_prox(thresholder)
-        self.reg = get_reg(thresholder)
+        self.reg = get_regularization(thresholder)
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
         )
@@ -185,16 +188,25 @@ class ConstrainedSR3(BaseOptimizer):
             self.trimming_step_size = trimming_step_size
 
     def enable_trimming(self, trimming_fraction):
+        """
+        Enable the trimming of potential outliers.
+
+        Parameters
+        ----------
+        trimming_fraction: float
+            The fraction of samples to be trimmed.
+            Must be between 0 and 1.
+        """
         self.use_trimming = True
         self.trimming_fraction = trimming_fraction
 
     def disable_trimming(self):
+        """Disable trimming of potential outliers."""
         self.use_trimming = False
         self.trimming_fraction = None
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
-        """Update the unregularized weight vector
-        """
+        """Update the unregularized weight vector"""
         b = x_transpose_y + coef_sparse / self.nu
         coef_full = cho_solve(cho, b)
         self.iters += 1
@@ -226,7 +238,7 @@ class ConstrainedSR3(BaseOptimizer):
 
     def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):
         trimming_array = trimming_array - self.trimming_step_size * trimming_grad
-        trimming_array = self.capped_simplex_proj(
+        trimming_array = capped_simplex_projection(
             trimming_array, self.trimming_fraction
         )
         self.history_trimming_.append(trimming_array)
@@ -280,11 +292,11 @@ class ConstrainedSR3(BaseOptimizer):
 
     def _reduce(self, x, y):
         """
-        Iterates the thresholding. Assumes an initial guess
-        is saved in self.coef_
+        Perform at most ``self.max_iter`` iterations of the SR3 algorithm
+        with inequality constraints.
+
+        Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
-        if self.initial_guess is not None:
-            self.coef_ = self.initial_guess
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 
@@ -361,19 +373,3 @@ class ConstrainedSR3(BaseOptimizer):
         if self.use_trimming:
             self.trimming_array = trimming_array
         self.obj_his = obj_his
-
-    @staticmethod
-    def capped_simplex_proj(trimming_array, trimming_fraction):
-        """Project onto the capped simplex"""
-        a = np.min(trimming_array) - 1.0
-        b = np.max(trimming_array) - 0.0
-
-        def f(x):
-            return (
-                np.sum(np.maximum(np.minimum(trimming_array - x, 1.0), 0.0))
-                - trimming_fraction * trimming_array.size
-            )
-
-        x = bisect(f, a, b)
-
-        return np.maximum(np.minimum(trimming_array - x, 1.0), 0.0)

@@ -189,7 +189,7 @@ class ConstrainedSR3(SR3):
         if self.thresholds is None:
             return super(ConstrainedSR3, self)._update_sparse_coef(coef_full)
         else:
-            coef_sparse = self.prox(coef_full, self.thresholds)
+            coef_sparse = self.prox(coef_full, self.thresholds.T)
         self.history_.append(coef_sparse.T)
         return coef_sparse
 
@@ -209,7 +209,7 @@ class ConstrainedSR3(SR3):
         else:
             return (
                 0.5 * np.sum(R2)
-                + self.reg(coef_full, 0.5 * self.thresholds ** 2 / self.nu)
+                + self.reg(coef_full, 0.5 * self.thresholds.T ** 2 / self.nu)
                 + 0.5 * np.sum(D2) / self.nu
             )
 

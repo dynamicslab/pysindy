@@ -233,7 +233,7 @@ def test_weighted_prox_functions(data, thresholder):
         x = x.reshape(-1, 1)
         thresholds = np.ones((1, 1))
     else:
-        thresholds = np.ones((x.shape[1], x_dot.shape[1]))
+        thresholds = np.ones((x_dot.shape[1], x.shape[1]))
 
     model = ConstrainedSR3(thresholder=thresholder, thresholds=thresholds)
     model.fit(x, x_dot)

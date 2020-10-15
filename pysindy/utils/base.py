@@ -159,7 +159,7 @@ def get_regularization(regularization):
     if regularization.lower() == "l0":
         return lambda x, lam: lam * np.count_nonzero(x)
     elif regularization.lower() == "weighted_l0":
-        return lambda x, lam: np.sum(lam.T[np.nonzero(x)])
+        return lambda x, lam: np.sum(lam[np.nonzero(x)])
     elif regularization.lower() == "l1":
         return lambda x, lam: lam * np.sum(np.abs(x))
     elif regularization.lower() == "weighted_l1":

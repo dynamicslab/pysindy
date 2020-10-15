@@ -126,7 +126,6 @@ class ConstrainedSR3(BaseOptimizer):
         thresholder="l0",
         max_iter=30,
         trimming_fraction=0.0,
-        trimming_initialization=None,
         trimming_step_size=1.0,
         constraint_lhs=None,
         constraint_rhs=None,
@@ -183,9 +182,8 @@ class ConstrainedSR3(BaseOptimizer):
             self.use_trimming = False
         else:
             self.use_trimming = True
-            self.trimming_fraction = trimming_fraction
-            self.trimming_initialization = trimming_initialization
-            self.trimming_step_size = trimming_step_size
+        self.trimming_fraction = trimming_fraction
+        self.trimming_step_size = trimming_step_size
 
     def enable_trimming(self, trimming_fraction):
         """
@@ -244,11 +242,6 @@ class ConstrainedSR3(BaseOptimizer):
         self.history_trimming_.append(trimming_array)
         return trimming_array
 
-    def _trimming_grad(self, x, y, coef_full, trimming_array):
-        """Gradient for the trimming variable"""
-        R2 = (y - x.dot(coef_full)) ** 2
-        return 0.5 * np.sum(R2, axis=1)
-
     def _objective(self, x, y, coef_full, coef_sparse, trimming_array=None):
         """Objective function"""
         R2 = (y - np.dot(x, coef_full)) ** 2
@@ -302,23 +295,7 @@ class ConstrainedSR3(BaseOptimizer):
 
         if self.use_trimming:
             coef_full = coef_sparse.copy()
-            assert self.trimming_fraction != 0
-            if self.trimming_initialization is None:
-                self.trimming_initialization = np.repeat(
-                    self.trimming_fraction, n_samples
-                )
-            assert (
-                np.abs(
-                    np.sum(self.trimming_initialization)
-                    - self.trimming_fraction * n_samples
-                )
-                <= 1e-6 * n_samples
-            )
-            assert np.all(
-                (self.trimming_initialization >= 0.0)
-                & (self.trimming_initialization <= 1.0)
-            )
-            trimming_array = self.trimming_initialization.copy()
+            trimming_array = np.repeat(1.0 - self.trimming_fraction, n_samples)
             self.history_trimming_ = [trimming_array]
 
         # Precompute some objects for upcoming least-squares solves.
@@ -328,7 +305,7 @@ class ConstrainedSR3(BaseOptimizer):
         if not self.use_constraints:
             cho = cho_factor(H)
 
-        obj_his = []
+        objective_history = []
         for _ in range(self.max_iter):
             if self.use_trimming:
                 x_weighted = x * trimming_array.reshape(n_samples, 1)
@@ -345,18 +322,19 @@ class ConstrainedSR3(BaseOptimizer):
                 )
             else:
                 coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
+
             coef_sparse = self._update_sparse_coef(coef_full)
+
             if self.use_trimming:
                 trimming_array = self._update_trimming_array(
                     coef_full, trimming_array, trimming_grad
                 )
 
-            if self.use_trimming:
-                obj_his.append(
+                objective_history.append(
                     self._objective(x, y, coef_full, coef_sparse, trimming_array)
                 )
             else:
-                obj_his.append(self._objective(x, y, coef_full, coef_sparse))
+                objective_history.append(self._objective(x, y, coef_full, coef_sparse))
             if self._convergence_criterion() < self.tol:
                 # TODO: Update this for trimming/constraints
                 break
@@ -372,4 +350,4 @@ class ConstrainedSR3(BaseOptimizer):
         self.coef_full_ = coef_full.T
         if self.use_trimming:
             self.trimming_array = trimming_array
-        self.obj_his = obj_his
+        self.objective_history = objective_history

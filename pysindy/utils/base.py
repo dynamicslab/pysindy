@@ -110,12 +110,6 @@ def prox_l1(x, threshold):
     return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
 
 
-def prox_weighted_l1(x, thresholds):
-    """Proximal operator for weighted l1 regularization."""
-    # Does this really need to be a 1?
-    return np.sign(x) * np.maximum(np.abs(x) - thresholds, 1)
-
-
 # TODO: replace code block with proper math block
 def prox_cad(x, lower_threshold):
     """
@@ -143,11 +137,7 @@ def prox_cad(x, lower_threshold):
 def get_prox(regularization):
     if regularization.lower() in ("l0", "weighted_l0"):
         return prox_l0
-    elif regularization.lower() == "weighted_l0":
-        return prox_l0
-    elif regularization.lower() == "l1":
-        return prox_l1
-    elif regularization.lower() == "weighted_l1":
+    elif regularization.lower() in ("l1", "weighted_l1"):
         return prox_l1
     elif regularization.lower() == "cad":
         return prox_cad

@@ -63,11 +63,16 @@ class ConstrainedSR3(SR3):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    constraint_lhs : 2D numpy array, shape (n_constraints, n_features * n_targets)
-        The left hand side matrix C of Cx <= d.
+    constraint_lhs : numpy ndarray, shape (n_constraints, n_features * n_targets), \
+            optional (default None)
+        The left hand side matrix C of Cw <= d.
+        There should be one row per constraint. The first ``n_features`` columns
+        correspond to constraint coefficients on the library features for the first
+        target (variable), the next ``n_features`` columns to the library features
+        for the second target (variable), and so on.
 
-    constraint_rhs : 1D numpy array, shape (n_constraints,)
-        The right hand side vector d of Cx <= d
+    constraint_rhs : numpy ndarray, shape (n_constraints,), optional (default None)
+        The right hand side vector d of Cw <= d.
 
     normalize : boolean, optional (default False)
         This parameter is ignored when fit_intercept is set to False. If True,

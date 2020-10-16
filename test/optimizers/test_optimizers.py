@@ -124,62 +124,37 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
     check_is_fitted(model)
 
 
-def test_bad_parameters():
+@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3])
+@pytest.mark.parametrize("params", [dict(threshold=-1), dict(max_iter=0)])
+def test_general_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
-        STLSQ(threshold=-1)
+        optimizer(**params)
 
+
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+@pytest.mark.parametrize(
+    "params",
+    [dict(nu=0), dict(tol=0), dict(trimming_fraction=-1), dict(trimming_fraction=2)],
+)
+def test_sr3_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
-        STLSQ(alpha=-1)
+        optimizer(**params)
 
-    with pytest.raises(ValueError):
-        STLSQ(max_iter=0)
 
-    with pytest.raises(ValueError):
-        SR3(threshold=-1)
-
-    with pytest.raises(ValueError):
-        SR3(nu=0)
-
-    with pytest.raises(ValueError):
-        SR3(tol=0)
-
-    with pytest.raises(ValueError):
-        SR3(max_iter=0)
-
-    with pytest.raises(NotImplementedError):
-        SR3(thresholder="l2")
-
-    with pytest.raises(ValueError):
-        ConstrainedSR3(threshold=-1)
-
-    with pytest.raises(ValueError):
-        ConstrainedSR3(nu=0)
-
-    with pytest.raises(ValueError):
-        ConstrainedSR3(tol=0)
-
-    with pytest.raises(ValueError):
-        ConstrainedSR3(max_iter=0)
-
-    with pytest.raises(NotImplementedError):
-        ConstrainedSR3(thresholder="l2")
-
-    with pytest.raises(ValueError):
-        ConstrainedSR3(thresholder="weighted_l0", thresholds=None)
-
-    with pytest.raises(ValueError):
-        ConstrainedSR3(thresholder="l0", thresholds=np.ones((5, 5)))
-
-    with pytest.raises(ValueError):
-        thresholds = np.ones((5, 5))
-        thresholds[0, 0] = -1
-        ConstrainedSR3(thresholds=thresholds)
-
-    with pytest.raises(ValueError):
-        SR3(trimming_fraction=-1)
-
-    with pytest.raises(ValueError):
-        SR3(trimming_fraction=2)
+@pytest.mark.parametrize(
+    "error, optimizer, params",
+    [
+        (ValueError, STLSQ, dict(alpha=-1)),
+        (NotImplementedError, SR3, dict(thresholder="l2")),
+        (NotImplementedError, ConstrainedSR3, dict(thresholder="l2")),
+        (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),
+        (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),
+        (ValueError, ConstrainedSR3, dict(thresholds=-np.ones((5, 5)))),
+    ],
+)
+def test_specific_bad_parameters(error, optimizer, params):
+    with pytest.raises(error):
+        optimizer(**params)
 
 
 def test_bad_optimizers(data_derivative_1d):
@@ -194,14 +169,15 @@ def test_bad_optimizers(data_derivative_1d):
         opt.fit(x, x_dot)
 
 
-def test_initial_guess_sr3():
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+def test_initial_guess_sr3(optimizer):
     x = np.random.standard_normal((10, 3))
     x_dot = np.random.standard_normal((10, 2))
 
-    control_model = SR3(max_iter=1).fit(x, x_dot)
+    control_model = optimizer(max_iter=1).fit(x, x_dot)
 
     initial_guess = np.random.standard_normal((x_dot.shape[1], x.shape[1]))
-    guess_model = SR3(max_iter=1, initial_guess=initial_guess).fit(x, x_dot)
+    guess_model = optimizer(max_iter=1, initial_guess=initial_guess).fit(x, x_dot)
 
     assert np.any(np.not_equal(control_model.coef_, guess_model.coef_))
 
@@ -282,13 +258,14 @@ def test_unbias_external(data_derivative_1d):
     )
 
 
-def test_sr3_trimming(data_linear_oscillator_corrupted):
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+def test_sr3_trimming(optimizer, data_linear_oscillator_corrupted):
     X, X_dot, trimming_array = data_linear_oscillator_corrupted
 
-    optimizer_without_trimming = SINDyOptimizer(SR3(), unbias=False)
+    optimizer_without_trimming = SINDyOptimizer(optimizer(), unbias=False)
     optimizer_without_trimming.fit(X, X_dot)
 
-    optimizer_trimming = SINDyOptimizer(SR3(trimming_fraction=0.15), unbias=False)
+    optimizer_trimming = SINDyOptimizer(optimizer(trimming_fraction=0.15), unbias=False)
     optimizer_trimming.fit(X, X_dot)
 
     # Check that trimming found the right samples to remove
@@ -305,35 +282,38 @@ def test_sr3_trimming(data_linear_oscillator_corrupted):
     )
 
 
-def test_sr3_disable_trimming(data_linear_oscillator_corrupted):
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+def test_sr3_disable_trimming(optimizer, data_linear_oscillator_corrupted):
     x, x_dot, _ = data_linear_oscillator_corrupted
 
-    model_plain = SR3()
+    model_plain = optimizer()
     model_plain.fit(x, x_dot)
 
-    model_trimming = SR3(trimming_fraction=0.5)
+    model_trimming = optimizer(trimming_fraction=0.5)
     model_trimming.disable_trimming()
     model_trimming.fit(x, x_dot)
 
     np.testing.assert_allclose(model_plain.coef_, model_trimming.coef_)
 
 
-def test_sr3_enable_trimming(data_linear_oscillator_corrupted):
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+def test_sr3_enable_trimming(optimizer, data_linear_oscillator_corrupted):
     x, x_dot, _ = data_linear_oscillator_corrupted
 
-    model_plain = SR3()
+    model_plain = optimizer()
     model_plain.enable_trimming(trimming_fraction=0.5)
     model_plain.fit(x, x_dot)
 
-    model_trimming = SR3(trimming_fraction=0.5)
+    model_trimming = optimizer(trimming_fraction=0.5)
     model_trimming.fit(x, x_dot)
 
     np.testing.assert_allclose(model_plain.coef_, model_trimming.coef_)
 
 
-def test_sr3_warn(data_linear_oscillator_corrupted):
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
     x, x_dot, _ = data_linear_oscillator_corrupted
-    model = SR3(max_iter=1, tol=1e-10)
+    model = optimizer(max_iter=1, tol=1e-10)
 
     with pytest.warns(ConvergenceWarning):
         model.fit(x, x_dot)
@@ -349,3 +329,23 @@ def test_fit_warn(data_derivative_1d, optimizer):
 
     with pytest.warns(ConvergenceWarning):
         optimizer.fit(x, x_dot)
+
+
+def test_constrained_sr3_constraints(data_linear_combination):
+    x, x_dot = data_linear_combination
+
+    # # Add some noise to make matrices nonsingular
+    # x += np.random.standard_normal(x.shape)
+    # x_dot += np.random.standard_normal(x_dot.shape)
+
+    constraint_rhs = np.zeros(2)
+    constraint_lhs = np.zeros((2, x.shape[1] * x_dot.shape[1]))
+
+    # Should force corresponding entries of coef_ to be 0's
+    constraint_lhs[0, 0] = 1
+    constraint_lhs[1, 1] = 1
+
+    model = ConstrainedSR3(constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs)
+    model.fit(x, x_dot)
+
+    assert not any([model.coef_[0, 0], model.coef_[1, 1]])

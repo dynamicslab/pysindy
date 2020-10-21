@@ -174,18 +174,16 @@ def test_t_default(data):
 
 
 @pytest.mark.parametrize(
-    "data, optimizer",
+    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
+)
+@pytest.mark.parametrize(
+    "optimizer",
     [
-        (pytest.lazy_fixture("data_1d"), STLSQ()),
-        (pytest.lazy_fixture("data_lorenz"), STLSQ()),
-        (pytest.lazy_fixture("data_1d"), SR3()),
-        (pytest.lazy_fixture("data_lorenz"), SR3()),
-        (pytest.lazy_fixture("data_1d"), ConstrainedSR3()),
-        (pytest.lazy_fixture("data_lorenz"), ConstrainedSR3()),
-        (pytest.lazy_fixture("data_1d"), Lasso(fit_intercept=False)),
-        (pytest.lazy_fixture("data_lorenz"), Lasso(fit_intercept=False)),
-        (pytest.lazy_fixture("data_1d"), ElasticNet(fit_intercept=False)),
-        (pytest.lazy_fixture("data_lorenz"), ElasticNet(fit_intercept=False)),
+        STLSQ(),
+        SR3(),
+        ConstrainedSR3(),
+        Lasso(fit_intercept=False),
+        ElasticNet(fit_intercept=False),
     ],
 )
 def test_predict(data, optimizer):
@@ -579,3 +577,27 @@ def test_cross_validation(data_lorenz):
     )
     search.fit(x)
     check_is_fitted(search)
+
+
+def test_linear_constraints(data_lorenz):
+    x, t = data_lorenz
+
+    library = PolynomialLibrary().fit(x)
+
+    constraint_rhs = np.ones(2)
+    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
+
+    target_1, target_2 = 1, 3
+    constraint_lhs[0, 3] = target_1
+    constraint_lhs[1, library.n_output_features_] = target_2
+
+    optimizer = ConstrainedSR3(
+        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
+    )
+    model = SINDy(feature_library=library, optimizer=optimizer).fit(x, t)
+
+    coeffs = model.coefficients()
+
+    np.testing.assert_allclose(
+        np.array([coeffs[0, 3], coeffs[1, 0]]), np.array([1 / target_1, 1 / target_2])
+    )

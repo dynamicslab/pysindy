@@ -331,21 +331,42 @@ def test_fit_warn(data_derivative_1d, optimizer):
         optimizer.fit(x, x_dot)
 
 
-def test_constrained_sr3_constraints(data_linear_combination):
+@pytest.mark.parametrize("target_value", [0, -1, 3])
+def test_row_format_constraints(data_linear_combination, target_value):
+    # Solution is x_dot = x.dot(np.array([[1, 1, 0], [0, 1, 1]]))
     x, x_dot = data_linear_combination
 
-    # # Add some noise to make matrices nonsingular
-    # x += np.random.standard_normal(x.shape)
-    # x_dot += np.random.standard_normal(x_dot.shape)
-
-    constraint_rhs = np.zeros(2)
+    constraint_rhs = target_value * np.ones(2)
     constraint_lhs = np.zeros((2, x.shape[1] * x_dot.shape[1]))
 
-    # Should force corresponding entries of coef_ to be 0's
+    # Should force corresponding entries of coef_ to be target_value
     constraint_lhs[0, 0] = 1
-    constraint_lhs[1, 1] = 1
+    constraint_lhs[1, 3] = 1
+
+    model = ConstrainedSR3(
+        constraint_lhs=constraint_lhs,
+        constraint_rhs=constraint_rhs,
+        constraint_order="feature",
+    )
+    model.fit(x, x_dot)
+
+    np.testing.assert_allclose(
+        np.array([model.coef_[0, 0], model.coef_[1, 1]]), target_value
+    )
+
+
+@pytest.mark.parametrize("target_value", [0, -1, 3])
+def test_target_format_constraints(data_linear_combination, target_value):
+    x, x_dot = data_linear_combination
+
+    constraint_rhs = target_value * np.ones(2)
+    constraint_lhs = np.zeros((2, x.shape[1] * x_dot.shape[1]))
+
+    # Should force corresponding entries of coef_ to be target_value
+    constraint_lhs[0, 1] = 1
+    constraint_lhs[1, 4] = 1
 
     model = ConstrainedSR3(constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs)
     model.fit(x, x_dot)
 
-    assert not any([model.coef_[0, 0], model.coef_[1, 1]])
+    np.testing.assert_allclose(model.coef_[:, 1], target_value)

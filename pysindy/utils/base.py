@@ -100,6 +100,26 @@ def drop_nan_rows(x, x_dot):
     return x, x_dot
 
 
+def reorder_constraints(c, n_features, output_order="row"):
+    """Reorder constraint matrix."""
+    ret = c.copy()
+
+    if ret.ndim == 1:
+        ret = ret.reshape(1, -1)
+
+    n_targets = ret.shape[1] // n_features
+    shape = (n_targets, n_features)
+
+    if output_order == "row":
+        for i in range(ret.shape[0]):
+            ret[i] = ret[i].reshape(shape).flatten(order="F")
+    else:
+        for i in range(ret.shape[0]):
+            ret[i] = ret[i].reshape(shape, order="F").flatten()
+
+    return ret
+
+
 def prox_l0(x, threshold):
     """Proximal operator for L0 regularization."""
     return x * (np.abs(x) > threshold)

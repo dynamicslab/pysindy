@@ -276,6 +276,9 @@ class SINDy(BaseEstimator):
         # Drop rows where derivative isn't known
         x, x_dot = drop_nan_rows(x, x_dot)
 
+        if hasattr(self.optimizer, "unbias"):
+            unbias = self.optimizer.unbias
+
         optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
         steps = [("features", self.feature_library), ("model", optimizer)]
         self.model = Pipeline(steps)

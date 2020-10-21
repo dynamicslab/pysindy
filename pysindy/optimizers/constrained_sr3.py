@@ -5,6 +5,7 @@ from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import get_regularization
+from ..utils import reorder_constraints
 from .sr3 import SR3
 
 
@@ -29,8 +30,9 @@ class ConstrainedSR3(SR3):
     constraint matrix, and d is a vector of values. See the following
     reference for more details:
 
-        Zheng, Peng, et al. "A unified framework for sparse relaxed
-        regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
+        Champion, Kathleen, et al. "A unified sparse optimization framework
+        to learn parsimonious physics-informed models from data."
+        arXiv preprint arXiv:1906.10612 (2019).
 
     Parameters
     ----------
@@ -66,13 +68,23 @@ class ConstrainedSR3(SR3):
     constraint_lhs : numpy ndarray, shape (n_constraints, n_features * n_targets), \
             optional (default None)
         The left hand side matrix C of Cw <= d.
-        There should be one row per constraint. The first ``n_features`` columns
-        correspond to constraint coefficients on the library features for the first
-        target (variable), the next ``n_features`` columns to the library features
-        for the second target (variable), and so on.
+        There should be one row per constraint.
 
     constraint_rhs : numpy ndarray, shape (n_constraints,), optional (default None)
         The right hand side vector d of Cw <= d.
+
+    constraint_order : string, optional (default "target")
+        The format in which the constraints ``constraint_lhs`` were passed.
+        Must be one of "target" or "feature".
+        "target" indicates that the constraints are grouped by target:
+        i.e. the first ``n_features`` columns
+        correspond to constraint coefficients on the library features for the first
+        target (variable), the next ``n_features`` columns to the library features
+        for the second target (variable), and so on.
+        "feature" indicates that the constraints are grouped by library feature:
+        the first ``n_targets`` columns correspond to the first library feature,
+        the next ``n_targets`` columns to the second library feature, and so on.
+        ""
 
     normalize : boolean, optional (default False)
         This parameter is ignored when fit_intercept is set to False. If True,
@@ -86,16 +98,6 @@ class ConstrainedSR3(SR3):
                 optional (default None)
         Initial guess for coefficients ``coef_``, (v in the mathematical equations)
         If None, least-squares is used to obtain an initial guess.
-
-    unbias : boolean, optional (default True)
-        Whether to perform an extra step of unregularized linear regression to unbias
-        the coefficients for the identified support.
-        For example, if `STLSQ(alpha=0.1)` is used then the learned coefficients will
-        be biased toward 0 due to the L2 regularization.
-        Setting `unbias=True` will trigger an additional step wherein the nonzero
-        coefficients learned by the `STLSQ` object will be updated using an
-        unregularized least-squares fit.
-        `unbias` is automatically set to False if a constraint is used.
 
     thresholds : np.ndarray, shape (n_targets, n_features), optional \
             (default None)
@@ -118,6 +120,12 @@ class ConstrainedSR3(SR3):
     coef_full_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
+
+    unbias : boolean
+        Whether to perform an extra step of unregularized linear regression
+        to unbias the coefficients for the identified support.
+        ``unbias`` is automatically set to False if a constraint is used and
+        is otherwise left uninitialized.
     """
 
     def __init__(
@@ -131,6 +139,7 @@ class ConstrainedSR3(SR3):
         trimming_step_size=1.0,
         constraint_lhs=None,
         constraint_rhs=None,
+        constraint_order="target",
         normalize=False,
         fit_intercept=False,
         copy_X=True,
@@ -170,10 +179,15 @@ class ConstrainedSR3(SR3):
         )
 
         if self.use_constraints:
-            self.n_constraints = constraint_lhs.shape[0]
+            if constraint_order not in ("feature", "target"):
+                raise ValueError(
+                    "constraint_order must be either 'feature' or 'target'"
+                )
+
             self.constraint_lhs = constraint_lhs
             self.constraint_rhs = constraint_rhs
             self.unbias = False
+            self.constraint_order = constraint_order
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
         g = x_transpose_y + coef_sparse / self.nu
@@ -233,6 +247,9 @@ class ConstrainedSR3(SR3):
             trimming_array = np.repeat(1.0 - self.trimming_fraction, n_samples)
             self.history_trimming_ = [trimming_array]
 
+        if self.use_constraints and self.constraint_order.lower() == "target":
+            self.constraint_lhs = reorder_constraints(self.constraint_lhs, n_features)
+
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
         H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
@@ -279,6 +296,11 @@ class ConstrainedSR3(SR3):
                     self.max_iter
                 ),
                 ConvergenceWarning,
+            )
+
+        if self.use_constraints and self.constraint_order.lower() == "target":
+            self.constraint_lhs = reorder_constraints(
+                self.constraint_lhs, n_features, output_order="target"
             )
 
         self.coef_ = coef_sparse.T

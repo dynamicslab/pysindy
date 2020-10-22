@@ -18,3 +18,4 @@ hypothesis
 sphinx-nbexamples
 jupyter_contrib_nbextensions
 pandas
+seaborn

@@ -2,18 +2,6 @@ import warnings
 
 import numpy as np
 from scipy.linalg import cho_factor
-<<<<<<< HEAD
-from scipy.linalg import cho_solve
-from scipy.optimize import bisect
-from sklearn.exceptions import ConvergenceWarning
-
-from pysindy.optimizers import BaseOptimizer
-from pysindy.utils import get_prox
-from pysindy.utils import get_reg
-
-
-class ConstrainedSR3(BaseOptimizer):
-=======
 from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import get_regularization
@@ -22,7 +10,6 @@ from .sr3 import SR3
 
 
 class ConstrainedSR3(SR3):
->>>>>>> b9ef591e8c10cad5c2d4a5839dd97a3b4a60f10b
     """
     Sparse relaxed regularized regression with linear inequality constraints.
 
@@ -43,14 +30,9 @@ class ConstrainedSR3(SR3):
     constraint matrix, and d is a vector of values. See the following
     reference for more details:
 
-<<<<<<< HEAD
-        Zheng, Peng, et al. "A unified framework for sparse relaxed
-        regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
-=======
         Champion, Kathleen, et al. "A unified sparse optimization framework
         to learn parsimonious physics-informed models from data."
         arXiv preprint arXiv:1906.10612 (2019).
->>>>>>> b9ef591e8c10cad5c2d4a5839dd97a3b4a60f10b
 
     Parameters
     ----------
@@ -83,13 +65,6 @@ class ConstrainedSR3(SR3):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-<<<<<<< HEAD
-    constraint_lhs : 2D numpy array, shape (n_constraints, n_features * n_targets)
-        The left hand side matrix C of Cx <= d.
-
-    constraint_rhs : 1D numpy array, shape (n_constraints,)
-        The right hand side vector d of Cx <= d
-=======
     constraint_lhs : numpy ndarray, shape (n_constraints, n_features * n_targets), \
             optional (default None)
         The left hand side matrix C of Cw <= d.
@@ -110,7 +85,6 @@ class ConstrainedSR3(SR3):
         the first ``n_targets`` columns correspond to the first library feature,
         the next ``n_targets`` columns to the second library feature, and so on.
         ""
->>>>>>> b9ef591e8c10cad5c2d4a5839dd97a3b4a60f10b
 
     normalize : boolean, optional (default False)
         This parameter is ignored when fit_intercept is set to False. If True,
@@ -120,32 +94,6 @@ class ConstrainedSR3(SR3):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-<<<<<<< HEAD
-    initial_guess : 2D numpy array of floats, shape (n_targets, n_features), \
-            optional (default None)
-        Initial guess for v.
-        If None, the initial guess is obtained via a standard least squares fit.
-
-    unbias : boolean, optional (default True)
-        Whether to perform an extra step of unregularized linear regression to unbias
-        the coefficients for the identified support.
-        For example, if `STLSQ(alpha=0.1)` is used then the learned coefficients will
-        be biased toward 0 due to the L2 regularization.
-        Setting `unbias=True` will trigger an additional step wherein the nonzero
-        coefficients learned by the `STLSQ` object will be updated using an
-        unregularized least-squares fit.
-        `unbias` is automatically set to False if a constraint is used.
-
-    thresholds : 2D array of floats, shape (n_targets, n_features), optional \
-            (default None)
-        Array of thresholds for each library function coefficient.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        `thresholds[i, j]` should specify the threshold to be used for the
-        (i + 1, j + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (i + 1)st library function in the equation
-        for the (j + 1)st measurement variable.
-=======
     initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
                 optional (default None)
         Initial guess for coefficients ``coef_``, (v in the mathematical equations)
@@ -162,7 +110,6 @@ class ConstrainedSR3(SR3):
         (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
         threshold to be used for the (j + 1)st library function in the equation
         for the (i + 1)st measurement variable.
->>>>>>> b9ef591e8c10cad5c2d4a5839dd97a3b4a60f10b
 
     Attributes
     ----------
@@ -173,15 +120,12 @@ class ConstrainedSR3(SR3):
     coef_full_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
-<<<<<<< HEAD
-=======
 
     unbias : boolean
         Whether to perform an extra step of unregularized linear regression
         to unbias the coefficients for the identified support.
         ``unbias`` is automatically set to False if a constraint is used and
         is otherwise left uninitialized.
->>>>>>> b9ef591e8c10cad5c2d4a5839dd97a3b4a60f10b
     """
 
     def __init__(

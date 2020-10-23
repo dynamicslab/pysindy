@@ -82,11 +82,6 @@ class SR3(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : 2D numpy array of floats, shape (n_targets, n_features), \
-            optional (default None)
-        Initial guess for v.
-        If None, the initial guess is obtained via a standard least squares fit.
-
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -131,7 +126,6 @@ class SR3(BaseOptimizer):
         trimming_fraction=0.0,
         trimming_step_size=1.0,
         max_iter=30,
-        initial_guess=None,
         normalize=False,
         fit_intercept=False,
         copy_X=True,

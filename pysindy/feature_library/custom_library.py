@@ -1,11 +1,11 @@
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
-import numpy as np
+from numpy import empty
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-from .feature_library import BaseFeatureLibrary
+from .base import BaseFeatureLibrary
 
 
 class CustomLibrary(BaseFeatureLibrary):
@@ -26,6 +26,13 @@ class CustomLibrary(BaseFeatureLibrary):
         :math:`\\sin(x)` given :math:`x` as input. The function_names list must be the
         same length as library_functions. If no list of function names is
         provided, defaults to using :math:`[ f_0(x),f_1(x), f_2(x), \\ldots ]`.
+
+    interaction_only : boolean, optional (default True)
+        Whether to omit self-interaction terms.
+        If True, function evaulations of the form :math:`f(x,x)` and :math:`f(x,y,x)`
+        will be omitted, but those of the form :math:`f(x,y)` and :math:`f(x,y,z)`
+        will be included.
+        If False, all combinations will be included.
 
     Attributes
     ----------
@@ -48,10 +55,10 @@ class CustomLibrary(BaseFeatureLibrary):
     --------
     >>> import numpy as np
     >>> from pysindy.feature_library import CustomLibrary
-    >>> X = np.array([[0.,-1],[1.,0.],[2.,-1.]])
+    >>> x = np.array([[0.,-1],[1.,0.],[2.,-1.]])
     >>> functions = [lambda x : np.exp(x), lambda x,y : np.sin(x+y)]
-    >>> lib = CustomLibrary(library_functions=functions).fit(X)
-    >>> lib.transform(X)
+    >>> lib = CustomLibrary(library_functions=functions).fit(x)
+    >>> lib.transform(x)
     array([[ 1.        ,  0.36787944, -0.84147098],
            [ 2.71828183,  1.        ,  0.84147098],
            [ 7.3890561 ,  0.36787944,  0.84147098]])
@@ -84,10 +91,10 @@ class CustomLibrary(BaseFeatureLibrary):
         input_features : list of string, length n_features, optional
             String names for input features if available. By default,
             "x0", "x1", ... "xn_features" is used.
+
         Returns
         -------
         output_feature_names : list of string, length n_output_features
-
         """
         check_is_fitted(self)
         if input_features is None:
@@ -102,19 +109,19 @@ class CustomLibrary(BaseFeatureLibrary):
                 )
         return feature_names
 
-    def fit(self, X, y=None):
+    def fit(self, x, y=None):
         """Compute number of output features.
 
         Parameters
         ----------
-        X : array-like, shape (n_samples, n_features)
-            The data.
+        x : array-like, shape (n_samples, n_features)
+            Measurement data.
+
         Returns
         -------
         self : instance
-
         """
-        n_samples, n_features = check_array(X).shape
+        n_samples, n_features = check_array(x).shape
         self.n_input_features_ = n_features
         n_output_features = 0
         for f in self.functions:
@@ -132,37 +139,36 @@ class CustomLibrary(BaseFeatureLibrary):
             )
         return self
 
-    def transform(self, X):
+    def transform(self, x):
         """Transform data to custom features
 
         Parameters
         ----------
-        X : array-like, shape [n_samples, n_features]
+        x : array-like, shape (n_samples, n_features)
             The data to transform, row by row.
 
         Returns
         -------
-        XP : np.ndarray, shape [n_samples, NP]
-            The matrix of features, where NP is the number of features
+        xp : np.ndarray, shape (n_samples, n_output_features)
+            The matrix of features, where n_output_features is the number of features
             generated from applying the custom functions to the inputs.
-
         """
         check_is_fitted(self)
 
-        X = check_array(X)
+        x = check_array(x)
 
-        n_samples, n_features = X.shape
+        n_samples, n_features = x.shape
 
         if n_features != self.n_input_features_:
-            raise ValueError("X shape does not match training shape")
+            raise ValueError("x shape does not match training shape")
 
-        XP = np.empty((n_samples, self.n_output_features_), dtype=X.dtype)
+        xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0
-        for i, f in enumerate(self.functions):
+        for f in self.functions:
             for c in self._combinations(
                 self.n_input_features_, f.__code__.co_argcount, self.interaction_only
             ):
-                XP[:, library_idx] = f(*[X[:, j] for j in c])
+                xp[:, library_idx] = f(*[x[:, j] for j in c])
                 library_idx += 1
 
-        return XP
+        return xp

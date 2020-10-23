@@ -8,6 +8,7 @@ from scipy import sparse
 from sklearn.linear_model import LinearRegression
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.utils.extmath import safe_sparse_dot
+from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 
@@ -27,6 +28,7 @@ def _rescale_data(X, y, sample_weight):
 class ComplexityMixin:
     @property
     def complexity(self):
+        check_is_fitted(self)
         return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)
 
 
@@ -50,6 +52,11 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
+    initial_guess :  array, shape (n_features,) or (n_targets, n_features), \
+            optional (default None)
+        Initial guess for coefficients ``coef_``.
+        If None, the initial guess is obtained via a least-squares fit.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -63,7 +70,14 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         History of ``coef_`` over iterations of the optimization algorithm.
     """
 
-    def __init__(self, max_iter=20, normalize=False, fit_intercept=False, copy_X=True):
+    def __init__(
+        self,
+        max_iter=20,
+        normalize=False,
+        fit_intercept=False,
+        initial_guess=None,
+        copy_X=True,
+    ):
         super(BaseOptimizer, self).__init__(
             fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
         )
@@ -73,9 +87,9 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         self.max_iter = max_iter
         self.iters = 0
-        self.coef_ = None
-        self.ind_ = None
-        self.history_ = []
+        if np.ndim(initial_guess) == 1:
+            initial_guess = initial_guess.reshape(1, -1)
+        self.initial_guess = initial_guess
 
     # Force subclasses to implement this
     @abc.abstractmethod
@@ -125,9 +139,23 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
             x, y = _rescale_data(x, y, sample_weight)
 
         self.iters = 0
-        self.ind_ = np.ones((y.shape[1], x.shape[1]), dtype=bool)
-        self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0].T  # initial guess
-        self.history_.append(self.coef_)
+
+        if y.ndim == 1:
+            y = y.reshape(-1, 1)
+        coef_shape = (y.shape[1], x.shape[1])
+        self.ind_ = np.ones(coef_shape, dtype=bool)
+
+        if self.initial_guess is None:
+            self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0].T
+        else:
+            if not self.initial_guess.shape == coef_shape:
+                raise ValueError(
+                    "initial_guess shape is incompatible with training data. "
+                    f"Expected: {coef_shape}. Received: {self.initial_guess.shape}."
+                )
+            self.coef_ = self.initial_guess
+
+        self.history_ = [self.coef_]
 
         self._reduce(x, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14

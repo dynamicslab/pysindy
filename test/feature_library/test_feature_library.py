@@ -13,7 +13,7 @@ from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import IdentityLibrary
 from pysindy.feature_library import PolynomialLibrary
-from pysindy.feature_library.feature_library import BaseFeatureLibrary
+from pysindy.feature_library.base import BaseFeatureLibrary
 
 
 def test_form_custom_library():
@@ -94,7 +94,7 @@ def test_change_in_data_shape(data_lorenz, library):
         (PolynomialLibrary(), 10),
         (IdentityLibrary() + PolynomialLibrary(), 13),
         (FourierLibrary(), 6),
-        (pytest.lazy_fixture("data_custom_library"), 9),
+        (pytest.lazy_fixture("data_custom_library"), 12),
     ],
 )
 def test_output_shape(data_lorenz, library, shape):

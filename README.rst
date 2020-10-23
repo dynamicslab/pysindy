@@ -1,9 +1,11 @@
 PySINDy
 =========
 
-|BuildCI| |RTD| |PyPI| |Codecov| |JOSS|
+|BuildCI| |RTD| |PyPI| |Codecov| |JOSS| |DOI|
 
 **PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016a), including the unified optimization approach of Champion et al. (2019) and SINDy with control from Brunton et al. (2016b). A comprehensive literature review is given in de Silva et al. (2020).
+
+.. contents:: Table of contents
 
 System identification
 ---------------------
@@ -40,7 +42,7 @@ For a more in-depth look at the mathematical foundations of SINDy, please see ou
 
 Relation to PySINDy
 ^^^^^^^^^^^^^^^^^^^
-The PySINDy class revolves around the ``SINDy`` class which consists of three primary components; one for each term in the above matrix approximation problem.
+The PySINDy package revolves around the ``SINDy`` class which consists of three primary components; one for each term in the above matrix approximation problem.
 
 * ``differentiation_method``: computes ``X'``, though if derivatives are known or measured directly, they can be used instead
 * ``feature_library``: specifies the candidate basis functions to be used to construct ``Theta(X)``
@@ -111,7 +113,7 @@ First clone this repository:
 
 .. code-block:: bash
 
-  git clone https://github.com/dynamicslab/pysindy
+  git clone https://github.com/dynamicslab/pysindy.git
 
 Then, to install the package, run
 
@@ -129,10 +131,14 @@ If you do not have root access, you should add the ``--user`` option to the abov
 
 Documentation
 -------------
-The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`__. There are numerous `examples <https://pysindy.readthedocs.io/en/latest/examples/index.html>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`__.
+The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`__. There are numerous `examples <https://pysindy.readthedocs.io/en/latest/examples/index.html>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`__. A video overview of PySINDy can be found on `Youtube <https://www.youtube.com/watch?v=DvbbXX8Bd90>`__.
 
 Community guidelines
 --------------------
+
+Contributing examples
+^^^^^^^^^^^^^^^^^^^^^
+We love seeing examples of PySINDy being used to solve interesting problems! If you would like to contribute an example, reach out to us by creating an issue.
 
 Contributing code
 ^^^^^^^^^^^^^^^^^
@@ -148,7 +154,7 @@ This will allow you to run unit tests and automatically format your code. To be 
 
     pytest
 
-We recommed using ``pre-commit`` to format your code. Once you have staged changes to commit
+We recommend using ``pre-commit`` to format your code. Once you have staged changes to commit
 
 .. code-block:: bash
 
@@ -158,9 +164,9 @@ you can run the following to automatically reformat your staged code
 
 .. code-block:: bash
 
-    pre-commit -a -v
+    pre-commit
 
-Note that you will then need to re-stage any changes `pre-commit` made to your code.
+Note that you will then need to re-stage any changes ``pre-commit`` made to your code.
 
 Reporting issues or bugs
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -169,6 +175,32 @@ If you find a bug in the code or want to request a new feature, please open an i
 Getting help
 ^^^^^^^^^^^^
 For help using PySINDy please consult the `documentation <https://pysindy.readthedocs.io/en/latest/>`__ and/or our `examples <https://github.com/dynamicslab/pysindy/tree/master/examples>`__, or create an issue.
+
+Citing PySINDy
+--------------
+PySINDy has been published in the Journal of Open Source Software (JOSS). The paper can be found `here <https://joss.theoj.org/papers/10.21105/joss.02104>`__.
+
+If you use PySINDy in your work, please cite it using:
+
+``de Silva et al., (2020). PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data. Journal of Open Source Software, 5(49), 2104, https://doi.org/10.21105/joss.02104``
+
+Bibtex:
+
+.. code-block:: text
+
+    @article{desilva2020,
+    doi = {10.21105/joss.02104},
+    url = {https://doi.org/10.21105/joss.02104},
+    year = {2020},
+    publisher = {The Open Journal},
+    volume = {5},
+    number = {49},
+    pages = {2104},
+    author = {Brian de Silva and Kathleen Champion and Markus Quade and Jean-Christophe Loiseau and J. Kutz and Steven Brunton},
+    title = {PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data},
+    journal = {Journal of Open Source Software}
+    }
+
 
 References
 ----------------------
@@ -196,6 +228,27 @@ References
    `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
 
 
+Related packages
+----------------
+* `Scikit-time <https://github.com/scikit-time/scikit-time>`_ - A Python library for the analysis of time series data.
+* `PyDMD <https://github.com/mathLab/PyDMD/>`_ - A Python package using the Dynamic Mode Decomposition (DMD) for a data-driven model simplification based on spatiotemporal coherent structures. DMD is a great alternative to SINDy.
+* `SEED <https://github.com/M-Vause/SEED2.0>`_ - Software for the Extraction of Equations from Data: a GUI for many of the methods provided by PySINDy.
+
+
+Contributors
+------------
+Thanks to the members of the community who have contributed to PySINDy!
+
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `billtubbs <https://github.com/kopytjuk>`_            | Bug fix `#68 <https://github.com/dynamicslab/pysindy/issues/68>`_                                                                                          |
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `kopytjuk <https://github.com/kopytjuk>`_             | Concatenation feature for libraries `#72 <https://github.com/dynamicslab/pysindy/pull/72>`_                                                                |
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `akaptano <https://github.com/akaptano>`_             | Constrained SR3 and plasma physics example notebook `#78 <https://github.com/dynamicslab/pysindy/pull/78>`_                                                |
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `andgoldschmidt <https://github.com/andgoldschmidt>`_ | `derivative <https://derivative.readthedocs.io/en/latest/>`_ package for numerical differentiation `#85 <https://github.com/dynamicslab/pysindy/pull/85>`_ |
++-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
 .. |BuildCI| image:: https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg
     :target: https://github.com/dynamicslab/pysindy/actions?query=workflow%3A%22Build+CI%22
 
@@ -211,3 +264,6 @@ References
 
 .. |JOSS| image:: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644/status.svg
     :target: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644
+
+.. |DOI| image:: https://zenodo.org/badge/186055899.svg
+   :target: https://zenodo.org/badge/latestdoi/186055899

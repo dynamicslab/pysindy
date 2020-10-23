@@ -1,7 +1,6 @@
 """Unit tests for SINDy with control."""
 import numpy as np
 import pytest
-from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
@@ -12,81 +11,6 @@ from sklearn.utils.validation import check_is_fitted
 from pysindy import SINDy
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
-
-
-@pytest.fixture
-def data_lorenz_c_1d():
-    def u_fun(t):
-        return np.sin(2 * t)
-
-    def lorenz(z, t):
-        return [
-            10 * (z[1] - z[0]) + u_fun(t) ** 2,
-            z[0] * (28 - z[2]) - z[1],
-            z[0] * z[1] - 8 / 3 * z[2],
-        ]
-
-    t = np.linspace(0, 5, 500)
-    x0 = [8, 27, -7]
-    x = odeint(lorenz, x0, t)
-    u = u_fun(t)
-
-    return x, t, u, u_fun
-
-
-@pytest.fixture
-def data_lorenz_c_2d():
-    def u_fun(t):
-        return np.column_stack([np.sin(2 * t), t ** 2])
-
-    def lorenz(z, t):
-        u = u_fun(t)
-        return [
-            10 * (z[1] - z[0]) + u[0, 0] ** 2,
-            z[0] * (28 - z[2]) - z[1],
-            z[0] * z[1] - 8 / 3 * z[2] - u[0, 1],
-        ]
-
-    t = np.linspace(0, 5, 500)
-    x0 = [8, 27, -7]
-    x = odeint(lorenz, x0, t)
-    u = u_fun(t)
-
-    return x, t, u, u_fun
-
-
-@pytest.fixture
-def data_discrete_time_c():
-    def logistic_map(x, mu, ui):
-        return mu * x * (1 - x) + ui
-
-    n_steps = 100
-    mu = 3.6
-
-    u = 0.01 * np.random.randn(n_steps)
-    x = np.zeros((n_steps))
-    x[0] = 0.5
-    for i in range(1, n_steps):
-        x[i] = logistic_map(x[i - 1], mu, u[i - 1])
-
-    return x, u
-
-
-@pytest.fixture
-def data_discrete_time_multiple_trajectories_c():
-    def logistic_map(x, mu, ui):
-        return mu * x * (1 - x) + ui
-
-    n_steps = 100
-    mus = [1, 2.3, 3.6]
-    u = [0.001 * np.random.randn(n_steps) for mu in mus]
-    x = [np.zeros((n_steps)) for mu in mus]
-    for i, mu in enumerate(mus):
-        x[i][0] = 0.5
-        for k in range(1, n_steps):
-            x[i][k] = logistic_map(x[i][k - 1], mu, u[i][k - 1])
-
-    return x, u
 
 
 def test_get_feature_names_len(data_lorenz_c_1d):
@@ -181,9 +105,9 @@ def test_bad_t(data):
     x, t, u, _ = data
     model = SINDy()
 
-    # No t
+    # Wrong type
     with pytest.raises(ValueError):
-        model.fit(x, u=u, t=None)
+        model.fit(x, u=u, t="1")
 
     # Invalid value of t
     with pytest.raises(ValueError):
@@ -207,6 +131,26 @@ def test_bad_t(data):
     t[3] = t[5]
     with pytest.raises(ValueError):
         model.fit(x, u=u, t=t)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [pytest.lazy_fixture("data_lorenz_c_1d"), pytest.lazy_fixture("data_lorenz_c_2d")],
+)
+def test_t_default(data):
+    x, t, u, _ = data
+    dt = t[1] - t[0]
+
+    model = SINDy()
+    model.fit(x, u=u, t=dt)
+
+    model_t_default = SINDy(t_default=dt)
+    model_t_default.fit(x, u=u)
+
+    np.testing.assert_allclose(model.coefficients(), model_t_default.coefficients())
+    np.testing.assert_almost_equal(
+        model.score(x, u=u, t=dt), model_t_default.score(x, u=u)
+    )
 
 
 @pytest.mark.parametrize(
@@ -263,6 +207,20 @@ def test_simulate_with_interp(data):
     "data",
     [pytest.lazy_fixture("data_lorenz_c_1d"), pytest.lazy_fixture("data_lorenz_c_2d")],
 )
+def test_simulate_with_vector_control_input(data):
+    x, t, u, _ = data
+    model = SINDy()
+    model.fit(x, u=u, t=t)
+
+    x1 = model.simulate(x[0], t=t, u=u)
+
+    assert len(x1) == len(t) - 1
+
+
+@pytest.mark.parametrize(
+    "data",
+    [pytest.lazy_fixture("data_lorenz_c_1d"), pytest.lazy_fixture("data_lorenz_c_2d")],
+)
 def test_score(data):
     x, t, u, _ = data
     model = SINDy()
@@ -275,16 +233,6 @@ def test_score(data):
     assert model.score(x, u=u, x_dot=x) <= 1
 
     assert model.score(x, u=u, t=t, x_dot=x) <= 1
-
-
-def test_parallel(data_lorenz_c_1d):
-    x, t, u, _ = data_lorenz_c_1d
-    model = SINDy(n_jobs=4)
-    model.fit(x, u=u, t=t)
-
-    x_dot = model.predict(x, u=u)
-    s = model.score(x, u=u, x_dot=x_dot)
-    assert s >= 0.95
 
 
 def test_fit_multiple_trajectores(data_multiple_trajctories):

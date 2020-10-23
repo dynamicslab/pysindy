@@ -8,48 +8,53 @@ from numpy import newaxis
 from numpy import vstack
 from numpy import zeros
 from scipy.integrate import odeint
+from scipy.interpolate import interp1d
 from scipy.linalg import LinAlgWarning
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy.differentiation import FiniteDifference
-from pysindy.optimizers import SINDyOptimizer
-from pysindy.optimizers import STLSQ
-from pysindy.utils.base import drop_nan_rows
-from pysindy.utils.base import equations
-from pysindy.utils.base import validate_control_variables
-from pysindy.utils.base import validate_input
+from .differentiation import FiniteDifference
+from .feature_library import PolynomialLibrary
+from .optimizers import SINDyOptimizer
+from .optimizers import STLSQ
+from .utils import drop_nan_rows
+from .utils import equations
+from .utils import validate_control_variables
+from .utils import validate_input
 
 
 class SINDy(BaseEstimator):
     """
-    SINDy model object.
+    Sparse Identification of Nonlinear Dynamical Systems (SINDy).
+    Uses sparse regression to learn a dynamical systems model from measurement data.
 
     Parameters
     ----------
     optimizer : optimizer object, optional
-        Optimization method used to fit the SINDy model. This must be an object
-        extending the ``sindy.optimizers.BaseOptimizer`` class. Default is
-        sequentially thresholded least squares with a threshold of 0.1.
+        Optimization method used to fit the SINDy model. This must be a class
+        extending :class:`pysindy.optimizers.BaseOptimizer`.
+        The default is sequentially thresholded least squares with a threshold of 0.1.
 
     feature_library : feature library object, optional
         Feature library object used to specify candidate right-hand side features.
-        This must be an object extending the
-        ``sindy.feature_library.BaseFeatureLibrary`` class.
-        Default is polynomial features of degree 2.
+        This must be a class extending
+        :class:`pysindy.feature_library.base.BaseFeatureLibrary`.
+        The default option is polynomial features of degree 2.
 
     differentiation_method : differentiation object, optional
-        Method for differentiating the data. This must be an object extending
-        the ``sindy.differentiation_methods.BaseDifferentiation`` class.
-        Default is centered difference.
+        Method for differentiating the data. This must be a class extending
+        :class:`pysindy.differentiation_methods.base.BaseDifferentiation` class.
+        The default option is centered difference.
 
     feature_names : list of string, length n_input_features, optional
         Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
         ``['x0', 'x1', ...]``.
+
+    t_default : float, optional (default 1)
+        Default value for the time step.
 
     discrete_time : boolean, optional (default False)
         If True, dynamical system is treated as a map. Rather than predicting
@@ -57,13 +62,9 @@ class SINDy(BaseEstimator):
         one time step. If False, dynamical system is assumed to be a flow
         (right-hand side functions predict continuous time derivatives).
 
-    n_jobs : int, optional (default 1)
-        The number of parallel jobs to use when fitting, predicting with, and
-        scoring the model.
-
     Attributes
     ----------
-    model : sklearn.multioutput.MultiOutputRegressor object
+    model : ``sklearn.multioutput.MultiOutputRegressor`` object
         The fitted SINDy model.
 
     n_input_features_ : int
@@ -72,6 +73,9 @@ class SINDy(BaseEstimator):
     n_output_features_ : int
         The total number of output features. This number is a function of
         ``self.n_input_features`` and the feature library being used.
+
+    n_control_features_ : int
+        The total number of control input features.
 
     Examples
     --------
@@ -141,26 +145,31 @@ class SINDy(BaseEstimator):
         feature_library=None,
         differentiation_method=None,
         feature_names=None,
+        t_default=1,
         discrete_time=False,
-        n_jobs=1,
     ):
         if optimizer is None:
             optimizer = STLSQ()
         self.optimizer = optimizer
         if feature_library is None:
-            feature_library = PolynomialFeatures()
+            feature_library = PolynomialLibrary()
         self.feature_library = feature_library
         if differentiation_method is None:
             differentiation_method = FiniteDifference()
         self.differentiation_method = differentiation_method
+        if not isinstance(t_default, float) and not isinstance(t_default, int):
+            raise ValueError("t_default must be a positive number")
+        elif t_default <= 0:
+            raise ValueError("t_default must be a positive number")
+        else:
+            self.t_default = t_default
         self.feature_names = feature_names
         self.discrete_time = discrete_time
-        self.n_jobs = n_jobs
 
     def fit(
         self,
         x,
-        t=1,
+        t=None,
         x_dot=None,
         u=None,
         multiple_trajectories=False,
@@ -168,7 +177,7 @@ class SINDy(BaseEstimator):
         quiet=False,
     ):
         """
-        Fit the SINDy model.
+        Fit a SINDy model.
 
         Parameters
         ----------
@@ -177,8 +186,8 @@ class SINDy(BaseEstimator):
             x should be a list containing data for each trajectory. Individual
             trajectories may contain different numbers of samples.
 
-        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
-                (default 1)
+        t: float, numpy array of shape (n_samples,), or list of numpy arrays, optional \
+                (default None)
             If t is a float, it specifies the timestep between each sample.
             If array-like, it specifies the time at which each sample was
             collected.
@@ -186,7 +195,7 @@ class SINDy(BaseEstimator):
             In the case of multi-trajectory training data, t may also be a list
             of arrays containing the collection times for each individual
             trajectory.
-            Default value is a timestep of 1 between samples.
+            If None, the default time step ``t_default`` will be used.
 
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
                 optional (default None)
@@ -214,10 +223,10 @@ class SINDy(BaseEstimator):
         unbias: boolean, optional (default True)
             Whether to perform an extra step of unregularized linear regression to
             unbias the coefficients for the identified support.
-            If the optimizer (``SINDy.optimizer``) applies any type of regularization,
+            If the optimizer (``self.optimizer``) applies any type of regularization,
             that regularization may bias coefficients toward particular values,
             improving the conditioning of the problem but harming the quality of the
-            fit. Setting ``unbias=True`` enables an extra step wherein unregularized
+            fit. Setting ``unbias==True`` enables an extra step wherein unregularized
             linear regression is applied, but only for the coefficients in the support
             identified by the optimizer. This helps to remove the bias introduced by
             regularization.
@@ -227,8 +236,10 @@ class SINDy(BaseEstimator):
 
         Returns
         -------
-        self: returns an instance of self
+        self: a fitted :class:`SINDy` instance
         """
+        if t is None:
+            t = self.t_default
         if u is None:
             self.n_control_features_ = 0
         else:
@@ -242,7 +253,7 @@ class SINDy(BaseEstimator):
             self.n_control_features_ = u.shape[1]
 
         if multiple_trajectories:
-            x, x_dot = self.process_multiple_trajectories(x, t, x_dot)
+            x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         else:
             x = validate_input(x, t)
 
@@ -264,6 +275,9 @@ class SINDy(BaseEstimator):
 
         # Drop rows where derivative isn't known
         x, x_dot = drop_nan_rows(x, x_dot)
+
+        if hasattr(self.optimizer, "unbias"):
+            unbias = self.optimizer.unbias
 
         optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
         steps = [("features", self.feature_library), ("model", optimizer)]
@@ -301,7 +315,7 @@ class SINDy(BaseEstimator):
 
         u: array-like or list of array-like, shape(n_samples, n_control_features), \
                 (default None)
-            Control variables. If ``multiple_trajectories=True`` then u
+            Control variables. If ``multiple_trajectories==True`` then u
             must be a list of control variable data from each trajectory. If the
             model was fit with control variables then u is not optional.
 
@@ -353,13 +367,14 @@ class SINDy(BaseEstimator):
         Parameters
         ----------
         precision: int, optional (default 3)
-            Number of decimal points to print for each coefficient in the
+            Number of decimal points to include for each coefficient in the
             equation.
 
         Returns
         -------
         equations: list of strings
-            Strings containing the SINDy model equation for each input feature.
+            List of strings representing the SINDy model equations for each
+            input feature.
         """
         check_is_fitted(self, "model")
         if self.discrete_time:
@@ -377,6 +392,7 @@ class SINDy(BaseEstimator):
         ----------
         lhs: list of strings, optional (default None)
             List of variables to print on the left-hand sides of the learned equations.
+            By defualt :code:`self.input_features` are used.
 
         precision: int, optional (default 3)
             Precision to be used when printing out model coefficients.
@@ -393,7 +409,7 @@ class SINDy(BaseEstimator):
     def score(
         self,
         x,
-        t=1,
+        t=None,
         x_dot=None,
         u=None,
         multiple_trajectories=False,
@@ -401,18 +417,19 @@ class SINDy(BaseEstimator):
         **metric_kws
     ):
         """
-        Returns a score for the time derivative prediction.
+        Returns a score for the time derivative prediction produced by the model.
 
         Parameters
         ----------
         x: array-like or list of array-like, shape (n_samples, n_input_features)
-            Samples
+            Samples from which to make predictions.
 
-        t: float, numpy array of shape [n_samples], or list of numpy arrays, optional \
-                (default 1)
+        t: float, numpy array of shape (n_samples,), or list of numpy arrays, optional \
+                (default None)
             Time step between samples or array of collection times. Optional,
             used to compute the time derivatives of the samples if x_dot is not
             provided.
+            If None, the default time step ``t_default`` will be used.
 
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
                 optional (default None)
@@ -423,7 +440,7 @@ class SINDy(BaseEstimator):
 
         u: array-like or list of array-like, shape(n_samples, n_control_features), \
                 optional (default None)
-            Control variables. If ``multiple_trajectories=True`` then u
+            Control variables. If ``multiple_trajectories==True`` then u
             must be a list of control variable data from each trajectory.
             If the model was fit with control variables then u is not optional.
 
@@ -431,9 +448,12 @@ class SINDy(BaseEstimator):
             If True, x contains multiple trajectories and must be a list of
             data from each trajectory. If False, x is a single trajectory.
 
-        metric: metric function, optional
+        metric: callable, optional
             Metric function with which to score the prediction. Default is the
-            coefficient of determination R^2.
+            R^2 coefficient of determination.
+            See `Scikit-learn \
+            <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
+            for more options.
 
         metric_kws: dict, optional
             Optional keyword arguments to pass to the metric function.
@@ -443,6 +463,8 @@ class SINDy(BaseEstimator):
         score: float
             Metric function value for the model prediction of x_dot.
         """
+        if t is None:
+            t = self.t_default
         if u is None or self.n_control_features_ == 0:
             if self.n_control_features_ > 0:
                 raise TypeError(
@@ -463,7 +485,7 @@ class SINDy(BaseEstimator):
             )
 
         if multiple_trajectories:
-            x, x_dot = self.process_multiple_trajectories(
+            x, x_dot = self._process_multiple_trajectories(
                 x, t, x_dot, return_array=True
             )
         else:
@@ -486,12 +508,47 @@ class SINDy(BaseEstimator):
         x, x_dot = drop_nan_rows(x, x_dot)
 
         x_dot_predict = self.model.predict(x)
-        return metric(x_dot_predict, x_dot, **metric_kws)
+        return metric(x_dot, x_dot_predict, **metric_kws)
 
-    def process_multiple_trajectories(self, x, t, x_dot, return_array=True):
+    def _process_multiple_trajectories(self, x, t, x_dot, return_array=True):
         """
         Handle input data that contains multiple trajectories by doing the
         necessary validation, reshaping, and computation of derivatives.
+
+        This method essentially just loops over elements of each list in parallel,
+        validates them, and (optionally) concatenates them together.
+
+        Parameters
+        ----------
+        x: list of np.ndarray
+            List of measurements, with each entry corresponding to a different
+            trajectory.
+
+        t: list of np.ndarray or int
+            List of time points for different trajectories.
+            If a list of ints is passed, each entry is assumed to be the timestep
+            for the corresponding trajectory in x.
+
+        x_dot: list of np.ndarray
+            List of derivative measurements, with each entry corresponding to a
+            different trajectory. If None, the derivatives will be approximated
+            from x.
+
+        return_array: boolean, optional (default True)
+            Whether to return concatenated np.ndarrays.
+            If False, the outputs will be lists with an entry for each trajectory.
+
+        Returns
+        -------
+        x_out: np.ndarray or list
+            Validated version of x. If return_array is True, x_out will be an
+            np.ndarray of concatenated trajectories. If False, x_out will be
+            a list.
+
+        x_dot_out: np.ndarray or list
+            Validated derivative measurements.If return_array is True, x_dot_out
+            will be an np.ndarray of concatenated trajectories.
+            If False, x_out will be a list.
         """
         if not isinstance(x, Sequence):
             raise TypeError("Input x must be a list")
@@ -536,19 +593,20 @@ class SINDy(BaseEstimator):
         else:
             return x, x_dot
 
-    def differentiate(self, x, t=1, multiple_trajectories=False):
+    def differentiate(self, x, t=None, multiple_trajectories=False):
         """
-        Apply the model's differentiation method to data.
+        Apply the model's differentiation method
+        (:code:`self.differentiation_method`) to data.
 
         Parameters
         ----------
         x: array-like or list of array-like, shape (n_samples, n_input_features)
             Data to be differentiated.
 
-        t: int, numpy array of shape [n_samples], or list of numpy arrays, optional \
-                (default 1)
-            Time step between samples or array of collection times. Default is
-            a time step of 1 between samples.
+        t: int, numpy array of shape (n_samples,), or list of numpy arrays, optional \
+                (default None)
+            Time step between samples or array of collection times.
+            If None, the default time step ``t_default`` will be used.
 
         multiple_trajectories: boolean, optional (default False)
             If True, x contains multiple trajectories and must be a list of
@@ -560,23 +618,41 @@ class SINDy(BaseEstimator):
             Time derivatives computed by using the model's differentiation
             method
         """
+        if t is None:
+            t = self.t_default
         if self.discrete_time:
             raise RuntimeError("No differentiation implemented for discrete time model")
 
         if multiple_trajectories:
-            return self.process_multiple_trajectories(x, t, None, return_array=False)[1]
+            return self._process_multiple_trajectories(x, t, None, return_array=False)[
+                1
+            ]
         else:
             x = validate_input(x, t)
             return self.differentiation_method(x, t)
 
     def coefficients(self):
-        """Return a list of the coefficients learned by SINDy model.
+        """
+        Get an array of the coefficients learned by SINDy model.
+
+        Returns
+        -------
+        coef: np.ndarray, shape (n_input_features, n_output_features)
+            Learned coefficients of the SINDy model.
+            Equivalent to :math:`\\Xi^\\top` in the literature.
         """
         check_is_fitted(self, "model")
         return self.model.steps[-1][1].coef_
 
     def get_feature_names(self):
-        """Return a list of names of features used by SINDy model.
+        """
+        Get a list of names of features used by SINDy model.
+
+        Returns
+        -------
+        feats: list
+            A list of strings giving the names of the features in the feature
+            library, :code:`self.feature_library`.
         """
         check_is_fitted(self, "model")
         return self.model.steps[0][1].get_feature_names(
@@ -584,7 +660,15 @@ class SINDy(BaseEstimator):
         )
 
     def simulate(
-        self, x0, t, u=None, integrator=odeint, stop_condition=None, **integrator_kws
+        self,
+        x0,
+        t,
+        u=None,
+        integrator=odeint,
+        stop_condition=None,
+        interpolator=None,
+        integrator_kws={},
+        interpolator_kws={},
     ):
         """
         Simulate the SINDy model forward in time.
@@ -601,23 +685,34 @@ class SINDy(BaseEstimator):
 
         u: function from R^1 to R^{n_control_features} or list/array, optional \
             (default None)
-            Control input function.
+            Control inputs.
             If the model is continuous time, i.e. ``self.discrete_time == False``,
             this function should take in a time and output the values of each of
             the n_control_features control features as a list or numpy array.
+            Alternatively, if the model is continuous time, ``u`` can also be an
+            array of control inputs at each time step. In this case the array is
+            fit with the interpolator specified by ``interpolator``.
             If the model is discrete time, i.e. ``self.discrete_time == True``,
             u should be a list (with ``len(u) == t``) or array (with
             ``u.shape[0] == 1``) giving the control inputs at each step.
 
-        integrator: function object, optional
-            Function to use to integrate the system. Default is scipy's odeint.
+        integrator: callable, optional (default ``odeint``)
+            Function to use to integrate the system.
+            Default is ``scipy.integrate.odeint``.
 
         stop_condition: function object, optional
             If model is in discrete time, optional function that gives a
             stopping condition for stepping the simulation forward.
 
-        integrator_kws: dict, optional
+        interpolator: callable, optional (default ``interp1d``)
+            Function used to interpolate control inputs if ``u`` is an array.
+            Default is ``scipy.interpolate.interp1d``.
+
+        integrator_kws: dict, optional (default {})
             Optional keyword arguments to pass to the integrator
+
+        interpolator_kws: dict, optional (default {})
+            Optional keyword arguments to pass to the control input interpolator
 
         Returns
         -------
@@ -629,7 +724,7 @@ class SINDy(BaseEstimator):
             raise TypeError("Model was fit using control variables, so u is required")
 
         if self.discrete_time:
-            if not isinstance(t, int):
+            if not isinstance(t, int) or t <= 0:
                 raise ValueError(
                     "For discrete time model, t must be an integer (indicating"
                     "the number of steps to predict)"
@@ -682,18 +777,36 @@ class SINDy(BaseEstimator):
                     return self.predict(x[newaxis, :])[0]
 
             else:
-                if ndim(u(1)) == 1:
+                if not callable(u):
+                    if interpolator is None:
+                        u_fun = interp1d(t, u, axis=0, kind="cubic")
+                    else:
+                        u_fun = interpolator(t, u, **interpolator_kws)
+
+                    t = t[:-1]
+                    warnings.warn(
+                        "Last time point dropped in simulation because interpolation"
+                        " of control input was used. To avoid this, pass in a callable"
+                        " for u."
+                    )
+                else:
+                    u_fun = u
+
+                if ndim(u_fun(t[0])) == 1:
 
                     def rhs(x, t):
-                        return self.predict(x[newaxis, :], u(t).reshape(1, -1))[0]
+                        return self.predict(x[newaxis, :], u_fun(t).reshape(1, -1))[0]
 
                 else:
 
                     def rhs(x, t):
-                        return self.predict(x[newaxis, :], u(t))[0]
+                        return self.predict(x[newaxis, :], u_fun(t))[0]
 
             return integrator(rhs, x0, t, **integrator_kws)
 
     @property
     def complexity(self):
+        """
+        Complexity of the model measured as the number of nonzero parameters.
+        """
         return self.model.steps[-1][1].complexity

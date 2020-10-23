@@ -1,4 +1,3 @@
-import datetime
 import importlib
 import pathlib
 
@@ -8,7 +7,7 @@ project = "pysindy"  # package name
 
 # no need to edit below this line
 
-copyright = f"{datetime.datetime.now().year}, {author}"
+copyright = f"2020, {author}"
 
 module = importlib.import_module(project)
 version = release = getattr(module, "__version__")
@@ -24,6 +23,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.mathjax",
     "sphinx_nbexamples",
+    "sphinx.ext.intersphinx",
 ]
 
 apidoc_module_dir = f"../{project}"
@@ -43,7 +43,7 @@ if (here / "static/custom.css").exists():
     html_static_path = ["static"]
 
     def setup(app):
-        app.add_stylesheet("custom.css")
+        app.add_css_file("custom.css")
 
 
 exclude_patterns = ["build", "_build"]
@@ -67,6 +67,10 @@ example_gallery_config = dict(
     gallery_dirs=["examples"],
     pattern=".+.ipynb",
 )
+
+intersphinx_mapping = {
+    "derivative": ("https://derivative.readthedocs.io/en/latest/", None)
+}
 
 # -- Extensions to the  Napoleon GoogleDocstring class ---------------------
 # michaelgoerz.net/notes/extending-sphinx-napoleon-docstring-sections.html

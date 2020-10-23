@@ -2,8 +2,11 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
 
-from pysindy.optimizers.base import _MultiTargetLinearRegressor
-from pysindy.utils.base import supports_multiple_targets
+from ..utils.base import supports_multiple_targets
+from .base import _MultiTargetLinearRegressor
+
+
+COEF_THRESHOLD = 1e-14
 
 
 class SINDyOptimizer(BaseEstimator):
@@ -49,7 +52,7 @@ class SINDyOptimizer(BaseEstimator):
         self.optimizer.fit(x, y)
         if not hasattr(self.optimizer, "coef_"):
             raise AttributeError("optimizer has no attribute coef_")
-        self.ind_ = np.abs(self.coef_) > 1e-14
+        self.ind_ = np.abs(self.coef_) > COEF_THRESHOLD
 
         if self.unbias:
             self._unbias(x, y)

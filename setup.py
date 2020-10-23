@@ -44,7 +44,7 @@ setup(
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,
-    packages=find_packages(exclude=["test", "example"]),
+    packages=find_packages(exclude=["test", "examples"]),
     install_requires=REQUIRED,
     python_requires=PYTHON,
     license=LICENSE,

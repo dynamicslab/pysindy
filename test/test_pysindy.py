@@ -18,10 +18,14 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
+from pysindy.differentiation import SINDyDerivative
+from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import ConstrainedSR3
@@ -116,9 +120,9 @@ def test_bad_t(data):
     x, t = data
     model = SINDy()
 
-    # No t
+    # Wrong type
     with pytest.raises(ValueError):
-        model.fit(x, t=None)
+        model.fit(x, t="1")
 
     # Invalid value of t
     with pytest.raises(ValueError):
@@ -145,18 +149,41 @@ def test_bad_t(data):
 
 
 @pytest.mark.parametrize(
-    "data, optimizer",
+    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
+)
+def test_t_default(data):
+    x, t = data
+    dt = t[1] - t[0]
+
+    with pytest.raises(ValueError):
+        model = SINDy(t_default=0)
+    with pytest.raises(ValueError):
+        model = SINDy(t_default="1")
+
+    model = SINDy()
+    model.fit(x, dt)
+
+    model_t_default = SINDy(t_default=dt)
+    model_t_default.fit(x)
+
+    np.testing.assert_allclose(model.coefficients(), model_t_default.coefficients())
+    np.testing.assert_almost_equal(model.score(x, t=dt), model_t_default.score(x))
+    np.testing.assert_almost_equal(
+        model.differentiate(x, t=dt), model_t_default.differentiate(x)
+    )
+
+
+@pytest.mark.parametrize(
+    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
+)
+@pytest.mark.parametrize(
+    "optimizer",
     [
-        (pytest.lazy_fixture("data_1d"), STLSQ()),
-        (pytest.lazy_fixture("data_lorenz"), STLSQ()),
-        (pytest.lazy_fixture("data_1d"), SR3()),
-        (pytest.lazy_fixture("data_lorenz"), SR3()),
-        (pytest.lazy_fixture("data_1d"), ConstrainedSR3()),
-        (pytest.lazy_fixture("data_lorenz"), ConstrainedSR3()),
-        (pytest.lazy_fixture("data_1d"), Lasso(fit_intercept=False)),
-        (pytest.lazy_fixture("data_lorenz"), Lasso(fit_intercept=False)),
-        (pytest.lazy_fixture("data_1d"), ElasticNet(fit_intercept=False)),
-        (pytest.lazy_fixture("data_lorenz"), ElasticNet(fit_intercept=False)),
+        STLSQ(),
+        SR3(),
+        ConstrainedSR3(),
+        Lasso(fit_intercept=False),
+        ElasticNet(fit_intercept=False),
     ],
 )
 def test_predict(data, optimizer):
@@ -203,6 +230,33 @@ def test_libraries(data_lorenz, library):
     assert s <= 1
 
 
+def test_integration_smoothed_finite_difference(data_lorenz):
+    x, t = data_lorenz
+    model = SINDy(differentiation_method=SmoothedFiniteDifference())
+
+    model.fit(x, t=t)
+
+    check_is_fitted(model)
+
+
+@pytest.mark.parametrize(
+    "derivative_kws",
+    [
+        dict(kind="finite_difference", k=1),
+        dict(kind="spectral"),
+        dict(kind="spline", s=1e-2),
+        dict(kind="trend_filtered", order=0, alpha=1e-2),
+        dict(kind="savitzky_golay", order=3, left=1, right=1),
+    ],
+)
+def test_integration_derivative_methods(data_lorenz, derivative_kws):
+    x, t = data_lorenz
+    model = SINDy(differentiation_method=SINDyDerivative(**derivative_kws))
+    model.fit(x, t=t)
+
+    check_is_fitted(model)
+
+
 @pytest.mark.parametrize(
     "data",
     [
@@ -223,16 +277,6 @@ def test_score(data):
     assert model.score(x, x_dot=x) <= 1
 
     assert model.score(x, t, x_dot=x) <= 1
-
-
-def test_parallel(data_lorenz):
-    x, t = data_lorenz
-    model = SINDy(n_jobs=4)
-    model.fit(x, t)
-
-    x_dot = model.predict(x)
-    s = model.score(x, x_dot=x_dot)
-    assert s >= 0.95
 
 
 def test_fit_multiple_trajectores(data_multiple_trajctories):
@@ -256,6 +300,11 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
     model = SINDy()
     model.fit(x, t=t, x_dot=x, multiple_trajectories=True)
     check_is_fitted(model)
+
+    # Test validate_input
+    t[0] = None
+    with pytest.raises(ValueError):
+        model.fit(x, t=t, multiple_trajectories=True)
 
 
 def test_predict_multiple_trajectories(data_multiple_trajctories):
@@ -463,17 +512,17 @@ def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_t
 
     model = SINDy()
     with pytest.raises(TypeError):
-        model.process_multiple_trajectories(np.array(x), t, x)
+        model._process_multiple_trajectories(np.array(x, dtype=object), t, x)
     with pytest.raises(TypeError):
-        model.process_multiple_trajectories(x, t, np.array(x))
+        model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
 
     # Test an option that doesn't get tested elsewhere
-    model.process_multiple_trajectories(x, t, x, return_array=False)
+    model._process_multiple_trajectories(x, t, x, return_array=False)
 
     x = data_discrete_time
     model = SINDy(discrete_time=True)
     with pytest.raises(TypeError):
-        model.process_multiple_trajectories(x, t, np.array(x))
+        model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
 
 
 def test_simulate_errors(data_lorenz):
@@ -504,3 +553,51 @@ def test_fit_warn(data_lorenz, params, warning):
         model.fit(x, t, quiet=True)
 
     assert len(warn_record) == 0
+
+
+def test_cross_validation(data_lorenz):
+    x, t = data_lorenz
+    dt = t[1] - t[0]
+
+    model = SINDy(
+        t_default=dt, differentiation_method=SINDyDerivative(kind="spline", s=1e-2)
+    )
+
+    param_grid = {
+        "optimizer__threshold": [0.01, 0.1],
+        "differentiation_method__kwargs": [
+            {"kind": "spline", "s": 1e-2},
+            {"kind": "finite_difference", "k": 1},
+        ],
+        "feature_library__degree": [1, 2],
+    }
+
+    search = RandomizedSearchCV(
+        model, param_grid, cv=TimeSeriesSplit(n_splits=3), n_iter=5
+    )
+    search.fit(x)
+    check_is_fitted(search)
+
+
+def test_linear_constraints(data_lorenz):
+    x, t = data_lorenz
+
+    library = PolynomialLibrary().fit(x)
+
+    constraint_rhs = np.ones(2)
+    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
+
+    target_1, target_2 = 1, 3
+    constraint_lhs[0, 3] = target_1
+    constraint_lhs[1, library.n_output_features_] = target_2
+
+    optimizer = ConstrainedSR3(
+        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
+    )
+    model = SINDy(feature_library=library, optimizer=optimizer).fit(x, t)
+
+    coeffs = model.coefficients()
+
+    np.testing.assert_allclose(
+        np.array([coeffs[0, 3], coeffs[1, 0]]), np.array([1 / target_1, 1 / target_2])
+    )

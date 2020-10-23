@@ -5,7 +5,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ridge_regression
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy.optimizers import BaseOptimizer
+from .base import BaseOptimizer
 
 
 class STLSQ(BaseOptimizer):
@@ -14,7 +14,15 @@ class STLSQ(BaseOptimizer):
     Attempts to minimize the objective function
     :math:`\\|y - Xw\\|^2_2 + \\alpha \\|w\\|^2_2`
     by iteratively performing least squares and masking out
-    elements of the weight that are below a given threshold.
+    elements of the weight array w that are below a given threshold.
+
+    See the following reference for more details:
+
+        Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
+        "Discovering governing equations from data by sparse
+        identification of nonlinear dynamical systems."
+        Proceedings of the national academy of sciences
+        113.15 (2016): 3932-3937.
 
     Parameters
     ----------
@@ -29,7 +37,7 @@ class STLSQ(BaseOptimizer):
     max_iter : int, optional (default 20)
         Maximum iterations of the optimization algorithm.
 
-    ridge_kw : dict, optional
+    ridge_kw : dict, optional (default None)
         Optional keyword arguments to pass to the ridge regression.
 
     fit_intercept : boolean, optional (default False)
@@ -56,7 +64,8 @@ class STLSQ(BaseOptimizer):
 
     ind_ : array, shape (n_features,) or (n_targets, n_features)
         Array of 0s and 1s indicating which coefficients of the
-        weight vector that have not been masked out.
+        weight vector have not been masked out, i.e. the support of
+        ``self.coef_``.
 
     history_ : list
         History of ``coef_``. ``history_[k]`` contains the values of
@@ -111,8 +120,7 @@ class STLSQ(BaseOptimizer):
         self.initial_guess = initial_guess
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):
-        """Perform thresholding of the weight vector(s)
-        """
+        """Perform thresholding of the weight vector(s)"""
         c = np.zeros(dim)
         c[ind] = coef
         big_ind = np.abs(c) >= threshold
@@ -120,16 +128,14 @@ class STLSQ(BaseOptimizer):
         return c, big_ind
 
     def _regress(self, x, y):
-        """Perform the ridge regression
-        """
+        """Perform the ridge regression"""
         kw = self.ridge_kw or {}
         coef = ridge_regression(x, y, self.alpha, **kw)
         self.iters += 1
         return coef
 
     def _no_change(self):
-        """Check if the coefficient mask has changed after thresholding
-        """
+        """Check if the coefficient mask has changed after thresholding"""
         this_coef = self.history_[-1].flatten()
         if len(self.history_) > 1:
             last_coef = self.history_[-2].flatten()
@@ -138,8 +144,11 @@ class STLSQ(BaseOptimizer):
         return all(bool(i) == bool(j) for i, j in zip(this_coef, last_coef))
 
     def _reduce(self, x, y):
-        """Iterates the thresholding. Assumes an initial guess is saved in
-        self.coef_ and self.ind_
+        """Performs at most ``self.max_iter`` iterations of the
+        sequentially-thresholded least squares algorithm.
+
+        Assumes an initial guess for coefficients and support are saved in
+        ``self.coef_`` and ``self.ind_``.
         """
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess

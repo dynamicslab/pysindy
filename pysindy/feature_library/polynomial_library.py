@@ -10,7 +10,7 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import FLOAT_DTYPES
 
-from .feature_library import BaseFeatureLibrary
+from .base import BaseFeatureLibrary
 
 
 class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
@@ -127,7 +127,6 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         Returns
         -------
         output_feature_names : list of string, length n_output_features
-
         """
         powers = self.powers_
         if input_features is None:
@@ -147,19 +146,20 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             feature_names.append(name)
         return feature_names
 
-    def fit(self, X, y=None):
+    def fit(self, x, y=None):
         """
         Compute number of output features.
 
         Parameters
         ----------
-        X : array-like, shape (n_samples, n_features)
+        x : array-like, shape (n_samples, n_features)
             The data.
+
         Returns
         -------
         self : instance
         """
-        n_samples, n_features = check_array(X, accept_sparse=True).shape
+        n_samples, n_features = check_array(x, accept_sparse=True).shape
         combinations = self._combinations(
             n_features,
             self.degree,
@@ -171,12 +171,12 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         self.n_output_features_ = sum(1 for _ in combinations)
         return self
 
-    def transform(self, X):
+    def transform(self, x):
         """Transform data to polynomial features.
 
         Parameters
         ----------
-        X : array-like or CSR/CSC sparse matrix, shape [n_samples, n_features]
+        x : array-like or CSR/CSC sparse matrix, shape (n_samples, n_features)
             The data to transform, row by row.
             Prefer CSR over CSC for sparse input (for speed), but CSC is
             required if the degree is 4 or higher. If the degree is less than
@@ -192,37 +192,41 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
         Returns
         -------
-        XP : np.ndarray or CSR/CSC sparse matrix, shape [n_samples, NP]
-            The matrix of features, where NP is the number of polynomial
+        xp : np.ndarray or CSR/CSC sparse matrix, shape (n_samples, n_output_features)
+            The matrix of features, where n_output_features is the number of polynomial
             features generated from the combination of inputs.
-
         """
         check_is_fitted(self)
 
-        X = check_array(X, order="F", dtype=FLOAT_DTYPES, accept_sparse=("csr", "csc"))
+        x = check_array(x, order="F", dtype=FLOAT_DTYPES, accept_sparse=("csr", "csc"))
 
-        n_samples, n_features = X.shape
+        n_samples, n_features = x.shape
 
         if n_features != self.n_input_features_:
-            raise ValueError("X shape does not match training shape")
+            raise ValueError("x shape does not match training shape")
 
-        if sparse.isspmatrix_csr(X):
+        if sparse.isspmatrix_csr(x):
             if self.degree > 3:
-                return self.transform(X.tocsc()).tocsr()
+                return self.transform(x.tocsc()).tocsr()
             to_stack = []
             if self.include_bias:
-                to_stack.append(np.ones(shape=(n_samples, 1), dtype=X.dtype))
-            to_stack.append(X)
+                to_stack.append(np.ones(shape=(n_samples, 1), dtype=x.dtype))
+            to_stack.append(x)
             for deg in range(2, self.degree + 1):
-                Xp_next = _csr_polynomial_expansion(
-                    X.data, X.indices, X.indptr, X.shape[1], self.interaction_only, deg,
+                xp_next = _csr_polynomial_expansion(
+                    x.data,
+                    x.indices,
+                    x.indptr,
+                    x.shape[1],
+                    self.interaction_only,
+                    deg,
                 )
-                if Xp_next is None:
+                if xp_next is None:
                     break
-                to_stack.append(Xp_next)
-            XP = sparse.hstack(to_stack, format="csr")
-        elif sparse.isspmatrix_csc(X) and self.degree < 4:
-            return self.transform(X.tocsr()).tocsc()
+                to_stack.append(xp_next)
+            xp = sparse.hstack(to_stack, format="csr")
+        elif sparse.isspmatrix_csc(x) and self.degree < 4:
+            return self.transform(x.tocsr()).tocsc()
         else:
             combinations = self._combinations(
                 n_features,
@@ -231,25 +235,25 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                 self.interaction_only,
                 self.include_bias,
             )
-            if sparse.isspmatrix(X):
+            if sparse.isspmatrix(x):
                 columns = []
                 for comb in combinations:
                     if comb:
                         out_col = 1
                         for col_idx in comb:
-                            out_col = X[:, col_idx].multiply(out_col)
+                            out_col = x[:, col_idx].multiply(out_col)
                         columns.append(out_col)
                     else:
-                        bias = sparse.csc_matrix(np.ones((X.shape[0], 1)))
+                        bias = sparse.csc_matrix(np.ones((x.shape[0], 1)))
                         columns.append(bias)
-                XP = sparse.hstack(columns, dtype=X.dtype).tocsc()
+                xp = sparse.hstack(columns, dtype=x.dtype).tocsc()
             else:
-                XP = np.empty(
+                xp = np.empty(
                     (n_samples, self.n_output_features_),
-                    dtype=X.dtype,
+                    dtype=x.dtype,
                     order=self.order,
                 )
                 for i, comb in enumerate(combinations):
-                    XP[:, i] = X[:, comb].prod(1)
+                    xp[:, i] = x[:, comb].prod(1)
 
-        return XP
+        return xp

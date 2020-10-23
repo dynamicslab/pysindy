@@ -2,6 +2,7 @@ from itertools import repeat
 from typing import Sequence
 
 import numpy as np
+from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
 
@@ -24,7 +25,7 @@ def validate_input(x, t=T_DEFAULT):
         if t is None:
             raise ValueError("t must be a scalar or array-like.")
         # Apply this check if t is a scalar
-        elif np.ndim(t) == 0:
+        elif np.ndim(t) == 0 and (isinstance(t, int) or isinstance(t, float)):
             if t <= 0:
                 raise ValueError("t must be positive")
         # Only apply these tests if t is array-like
@@ -99,8 +100,28 @@ def drop_nan_rows(x, x_dot):
     return x, x_dot
 
 
+def reorder_constraints(c, n_features, output_order="row"):
+    """Reorder constraint matrix."""
+    ret = c.copy()
+
+    if ret.ndim == 1:
+        ret = ret.reshape(1, -1)
+
+    n_targets = ret.shape[1] // n_features
+    shape = (n_targets, n_features)
+
+    if output_order == "row":
+        for i in range(ret.shape[0]):
+            ret[i] = ret[i].reshape(shape).flatten(order="F")
+    else:
+        for i in range(ret.shape[0]):
+            ret[i] = ret[i].reshape(shape, order="F").flatten()
+
+    return ret
+
+
 def prox_l0(x, threshold):
-    """Proximal operator for l0 regularization."""
+    """Proximal operator for L0 regularization."""
     return x * (np.abs(x) > threshold)
 
 
@@ -115,7 +136,7 @@ def prox_weighted_l0(x, thresholds):
 
 
 def prox_l1(x, threshold):
-    """Proximal operator for l1 regularization."""
+    """Proximal operator for L1 regularization."""
     return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
 
 
@@ -149,11 +170,9 @@ def prox_cad(x, lower_threshold):
 
 
 def get_prox(regularization):
-    if regularization.lower() == "l0":
+    if regularization.lower() in ("l0", "weighted_l0"):
         return prox_l0
-    elif regularization.lower() == "weighted_l0":
-        return prox_weighted_l0
-    elif regularization.lower() == "l1":
+    elif regularization.lower() in ("l1", "weighted_l1"):
         return prox_l1
     elif regularization.lower() == "weighted_l1":
         return prox_weighted_l1
@@ -163,17 +182,33 @@ def get_prox(regularization):
         raise NotImplementedError("{} has not been implemented".format(regularization))
 
 
-def get_reg(regularization):
+def get_regularization(regularization):
     if regularization.lower() == "l0":
         return lambda x, lam: lam * np.count_nonzero(x)
     elif regularization.lower() == "weighted_l0":
-        return lambda x, lam: np.sum(lam.T[np.nonzero(x)])
+        return lambda x, lam: np.sum(lam[np.nonzero(x)])
     elif regularization.lower() == "l1":
         return lambda x, lam: lam * np.sum(np.abs(x))
     elif regularization.lower() == "weighted_l1":
         return lambda x, lam: np.sum(np.abs(lam @ x))
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
+
+
+def capped_simplex_projection(trimming_array, trimming_fraction):
+    """Projection of trimming_array onto the capped simplex"""
+    a = np.min(trimming_array) - 1.0
+    b = np.max(trimming_array) - 0.0
+
+    def f(x):
+        return (
+            np.sum(np.maximum(np.minimum(trimming_array - x, 1.0), 0.0))
+            - (1.0 - trimming_fraction) * trimming_array.size
+        )
+
+    x = bisect(f, a, b)
+
+    return np.maximum(np.minimum(trimming_array - x, 1.0), 0.0)
 
 
 def print_model(

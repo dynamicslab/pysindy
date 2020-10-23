@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-from .feature_library import BaseFeatureLibrary
+from .base import BaseFeatureLibrary
 
 
 class FourierLibrary(BaseFeatureLibrary):
@@ -30,16 +30,16 @@ class FourierLibrary(BaseFeatureLibrary):
 
     n_output_features_ : int
         The total number of output features. The number of output features
-        is 2*n_input_features_*n_frequencies if both sines and cosines
-        are included. Otherwise it is n_input_features*n_frequencies.
+        is ``2 * n_input_features_ * n_frequencies`` if both sines and cosines
+        are included. Otherwise it is ``n_input_features * n_frequencies``.
 
     Examples
     --------
     >>> import numpy as np
     >>> from pysindy.feature_library import FourierLibrary
-    >>> X = np.array([[0.],[1.],[2.]])
-    >>> lib = FourierLibrary(n_frequencies=2).fit(X)
-    >>> lib.transform(X)
+    >>> x = np.array([[0.],[1.],[2.]])
+    >>> lib = FourierLibrary(n_frequencies=2).fit(x)
+    >>> lib.transform(x)
     array([[ 0.        ,  1.        ,  0.        ,  1.        ],
            [ 0.84147098,  0.54030231,  0.90929743, -0.41614684],
            [ 0.90929743, -0.41614684, -0.7568025 , -0.65364362]])
@@ -83,20 +83,20 @@ class FourierLibrary(BaseFeatureLibrary):
                     feature_names.append("cos(" + str(i + 1) + " " + feature + ")")
         return feature_names
 
-    def fit(self, X, y=None):
+    def fit(self, x, y=None):
         """
         Compute number of output features.
 
         Parameters
         ----------
-        X : array-like, shape (n_samples, n_features)
+        x : array-like, shape (n_samples, n_features)
             The data.
 
         Returns
         -------
         self : instance
         """
-        n_samples, n_features = check_array(X).shape
+        n_samples, n_features = check_array(x).shape
         self.n_input_features_ = n_features
         if self.include_sin and self.include_cos:
             self.n_output_features_ = n_features * self.n_frequencies * 2
@@ -104,37 +104,37 @@ class FourierLibrary(BaseFeatureLibrary):
             self.n_output_features_ = n_features * self.n_frequencies
         return self
 
-    def transform(self, X):
+    def transform(self, x):
         """Transform data to Fourier features
 
         Parameters
         ----------
-        X : array-like, shape [n_samples, n_features]
+        x : array-like, shape (n_samples, n_features)
             The data to transform, row by row.
 
         Returns
         -------
-        XP : np.ndarray, shape [n_samples, NP]
-            The matrix of features, where NP is the number of Fourier
+        xp : np.ndarray, shape (n_samples, n_output_features)
+            The matrix of features, where n_output_features is the number of Fourier
             features generated from the inputs.
         """
         check_is_fitted(self)
 
-        X = check_array(X)
+        x = check_array(x)
 
-        n_samples, n_features = X.shape
+        n_samples, n_features = x.shape
 
         if n_features != self.n_input_features_:
-            raise ValueError("X shape does not match training shape")
+            raise ValueError("x shape does not match training shape")
 
-        XP = np.empty((n_samples, self.n_output_features_), dtype=X.dtype)
+        xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
         idx = 0
         for i in range(self.n_frequencies):
             for j in range(self.n_input_features_):
                 if self.include_sin:
-                    XP[:, idx] = np.sin((i + 1) * X[:, j])
+                    xp[:, idx] = np.sin((i + 1) * x[:, j])
                     idx += 1
                 if self.include_cos:
-                    XP[:, idx] = np.cos((i + 1) * X[:, j])
+                    xp[:, idx] = np.cos((i + 1) * x[:, j])
                     idx += 1
-        return XP
+        return xp

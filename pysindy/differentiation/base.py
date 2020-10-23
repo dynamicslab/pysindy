@@ -3,15 +3,17 @@ Base class for numerical differentiation methods
 """
 import abc
 
-from pysindy.utils.base import validate_input
+from sklearn.base import BaseEstimator
+
+from ..utils.base import validate_input
 
 
-class BaseDifferentiation:
+class BaseDifferentiation(BaseEstimator):
     """
     Base class for differentiation methods.
 
     Simply forces differentiation methods to implement a
-    _differentiate function.
+    ``_differentiate`` function.
     """
 
     def __init__(self):
@@ -29,7 +31,7 @@ class BaseDifferentiation:
             Data to be differentiated. Rows of x should correspond to the same
             point in time.
 
-        t: float or numpy array of shape [n_samples]
+        t: float or numpy array of shape (n_samples,)
             If t is a float, it is interpreted as the timestep between
             samples in x.
             If t is a numpy array, it specifies the times corresponding

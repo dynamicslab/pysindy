@@ -36,7 +36,7 @@ jobs:
         pip install -r requirements-dev.txt
     - name: Test with pytest
       run: |
-        python3 -m pytest test --cov=pysindy --cov-report=xml
+        pytest test --cov=pysindy --cov-report=xml
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:

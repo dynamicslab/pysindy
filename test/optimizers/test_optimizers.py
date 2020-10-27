@@ -225,15 +225,6 @@ def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
     check_is_fitted(model)
 
 
-@pytest.mark.parametrize("thresholder", ["weighted_l0", "weighted_l1"])
-def test_weighted_prox_functions(data_derivative_1d, thresholder):
-    x, x_dot = data_derivative_1d
-    x = x.reshape(-1, 1)
-    thresholds = np.ones((x_dot.shape[0], 1))
-    model = ConstrainedSR3(thresholder=thresholder, thresholds=thresholds)
-    check_is_fitted(model)
-
-
 def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)

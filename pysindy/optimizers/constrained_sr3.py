@@ -11,7 +11,7 @@ from .sr3 import SR3
 
 class ConstrainedSR3(SR3):
     """
-    Sparse relaxed regularized regression with linear inequality constraints.
+    Sparse relaxed regularized regression with linear equality constraints.
 
     Attempts to minimize the objective function
 
@@ -24,7 +24,7 @@ class ConstrainedSR3(SR3):
 
     .. math::
 
-        Cw <= d
+        Cw = d
 
     over v and w where :math:`R(v)` is a regularization function, C is a
     constraint matrix, and d is a vector of values. See the following

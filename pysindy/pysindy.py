@@ -36,13 +36,13 @@ class SINDy(BaseEstimator):
     optimizer : optimizer object, optional
         Optimization method used to fit the SINDy model. This must be a class
         extending :class:`pysindy.optimizers.BaseOptimizer`.
-        The default is sequentially thresholded least squares with a threshold of 0.1.
+        The default is :class:`STLSQ`.
 
     feature_library : feature library object, optional
         Feature library object used to specify candidate right-hand side features.
         This must be a class extending
         :class:`pysindy.feature_library.base.BaseFeatureLibrary`.
-        The default option is polynomial features of degree 2.
+        The default option is :class:`PolynomialLibrary`.
 
     differentiation_method : differentiation object, optional
         Method for differentiating the data. This must be a class extending

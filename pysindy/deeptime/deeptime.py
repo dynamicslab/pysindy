@@ -1,5 +1,5 @@
 """
-`Scikit-time <https://scikit-time.github.io/>`_ wrapper interface for PySINDy.
+`Deeptime <https://deeptime-ml.github.io/>`_ wrapper interface for PySINDy.
 """
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
@@ -9,9 +9,9 @@ from ..pysindy import SINDy
 
 class SINDyEstimator(SINDy):
     """
-    Implementation of SINDy conforming to the API of a Scikit-time
+    Implementation of SINDy conforming to the API of a Deeptime
     `Estimator \
-    <https://scikit-time.github.io/api/generated/sktime.base.Estimator.html>`_.
+    <https://deeptime-ml.github.io/api/generated/deeptime.base.Estimator.html>`_.
 
     Parameters
     ----------
@@ -130,8 +130,8 @@ class SINDyEstimator(SINDy):
 
 class SINDyModel(SINDy):
     """
-    Implementation of SINDy conforming to the API of a Scikit-time
-    `Model <https://scikit-time.github.io/api/generated/sktime.base.Model.html>`_.
+    Implementation of SINDy conforming to the API of a Deeptime
+    `Model <https://deeptime-ml.github.io/api/generated/deeptime.base.Model.html>`_.
 
     The model is represented as a Scikit-learn pipeline object with two steps:
     1. Map the raw input data to nonlinear features according to the selected

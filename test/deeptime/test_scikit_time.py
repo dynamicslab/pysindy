@@ -5,8 +5,8 @@ from sklearn.exceptions import NotFittedError
 from pysindy import FourierLibrary
 from pysindy import SINDy
 from pysindy import STLSQ
-from pysindy.scikit_time import SINDyEstimator
-from pysindy.scikit_time import SINDyModel
+from pysindy.deeptime import SINDyEstimator
+from pysindy.deeptime import SINDyModel
 
 
 def test_estimator_has_model(data_lorenz):

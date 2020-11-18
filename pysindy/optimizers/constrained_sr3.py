@@ -189,6 +189,9 @@ class ConstrainedSR3(SR3):
             self.unbias = False
             self.constraint_order = constraint_order
 
+    def _set_threshold(self,threshold):
+        self.threshold=threshold
+
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
         g = x_transpose_y + coef_sparse / self.nu
         inv1 = np.linalg.inv(H)

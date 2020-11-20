@@ -52,10 +52,10 @@ class STLSQ(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : 2D numpy array of floats (default None)
-        If user does not pass this, the initial guess for the optimization is
-        a naive lstsq (see below). If passes, the optimization starts
-        with this matrix as the initial starting point.
+    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
+            optional (default None)
+        Initial guess for coefficients ``coef_``.
+        If None, least-squares is used to obtain an initial guess.
 
     Attributes
     ----------

@@ -52,7 +52,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess :  array, shape (n_features,) or (n_targets, n_features), \
+    initial_guess :  np.ndarray, shape (n_features,) or (n_targets, n_features), \
             optional (default None)
         Initial guess for coefficients ``coef_``.
         If None, the initial guess is obtained via a least-squares fit.

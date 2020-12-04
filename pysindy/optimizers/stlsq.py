@@ -52,6 +52,11 @@ class STLSQ(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
+    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
+            optional (default None)
+        Initial guess for coefficients ``coef_``.
+        If None, least-squares is used to obtain an initial guess.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -59,7 +64,8 @@ class STLSQ(BaseOptimizer):
 
     ind_ : array, shape (n_features,) or (n_targets, n_features)
         Array of 0s and 1s indicating which coefficients of the
-        weight vector have not been masked out.
+        weight vector have not been masked out, i.e. the support of
+        ``self.coef_``.
 
     history_ : list
         History of ``coef_``. ``history_[k]`` contains the values of
@@ -94,6 +100,7 @@ class STLSQ(BaseOptimizer):
         normalize=False,
         fit_intercept=False,
         copy_X=True,
+        initial_guess=None,
     ):
         super(STLSQ, self).__init__(
             max_iter=max_iter,
@@ -110,6 +117,7 @@ class STLSQ(BaseOptimizer):
         self.threshold = threshold
         self.alpha = alpha
         self.ridge_kw = ridge_kw
+        self.initial_guess = initial_guess
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):
         """Perform thresholding of the weight vector(s)"""
@@ -142,6 +150,9 @@ class STLSQ(BaseOptimizer):
         Assumes an initial guess for coefficients and support are saved in
         ``self.coef_`` and ``self.ind_``.
         """
+        if self.initial_guess is not None:
+            self.coef_ = self.initial_guess
+
         ind = self.ind_
         n_samples, n_features = x.shape
         n_targets = y.shape[1]

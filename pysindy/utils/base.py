@@ -2,6 +2,7 @@ from itertools import repeat
 from typing import Sequence
 
 import numpy as np
+from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
 
@@ -99,14 +100,49 @@ def drop_nan_rows(x, x_dot):
     return x, x_dot
 
 
+def reorder_constraints(c, n_features, output_order="row"):
+    """Reorder constraint matrix."""
+    ret = c.copy()
+
+    if ret.ndim == 1:
+        ret = ret.reshape(1, -1)
+
+    n_targets = ret.shape[1] // n_features
+    shape = (n_targets, n_features)
+
+    if output_order == "row":
+        for i in range(ret.shape[0]):
+            ret[i] = ret[i].reshape(shape).flatten(order="F")
+    else:
+        for i in range(ret.shape[0]):
+            ret[i] = ret[i].reshape(shape, order="F").flatten()
+
+    return ret
+
+
 def prox_l0(x, threshold):
     """Proximal operator for L0 regularization."""
     return x * (np.abs(x) > threshold)
 
 
+def prox_weighted_l0(x, thresholds):
+    """Proximal operator for weighted l0 regularization."""
+    y = np.zeros(np.shape(x))
+    transp_thresholds = thresholds.T
+    for i in range(transp_thresholds.shape[0]):
+        for j in range(transp_thresholds.shape[1]):
+            y[i, j] = x[i, j] * (np.abs(x[i, j]) > transp_thresholds[i, j])
+    return y
+
+
 def prox_l1(x, threshold):
     """Proximal operator for L1 regularization."""
     return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
+
+
+def prox_weighted_l1(x, thresholds):
+    """Proximal operator for weighted l1 regularization."""
+    return np.sign(x) * np.maximum(np.abs(x) - thresholds, np.ones(x.shape))
 
 
 # TODO: replace code block with proper math block
@@ -134,14 +170,45 @@ def prox_cad(x, lower_threshold):
 
 
 def get_prox(regularization):
-    if regularization.lower() == "l0":
+    if regularization.lower() in ("l0", "weighted_l0"):
         return prox_l0
-    elif regularization.lower() == "l1":
+    elif regularization.lower() in ("l1", "weighted_l1"):
         return prox_l1
+    elif regularization.lower() == "weighted_l1":
+        return prox_weighted_l1
     elif regularization.lower() == "cad":
         return prox_cad
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
+
+
+def get_regularization(regularization):
+    if regularization.lower() == "l0":
+        return lambda x, lam: lam * np.count_nonzero(x)
+    elif regularization.lower() == "weighted_l0":
+        return lambda x, lam: np.sum(lam[np.nonzero(x)])
+    elif regularization.lower() == "l1":
+        return lambda x, lam: lam * np.sum(np.abs(x))
+    elif regularization.lower() == "weighted_l1":
+        return lambda x, lam: np.sum(np.abs(lam @ x))
+    else:
+        raise NotImplementedError("{} has not been implemented".format(regularization))
+
+
+def capped_simplex_projection(trimming_array, trimming_fraction):
+    """Projection of trimming_array onto the capped simplex"""
+    a = np.min(trimming_array) - 1.0
+    b = np.max(trimming_array) - 0.0
+
+    def f(x):
+        return (
+            np.sum(np.maximum(np.minimum(trimming_array - x, 1.0), 0.0))
+            - (1.0 - trimming_fraction) * trimming_array.size
+        )
+
+    x = bisect(f, a, b)
+
+    return np.maximum(np.minimum(trimming_array - x, 1.0), 0.0)
 
 
 def print_model(
@@ -208,7 +275,7 @@ def equations(pipeline, input_features=None, precision=3, input_fmt=None):
 
 
 def supports_multiple_targets(estimator):
-    """Checkes whether estimator supports mutliple targets."""
+    """Checks whether estimator supports multiple targets."""
     if isinstance(estimator, MultiOutputMixin):
         return True
     try:

@@ -16,3 +16,9 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.pytest.ini_options]
+filterwarnings = [
+  "ignore::RuntimeWarning",
+  "ignore::UserWarning"
+]

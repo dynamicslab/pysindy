@@ -779,7 +779,9 @@ class SINDy(BaseEstimator):
             else:
                 if not callable(u):
                     if interpolator is None:
-                        u_fun = interp1d(t, u, axis=0, kind="cubic", fill_value="extrapolate")
+                        u_fun = interp1d(
+                            t, u, axis=0, kind="cubic", fill_value="extrapolate"
+                        )
                     else:
                         u_fun = interpolator(t, u, **interpolator_kws)
 

@@ -45,10 +45,11 @@ class SINDyOptimizer(BaseEstimator):
         self.optimizer = optimizer
         self.unbias = unbias
 
-    def fit(self, x, y):
+    def fit(self, x, y, p=None):
         if len(y.shape) > 1 and y.shape[1] > 1:
             if not supports_multiple_targets(self.optimizer):
                 self.optimizer = _MultiTargetLinearRegressor(self.optimizer)
+       
         self.optimizer.fit(x, y)
         if not hasattr(self.optimizer, "coef_"):
             raise AttributeError("optimizer has no attribute coef_")

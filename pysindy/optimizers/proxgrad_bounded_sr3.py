@@ -1,23 +1,13 @@
 import warnings
 
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve
+from scipy.linalg import cho_factor
+from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import get_regularization
 from ..utils import reorder_constraints
 from .sr3 import SR3
-#import warnings
-#
-#import numpy as np
-#from scipy.linalg import cho_factor
-#from scipy.linalg import cho_solve
-#from sklearn.exceptions import ConvergenceWarning
-#
-#from ..utils import capped_simplex_projection
-#from ..utils import get_regularization
-#from ..utils import get_prox
-#from .base import BaseOptimizer
 
 
 class proxgradSR3(SR3):
@@ -63,14 +53,6 @@ class proxgradSR3(SR3):
         Regularization function to use. Currently implemented options
         are 'L0' (L0 norm), 'L1' (L1 norm), and 'CAD' (clipped
         absolute deviation).
-
-    trimming_fraction : float, optional (default 0.0)
-        Fraction of the data samples to trim during fitting. Should
-        be a float between 0.0 and 1.0. If 0.0, trimming is not
-        performed.
-
-    trimming_step_size : float, optional (default 1.0)
-        Step size to use in the trimming optimization procedure.
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -138,8 +120,6 @@ class proxgradSR3(SR3):
         eigmin=-10,
         tol=1e-5,
         thresholder="l0",
-        trimming_fraction=0.0,
-        trimming_step_size=1.0,
         max_iter=30,
         normalize=False,
         fit_intercept=False,
@@ -151,7 +131,7 @@ class proxgradSR3(SR3):
         objective_history=None,
         constraint_lhs=None,
         constraint_rhs=None,
-        constraint_order="target"
+        constraint_order="target",
     ):
         super(proxgradSR3, self).__init__(
             max_iter=max_iter,
@@ -169,8 +149,6 @@ class proxgradSR3(SR3):
             raise ValueError("eta must be positive")
         if tol <= 0:
             raise ValueError("tol must be positive")
-        if (trimming_fraction < 0) or (trimming_fraction > 1):
-            raise ValueError("trimming fraction must be between 0 and 1")
 
         self.threshold = threshold
         self.thresholds = thresholds
@@ -189,12 +167,6 @@ class proxgradSR3(SR3):
         self.m_history_ = []
         self.PW_history_ = []
         self.objective_history = objective_history
-        if trimming_fraction == 0.0:
-            self.use_trimming = False
-        else:
-            self.use_trimming = True
-        self.trimming_fraction = trimming_fraction
-        self.trimming_step_size = trimming_step_size
         self.unbias = False
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
@@ -210,25 +182,6 @@ class proxgradSR3(SR3):
             self.constraint_rhs = constraint_rhs
             self.unbias = False
             self.constraint_order = constraint_order
-
-
-    def enable_trimming(self, trimming_fraction):
-        """
-        Enable the trimming of potential outliers.
-
-        Parameters
-        ----------
-        trimming_fraction: float
-            The fraction of samples to be trimmed.
-            Must be between 0 and 1.
-        """
-        self.use_trimming = True
-        self.trimming_fraction = trimming_fraction
-
-    def disable_trimming(self):
-        """Disable trimming of potential outliers."""
-        self.use_trimming = False
-        self.trimming_fraction = None
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
         """Update the unregularized weight vector"""
@@ -289,11 +242,11 @@ class proxgradSR3(SR3):
 
     def _bounded_convergence_criterion(self, PW, A):
         """Calculate the bounded convergence criterion for the optimization"""
-        #return np.all(np.diag(self.PW_history_[-1]) < 0)
+        # return np.all(np.diag(self.PW_history_[-1]) < 0)
         err_coef = np.sqrt(np.sum((PW - A) ** 2)) / self.eta
         return err_coef
 
-    def _objective(self, x, y, coef_full, coef_sparse, A, p, trimming_array=None):
+    def _objective(self, x, y, coef_full, coef_sparse, A, p):
         """Objective function"""
         Nr = self.PL.shape[-1]
         PW = np.tensordot(p, coef_sparse[:Nr, :], axes=([3, 2], [0, 1]))
@@ -305,15 +258,16 @@ class proxgradSR3(SR3):
             return (
                 0.5 * np.sum(R2)
                 + self.reg(coef_full, 0.5 * self.threshold ** 2 / self.nu)
-                + 0.5 * np.sum(D2) / self.nu + 0.5 * np.sum(A2) / self.eta
+                + 0.5 * np.sum(D2) / self.nu
+                + 0.5 * np.sum(A2) / self.eta
             )
         else:
             return (
                 0.5 * np.sum(R2)
                 + self.reg(coef_full, 0.5 * self.thresholds.T ** 2 / self.nu)
-                + 0.5 * np.sum(D2) / self.nu + 0.5 * np.sum(A2) / self.eta
+                + 0.5 * np.sum(D2) / self.nu
+                + 0.5 * np.sum(A2) / self.eta
             )
-
 
     def _reduce(self, x, y):
         """
@@ -321,7 +275,11 @@ class proxgradSR3(SR3):
         Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
 
-        # Set initial coefficients and extract shapes
+        n_samples, n_features = x.shape
+        r = self.PL.shape[0]
+        Nr = self.PL.shape[-1]
+
+        # Set initial coefficients
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess
         if self.use_constraints and self.constraint_order.lower() == "target":
@@ -329,22 +287,19 @@ class proxgradSR3(SR3):
 
         coef_sparse = self.coef_.T
         self.history_.append(coef_sparse.T)
-        n_samples, n_features = x.shape
-        r = self.PL.shape[0]
-        Nr = self.PL.shape[-1]
 
         # Precompute some objects for upcoming least-squares solves.
         PL = self.PL
         PQ = self.PQ
-        A = np.diag(self.A_eigmax*np.ones(r)) 
+        A = np.diag(self.A_eigmax * np.ones(r))
         delta_jk = np.eye(r)
         delta_il = np.eye(Nr)
         delta_ijkl = np.zeros((Nr, r, r, Nr))
         for i in range(Nr):
             for j in range(r):
                 for k in range(r):
-                    for l in range(Nr):
-                        delta_ijkl[i, j, k, l] = delta_il[i, l] * delta_jk[j, k]
+                    for z in range(Nr):
+                        delta_ijkl[i, j, k, z] = delta_il[i, z] * delta_jk[j, k]
         H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
         cho = cho_factor(H)
         x_transpose_y = np.dot(x.T, y)
@@ -357,64 +312,66 @@ class proxgradSR3(SR3):
             # libraries right now, but this is easy fix.
             if self.use_constraints:
                 coef_full = self._update_full_coef_constraints(
-                        H, x_transpose_y, coef_sparse
+                    H, x_transpose_y, coef_sparse
                 )
             else:
                 coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
 
             # Update m
             W = coef_sparse[:Nr, :]
-            PQ_W = np.tensordot(PQ, W, axes=([2], [0])) # a matrix
+            PQ_W = np.tensordot(PQ, W, axes=([2], [0]))
             pqwTpqw = np.tensordot(PQ_W.T, PQ_W, axes=([2, 1], [0, 1]))
-            M_inv = np.linalg.pinv(pqwTpqw) # Minv_kn
-            PL_W = np.tensordot(PL, W, axes=([3, 2], [0, 1])) # a matrix
+            M_inv = np.linalg.pinv(pqwTpqw)
+            PL_W = np.tensordot(PL, W, axes=([3, 2], [0, 1]))
             m_b = np.tensordot(PQ_W.T, PL_W - A, axes=([2, 1], [0, 1]))
             m = np.tensordot(M_inv, m_b, axes=([1], [0]))
             self.m_history_.append(m)
 
-            # Switching from coordinate-descent for (Xi, m) 
+            # Switching from coordinate-descent for (Xi, m)
             # to prox-grad for (A, W)
             mPQ = np.zeros(PL.shape)
             for i in range(r):
-                for j in range(i+1, r):
-                    mPQ[i, j, :, int((i+1)/2.0*(2*r-i)) + j - 1 - i] = m
+                for j in range(i + 1, r):
+                    mPQ[i, j, :, int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i] = m
             for i in range(r):
                 mPQ[i, i, :, Nr - r + i] = m
             for i in range(r):
                 for j in range(Nr):
                     mPQ[:, :, i, j] = 0.5 * (mPQ[:, :, i, j] + mPQ[:, :, i, j].T)
-            
             # Compute 4-index tensor P
             p = PL - mPQ
-            PW = np.tensordot(p, W, axes=([3, 2], [0, 1])) # a matrix
-            A_b = - (PW - A) / self.eta
+            PW = np.tensordot(p, W, axes=([3, 2], [0, 1]))
+            A_b = -(PW - A) / self.eta
 
             # update W -- prox-grad version
-            W_b = (W - coef_full) / self.nu + np.tensordot(p.T, PW - A, axes=([3, 2], [0, 1])) / self.eta
+            W_b = (W - coef_full) / self.nu + np.tensordot(
+                p.T, PW - A, axes=([3, 2], [0, 1])
+            ) / self.eta
             coef_sparse = self._update_sparse_coef(W - self.alpha * W_b)
-            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1])) # a matrix
+            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
 
             # update A -- prox-grad version
             A = self._update_A_proxgrad(A - self.beta * A_b)
             self.A_history_.append(A)
 
             # update objective
-            objective_history.append(self._objective(x, y,
-                                                     coef_full,
-                                                     coef_sparse, A, p))
-            
-            if self._convergence_criterion() < self.tol and self._bounded_convergence_criterion(PW, A) < self.tol:
-                # Could not (further) select important features or already found a set of coefficients s.t. As is neg def
+            objective_history.append(
+                self._objective(x, y, coef_full, coef_sparse, A, p)
+            )
+            if (
+                self._convergence_criterion() < self.tol
+                and self._bounded_convergence_criterion(PW, A) < self.tol
+            ):
+                # Could not (further) select important features
+                # and already found a set of coefficients s.t. As is neg def
                 break
         else:
-            #warnings.warn(
-            #    "proxgradSR3._reduce did not converge after {} iterations.".format(
-            #        self.max_iter
-            #    ),
-            #    ConvergenceWarning,
-            #)
-            # Do nothing
-            dummy = 0
+            warnings.warn(
+                "proxgradSR3._reduce did not converge after {} iterations.".format(
+                    self.max_iter
+                ),
+                ConvergenceWarning,
+            )
 
         if self.use_constraints and self.constraint_order.lower() == "target":
             self.constraint_lhs = reorder_constraints(
@@ -424,6 +381,4 @@ class proxgradSR3(SR3):
         self.coef_ = np.real(coef_sparse.T)
         self.coef_full_ = coef_full.T
         self.m_ = m
-        if self.use_trimming:
-            self.trimming_array = trimming_array
         self.objective_history = objective_history

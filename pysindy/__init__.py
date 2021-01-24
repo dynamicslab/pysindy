@@ -25,6 +25,9 @@ from .feature_library import PolynomialLibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import proxgradSR3
+from .optimizers import stableSR3
+from .optimizers import wSR3
+from .optimizers import testSR3
 from .optimizers import SINDyOptimizer
 from .optimizers import SR3
 from .optimizers import STLSQ

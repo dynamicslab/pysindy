@@ -170,7 +170,7 @@ def prox_cad(x, lower_threshold):
 
 
 def get_prox(regularization):
-    if regularization.lower() in ("l0", "weighted_l0", "bounded_galerkin_l0"):
+    if regularization.lower() in ("l0", "weighted_l0"):
         return prox_l0
     elif regularization.lower() in ("l1", "weighted_l1"):
         return prox_l1
@@ -182,47 +182,6 @@ def get_prox(regularization):
         raise NotImplementedError("{} has not been implemented".format(regularization))
 
 
-def obj_function(m, L_obj, Q_obj):
-    As = np.zeros(L_obj.shape)
-    for i in range(As.shape[0]):
-        As[i, :] = L_obj[i, :] - np.dot(m, Q_obj[:, i, :])
-    eigvals, eigvecs = np.linalg.eig(As)
-    return(np.sort(eigvals)[-1])
-
-
-def sim_anneal(Xi):
-    r = Xi.shape[-1]
-    D = Xi.shape[0]
-    L = Xi[:r, :r]
-    Ls = 0.5*(L + L.T)
-    Q = np.zeros((r, r, r))
-    for i in range(r):
-        k = 0
-        # Do off diagonal
-        for j in range(r-1):
-            korig = k
-            k += (r-1-j)
-            Q[i, j, (j+1):] = Xi[r+korig:r+k, i]
-        # now do diagonal
-        for j in range(r):
-            Q[i, j, j] = Xi[D-r+j, i]
-        Q[i, :, :] = 0.5*(Q[i, :, :] + Q[i, :, :].T)
-    boundvals = np.zeros((r, 2))
-    boundmax = 200 
-    boundmin = -200
-    boundvals[:, 0] = boundmin
-    boundvals[:, 1] = boundmax
-
-    algo_sol = dual_annealing(obj_function, bounds=boundvals, args=(Ls, Q), maxiter=50, initial_temp=2e4)
-    opt_m = algo_sol.x
-    opt_energy = algo_sol.fun
-    opt_result = algo_sol.message
-    print(opt_m, 1e10*opt_energy, opt_result, np.sum(np.sum(np.abs(Xi))))
-    #print(Ls, Q, Xi)
-    # Lorenz is good with a 1e2*opt_energy here
-    return 1e10*opt_energy
-
-
 def get_regularization(regularization):
     if regularization.lower() == "l0":
         return lambda x, lam: lam * np.count_nonzero(x)
@@ -232,8 +191,6 @@ def get_regularization(regularization):
         return lambda x, lam: lam * np.sum(np.abs(x))
     elif regularization.lower() == "weighted_l1":
         return lambda x, lam: np.sum(np.abs(lam @ x))
-    elif regularization.lower() == "bounded_galerkin_l0":
-        return lambda x, lam: lam * (np.count_nonzero(x) + sim_anneal(x))
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
 

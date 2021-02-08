@@ -139,9 +139,9 @@ class clSR3(SR3):
             raise ValueError("threshold cannot be negative")
         if eta <= 0:
             raise ValueError("eta must be positive")
-        if alpha_m <= 0:
+        if alpha_m < 0:
             raise ValueError("alpha_m must be positive")
-        if alpha_A <= 0:
+        if alpha_A < 0:
             raise ValueError("alpha_A must be positive")
         if tol <= 0 or vtol <= 0:
             raise ValueError("tol and vtol must be positive")
@@ -215,24 +215,8 @@ class clSR3(SR3):
         err_coef = np.sqrt(np.sum((PW - A) ** 2)) / self.eta
         return err_coef
 
-    def _objective(self, x, y, coef_sparse, A, m):
+    def _objective(self, x, y, coef_sparse, A, PW):
         """Objective function"""
-        r = self.PL.shape[0]
-        Nr = self.PL.shape[-1]
-        
-        # Compute 4-index tensor P
-        mPQ = np.zeros(self.PL.shape)
-        for i in range(r):
-            for j in range(i + 1, r):
-                mPQ[i, j, :, int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i] = m
-        for i in range(r):
-            mPQ[i, i, :, Nr - r + i] = m
-        for i in range(r):
-            for j in range(Nr):
-                mPQ[:, :, i, j] = 0.5 * (mPQ[:, :, i, j] + mPQ[:, :, i, j].T)
-        p = self.PL - mPQ
-        PW = np.tensordot(p, coef_sparse[:Nr, :], axes=([3, 2], [0, 1]))
-
         # Compute the errors
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
@@ -336,47 +320,33 @@ class clSR3(SR3):
             
             # Switching from coordinate-descent for (W)
             # to prox-grad for (A, m)
-            W = coef_sparse
             m_prev = np.zeros(r)
             q = 0
             while np.sum(np.abs(m - m_prev)) > self.vtol:
-                if not self.accel:
-                    # Regular prox gradient descent
-                    mPQ = np.zeros(PL.shape)
-                    for i in range(r):
-                        for j in range(i + 1, r):
-                            mPQ[i, j, :, int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i] = m
-                    for i in range(r):
-                        mPQ[i, i, :, Nr - r + i] = m
-                    for i in range(r):
-                        for j in range(Nr):
-                            mPQ[:, :, i, j] = 0.5 * (mPQ[:, :, i, j] + mPQ[:, :, i, j].T)
-                    p = PL - mPQ
-                    PW = np.tensordot(p, coef_sparse[:Nr, :], axes=([3, 2], [0, 1]))
-                    PQW = np.tensordot(PQ, W, axes=([2], [0]))
-                    A_b = (A - PW)  # / self.eta
-                    PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
-                    m_prev = m
-                    m = m_prev - self.alpha_m * PQWT_PW
+                alpha_m = self.alpha_m
+                # Accelerated prox gradient descent
+                if self.accel:
+                    m_partial = m + (q - 1) / (q + 2) * (m - m_prev)
                 else:
-                    # Accelerated prox gradient descent
-                    m_partial = m + (q - 1)/(q + 2)*(m - m_prev)
-                    mPQ = np.zeros(PL.shape)
-                    for i in range(r):
-                        for j in range(i + 1, r):
-                            mPQ[i, j, :, int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i] = m_partial
-                    for i in range(r):
-                        mPQ[i, i, :, Nr - r + i] = m_partial
-                    for i in range(r):
-                        for j in range(Nr):
-                           mPQ[:, :, i, j] = 0.5 * (mPQ[:, :, i, j] + mPQ[:, :, i, j].T)
-                    p = PL - mPQ
-                    PW = np.tensordot(p, coef_sparse[:Nr, :], axes=([3, 2], [0, 1]))
-                    PQW = np.tensordot(PQ, W, axes=([2], [0]))
-                    A_b = (A - PW)  # / self.eta
-                    PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
-                    m_prev = m
-                    m = m_partial - self.alpha_m * PQWT_PW
+                    m_partial = m
+                mPQ = np.zeros(PL.shape)
+                for i in range(r):
+                    for j in range(i + 1, r):
+                        mPQ[i, j, :, int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i] = m_partial
+                for i in range(r):
+                    mPQ[i, i, :, Nr - r + i] = m_partial
+                mPQ = 0.5 * (mPQ + np.transpose(mPQ, [1, 0, 2, 3]))
+                p = PL - mPQ
+                PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+                PQW = np.tensordot(PQ, coef_sparse, axes=([2], [0]))
+                A_b = (A - PW) / self.eta
+                PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
+                m_prev = m
+                if self.accel:
+                    m = m_partial - alpha_m * PQWT_PW
+                else:
+                    m = m_prev - alpha_m * PQWT_PW
+                # alpha_m = alpha_m*0.999
 
                 #print(m,q)
                 q = q + 1
@@ -387,7 +357,7 @@ class clSR3(SR3):
                 
                 # For now, printing out objective function during minimization
                 if q % 1000 == 0:
-                    trash = self._objective(x, y, W, A, m)
+                    trash = self._objective(x, y, coef_sparse, A, PW)
 
             # (m,A) loop finished, append the result
             self.m_history_.append(m)
@@ -397,7 +367,7 @@ class clSR3(SR3):
 
             # update objective
             objective_history.append(
-                self._objective(x, y, coef_sparse, A, m)
+                self._objective(x, y, coef_sparse, A, PW)
             )
 
             if (self._convergence_criterion() < self.tol):

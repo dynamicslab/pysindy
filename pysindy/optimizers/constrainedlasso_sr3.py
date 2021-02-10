@@ -18,11 +18,12 @@ class clSR3(SR3):
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
-        + (0.5 / \\nu)\\|w-v\\|^2_2
+        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(w)
+        + (0.5 / \\eta)\\|Pw-A\\|^2_2 + \\delta_0(Cw-d)
+        + \\delta_{}\\Lambda(A)}
 
-    where :math:`R(v)` is a regularization function. See the following references
-    for more details:
+    where :math:`R(w)` is a regularization function.
+    See the following references for more details:
 
         Zheng, Peng, et al. "A unified framework for sparse relaxed
         regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
@@ -30,6 +31,8 @@ class clSR3(SR3):
         Champion, Kathleen, et al. "A unified sparse optimization framework
         to learn parsimonious physics-informed models from data."
         arXiv preprint arXiv:1906.10612 (2019).
+
+        New paper, Kaptanoglu et al. on trapping SINDy algorithms
 
     Parameters
     ----------
@@ -52,7 +55,7 @@ class clSR3(SR3):
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
-    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
+    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features),
             optional (default None)
         Initial guess for coefficients ``coef_``.
         If None, least-squares is used to obtain an initial guess.
@@ -102,6 +105,7 @@ class clSR3(SR3):
 
     def __init__(
         self,
+        w_evo=True,
         threshold=0.1,
         eta=1.0,
         alpha_A=0.5,
@@ -117,8 +121,6 @@ class clSR3(SR3):
         fit_intercept=False,
         copy_X=True,
         initial_guess=None,
-        Theta=None,
-        Xdot=None,
         PL=None,
         PQ=None,
         thresholds=None,
@@ -146,13 +148,12 @@ class clSR3(SR3):
         if tol <= 0 or vtol <= 0:
             raise ValueError("tol and vtol must be positive")
 
+        self.w_evo = w_evo
         self.threshold = threshold
         self.thresholds = thresholds
         self.alpha_A = alpha_A
         self.alpha_m = alpha_m
         self.eta = eta
-        self.Theta = Theta
-        self.Xdot = Xdot
         self.A_eigmax = eigmax
         self.A_eigmin = eigmin
         self.PL = PL
@@ -190,14 +191,12 @@ class clSR3(SR3):
         r = A_old.shape[0]
         A = np.diag(eigvals)
         for i in range(r):
-            if eigvals[i] < self.A_eigmin:
-                A[i, i] = self.A_eigmin
-            elif eigvals[i] > self.A_eigmax:
+            # if eigvals[i] < self.A_eigmin:
+            #     A[i, i] = self.A_eigmin
+            # elif eigvals[i] > self.A_eigmax:
+            if eigvals[i] > self.A_eigmax:
                 A[i, i] = self.A_eigmax
-            else:
-                A[i, i] = eigvals[i]
-        A = eigvecs @ A @ np.linalg.pinv(eigvecs)
-        return A
+        return eigvecs @ A @ np.linalg.pinv(eigvecs)
 
     def _convergence_criterion(self):
         """Calculate the convergence criterion for the optimization"""
@@ -221,7 +220,7 @@ class clSR3(SR3):
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
-        print(0.5 * np.sum(R2), 0.5 * np.sum(A2) / self.eta, L1)
+        #print(0.5 * np.sum(R2), 0.5 * np.sum(A2) / self.eta, L1)
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
     def _reduce(self, x, y):
@@ -238,17 +237,18 @@ class clSR3(SR3):
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess
         if self.use_constraints and self.constraint_order.lower() == "target":
-            self.constraint_lhs = reorder_constraints(self.constraint_lhs, n_features)
+            self.constraint_lhs = reorder_constraints(self.constraint_lhs,
+                                                      n_features)
 
         coef_sparse = self.coef_.T
-        
+
         # update objective
         objective_history = []
         objective_history.append(
-            self._objective(x, y, coef_sparse, np.zeros((r,r)), np.zeros(r))
+            self._objective(x, y, coef_sparse, np.zeros((r, r)), np.zeros(r))
         )
-        
-        # Precompute some objects for optimization 
+
+        # Precompute some objects for optimization
         PL = self.PL
         PQ = self.PQ
         A = np.diag(self.A_eigmax * np.ones(r))
@@ -260,7 +260,7 @@ class clSR3(SR3):
                 for k in range(r):
                     for z in range(Nr):
                         delta_ijkl[i, j, k, z] = delta_il[i, z] * delta_jk[j, k]
-        
+
         np.random.seed(1)
         m = np.random.rand(r)-np.ones(r)*0.5  # initial guess for m
         self.m_history_.append(m)
@@ -274,8 +274,6 @@ class clSR3(SR3):
             for j in range(Nr):
                 mPQ[:, :, i, j] = 0.5 * (mPQ[:, :, i, j] + mPQ[:, :, i, j].T)
         p = PL - mPQ
-        self.Theta = x
-        self.Xdot = y
         x_expanded = np.zeros((n_samples, r, n_features, r))
         for i in range(r):
             x_expanded[:, i, :, i] = x
@@ -283,7 +281,7 @@ class clSR3(SR3):
         xTx = np.dot(x_expanded.T, x_expanded)
         xTy = np.dot(x_expanded.T, y.flatten())
         PW = np.tensordot(p, coef_sparse[:Nr, :], axes=([3, 2], [0, 1]))
-        
+
         # Begin optimization loop
         for _ in range(self.max_iter):
 
@@ -306,59 +304,68 @@ class clSR3(SR3):
                     if (self.threshold * np.dot(Omega[i, :],
                                    np.ones(tau.shape[0])) > np.abs(np.dot(
                                    Omega[i, :], J) + np.dot(H[i, :], D))):
-                        print(i,": threshold not satisfying optimality, reduce the value")
+                        print(i, ": threshold not satisfying optimality, reduce the value")
                     tau[i, i] = Omega[i, i] - np.dot(Omega[i, :],
                         np.ones(tau.shape[0])) + np.abs(np.dot(H[i, :], D) + np.dot(Omega[i, :], J)) / self.threshold
                 tau_inv = np.linalg.pinv(tau)
-                v = np.dot(tau_inv, (np.dot(H, D) + np.dot(Omega, J)))  #/ self.threshold
+
+                # This should be divided by lambda, but G = -lambda * v + ...
+                v = np.dot(tau_inv, (np.dot(H, D) + np.dot(Omega, J)))
                 # self.v_history_.append(v)
                 G = J - v  # * self_threshold
             else:
                 G = J
-            coef_sparse = (np.dot(Omega, G) + np.dot(H, D)).reshape(coef_sparse.shape)
+            if self.w_evo:
+                W = (np.dot(Omega, G) + np.dot(H, D))
+                coef_sparse = W.reshape(coef_sparse.shape)
             self.history_.append(coef_sparse.T)
-            
+
             # Switching from coordinate-descent for (W)
             # to prox-grad for (A, m)
             m_prev = np.zeros(r)
             q = 0
+            tk_prev = 1
             while np.sum(np.abs(m - m_prev)) > self.vtol:
-                alpha_m = self.alpha_m
                 # Accelerated prox gradient descent
                 if self.accel:
-                    m_partial = m + (q - 1) / (q + 2) * (m - m_prev)
+                    tk = (1 + np.sqrt(1 + 4 * tk_prev ** 2)) / 2.0
+                    m_partial = m + (tk_prev - 1.0) / tk * (m - m_prev)
+                    # m_partial = m + (q - 1) / (q + 2) * (m - m_prev)
                 else:
                     m_partial = m
+                # Code incorrect if I comment below line out but not sure why
                 mPQ = np.zeros(PL.shape)
                 for i in range(r):
-                    for j in range(i + 1, r):
-                        mPQ[i, j, :, int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i] = m_partial
-                for i in range(r):
                     mPQ[i, i, :, Nr - r + i] = m_partial
+                    for j in range(i + 1, r):
+                        ind = int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i
+                        mPQ[i, j, :, ind] = m_partial
                 mPQ = 0.5 * (mPQ + np.transpose(mPQ, [1, 0, 2, 3]))
-                p = PL - mPQ
-                PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+                PW = np.tensordot(PL - mPQ, coef_sparse, axes=([3, 2], [0, 1]))
                 PQW = np.tensordot(PQ, coef_sparse, axes=([2], [0]))
                 A_b = (A - PW) / self.eta
                 PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
                 m_prev = m
                 if self.accel:
-                    m = m_partial - alpha_m * PQWT_PW
+                    m = m_partial - self.alpha_m * PQWT_PW
                 else:
-                    m = m_prev - alpha_m * PQWT_PW
+                    m = m_prev - self.alpha_m * PQWT_PW
                 # alpha_m = alpha_m*0.999
 
-                #print(m,q)
                 q = q + 1
 
                 # Update A
                 # A = self._update_A(PW)
                 A = self._update_A(A - self.alpha_A * A_b)
-                
-                # For now, printing out objective function during minimization
-                if q % 1000 == 0:
-                    trash = self._objective(x, y, coef_sparse, A, PW)
 
+                # For now, printing out objective function during minimization
+                if q % 10000 == 0:
+                    trash = self._objective(x, y, coef_sparse, A, PW)
+                    print(m,q)
+                # update objective
+                objective_history.append(
+                    self._objective(x, y, coef_sparse, A, PW)
+                )
             # (m,A) loop finished, append the result
             self.m_history_.append(m)
             self.A_history_.append(A)
@@ -366,9 +373,9 @@ class clSR3(SR3):
             self.PW_history_.append(np.sort(eigvals))
 
             # update objective
-            objective_history.append(
-                self._objective(x, y, coef_sparse, A, PW)
-            )
+            #objective_history.append(
+            #    self._objective(x, y, coef_sparse, A, PW)
+            #)
 
             if (self._convergence_criterion() < self.tol):
                 # Could not (further) select important features

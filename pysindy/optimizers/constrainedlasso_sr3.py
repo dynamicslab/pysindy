@@ -185,9 +185,22 @@ class clSR3(SR3):
             self.unbias = False
             self.constraint_order = constraint_order
 
+    def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A):
+        g = x_transpose_y + P_transpose_A / self.eta
+        inv1 = np.linalg.pinv(H,rcond=1e-8)
+        inv2 = np.linalg.pinv(
+            self.constraint_lhs.dot(inv1).dot(self.constraint_lhs.T),rcond=1e-8
+        )
+
+        rhs = g.flatten() + self.constraint_lhs.T.dot(inv2).dot(
+            self.constraint_rhs - self.constraint_lhs.dot(inv1).dot(g.flatten())
+        )
+        rhs = rhs.reshape(g.shape)
+        return inv1.dot(rhs)
+
     def _update_A(self, A_old):
         """Update the symmetrized A matrix"""
-        eigvals, eigvecs = np.linalg.eig(A_old)
+        eigvals, eigvecs = np.linalg.eigh(A_old)
         r = A_old.shape[0]
         A = np.diag(eigvals)
         for i in range(r):
@@ -196,7 +209,8 @@ class clSR3(SR3):
             # elif eigvals[i] > self.A_eigmax:
             if eigvals[i] > self.A_eigmax:
                 A[i, i] = self.A_eigmax
-        return eigvecs @ A @ np.linalg.pinv(eigvecs)
+        #return np.linalg.inv(eigvecs) @ A @ eigvecs 
+        return eigvecs @ A @ np.linalg.inv(eigvecs)
 
     def _convergence_criterion(self):
         """Calculate the convergence criterion for the optimization"""
@@ -214,13 +228,14 @@ class clSR3(SR3):
         err_coef = np.sqrt(np.sum((PW - A) ** 2)) / self.eta
         return err_coef
 
-    def _objective(self, x, y, coef_sparse, A, PW):
+    def _objective(self, x, y, coef_sparse, A, PW, q):
         """Objective function"""
         # Compute the errors
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
-        #print(0.5 * np.sum(R2), 0.5 * np.sum(A2) / self.eta, L1)
+        if q % 500 == 0:
+            print(q, 0.5 * np.sum(R2), 0.5 * np.sum(A2) / self.eta, L1)
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
     def _reduce(self, x, y):
@@ -245,7 +260,7 @@ class clSR3(SR3):
         # update objective
         objective_history = []
         objective_history.append(
-            self._objective(x, y, coef_sparse, np.zeros((r, r)), np.zeros(r))
+            self._objective(x, y, coef_sparse, np.zeros((r, r)), np.zeros(r), 0)
         )
 
         # Precompute some objects for optimization
@@ -280,104 +295,71 @@ class clSR3(SR3):
         x_expanded = np.reshape(x_expanded, (n_samples * r, r * n_features))
         xTx = np.dot(x_expanded.T, x_expanded)
         xTy = np.dot(x_expanded.T, y.flatten())
+        x_transpose_y = np.dot(x.T, y)
         PW = np.tensordot(p, coef_sparse[:Nr, :], axes=([3, 2], [0, 1]))
 
+        q = 0
+        tk_prev = 1
+        m_prev = np.zeros(r)
         # Begin optimization loop
         for _ in range(self.max_iter):
 
-            # minimization over W
-            Avec = A.flatten()
+            # update W
             Pmatrix = p.reshape(r * r, r * Nr)
             pTp = np.dot(Pmatrix.T, Pmatrix)
-            H = np.linalg.pinv(xTx + pTp / self.eta)
-            CHCT_inv = np.linalg.pinv(np.dot(self.constraint_lhs,
-                                      np.dot(H, self.constraint_lhs.T)))
-            CT_CHCTinv_CH = np.dot(np.dot(self.constraint_lhs.T, CHCT_inv),
-                                   np.dot(self.constraint_lhs, H))
-            D = np.dot(self.constraint_lhs.T, np.dot(CHCT_inv,
-                                                     self.constraint_rhs))
-            J = np.dot(Pmatrix.T, Avec) / self.eta + xTy
-            Omega = np.dot(H, np.eye(Nr * r) - CT_CHCTinv_CH)
-            if self.threshold > 0.0:
-                tau = np.copy(Omega)
-                for i in range(tau.shape[0]):
-                    if (self.threshold * np.dot(Omega[i, :],
-                                   np.ones(tau.shape[0])) > np.abs(np.dot(
-                                   Omega[i, :], J) + np.dot(H[i, :], D))):
-                        print(i, ": threshold not satisfying optimality, reduce the value")
-                    tau[i, i] = Omega[i, i] - np.dot(Omega[i, :],
-                        np.ones(tau.shape[0])) + np.abs(np.dot(H[i, :], D) + np.dot(Omega[i, :], J)) / self.threshold
-                tau_inv = np.linalg.pinv(tau)
-
-                # This should be divided by lambda, but G = -lambda * v + ...
-                v = np.dot(tau_inv, (np.dot(H, D) + np.dot(Omega, J)))
-                # self.v_history_.append(v)
-                G = J - v  # * self_threshold
+            H = xTx + pTp / self.eta
+            if self.use_constraints:
+                P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+                coef_sparse = self._update_coef_constraints(H, xTy, P_transpose_A).reshape(coef_sparse.shape)
             else:
-                G = J
-            if self.w_evo:
-                W = (np.dot(Omega, G) + np.dot(H, D))
-                coef_sparse = W.reshape(coef_sparse.shape)
+                coef_sparse = cho_solve(cho, x_transpose_y)
             self.history_.append(coef_sparse.T)
 
-            # Switching from coordinate-descent for (W)
-            # to prox-grad for (A, m)
-            m_prev = np.zeros(r)
-            q = 0
-            tk_prev = 1
-            while np.sum(np.abs(m - m_prev)) > self.vtol:
-                # Accelerated prox gradient descent
-                if self.accel:
-                    tk = (1 + np.sqrt(1 + 4 * tk_prev ** 2)) / 2.0
-                    m_partial = m + (tk_prev - 1.0) / tk * (m - m_prev)
-                    # m_partial = m + (q - 1) / (q + 2) * (m - m_prev)
-                else:
-                    m_partial = m
-                # Code incorrect if I comment below line out but not sure why
-                mPQ = np.zeros(PL.shape)
-                for i in range(r):
-                    mPQ[i, i, :, Nr - r + i] = m_partial
-                    for j in range(i + 1, r):
-                        ind = int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i
-                        mPQ[i, j, :, ind] = m_partial
-                mPQ = 0.5 * (mPQ + np.transpose(mPQ, [1, 0, 2, 3]))
-                PW = np.tensordot(PL - mPQ, coef_sparse, axes=([3, 2], [0, 1]))
-                PQW = np.tensordot(PQ, coef_sparse, axes=([2], [0]))
-                A_b = (A - PW) / self.eta
-                PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
-                m_prev = m
-                if self.accel:
-                    m = m_partial - self.alpha_m * PQWT_PW
-                else:
-                    m = m_prev - self.alpha_m * PQWT_PW
-                # alpha_m = alpha_m*0.999
+            # prox-grad for (A, m)
+            # Accelerated prox gradient descent
+            if self.accel:
+                tk = (1 + np.sqrt(1 + 4 * tk_prev ** 2)) / 2.0
+                m_partial = m + (tk_prev - 1.0) / tk * (m - m_prev)
+                tk_prev = tk
+            else:
+                m_partial = m
+            # Code incorrect if I comment below line out but not sure why
+            mPQ = np.zeros(PL.shape)
+            for i in range(r):
+                mPQ[i, i, :, Nr - r + i] = m_partial
+                for j in range(i + 1, r):
+                    ind = int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i
+                    mPQ[i, j, :, ind] = m_partial
+            mPQ = 0.5 * (mPQ + np.transpose(mPQ, [1, 0, 2, 3]))
+            PW = np.tensordot(PL - mPQ, coef_sparse, axes=([3, 2], [0, 1]))
+            PQW = np.tensordot(PQ, coef_sparse, axes=([2], [0]))
+            A_b = (A - PW) / self.eta
+            PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
+            if self.accel:
+                m = m_partial - self.alpha_m * PQWT_PW
+            else:
+                m = m_prev - self.alpha_m * PQWT_PW
+            m_prev = m
+            # alpha_m = alpha_m*0.999
 
-                q = q + 1
+            # Update A
+            # A = self._update_A(PW)
+            A = self._update_A(A - self.alpha_A * A_b)
 
-                # Update A
-                # A = self._update_A(PW)
-                A = self._update_A(A - self.alpha_A * A_b)
-
-                # For now, printing out objective function during minimization
-                if q % 10000 == 0:
-                    trash = self._objective(x, y, coef_sparse, A, PW)
-                    print(m,q)
-                # update objective
-                objective_history.append(
-                    self._objective(x, y, coef_sparse, A, PW)
-                )
-            # (m,A) loop finished, append the result
+            # (m,A) update finished, append the result
             self.m_history_.append(m)
             self.A_history_.append(A)
             eigvals, eigvecs = np.linalg.eig(PW)
             self.PW_history_.append(np.sort(eigvals))
-
+            # print(np.sort(eigvals))
+            
             # update objective
-            #objective_history.append(
-            #    self._objective(x, y, coef_sparse, A, PW)
-            #)
+            objective_history.append(
+                self._objective(x, y, coef_sparse, A, PW, q)
+            )
+            q = q + 1
 
-            if (self._convergence_criterion() < self.tol):
+            if (np.sum(np.abs(m - m_prev)) < self.vtol) and self._convergence_criterion() < self.tol:
                 # Could not (further) select important features
                 # and already found a set of coefficients s.t. As is neg def
                 break
@@ -394,5 +376,5 @@ class clSR3(SR3):
                 self.constraint_lhs, n_features, output_order="target"
             )
 
-        self.coef_ = np.real(coef_sparse.T)
+        self.coef_ = coef_sparse.T
         self.objective_history = objective_history

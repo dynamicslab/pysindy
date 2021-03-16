@@ -78,6 +78,10 @@ class trappingSR3(SR3):
         could be straightforwardly implemented, but L0 requires 
         reformulation because of nonconvexity.
 
+   eps_solver : float, optional
+       If threshold != 0.0, this specifies the error tolerance in the 
+       CVXPY (OSQP) solve. Default is 1.0e-3 in OSQP.
+
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
@@ -92,7 +96,11 @@ class trappingSR3(SR3):
     m0 : np.ndarray, shape (n_targets), optional (default None)
         Initial guess for vector m in the optimization. Otherwise 
         each component of m is randomly initialized in [-1, 1].
-
+    
+    A0 : np.ndarray, shape (n_targets, n_targets), optional (default None)
+        Initial guess for vector A in the optimization. Otherwise
+        A is initialized as A = diag(gamma).
+        
     PL : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
         Linear coefficient part of the P matrix in ||Pw - A||^2
     
@@ -146,6 +154,8 @@ class trappingSR3(SR3):
         self,
         w_evo=True,
         threshold=0.1,
+        eps_solver=1.0e-3,
+        max_cvxpy_iters=1e3,
         eta=1.0e20,
         alpha_A=1.0e20,
         alpha_m=5e19,
@@ -160,6 +170,7 @@ class trappingSR3(SR3):
         copy_X=True,
         initial_guess=None,
         m0=None,
+        A0=None,
         PL=None,
         PQ=None,
         thresholds=None,
@@ -186,12 +197,15 @@ class trappingSR3(SR3):
             raise ValueError("alpha_A must be positive")
         if gamma >= 0:
             raise ValueError("gamma must be negative")
-        if tol <= 0 or mtol <= 0:
+        if tol <= 0 or mtol <= 0 or eps_solver <= 0:
             raise ValueError("tol and mtol must be positive")
 
         self.w_evo = w_evo
         self.threshold = threshold
+        self.eps_solver = eps_solver
+        self.max_cvxpy_iters = max_cvxpy_iters
         self.m0 = m0
+        self.A0 = A0
         self.thresholds = thresholds
         self.alpha_A = alpha_A
         self.alpha_m = alpha_m
@@ -270,7 +284,7 @@ class trappingSR3(SR3):
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
-        if q % int(self.max_iter / 10) == 0 or self.threshold != 0.0:
+        if q % max(int(self.max_iter / 10.0), 1) == 0 or self.threshold != 0.0:
             row = [q, 0.5 * np.sum(R2), 0.5 * np.sum(A2) / self.eta, L1] 
             print("{0:12d} {1:12.5e} {2:12.5e} {3:12.5e}".format(*row))
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
@@ -296,17 +310,25 @@ class trappingSR3(SR3):
 
         row = ['Iteration', 'Data Error', 'Stability Error', 'L1 Error']
         print("{: >10} | {: >10} | {: >10} | {: >10}".format(*row))
-
-        # Precompute some objects for optimization
-        PL = self.PL
-        PQ = self.PQ
-        A = np.diag(self.gamma * np.ones(r))
+ 
+        # initial A
+        if self.A0 is not None:
+            A = self.A0
+        else:
+            A = np.diag(self.gamma * np.ones(r))
+        self.A_history_.append(A)
+         
+        # initial guess for m
         if self.m0 is not None:
             m = self.m0
         else:
             np.random.seed(1)
-            m = (np.random.rand(r)-np.ones(r))*1  # initial guess for m
+            m = (np.random.rand(r)-np.ones(r))*2
         self.m_history_.append(m)
+
+        # Precompute some objects for optimization
+        PL = self.PL
+        PQ = self.PQ
         mPQ = np.zeros(PL.shape)
         for i in range(r):
             for j in range(i + 1, r):
@@ -356,6 +378,7 @@ class trappingSR3(SR3):
                     else: 
                         prob = cp.Problem(cp.Minimize(cost))
                     start = time.time()
+                    # prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
                     prob.solve()
                     end = time.time()
                     # print('Total cvxpy time = ', end - start)

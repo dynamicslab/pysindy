@@ -8,7 +8,7 @@ import cvxpy as cp
 from ..utils import get_regularization, get_prox
 from ..utils import reorder_constraints
 from .sr3 import SR3
-
+from scipy.optimize import dual_annealing as anneal_algo
 
 class trappingSR3(SR3):
     """
@@ -154,8 +154,9 @@ class trappingSR3(SR3):
         self,
         w_evo=True,
         threshold=0.1,
-        eps_solver=1.0e-3,
+        eps_solver=1.0e-7,
         max_cvxpy_iters=1e3,
+        relax_optim=True,
         eta=1.0e20,
         alpha_A=1.0e20,
         alpha_m=5e19,
@@ -204,6 +205,7 @@ class trappingSR3(SR3):
         self.threshold = threshold
         self.eps_solver = eps_solver
         self.max_cvxpy_iters = max_cvxpy_iters
+        self.relax_optim = relax_optim
         self.m0 = m0
         self.A0 = A0
         self.thresholds = thresholds
@@ -315,7 +317,7 @@ class trappingSR3(SR3):
         if self.A0 is not None:
             A = self.A0
         else:
-            A = np.diag(self.gamma * np.ones(r))
+            A = np.zeros((r, r)) # np.diag(self.gamma * np.ones(r))
         self.A_history_.append(A)
          
         # initial guess for m
@@ -347,6 +349,21 @@ class trappingSR3(SR3):
         xTy = np.dot(x_expanded.T, y.flatten())
         Pmatrix = p.reshape(r * r, r * Nr)
 
+        boundvals = np.zeros((r, 2))
+        boundmax = 500
+        boundmin = -500
+        boundvals[:, 0] = boundmin
+        boundvals[:, 1] = boundmax
+        
+        
+        def _obj_function(m, L_obj, Q_obj):
+            # As = np.zeros(L_obj.shape)
+            As = L_obj - np.tensordot(m, Q_obj,axes=([0], [2]))
+            # As = L_obj - np.tensordot(m, Q_obj,axes=([0],[0]))
+            eigvals, eigvecs = np.linalg.eigh(As)
+            return(eigvals[-1])
+
+
         q = 0
         tk_prev = 1
         m_prev = m 
@@ -369,59 +386,101 @@ class trappingSR3(SR3):
             # update w
             if self.w_evo:
                 # Define and solve the CVXPY problem if threshold is nonzero.
-                if self.threshold > 0.0:
+                if self.relax_optim:
+                    if self.threshold > 0.0:
+                        xi = cp.Variable(Nr * r)
+                        cost = cp.sum_squares(x_expanded @ xi - y.flatten()) + self.threshold * cp.norm1(xi)
+                        cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+                        if self.use_constraints:
+                            prob = cp.Problem(cp.Minimize(cost),[self.constraint_lhs @ xi == self.constraint_rhs])
+                        else: 
+                            prob = cp.Problem(cp.Minimize(cost))
+                        start = time.time()
+                        # default is to use OSQP here
+                        prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
+                        # prob.solve()
+                        # prob.solve(eps=self.eps_solver)
+                        end = time.time()
+                        # print('Total cvxpy time = ', end - start)
+                        # print("\nThe optimal value is", prob.value)
+                        if xi.value is None:
+                            print('Infeasible solve over xi, increase/decrease eta')
+                            break
+                        coef_sparse = (xi.value).reshape(coef_sparse.shape)
+                    else:
+                        pTp = np.dot(Pmatrix.T, Pmatrix)
+                        H = xTx + pTp / self.eta
+                        if self.use_constraints:
+                            P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+                            coef_sparse = self._update_coef_constraints(H, xTy, P_transpose_A).reshape(coef_sparse.shape)
+                        else:
+                            coef_sparse = cho_solve(cho, x_transpose_y)
+                else:
                     xi = cp.Variable(Nr * r)
                     cost = cp.sum_squares(x_expanded @ xi - y.flatten()) + self.threshold * cp.norm1(xi)
-                    cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+                    cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
                     if self.use_constraints:
                         prob = cp.Problem(cp.Minimize(cost),[self.constraint_lhs @ xi == self.constraint_rhs])
                     else: 
                         prob = cp.Problem(cp.Minimize(cost))
                     start = time.time()
                     # prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
-                    prob.solve()
+                    # prob.solve()
+                    prob.solve(eps=self.eps_solver)
                     end = time.time()
                     # print('Total cvxpy time = ', end - start)
                     # print("\nThe optimal value is", prob.value)
+                    if xi.value is None:
+                        print('Infeasible solve over xi, increase/decrease eta')
+                        break
                     coef_sparse = (xi.value).reshape(coef_sparse.shape)
-                else:
-                    pTp = np.dot(Pmatrix.T, Pmatrix)
-                    H = xTx + pTp / self.eta
-                    if self.use_constraints:
-                        P_transpose_A = np.dot(Pmatrix.T, A.flatten())
-                        coef_sparse = self._update_coef_constraints(H, xTy, P_transpose_A).reshape(coef_sparse.shape)
-                    else:
-                        coef_sparse = cho_solve(cho, x_transpose_y)
+                
+                    m_cp = cp.Variable(r)
+                    L = np.tensordot(PL, coef_sparse, axes=([3, 2],[0, 1]))
+                    Q = np.reshape(np.tensordot(PQ, coef_sparse, axes=([2],[0])), (r * r, r))
+                    Ls = 0.5 * (L + L.T).flatten()
+                    cost_m = cp.lambda_max(cp.reshape(Ls - Q @ m_cp, (r, r)))
+                    prob_m = cp.Problem(cp.Minimize(cost_m))
+                    start = time.time()
+                    # SCS solver 
+                    prob_m.solve(eps=self.eps_solver)  #, verbose=True)
+                    end = time.time()
+                    m = m_cp.value
+                    if m is None: 
+                        print('Infeasible solve over m, increase/decrease eta')
+                        break
             self.history_.append(coef_sparse.T)
+            
+            if self.relax_optim:
+                # prox-grad for (A, m)
+                # Accelerated prox gradient descent
+                if self.accel:
+                    tk = (1 + np.sqrt(1 + 4 * tk_prev ** 2)) / 2.0
+                    m_partial = m + (tk_prev - 1.0) / tk * (m - m_prev)
+                    tk_prev = tk
+                    mPQ = np.zeros(PL.shape)
+                    for i in range(r):
+                        mPQ[i, i, :, Nr - r + i] = m_partial
+                        for j in range(i + 1, r):
+                            ind = int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i
+                            mPQ[i, j, :, ind] = m_partial
+                    mPQ = 0.5 * (mPQ + np.transpose(mPQ, [1, 0, 2, 3]))
+                    p = PL - mPQ
+                    Pmatrix = p.reshape(r * r, r * Nr)
+                PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+                PQW = np.tensordot(PQ, coef_sparse, axes=([2], [0]))
+                A_b = (A - PW) / self.eta
+                PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
+                if self.accel:
+                    m = m_partial - self.alpha_m * PQWT_PW
+                else:
+                    m = m_prev - self.alpha_m * PQWT_PW
+                m_prev = m
 
-            # prox-grad for (A, m)
-            # Accelerated prox gradient descent
-            if self.accel:
-                tk = (1 + np.sqrt(1 + 4 * tk_prev ** 2)) / 2.0
-                m_partial = m + (tk_prev - 1.0) / tk * (m - m_prev)
-                tk_prev = tk
-                mPQ = np.zeros(PL.shape)
-                for i in range(r):
-                    mPQ[i, i, :, Nr - r + i] = m_partial
-                    for j in range(i + 1, r):
-                        ind = int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i
-                        mPQ[i, j, :, ind] = m_partial
-                mPQ = 0.5 * (mPQ + np.transpose(mPQ, [1, 0, 2, 3]))
-                p = PL - mPQ
-                Pmatrix = p.reshape(r * r, r * Nr)
-            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
-            PQW = np.tensordot(PQ, coef_sparse, axes=([2], [0]))
-            A_b = (A - PW) / self.eta
-            PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
-            if self.accel:
-                m = m_partial - self.alpha_m * PQWT_PW
-            else:
-                m = m_prev - self.alpha_m * PQWT_PW
-            m_prev = m
-
-            # Update A
-            A = self._update_A(A - self.alpha_A * A_b, PW)
-
+                # Update A
+                A = self._update_A(A - self.alpha_A * A_b, PW)
+            else: 
+                PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
             # (m,A) update finished, append the result
             self.m_history_.append(m)
             self.A_history_.append(A)

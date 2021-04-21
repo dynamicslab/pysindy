@@ -2,7 +2,7 @@ from itertools import repeat
 from typing import Sequence
 
 import numpy as np
-from scipy.optimize import bisect, dual_annealing
+from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
 

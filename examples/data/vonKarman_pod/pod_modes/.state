@@ -1,0 +1,9 @@
+NEK_SOURCE_ROOT=/srv/cfd/Nek5000
+FC=mpif77
+FFLAGS=-mcmodel=large
+FCPP=-cpp
+FR8=-fdefault-real-8 -fdefault-double-8
+FF77=-std=legacy
+CC=mpicc
+CFLAGS=
+PPLIST= MPI UNDERSCORE GLOBAL_LONG_LONG TIMER

@@ -1,0 +1,42 @@
+c
+c     Include file to dimension static arrays
+c     and to set some hardwired run-time parameters
+c
+      integer ldim,lx1,lxd,lx2,lx1m,lelg,lelt,lpmin,ldimt
+      integer lpelt,lbelt,toteq,lcvelt
+      integer lelx,lely,lelz,mxprev,lgmres,lorder,lhis
+      integer maxobj,lpert,nsessmax,lxo
+      integer lfdm,ldimt_proj,lelr
+
+      ! BASIC
+      parameter (ldim=2)               ! domain dimension (2 or 3)
+      parameter (lx1=7)                ! GLL points per element along each direction
+      parameter (lxd=9)                ! GL  points for over-integration (dealiasing) 
+      parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)
+                                     
+      parameter (lelg=3000)            ! max number of global elements
+      parameter (lpmin=1)              ! min number of MPI ranks 
+      parameter (lelt=lelg/lpmin + 3)  ! max number of local elements per MPI rank
+      parameter (ldimt=1)              ! max auxiliary fields (temperature + scalars)
+
+      ! OPTIONAL
+      parameter (ldimt_proj=1)         ! max auxiliary fields residual projection
+      parameter (lelr=lelt)            ! max number of local elements per restart file
+      parameter (lhis=100)             ! max history/monitoring points
+      parameter (maxobj=1)             ! max number of objects
+      parameter (lpert=1)              ! max number of perturbations
+      parameter (toteq=1)              ! max number of conserved scalars in CMT
+      parameter (nsessmax=1)           ! max sessions to NEKNEK
+      parameter (lxo=lx1)              ! max GLL points on output (lxo>=lx1)
+      parameter (mxprev=20,lgmres=30)  ! max dim of projection & Krylov space
+      parameter (lorder=3)             ! max order in time
+      parameter (lx1m=1)               ! GLL points mesh solver
+      parameter (lfdm=0)               ! unused 
+      parameter (lelx=1,lely=1,lelz=1) ! global tensor mesh dimensions
+
+      parameter (lbelt=1)              ! lelt for mhd
+      parameter (lpelt=1)              ! lelt for linear stability
+      parameter (lcvelt=1)             ! lelt for cvode
+
+      ! INTERNALS
+      include 'SIZE.inc'

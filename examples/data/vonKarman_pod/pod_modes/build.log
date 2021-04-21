@@ -1,0 +1,3124 @@
+ar -cr libblasLapack.a *.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/drive1.f -o obj/drive1.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/drive2.f -o obj/drive2.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/plan5.f -o obj/plan5.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/plan4.f -o obj/plan4.o
+/srv/cfd/Nek5000/core/plan5.f:10:20:
+
+       common /scrns/  resv  (lx1*ly1*lz1*lelv,3)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (3531528 vs 7063056 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/bdry.f -o obj/bdry.o
+/srv/cfd/Nek5000/core/plan4.f:46:20:
+
+          call sumab(vx_e,vx,vxlag,ntot1,ab,nab)
+                    1
+Warning: Rank mismatch in argument ‘v’ at (1) (scalar and rank-4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/plan4.f:47:20:
+
+          call sumab(vy_e,vy,vylag,ntot1,ab,nab)
+                    1
+Warning: Rank mismatch in argument ‘v’ at (1) (scalar and rank-4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/plan4.f:48:30:
+
+          if (if3d) call sumab(vz_e,vz,vzlag,ntot1,ab,nab)
+                              1
+Warning: Rank mismatch in argument ‘v’ at (1) (scalar and rank-4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/plan4.f:180:20:
+
+       call bcdirpr (pr)
+                    1
+Warning: Actual argument contains too few elements for dummy argument ‘s’ (75075/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/plan4.f:69:24:
+
+          call crespsp  (respr)
+                        1
+Warning: Actual argument contains too few elements for dummy argument ‘respr’ (75075/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/drive2.f:1479:36:
+
+          call plan4_vol(vxc,vyc,vzc,prc)
+                                    1
+Warning: Actual argument contains too few elements for dummy argument ‘prc’ (75075/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/plan4.f:118:20:
+
+       common /scruz/         sij (lx1*ly1*lz1,6,lelv)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (7063056 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/plan4.f:21:20:
+
+       COMMON /SCRNS/ RES1  (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7663656 vs 7063056 bytes)
+/srv/cfd/Nek5000/core/drive2.f:1651:20:
+
+       common /scrns/ resv1 (lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (4708704 vs 7663656 bytes)
+/srv/cfd/Nek5000/core/plan4.f:553:20:
+
+       common /scrns/ w1(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 7663656 bytes)
+/srv/cfd/Nek5000/core/plan4.f:656:20:
+
+       COMMON /SCRNS/ DVC  (LX1,LY1,LZ1,LELV),
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (4708704 vs 7663656 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/coef.f -o obj/coef.o
+/srv/cfd/Nek5000/core/drive2.f:1288:20:
+
+       COMMON /SCRNS/ WORK(LCTMP1)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (4708704 vs 7663656 bytes)
+/srv/cfd/Nek5000/core/drive2.f:1511:20:
+
+       COMMON /SCRNS/ RESV1 (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (4132128 vs 7663656 bytes)
+/srv/cfd/Nek5000/core/drive2.f:1702:20:
+
+       COMMON /SCRNS/ w(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (1177176 vs 7663656 bytes)
+/srv/cfd/Nek5000/core/drive2.f:1749:20:
+
+       COMMON /SCRUZ/ TA(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (1177176 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/bdry.f:1352:20:
+
+       COMMON /CTMP1/ A1X(LX1),A1Y(LX1),STX(LX1),STY(LX1)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (224 vs 1960 bytes)
+/srv/cfd/Nek5000/core/bdry.f:1419:20:
+
+       COMMON /CTMP0/ XFM1(LX1),YFM1(LX1),T1XF(LX1),T1YF(LX1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (224 vs 1176 bytes)
+/srv/cfd/Nek5000/core/bdry.f:1417:20:
+
+       COMMON /CTMP1/ A1X(LX1),A1Y(LX1),A2X(LX1),A2Y(LX1)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (392 vs 1960 bytes)
+/srv/cfd/Nek5000/core/bdry.f:588:20:
+
+       COMMON /SCRMG/ TMQ1(LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (3531528 vs 2352 bytes)
+/srv/cfd/Nek5000/core/bdry.f:585:20:
+
+       COMMON /SCRUZ/ TMP1(LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (3531528 vs 2352 bytes)
+/srv/cfd/Nek5000/core/bdry.f:1208:20:
+
+       COMMON /CTMP0/ STC(LX1,LY1,LZ1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (392 vs 1176 bytes)
+/srv/cfd/Nek5000/core/bdry.f:1205:20:
+
+       COMMON /SCRSF/ TRX(LX1,LY1,LZ1)
+                    1
+Warning: Named COMMON block ‘scrsf’ at (1) shall be of the same size as elsewhere (1176 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/bdry.f:1848:20:
+
+       COMMON /SCRMG/ V1(LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (4708704 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/bdry.f:1942:20:
+
+       common /scrmg/ v1(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (3531528 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/coef.f:1651:22:
+
+       call out_fld_el(x,e,'XQ')
+                      1
+Warning: Actual argument contains too few elements for dummy argument ‘x’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/coef.f:1652:22:
+
+       call out_fld_el(y,e,'YQ')
+                      1
+Warning: Actual argument contains too few elements for dummy argument ‘x’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/coef.f:1653:22:
+
+       call out_fld_el(z,e,'ZQ')
+                      1
+Warning: Actual argument contains too few elements for dummy argument ‘x’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/coef.f:1207:20:
+
+       COMMON /CTMP1/ ZSM1(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (4708704 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/coef.f:1081:20:
+
+       COMMON /CTMP0/ WGTR1(LX1,LELT)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (672672 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/coef.f:1077:20:
+
+       COMMON /SCRNS/ XRM1(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (4708704 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/coef.f:1144:20:
+
+       COMMON /SCRNS/ XRM1(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (4708704 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/coef.f:604:20:
+
+       COMMON /CTMP1/ ZSM1(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (2354352 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/coef.f:1464:20:
+
+       COMMON /CTMP0/ XA(LX1,LY3,LZ3), XB(LX1,LY1,LZ3)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (784 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/coef.f:1397:20:
+
+       COMMON /CTMP0/ XB(LX1,LY1,LZ1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (392 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/coef.f:1507:20:
+
+       COMMON /CTMP0/ XA(LX3,LY1,LZ1),  XB(LX3,LY3,LZ1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (784 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/coef.f:1582:20:
+
+       COMMON /CTMP0/ XA(LX1,LY2,LZ2), XB(LX1,LY1,LZ2)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (672 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/coef.f:1623:20:
+
+       COMMON /CTMP0/ XA(LX1,LY2,LZ2), XB(LX1,LY1,LZ2)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (672 vs 2354352 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/conduct.f -o obj/conduct.o
+/srv/cfd/Nek5000/core/conduct.f:594:22:
+
+       call fwght  (qs,mask)  ! qs is work array
+                      1
+Warning: Actual argument contains too few elements for dummy argument ‘mult’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/conduct.f:448:20:
+
+       common /scruz/ ta(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (2354352 vs 1177176 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/connect1.f -o obj/connect1.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/connect2.f -o obj/connect2.o
+/srv/cfd/Nek5000/core/connect2.f:77:34:
+
+                 call cscan(string,'MESH DATA',9)
+                                  1
+Warning: Character length of actual argument shorter than of dummy argument ‘key’ (9/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/connect2.f:375:20:
+
+       common /scrns/ tc(lx1,ly1,lz1,lelt),td(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (5885880 vs 3531544 bytes)
+/srv/cfd/Nek5000/core/connect2.f:605:20:
+
+       COMMON /CTMP0/ VO(LELT),XYZI(3,LELT),CG(3,LELT)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (168264 vs 456 bytes)
+/srv/cfd/Nek5000/core/connect2.f:778:20:
+
+       COMMON /CTMP0/ XCG(LELT),YCG(LELT),ZCG(LELT)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (72072 vs 168264 bytes)
+/srv/cfd/Nek5000/core/connect1.f:316:20:
+
+       COMMON /CTMP0/ ITMP(3,3,3)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (108 vs 368 bytes)
+/srv/cfd/Nek5000/core/connect1.f:1628:20:
+
+       common /scruz/  snx(lxz) , sny(lxz) , snz(lxz) ,  efc(lxz)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (224 vs 3531528 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/dssum.f -o obj/dssum.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/edgec.f -o obj/edgec.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/eigsolv.f -o obj/eigsolv.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/gauss.f -o obj/gauss.o
+/srv/cfd/Nek5000/core/eigsolv.f:371:20:
+
+       COMMON /SCREV/ X2 (LX2,LY2,LZ2,LELV)
+                    1
+Warning: Named COMMON block ‘screv’ at (1) shall be of the same size as elsewhere (1201200 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/eigsolv.f:326:20:
+
+       COMMON /SCREV/ X2   (LX2,LY2,LZ2,LELV)
+                    1
+Warning: Named COMMON block ‘screv’ at (1) shall be of the same size as elsewhere (1201200 vs 2354352 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/genxyz.f -o obj/genxyz.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/navier1.f -o obj/navier1.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/makeq.f -o obj/makeq.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/navier0.f -o obj/navier0.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/navier2.f -o obj/navier2.o
+/srv/cfd/Nek5000/core/navier0.f:54:20:
+
+       common /scruz/ xbar(ldim,lelt),ibar(lelt)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (60064 vs 1801800 bytes)
+/srv/cfd/Nek5000/core/genxyz.f:1456:17:
+
+             ledg(5)  = dist_xyzc(1,5,ie)
+                 1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 1
+/srv/cfd/Nek5000/core/genxyz.f:1457:17:
+
+             ledg(6)  = dist_xyzc(2,6,ie)
+                 1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 1
+/srv/cfd/Nek5000/core/genxyz.f:1458:17:
+
+             ledg(7)  = dist_xyzc(4,8,ie)
+                 1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 1
+/srv/cfd/Nek5000/core/genxyz.f:1459:17:
+
+             ledg(8)  = dist_xyzc(3,7,ie)
+                 1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 1
+/srv/cfd/Nek5000/core/genxyz.f:1461:17:
+
+             ledg(9)  = dist_xyzc(5,6,ie)
+                 1
+Warning: Array reference at (1) is out of bounds (9 > 4) in dimension 1
+/srv/cfd/Nek5000/core/genxyz.f:1462:17:
+
+             ledg(10) = dist_xyzc(5,8,ie)
+                 1
+Warning: Array reference at (1) is out of bounds (10 > 4) in dimension 1
+/srv/cfd/Nek5000/core/genxyz.f:1463:17:
+
+             ledg(11) = dist_xyzc(8,7,ie)
+                 1
+Warning: Array reference at (1) is out of bounds (11 > 4) in dimension 1
+/srv/cfd/Nek5000/core/genxyz.f:1464:17:
+
+             ledg(12) = dist_xyzc(6,7,ie)
+                 1
+Warning: Array reference at (1) is out of bounds (12 > 4) in dimension 1
+/srv/cfd/Nek5000/core/genxyz.f:692:20:
+
+       COMMON /CTMP0/ XCV(3,2,2),VN1(3),VN2(3)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (240 vs 784 bytes)
+/srv/cfd/Nek5000/core/genxyz.f:1293:20:
+
+       common /ctmp0/ xcb(2,2,2),ycb(2,2,2),zcb(2,2,2),w(ldw)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1760 vs 784 bytes)
+/srv/cfd/Nek5000/core/genxyz.f:1344:20:
+
+       common /ctmp0/ w(ldw,2),zg(3)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (3160 vs 1760 bytes)
+/srv/cfd/Nek5000/core/genxyz.f:1354:20:
+
+       common /cxyzl/ zgml(lx1,3),jx (lx1*3),jy (lx1*3),jz (lx1*3)
+                    1
+Warning: Named COMMON block ‘cxyzl’ at (1) shall be of the same size as elsewhere (1200 vs 856 bytes)
+/srv/cfd/Nek5000/core/genxyz.f:329:21:
+
+       COMMON /SRFCEL/ SUCCES
+                     1
+Warning: Named COMMON block ‘srfcel’ at (1) shall be of the same size as elsewhere (8 vs 4 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/navier3.f -o obj/navier3.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/navier4.f -o obj/navier4.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/prepost.f -o obj/prepost.o
+/srv/cfd/Nek5000/core/navier4.f:687:38:
+
+      $   (m,mmx,ixb,ibb,ix,ib,ih1,ih2,ivar,n,ifvec,name6)
+                                      1
+Warning: Actual argument contains too few elements for dummy argument ‘ivar’ (1/10) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier4.f:713:14:
+
+          ivar(2) = m ! Update number of saved vectors
+              1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 1
+/srv/cfd/Nek5000/core/navier4.f:1141:35:
+
+      $                             ivar,n,ifvec,name6)
+                                   1
+Warning: Actual argument contains too few elements for dummy argument ‘ivar’ (1/10) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier4.f:1149:11:
+
+       ivar(2) = m ! Update number of saved vectors
+           1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 1
+/srv/cfd/Nek5000/core/navier4.f:1295:26:
+
+         call hmhzpf (name,u,r,h1,h2,mask,mult,imsh,tol,maxi,isd,binvm1)
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘u’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier4.f:1297:26:
+
+         call hmhzpf (name,u,r,h1,h2,mask,mult,imsh,tol,maxi,isd,bintm1)
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘u’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:2592:27:
+
+          call rotate_cyc  (a,b,c,1)
+                           1
+Warning: Actual argument contains too few elements for dummy argument ‘r1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:2594:27:
+
+          call rotate_cyc  (a,b,c,0)
+                           1
+Warning: Actual argument contains too few elements for dummy argument ‘r1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:4082:23:
+
+       call multd (work,inpx,rxm2,sxm2,txm2,1,iflg)
+                       1
+Warning: Actual argument contains too few elements for dummy argument ‘x’ (49/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:4084:23:
+
+       call multd (work,inpy,rym2,sym2,tym2,2,iflg)
+                       1
+Warning: Actual argument contains too few elements for dummy argument ‘x’ (49/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:4087:26:
+
+          call multd (work,inpz,rzm2,szm2,tzm2,3,iflg)
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘x’ (49/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:2982:56:
+
+             call specmp(md(1,1,1,ie),nd,m1(1,1,1,ie),n1,im1d,im1dt,w)
+                                                        1
+Warning: Rank mismatch in argument ‘ba’ at (1) (scalar and rank-2) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:2986:56:
+
+             call specmp(m1(1,1,1,ie),n1,md(1,1,1,ie),nd,imd1,imd1t,w)
+                                                        1
+Warning: Rank mismatch in argument ‘ba’ at (1) (scalar and rank-2) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:3013:52:
+
+         call specmp(m1(1,1,1,ie),n1,md(1,1,1,ie),nd,pmd1,pmd1t,w)
+                                                    1
+Warning: Rank mismatch in argument ‘ba’ at (1) (scalar and rank-2) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:3272:26:
+
+       call mapwp(dfid,lxd,dfi,lx1,-1)
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘m1’ (49/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:4108:17:
+
+       call cdtp (outx,inpfld,rxm2,sxm2,txm2,1)
+                 1
+Warning: Actual argument contains too few elements for dummy argument ‘dtx’ (49/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:4109:17:
+
+       call cdtp (outy,inpfld,rym2,sym2,tym2,2)
+                 1
+Warning: Actual argument contains too few elements for dummy argument ‘dtx’ (49/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:4111:20:
+
+      $   call cdtp (outz,inpfld,rzm2,szm2,tzm2,3)
+                    1
+Warning: Actual argument contains too few elements for dummy argument ‘dtx’ (49/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier4.f:217:21:
+
+       COMMON /ORTHOX/ Pbar(LTOT2),Pnew(LTOT2),Pbrr(ltot2)
+                     1
+Warning: Named COMMON block ‘orthox’ at (1) shall be of the same size as elsewhere (1801800 vs 1201200 bytes)
+/srv/cfd/Nek5000/core/navier4.f:368:21:
+
+       COMMON /ORTHOX/ Pbar(LTOT2),Pnew(LTOT2)
+                     1
+Warning: Named COMMON block ‘orthox’ at (1) shall be of the same size as elsewhere (1201200 vs 1801800 bytes)
+/srv/cfd/Nek5000/core/navier4.f:30:21:
+
+       COMMON /ORTHOX/ Pbar(LTOT2),Pnew(LTOT2)
+                     1
+Warning: Named COMMON block ‘orthox’ at (1) shall be of the same size as elsewhere (1201200 vs 1801800 bytes)
+/srv/cfd/Nek5000/core/navier1.f:317:22:
+
+          call wgradm1(out1,out2,out3,inp,nelv) ! weak grad on FLUID mesh
+                      1
+Warning: Actual argument contains too few elements for dummy argument ‘ux’ (25/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:322:18:
+
+       CALL MULTD (OUT1,INP,RXM2,SXM2,TXM2,1,iflg)
+                  1
+Warning: Actual argument contains too few elements for dummy argument ‘dx’ (25/75075) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:323:18:
+
+       CALL MULTD (OUT2,INP,RYM2,SYM2,TYM2,2,iflg)
+                  1
+Warning: Actual argument contains too few elements for dummy argument ‘dx’ (25/75075) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:325:18:
+
+      $CALL MULTD (OUT3,INP,RZM2,SZM2,TZM2,3,iflg)
+                  1
+Warning: Actual argument contains too few elements for dummy argument ‘dx’ (25/75075) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:1751:33:
+
+          CALL BDSYS (BDMAT,BDRHS,DTBD,NBD,ldim)
+                                 1
+Warning: Actual argument contains too few elements for dummy argument ‘dt’ (1/9) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:1855:27:
+
+       CALL VELCHAR (VX,VXN,VXLAG,NBD,TAU,DTLAG)
+                           1
+Warning: Actual argument contains too few elements for dummy argument ‘vlag’ (294294/1324323) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:1856:27:
+
+       CALL VELCHAR (VY,VYN,VYLAG,NBD,TAU,DTLAG)
+                           1
+Warning: Actual argument contains too few elements for dummy argument ‘vlag’ (294294/1324323) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:1858:27:
+
+      $CALL VELCHAR (VZ,VZN,VZLAG,NBD,TAU,DTLAG)
+                           1
+Warning: Actual argument contains too few elements for dummy argument ‘vlag’ (294294/1324323) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier4.f:119:21:
+
+       COMMON /ORTHOX/ Pbar(LTOT2),Pnew(LTOT2)
+                     1
+Warning: Named COMMON block ‘orthox’ at (1) shall be of the same size as elsewhere (1201200 vs 1801800 bytes)
+/srv/cfd/Nek5000/core/navier1.f:2618:30:
+
+             call rotate_cyc  (a,b,c,1)
+                              1
+Warning: Actual argument contains too few elements for dummy argument ‘r1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:2620:30:
+
+             call rotate_cyc  (a,b,c,0)
+                              1
+Warning: Actual argument contains too few elements for dummy argument ‘r1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:3542:23:
+
+       call velchar (vx,vxn,vxlag,nbd,tau,dtlag)
+                       1
+Warning: Actual argument contains too few elements for dummy argument ‘vn’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:3543:23:
+
+       call velchar (vy,vyn,vylag,nbd,tau,dtlag)
+                       1
+Warning: Actual argument contains too few elements for dummy argument ‘vn’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:3545:23:
+
+      $call velchar (vz,vzn,vzlag,nbd,tau,dtlag)
+                       1
+Warning: Actual argument contains too few elements for dummy argument ‘vn’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:3626:22:
+
+       call conv1rk   (du,dv,dw,u,v,w)
+                      1
+Warning: Actual argument contains too few elements for dummy argument ‘du’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:3826:22:
+
+       call conv1rk2  (du,dv,dw,u,v,w,cu,cv,cw,beta,wk)
+                      1
+Warning: Actual argument contains too few elements for dummy argument ‘du’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:3960:20:
+
+       CALL VELINIT (VEL1,VEL2,VEL3,ILAG)
+                    1
+Warning: Actual argument contains too few elements for dummy argument ‘vel1’ (49/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier4.f:1257:20:
+
+       common /scruz/ r (lt),ub(lt)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (2354352 vs 1201200 bytes)
+/srv/cfd/Nek5000/core/navier1.f:4653:21:
+
+       common /dgradl/ d(ldg),dt(ldg),dg(ldg),dgt(ldg),jgl(ldg),jgt(ldg)
+                     1
+Warning: Named COMMON block ‘dgradl’ at (1) shall be of the same size as elsewhere (37584 vs 46656 bytes)
+/srv/cfd/Nek5000/core/navier1.f:4720:21:
+
+       common /dgradl/ d(ldg),dt(ldg),dg(ldg),dgt(ldg),jgl(ldg),jgt(ldg)
+                     1
+Warning: Named COMMON block ‘dgradl’ at (1) shall be of the same size as elsewhere (37584 vs 46656 bytes)
+/srv/cfd/Nek5000/core/navier1.f:1971:20:
+
+       COMMON /CTMP1/ WORK   (LXYZ1,LELT)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (1177176 vs 3528 bytes)
+/srv/cfd/Nek5000/core/navier1.f:3159:20:
+
+       COMMON /CTMP1/  MFI    (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (3531528 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/navier1.f:566:20:
+
+       common /ctmp1/ ta1 (lx1*ly1*lz1)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (1176 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/navier1.f:4184:20:
+
+       common /ctmp1/ ur(lxyz),us(lxyz),ut(lxyz)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (1176 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/navier1.f:916:20:
+
+       COMMON /SCRCH/ H1M2 (LX2,LY2,LZ2,LELV)
+                    1
+Warning: Named COMMON block ‘scrch’ at (1) shall be of the same size as elsewhere (1201200 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/navier1.f:4077:20:
+
+       common /ctmp0/ work (lx2,ly2,lz2,lelv)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (600600 vs 1176 bytes)
+/srv/cfd/Nek5000/core/navier1.f:987:21:
+
+       COMMON /CPRINT/ IFPRINT, IFHZPC
+                     1
+Warning: Named COMMON block ‘cprint’ at (1) shall be of the same size as elsewhere (8 vs 4 bytes)
+/srv/cfd/Nek5000/core/navier1.f:980:20:
+
+       COMMON /SCRNS/ MASK (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (6486480 vs 7063056 bytes)
+/srv/cfd/Nek5000/core/navier1.f:1105:21:
+
+       COMMON /CPRINT/ IFPRINT
+                     1
+Warning: Named COMMON block ‘cprint’ at (1) shall be of the same size as elsewhere (4 vs 8 bytes)
+/srv/cfd/Nek5000/core/navier1.f:1103:20:
+
+       COMMON /CTMP0/ TA  (LX2,LY2,LZ2,LELV)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1201200 vs 600600 bytes)
+/srv/cfd/Nek5000/core/navier1.f:92:20:
+
+       COMMON /SCRUZ/ TA1    (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (3531528 vs 2402400 bytes)
+/srv/cfd/Nek5000/core/navier1.f:159:20:
+
+       COMMON /SCRUZ/ TB1   (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (4708704 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/navier1.f:2196:20:
+
+       COMMON /SCRMG/ TB1   (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (4132128 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/navier1.f:2189:20:
+
+       COMMON /SCRNS/ RESV1 (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7663656 vs 7063056 bytes)
+/srv/cfd/Nek5000/core/navier1.f:351:20:
+
+       common /ctmp1/ wx  (lx1*ly1*lz1)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (1568 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/navier1.f:1559:20:
+
+       COMMON /SCRNS/ TA1(LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (8240232 vs 7663656 bytes)
+/srv/cfd/Nek5000/core/prepost.f:1099:37:
+
+       iprefix        = i_find_prefix(prefix,99)
+                                     1
+Warning: Rank mismatch in argument ‘prefix’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/prepost.f:1111:31:
+
+       call restart_nfld( nfld, prefix ) ! Check for Restart option.
+                               1
+Warning: Rank mismatch in argument ‘prefix’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:1608:20:
+
+       COMMON /SCRUZ/ TA1 (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (3531528 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/navier1.f:1528:20:
+
+       COMMON /SCRUZ/ TA1 (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (3531528 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/navier1.f:3293:20:
+
+       common /ctmp0/ dudr(lx1,ly1,lz1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1176 vs 1201200 bytes)
+/srv/cfd/Nek5000/core/prepost.f:401:37:
+
+       if (nid.eq.0) call dump_header(excode,p66,ierr)
+                                     1
+Warning: Rank mismatch in argument ‘excodein’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:3233:20:
+
+       COMMON /CTMP0/ TA1  (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (5069064 vs 1201200 bytes)
+/srv/cfd/Nek5000/core/prepost.f:1388:32:
+
+       call outpost2(v1,v2,v3,vp,vt,itmp,name3)
+                                1
+Warning: Actual argument contains too few elements for dummy argument ‘vt’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier1.f:1308:20:
+
+       COMMON /SCRNS/ TA1  (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/navier1.f:4256:20:
+
+       COMMON /SCRNS/ SXZ(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/navier1.f:4252:20:
+
+       COMMON /SCRUZ/ W1 (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (3531528 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/navier1.f:4326:20:
+
+       COMMON /SCRNS/ EXZ(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/navier1.f:14:20:
+
+       COMMON /SCRNS/ RESV1 (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7663656 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/navier1.f:201:20:
+
+       COMMON /SCRMG/ WORK  (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (1177176 vs 4132128 bytes)
+/srv/cfd/Nek5000/core/navier1.f:1075:20:
+
+       COMMON /SCRMG/ TA   (LX2,LY2,LZ2,LELV)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (1201200 vs 4132128 bytes)
+/srv/cfd/Nek5000/core/navier1.f:2101:20:
+
+       COMMON /SCRCH/ TA2(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scrch’ at (1) shall be of the same size as elsewhere (1177176 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/navier1.f:2097:20:
+
+       COMMON /SCRMG/ Y1 (LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (4708704 vs 4132128 bytes)
+/srv/cfd/Nek5000/core/navier1.f:3371:20:
+
+       common /ctmp0/ dudr(lx1,ly1,lz1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1176 vs 5069064 bytes)
+/srv/cfd/Nek5000/core/prepost.f:805:20:
+
+       common /ctmp1/ tdump(lxyz,lpsc9)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (2156 vs 2160 bytes)
+/srv/cfd/Nek5000/core/navier1.f:3881:20:
+
+       COMMON /CTMP1/ WORK(LXYZ1,LELT)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (1177176 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/navier1.f:3942:20:
+
+       COMMON /CTMP1/ RKX1  (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (4708704 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/prepost.f:848:20:
+
+       common /SCRUZ/  ur1(lxo*lxo*lxo*lelt)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (24720696 vs 4132128 bytes)
+/srv/cfd/Nek5000/core/navier1.f:4404:20:
+
+       common /scruz/ u(lx1*ly1*lz1),v(lx1*ly1*lz1),w(lx1*ly1*lz1)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (1176 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/prepost.f:1734:20:
+
+       common /SCRNS/ u4(2+lxo*lxo*lxo*6*lelt)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (24720704 vs 8240240 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/speclib.f -o obj/speclib.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/map2.f -o obj/map2.o
+/srv/cfd/Nek5000/core/map2.f:170:20:
+
+       common /ctmp0/ eid8, vtx8, iwork
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (228232 vs 12012 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/mvmesh.f -o obj/mvmesh.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/ic.f -o obj/ic.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/gfldr.f -o obj/gfldr.o
+/srv/cfd/Nek5000/core/gfldr.f:124:30:
+
+         call gfldr_getfld(pm1,dum,dum,ntot,1,ifldpos+1)
+                              1
+Warning: Rank mismatch in argument ‘out2’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/gfldr.f:132:39:
+
+         call gfldr_getfld(t(1,1,1,1,1),dum,dum,ntot,1,ifldpos+1)
+                                       1
+Warning: Rank mismatch in argument ‘out2’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/gfldr.f:140:44:
+
+            call gfldr_getfld(t(1,1,1,1,i+1),dum,dum,ntot,1,ifldpos+1)
+                                            1
+Warning: Rank mismatch in argument ‘out2’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/mvmesh.f:615:20:
+
+       COMMON /SCRUZ/ R1(LX1,LY1,LZ1),R2(LX1,LY1,LZ1),R3(LX1,LY1,LZ1)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (1176 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/mvmesh.f:508:20:
+
+       common /scruz/ r1(lx1,ly1,lz1),r2(lx1,ly1,lz1),r3(lx1,ly1,lz1)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (1176 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/mvmesh.f:87:20:
+
+       COMMON /SCRUZ/ FM1(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (4708704 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/mvmesh.f:116:20:
+
+       COMMON /SCRUZ/ FMT(LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (2354352 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/mvmesh.f:536:20:
+
+       COMMON /SCRUZ/ R1(LX1,LY1,LZ1),R2(LX1,LY1,LZ1),R3(LX1,LY1,LZ1)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (1176 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/mvmesh.f:574:20:
+
+       COMMON /SCRUZ/ R1(LX1,LY1,LZ1),R2(LX1,LY1,LZ1),R3(LX1,LY1,LZ1)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (1176 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/mvmesh.f:962:20:
+
+       COMMON /SCRUZ/ XM3 (LX3,LY3,LZ3,LELT)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (3531528 vs 4708704 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/ssolv.f -o obj/ssolv.o
+/srv/cfd/Nek5000/core/ic.f:324:24:
+
+          IF (INDX1(LINE,'PRESOLV',7).NE.0) THEN
+                        1
+Warning: Character length of actual argument shorter than of dummy argument ‘s2’ (7/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1381:15:
+
+       I1=INDX1(S1,S2,L2)
+               1
+Warning: Rank mismatch in argument ‘s1’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:328:34:
+
+             CALL CSPLIT(CDUM,LINE,' ',1)
+                                  1
+Warning: Character length of actual argument shorter than of dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:345:33:
+
+                IF (INDX_CUT(LINE,'U',1).NE.0) THEN
+                                 1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:350:33:
+
+                IF (INDX_CUT(LINE,'T',1).NE.0) THEN
+                                 1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:358:36:
+
+                   IF (INDX_CUT(LINE,S2,2).NE.0) THEN
+                                    1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (2/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:980:30:
+
+       call csplit(fname,rsopt,' ',1)
+                              1
+Warning: Character length of actual argument shorter than of dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:982:22:
+
+       if (indx1(fname,'.',1).eq.0) then
+                      1
+Warning: Character length of actual argument shorter than of dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1017:28:
+
+          ITO=INDX_CUT(RSOPT,'TIME',4)
+                            1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (4/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1021:31:
+
+             IT1=INDX_CUT(RSOPT,'=',1)
+                               1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1683:23:
+
+       IFLDW=INDX1(WORK,' ',1)-1
+                       1
+Warning: Character length of actual argument shorter than of dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1033:27:
+
+             IT1=INDX1(LINE,' ',1)
+                           1
+Warning: Character length of actual argument shorter than of dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1040:28:
+
+          IXO=INDX_CUT(RSOPT,'X',1)
+                            1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1047:28:
+
+          IVO=INDX_CUT(RSOPT,'U',1)
+                            1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1054:28:
+
+          IPO=INDX_CUT(RSOPT,'P',1)
+                            1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1060:28:
+
+          ITO=INDX_CUT(RSOPT,'T',1)
+                            1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1068:31:
+
+             ipo=indx_cut(rsopt,s2,2)
+                               1
+Warning: Actual argument contains too few elements for dummy argument ‘s2’ (2/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2526:23:
+
+             i1 = indx1(fname,eight,k)
+                       1
+Warning: Rank mismatch in argument ‘s1’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2203:24:
+
+       if (indx2(hdr,132,'#std',4).eq.1) then
+                        1
+Warning: Character length of actual argument shorter than of dummy argument ‘s2’ (4/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/mvmesh.f:1169:0:
+
+          zsurf(ix,iy,ex,ey) = glmax(zsurf(ix,iy,ex,ey),1)
+ 
+Warning: iteration 1 invokes undefined behavior [-Waggressive-loop-optimizations]
+/srv/cfd/Nek5000/core/mvmesh.f:1150:0:
+
+       do iy=1,ly1
+ 
+note: within this loop
+/srv/cfd/Nek5000/core/ic.f:2309:34:
+
+       call parse_std_hdr_2006(hdr,rdcode)  ! try the original header format
+                                  1
+Warning: Actual argument contains too few elements for dummy argument ‘rlcode’ (10/20) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2180:72:
+
+                call mapab4r(u(1,ei),wk(l        ),nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘x’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2181:72:
+
+                call mapab4r(v(1,ei),wk(l+  nxyzw),nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘x’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2183:72:
+
+      $         call mapab4r(w(1,ei),wk(l+2*nxyzw),nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘x’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2185:72:
+
+                call mapab  (u(1,ei),wk(l        ),nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘y’ at (1); passed REAL(4) to REAL(8) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2186:72:
+
+                call mapab  (v(1,ei),wk(l+  nxyzw),nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘y’ at (1); passed REAL(4) to REAL(8) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2188:72:
+
+      $         call mapab  (w(1,ei),wk(l+2*nxyzw),nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘y’ at (1); passed REAL(4) to REAL(8) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2416:72:
+
+             call mfi_getv(xm1,ym1,zm1,wk,lwk,.false.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2418:72:
+
+             call mfi_getv(xm1,ym1,zm1,wk,lwk,.true.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2429:72:
+
+                call mfi_getv(bx,by,bz,wk,lwk,.false.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2432:72:
+
+                call mfi_getv(vx,vy,vz,wk,lwk,.false.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2435:72:
+
+             call mfi_getv(vx,vy,vz,wk,lwk,.true.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2042:72:
+
+                call mapab4r(u(1,ei),wk(l        ),nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘x’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2044:72:
+
+                call mapab  (u(1,ei),wk(l        ),nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘y’ at (1); passed REAL(4) to REAL(8) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2445:72:
+
+             call mfi_gets(pm1,wk,lwk,.false.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2447:72:
+
+             call mfi_gets(pm1,wk,lwk,.true.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2457:72:
+
+             call mfi_gets(t,wk,lwk,.false.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2459:72:
+
+             call mfi_gets(t,wk,lwk,.true.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2471:72:
+
+                call mfi_gets(t(1,1,1,1,k+1),wk,lwk,.false.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:2473:72:
+
+                call mfi_gets(t(1,1,1,1,k+1),wk,lwk,.true.)
+                                                                        1
+Warning: Type mismatch in argument ‘wk’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1333:27:
+
+       i1_from_char = indx2(n10,10,s1,1)-1
+                           1
+Warning: Character length of actual argument shorter than of dummy argument ‘s1’ (10/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1140:72:
+
+             call mapab4r(sdump(1,ieg),tdump,nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘x’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1172:72:
+
+                call mapab4r(sdump(1,ie),tdump,nxr,1)
+                                                                        1
+Warning: Type mismatch in argument ‘x’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:853:38:
+
+      $            call copy(t(1,1,1,1,2),sdmp2(1,1),ntott)
+                                      1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 5
+/srv/cfd/Nek5000/core/ic.f:2784:33:
+
+          if (ifsplit) call dsavg(pr)  ! continuous pressure
+                                 1
+Warning: Actual argument contains too few elements for dummy argument ‘u’ (75075/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1715:23:
+
+       IFLDW=INDX1(WORK,' ',1)-1
+                       1
+Warning: Character length of actual argument shorter than of dummy argument ‘s2’ (1/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/ic.f:1274:20:
+
+       common /ctmp0/  xa(lxyzr)      ,xb(lx1,ly1,lzr) ,xc(lxyzr)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (21880 vs 392 bytes)
+/srv/cfd/Nek5000/core/ic.f:25:20:
+
+       common /ctmp1/ work(lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (1177656 vs 47320 bytes)
+/srv/cfd/Nek5000/core/ssolv.f:499:20:
+
+       COMMON /SCRUZ/  W1  (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (4132128 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/ssolv.f:728:20:
+
+       COMMON /SCRMG/ DIVFLD (LX2,LY2,LZ2,LELV)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (1201200 vs 4132128 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/planx.f -o obj/planx.o
+mpif77 -c  -O3 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/math.f -o obj/math.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/mxm_wrapper.f -o obj/mxm_wrapper.o 
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/hmholtz.f -o obj/hmholtz.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/subs1.f -o obj/subs1.o
+/srv/cfd/Nek5000/core/math.f:1246:72:
+
+       call sort(xout,work,n)
+                                                                        1
+Warning: Type mismatch in argument ‘ind’ at (1); passed REAL(8) to INTEGER(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/math.f:1625:22:
+
+       difmax = glamax(d,1)
+                      1
+Warning: Rank mismatch in argument ‘a’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/math.f:851:20:
+
+       common /scrsf/ w1 (lx2*ly2*lz2*lelt)
+                    1
+Warning: Named COMMON block ‘scrsf’ at (1) shall be of the same size as elsewhere (600600 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:653:28:
+
+            call hmh_flex_cg(x,h1,h2,mult,iter)
+                            1
+Warning: Actual argument contains too few elements for dummy argument ‘res’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:683:22:
+
+          call setfast(h1,h2,imsh)
+                      1
+Warning: Actual argument contains too few elements for dummy argument ‘helm1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:690:24:
+
+          call setprec(D,h1,h2,imsh,isd)
+                        1
+Warning: Actual argument contains too few elements for dummy argument ‘helm1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:692:33:
+
+          call set_fdm_prec_h1b(d,h1,h2,nel)
+                                 1
+Warning: Actual argument contains too few elements for dummy argument ‘h1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:736:33:
+
+                call fdm_h1(z,r,d,mask,mult,nel,ktype(1,1,kfldfdm),w)
+                                 1
+Warning: Actual argument contains too few elements for dummy argument ‘mask’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:795:26:
+
+          call axhelm (w,p,h1,h2,imsh,isd)
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘helm1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:1927:44:
+
+            d(i1,i2, 1,e)=d(i1,i2, 1,e)-2*fw(5,e)*unt(i,5,e)*dzm1( 1, 1)
+                                            1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 1
+/srv/cfd/Nek5000/core/hmholtz.f:1928:44:
+
+            d(i1,i2,nx,e)=d(i1,i2,nx,e)-2*fw(6,e)*unt(i,6,e)*dzm1(nx,nx)
+                                            1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 1
+/srv/cfd/Nek5000/core/hmholtz.f:1542:24:
+
+       call setprec_dg(d,h1,h2,imsh,1) !  diag preconditioner
+                        1
+Warning: Actual argument contains too few elements for dummy argument ‘h1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:2154:13:
+
+      $      ,dxtm1,dym1,dzm1,lx1,ly1,lz1,if3d)
+             1
+Warning: Rank mismatch in argument ‘drt’ at (1) (scalar and rank-2) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:1592:26:
+
+          call hxdg   (w,p,h1,h2)
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘h1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:2046:15:
+
+      $        ,dxtm1,dym1,dzm1,lx1,ly1,lz1,if3d)
+               1
+Warning: Rank mismatch in argument ‘drt’ at (1) (scalar and rank-2) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hmholtz.f:96:20:
+
+       COMMON /CTMP1/ DUDR  (LX1,LY1,LZ1)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (2352 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:940:20:
+
+       common /ctmp0/ w(lx1,ly1,lz1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (392 vs 1345344 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:2171:22:
+
+       common  /cprint/ ifprint
+                      1
+Warning: Named COMMON block ‘cprint’ at (1) shall be of the same size as elsewhere (4 vs 8 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:2183:20:
+
+       common /ctmp0/   wk1(lgmres),wk2(lgmres)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (480 vs 1345344 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:2179:20:
+
+       common /scrcg/ r(lt),z(lt),p(lt),w(lt)
+                    1
+Warning: Named COMMON block ‘scrcg’ at (1) shall be of the same size as elsewhere (4708704 vs 1177192 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:2180:20:
+
+       common /scrmg/ r1(lt)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (1177176 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:539:22:
+
+       COMMON  /CPRINT/ IFPRINT
+                      1
+Warning: Named COMMON block ‘cprint’ at (1) shall be of the same size as elsewhere (4 vs 8 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:541:20:
+
+       COMMON /CTMP0/ W1   (LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (2354352 vs 1345344 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:1130:20:
+
+       COMMON /CTMP0/ W(LX1,LX1),aa(lx1,lx1),bb(lx1,lx1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1178352 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/hmholtz.f:1037:20:
+
+       COMMON /CTMP0/ W(LX1,LX1),aa(lx1,lx1),bb(lx1,lx1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1176 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/subs1.f:1775:17:
+
+             mask(3,ic,jc,kc,e) = v3mask(i,j,k,e)
+                 1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 1
+/srv/cfd/Nek5000/core/subs1.f:2051:48:
+
+       call local_grad3(ur(1,1,1),ur(1,2,1),ur(1,3,1),u,p,1,dxm1,dxtm1)
+                                                1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2052:48:
+
+       call local_grad3(ur(1,1,2),ur(1,2,2),ur(1,3,2),v,p,1,dxm1,dxtm1)
+                                                1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2053:30:
+
+       call local_grad3(ur(1,1,3),ur(1,2,3),ur(1,3,3),w,p,1,dxm1,dxtm1)
+                              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2053:40:
+
+       call local_grad3(ur(1,1,3),ur(1,2,3),ur(1,3,3),w,p,1,dxm1,dxtm1)
+                                        1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2053:48:
+
+       call local_grad3(ur(1,1,3),ur(1,2,3),ur(1,3,3),w,p,1,dxm1,dxtm1)
+                                                1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2053:50:
+
+       call local_grad3(ur(1,1,3),ur(1,2,3),ur(1,3,3),w,p,1,dxm1,dxtm1)
+                                                  1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2058:45:
+
+      $                                + ur(i,3,1)*txm1(i,1,1,e)
+                                             1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2060:45:
+
+      $                                + ur(i,3,1)*tym1(i,1,1,e)
+                                             1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2062:45:
+
+      $                                + ur(i,3,1)*tzm1(i,1,1,e)
+                                             1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2065:45:
+
+      $                                + ur(i,3,2)*txm1(i,1,1,e)
+                                             1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2067:45:
+
+      $                                + ur(i,3,2)*tym1(i,1,1,e)
+                                             1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2069:45:
+
+      $                                + ur(i,3,2)*tzm1(i,1,1,e)
+                                             1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2072:45:
+
+      $                                + ur(i,3,3)*txm1(i,1,1,e)
+                                             1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2072:47:
+
+      $                                + ur(i,3,3)*txm1(i,1,1,e)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2071:47:
+
+          w1 = ur(i,1,3)*rxm1(i,1,1,e) + ur(i,2,3)*sxm1(i,1,1,e)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2071:21:
+
+          w1 = ur(i,1,3)*rxm1(i,1,1,e) + ur(i,2,3)*sxm1(i,1,1,e)
+                     1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2074:45:
+
+      $                                + ur(i,3,3)*tym1(i,1,1,e)
+                                             1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2074:47:
+
+      $                                + ur(i,3,3)*tym1(i,1,1,e)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2073:47:
+
+          w2 = ur(i,1,3)*rym1(i,1,1,e) + ur(i,2,3)*sym1(i,1,1,e)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2073:21:
+
+          w2 = ur(i,1,3)*rym1(i,1,1,e) + ur(i,2,3)*sym1(i,1,1,e)
+                     1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2076:45:
+
+      $                                + ur(i,3,3)*tzm1(i,1,1,e)
+                                             1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2076:47:
+
+      $                                + ur(i,3,3)*tzm1(i,1,1,e)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2075:47:
+
+          w3 = ur(i,1,3)*rzm1(i,1,1,e) + ur(i,2,3)*szm1(i,1,1,e)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2075:21:
+
+          w3 = ur(i,1,3)*rzm1(i,1,1,e) + ur(i,2,3)*szm1(i,1,1,e)
+                     1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2093:14:
+
+          ur(i,3,1)=txm1(i,1,1,e)*s11+tym1(i,1,1,e)*s12+tzm1(i,1,1,e)*s13
+              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2097:14:
+
+          ur(i,3,2)=txm1(i,1,1,e)*s21+tym1(i,1,1,e)*s22+tzm1(i,1,1,e)*s23
+              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2099:16:
+
+          ur(i,1,3)=rxm1(i,1,1,e)*s31+rym1(i,1,1,e)*s32+rzm1(i,1,1,e)*s33
+                1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2100:16:
+
+          ur(i,2,3)=sxm1(i,1,1,e)*s31+sym1(i,1,1,e)*s32+szm1(i,1,1,e)*s33
+                1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2101:14:
+
+          ur(i,3,3)=txm1(i,1,1,e)*s31+tym1(i,1,1,e)*s32+tzm1(i,1,1,e)*s33
+              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2101:16:
+
+          ur(i,3,3)=txm1(i,1,1,e)*s31+tym1(i,1,1,e)*s32+tzm1(i,1,1,e)*s33
+                1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2105:39:
+
+      $    (au,ur(1,1,1),ur(1,2,1),ur(1,3,1),p,1,dxm1,dxtm1,av)
+                                       1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2107:39:
+
+      $    (av,ur(1,1,2),ur(1,2,2),ur(1,3,2),p,1,dxm1,dxtm1,ur)
+                                       1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2109:21:
+
+      $    (aw,ur(1,1,3),ur(1,2,3),ur(1,3,3),p,1,dxm1,dxtm1,ur)
+                     1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2109:31:
+
+      $    (aw,ur(1,1,3),ur(1,2,3),ur(1,3,3),p,1,dxm1,dxtm1,ur)
+                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:2109:39:
+
+      $    (aw,ur(1,1,3),ur(1,2,3),ur(1,3,3),p,1,dxm1,dxtm1,ur)
+                                       1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2109:41:
+
+      $    (aw,ur(1,1,3),ur(1,2,3),ur(1,3,3),p,1,dxm1,dxtm1,ur)
+                                         1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/subs1.f:1810:20:
+
+       call axhmsf  (a1,a2,a3,p1,p2,p3,h1,h2,matmod)
+                    1
+Warning: Actual argument contains too few elements for dummy argument ‘au1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:1856:43:
+
+          call axstrs_nds(a1,a2,a3,w1,w2,w3,h1,h2,matmod,nel)
+                                           1
+Warning: Rank mismatch in argument ‘h1’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:1864:14:
+
+      $      a(3,i,k,j,e)=vlsc2(b(1,i),a3(1,e),nxyz)  ! bi^T * A^e * bj
+              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 1
+/srv/cfd/Nek5000/core/subs1.f:2001:49:
+
+       call get_local_crs_galerkin_strs(a,ncr,nxc,h1,h2,matmod)
+                                                 1
+Warning: Rank mismatch in argument ‘h1’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:53:42:
+
+       if (ifcrsl) call set_up_h1_crs_strs(h1,h2,ifield,matmod)
+                                          1
+Warning: Rank mismatch in argument ‘h1’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:90:27:
+
+          call fdm_h1a (pp1,r1,dpc,nel,ktype(1,1,1),wa)
+                           1
+Warning: Actual argument contains too few elements for dummy argument ‘r’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:91:27:
+
+          call fdm_h1a (pp2,r2,dpc,nel,ktype(1,1,2),wa)
+                           1
+Warning: Actual argument contains too few elements for dummy argument ‘r’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:92:27:
+
+          call fdm_h1a (pp3,r3,dpc,nel,ktype(1,1,3),wa)
+                           1
+Warning: Actual argument contains too few elements for dummy argument ‘r’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:111:23:
+
+          call axhmsf  (ap1,ap2,ap3,p1,p2,p3,h1,h2,matmod)
+                       1
+Warning: Actual argument contains too few elements for dummy argument ‘au1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:136:30:
+
+             call fdm_h1a (pp1,r1,dpc,nel,ktype(1,1,1),wa)
+                              1
+Warning: Actual argument contains too few elements for dummy argument ‘r’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:137:30:
+
+             call fdm_h1a (pp2,r2,dpc,nel,ktype(1,1,2),wa)
+                              1
+Warning: Actual argument contains too few elements for dummy argument ‘r’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:138:30:
+
+             call fdm_h1a (pp3,r3,dpc,nel,ktype(1,1,3),wa)
+                              1
+Warning: Actual argument contains too few elements for dummy argument ‘r’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:1132:23:
+
+          call chktcgs (r1,r2,r3,rmask1,rmask2,rmask3,rmult,binvm1
+                       1
+Warning: Actual argument contains too few elements for dummy argument ‘r1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:2525:43:
+
+       call axhmsf   (b(1,1,k),b(1,2,k),b(1,3,k)
+                                           1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2526:43:
+
+      $              ,x(1,1,k),x(1,2,k),x(1,3,k),h1,h2,matmod)
+                                           1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2527:43:
+
+       call rmask    (b(1,1,k),b(1,2,k),b(1,3,k),nel)
+                                           1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2528:43:
+
+       call opdssum  (b(1,1,k),b(1,2,k),b(1,3,k))
+                                           1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2530:47:
+
+       xax0 = op_glsc2_wt(b(1,1,k),b(1,2,k),b(1,3,k)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2531:47:
+
+      $                  ,x(1,1,k),x(1,2,k),x(1,3,k),wt)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2542:52:
+
+      $          + op_vlsc2_wt(b(1,1,k),b(1,2,k),b(1,3,k)
+                                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2543:52:
+
+      $                       ,x(1,1,j),x(1,2,j),x(1,3,j),wt))/2.
+                                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2540:52:
+
+         betaj = ( op_vlsc2_wt(b(1,1,j),b(1,2,j),b(1,3,j)
+                                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2541:52:
+
+      $                       ,x(1,1,k),x(1,2,k),x(1,3,k),wt)
+                                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2553:47:
+
+       xax2 = op_glsc2_wt(b(1,1,k),b(1,2,k),b(1,3,k)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:2554:47:
+
+      $                  ,x(1,1,k),x(1,2,k),x(1,3,k),wt)
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/subs1.f:1144:23:
+
+          call chktcgs (r1,r2,r3,rmask1,rmask2,rmask3,rmult,bintm1
+                       1
+Warning: Actual argument contains too few elements for dummy argument ‘r1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:1623:38:
+
+             call fcsum2(usum_f,asum_f,u,e,f)
+                                      1
+Warning: Actual argument contains too few elements for dummy argument ‘x’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:1799:20:
+
+       call axhmsf  (a1,a2,a3,p1,p2,p3,h1,h2,matmod)
+                    1
+Warning: Actual argument contains too few elements for dummy argument ‘au1’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/subs1.f:686:20:
+
+       common /ctmp0/  stc(lx1,ly1,lz1),sigst(lx1,ly1),dtst(lx1,ly1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1176 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/subs1.f:802:20:
+
+       common /ctmp0/  xfm1(lx1,ly1),yfm1(lx1,ly1),zfm1(lx1,ly1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1176 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/subs1.f:803:20:
+
+       common /ctmp1/  drm1(lx1,lx1),drtm1(lx1,ly1)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (1568 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/subs1.f:805:20:
+
+       common /scrmg/  xrm1(lx1,ly1),yrm1(lx1,ly1),zrm1(lx1,ly1)
+                    1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (2352 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/subs1.f:756:20:
+
+       common /ctmp0/  xfm1(lx1),yfm1(lx1),t1xf(lx1),t1yf(lx1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (224 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/subs1.f:479:20:
+
+       common /ctmp0/ x(lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (2354352 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/subs1.f:476:20:
+
+       common /ctmp1/ u(lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (3531528 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/subs1.f:1646:20:
+
+       common /ctmp0/ w(lx1,ly1,lz1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (392 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/subs1.f:1437:20:
+
+       common /ctmp1/ txx(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (4708704 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/subs1.f:2315:20:
+
+       common /ctmp0/ phi(lx1,ly1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (392 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/subs1.f:1378:20:
+
+       common /scrsf/ t11(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘scrsf’ at (1) shall be of the same size as elsewhere (4708704 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/subs1.f:1461:20:
+
+       common /scrsf/ ur(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘scrsf’ at (1) shall be of the same size as elsewhere (3531528 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/subs1.f:1733:20:
+
+       common /ctmp0/ gnum(lx1*ly1*lz1*lelt)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1177176 vs 2354352 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/subs2.f -o obj/subs2.o
+/srv/cfd/Nek5000/core/subs2.f:45:20:
+
+       common /ctmp0/ exz(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (2354352 vs 392 bytes)
+/srv/cfd/Nek5000/core/subs2.f:41:20:
+
+       common /ctmp1/ exx(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (4708704 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/subs2.f:681:20:
+
+       common /screv/ hfmask(lx1,lz1,6,lelt)
+                    1
+Warning: Named COMMON block ‘screv’ at (1) shall be of the same size as elsewhere (2186184 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/subs2.f:716:20:
+
+       common /screv/ hfmask(lx1,lz1,6,lelt)
+                    1
+Warning: Named COMMON block ‘screv’ at (1) shall be of the same size as elsewhere (2186184 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/subs2.f:1766:20:
+
+       common /ctmp0/ wa(lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1177176 vs 2354352 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/gmres.f -o obj/gmres.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/hsmg.f -o obj/hsmg.o
+/srv/cfd/Nek5000/core/gmres.f:588:27:
+
+       call dd_swap_vals(v1,v,gsh_dd)
+                           1
+Warning: Actual argument contains too few elements for dummy argument ‘v0’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/gmres.f:788:35:
+
+       call set_up_fast_1D_sem_op_a(s,eb0,eb1,l,r,ll,lm,lr,ah)
+                                   1
+Warning: Actual argument contains too few elements for dummy argument ‘g’ (1/81) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/gmres.f:790:35:
+
+       call set_up_fast_1D_sem_op_b(g,bb0,bb1,l,r,ll,lm,lr,bh)
+                                   1
+Warning: Actual argument contains too few elements for dummy argument ‘g’ (2/81) at (1) [-Wargument-mismatch]
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/convect.f -o obj/convect.o
+/srv/cfd/Nek5000/core/hsmg.f:1060:24:
+
+                wt(i,j,1,3,ie)=1.0/w(i,j,1,ie)
+                        1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 4
+/srv/cfd/Nek5000/core/hsmg.f:1061:24:
+
+                wt(i,j,2,3,ie)=1.0/w(i,j,nz,ie)
+                        1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 4
+/srv/cfd/Nek5000/core/hsmg.f:1171:24:
+
+                wt(j,k,1,3,ie)=w(i,j,1,ie)
+                        1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 4
+/srv/cfd/Nek5000/core/hsmg.f:1172:24:
+
+                wt(j,k,2,3,ie)=w(i,j,nz,ie)
+                        1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 4
+/srv/cfd/Nek5000/core/hsmg.f:733:47:
+
+          if(if3d) call hsmg_setup_fast1d(s(1,1,3,ie),lt,nt,lbt,rbt
+                                               1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/hsmg.f:978:50:
+
+                u(i,j, 1,ie)=u(i,j, 1,ie)*wt(i,j,1,3,ie)
+                                                  1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 4
+/srv/cfd/Nek5000/core/hsmg.f:979:50:
+
+                u(i,j,nz,ie)=u(i,j,nz,ie)*wt(i,j,2,3,ie)
+                                                  1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 4
+/srv/cfd/Nek5000/core/hsmg.f:473:30:
+
+       call hsmg_schwarz_dssum(mg_work,l)
+                              1
+Warning: Rank mismatch in argument ‘u’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hsmg.f:920:62:
+
+      $                         ,s(1,2,1,ie),s(1,1,2,ie),s(1,1,3,ie))
+                                                              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/hsmg.f:925:62:
+
+      $                         ,s(1,1,1,ie),s(1,2,2,ie),s(1,2,3,ie))
+                                                              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/hsmg.f:889:24:
+
+       call hsmg_do_fast(e,r,
+                        1
+Warning: Rank mismatch in argument ‘e’ at (1) (rank-2 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hsmg.f:476:31:
+
+       call hsmg_fdm(mg_work(i),mg_work,l) ! Do the local solves
+                               1
+Warning: Rank mismatch in argument ‘r’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hsmg.f:1255:10:
+
+      $    e,mg_schwarz_wt(mg_schwarz_wt_index(l,mg_fld)),mg_nh(l))
+          1
+Warning: Rank mismatch in argument ‘e’ at (1) (rank-3 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hsmg.f:1257:10:
+
+      $    e,mg_schwarz_wt(mg_schwarz_wt_index(l,mg_fld)),mg_nh(l))
+          1
+Warning: Rank mismatch in argument ‘e’ at (1) (rank-4 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hsmg.f:434:31:
+
+       call hsmg_schwarz_wt    (e,l)          ! e  := W e
+                               1
+Warning: Rank mismatch in argument ‘e’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hsmg.f:530:30:
+
+       call hsmg_schwarz_dssum(mg_work,l)
+                              1
+Warning: Rank mismatch in argument ‘u’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hsmg.f:534:31:
+
+       call hsmg_fdm(mg_work(i),mg_work,l)
+                               1
+Warning: Rank mismatch in argument ‘r’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/hsmg.f:2155:20:
+
+       common /hsmgw/ work(lx1*lx1)
+                    1
+Warning: Named COMMON block ‘hsmgw’ at (1) shall be of the same size as elsewhere (392 vs 3888 bytes)
+/srv/cfd/Nek5000/core/hsmg.f:2727:20:
+
+       common /ctmp0/ wi(2*lx1+4)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (144 vs 1176 bytes)
+/srv/cfd/Nek5000/core/hsmg.f:298:20:
+
+       common /hsmgw/ work((lx1+2)*(lx1+2))
+                    1
+Warning: Named COMMON block ‘hsmgw’ at (1) shall be of the same size as elsewhere (648 vs 3888 bytes)
+/srv/cfd/Nek5000/core/hsmg.f:262:20:
+
+       common /hsmgw/ work((lx1+2)*(lx1+2))
+                    1
+Warning: Named COMMON block ‘hsmgw’ at (1) shall be of the same size as elsewhere (648 vs 3888 bytes)
+/srv/cfd/Nek5000/core/hsmg.f:790:20:
+
+       common /ctmp0/ b(2*lxm*lxm),w(2*lxm*lxm)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (2592 vs 1176 bytes)
+/srv/cfd/Nek5000/core/hsmg.f:1394:20:
+
+       common /scrvh/ h1    (lx1,ly1,lz1,lelv),
+                    1
+Warning: Named COMMON block ‘scrvh’ at (1) shall be of the same size as elsewhere (2354352 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/hsmg.f:1872:20:
+
+       common /scrvh/ h1    (lx1,ly1,lz1,lelv),
+                    1
+Warning: Named COMMON block ‘scrvh’ at (1) shall be of the same size as elsewhere (2354352 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/hsmg.f:2240:20:
+
+       common /scrvh/ h1    (lx1,ly1,lz1,lelt),
+                    1
+Warning: Named COMMON block ‘scrvh’ at (1) shall be of the same size as elsewhere (2354352 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/hsmg.f:2908:20:
+
+       common /ctmp0/ w(100000)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (800000 vs 2592 bytes)
+/srv/cfd/Nek5000/core/convect.f:82:20:
+
+       call int_vel (bmst,tau,bmass,n,nc,cs,nid) ! B(t^n-1)
+                    1
+Warning: Rank mismatch in argument ‘c_t’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:1717:28:
+
+          call grad_rstd_ta (ud,ur,us,ut,lxd,if3d) ! GL->GL gradt
+                            1
+Warning: Rank mismatch in argument ‘du’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:1843:25:
+
+       call full2face(uf ,u )
+                         1
+Warning: Actual argument contains too few elements for dummy argument ‘vol_ary’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:1605:25:
+
+       call full2face(uf ,u )
+                         1
+Warning: Actual argument contains too few elements for dummy argument ‘vol_ary’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:1659:26:
+
+       call add_face2full( du , uf)  ! <--- this stmt.
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘vol_ary’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:1661:26:
+
+       call fbinvert     ( du )      ! Right now works only for undeformed
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘rhs’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:211:58:
+
+        if (param(99).eq.1) call conv_rhs_dg         (du,u,c)
+                                                          1
+Warning: Actual argument contains too few elements for dummy argument ‘c’ (1/729729) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:1402:25:
+
+       call full2face(uf ,u )
+                         1
+Warning: Actual argument contains too few elements for dummy argument ‘vol_ary’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:1441:26:
+
+       call add_face2full( du , uf)  ! <--- this stmt.
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘vol_ary’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:1443:26:
+
+       call fbinvert     ( du )      ! Right now works only for undeformed
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘rhs’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:124:26:
+
+             call int_vel (bmst,th,bmass,n,nc,cs,nid)   ! B(n-1/2)
+                          1
+Warning: Rank mismatch in argument ‘c_t’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:139:26:
+
+             call int_vel (bmst,tau1,bmass,n,nc,cs,nid) ! B^-1(n)
+                          1
+Warning: Rank mismatch in argument ‘c_t’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:39:40:
+
+      $  ,u1,r1,r2,r3,r4,bmsk,bdivw,bdwt,bmass,bmst,bm,bmlag)
+                                        1
+Warning: Rank mismatch in argument ‘bmass’ at (1) (scalar and rank-2) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:604:55:
+
+          call set_convect_cons(c(ix,1),c(iy,1),c(iz,1),u,v,w)
+                                                       1
+Warning: Actual argument contains too few elements for dummy argument ‘ux’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:886:59:
+
+               cs(i,e)=rx(i,4,e)*fx(i)+rx(i,5,e)*fy(i)+rx(i,6,e)*fz(i)
+                                                           1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:886:43:
+
+               cs(i,e)=rx(i,4,e)*fx(i)+rx(i,5,e)*fy(i)+rx(i,6,e)*fz(i)
+                                           1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:887:59:
+
+               ct(i,e)=rx(i,7,e)*fx(i)+rx(i,8,e)*fy(i)+rx(i,9,e)*fz(i)
+                                                           1
+Warning: Array reference at (1) is out of bounds (9 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:887:43:
+
+               ct(i,e)=rx(i,7,e)*fx(i)+rx(i,8,e)*fy(i)+rx(i,9,e)*fz(i)
+                                           1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:887:27:
+
+               ct(i,e)=rx(i,7,e)*fx(i)+rx(i,8,e)*fy(i)+rx(i,9,e)*fz(i)
+                           1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:606:55:
+
+          call set_convect_new (c(ix,1),c(iy,1),c(iz,1),u,v,w)
+                                                       1
+Warning: Actual argument contains too few elements for dummy argument ‘ux’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:689:60:
+
+                tr(i,2)=rx(i,4,e)*fx(i)+rx(i,5,e)*fy(i)+rx(i,6,e)*fz(i)
+                                                            1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:689:44:
+
+                tr(i,2)=rx(i,4,e)*fx(i)+rx(i,5,e)*fy(i)+rx(i,6,e)*fz(i)
+                                            1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:690:60:
+
+                tr(i,3)=rx(i,7,e)*fx(i)+rx(i,8,e)*fy(i)+rx(i,9,e)*fz(i)
+                                                            1
+Warning: Array reference at (1) is out of bounds (9 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:690:44:
+
+                tr(i,3)=rx(i,7,e)*fx(i)+rx(i,8,e)*fy(i)+rx(i,9,e)*fz(i)
+                                            1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:690:28:
+
+                tr(i,3)=rx(i,7,e)*fx(i)+rx(i,8,e)*fy(i)+rx(i,9,e)*fz(i)
+                            1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect.f:1753:25:
+
+       call full2face(uf ,u )
+                         1
+Warning: Actual argument contains too few elements for dummy argument ‘vol_ary’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/convect.f:1074:20:
+
+       common /ctmp1/ ur(ldd),us(ldd),ut(ldd),ju(ldd),ud(ldd),tu(ldd)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (3888 vs 2592 bytes)
+/srv/cfd/Nek5000/core/convect.f:1386:20:
+
+       common /scrdg/ uf(lf),uxf(lf),uyf(lf),uzf(lf),upwind_wgt(lf)
+                    1
+Warning: Named COMMON block ‘scrdg’ at (1) shall be of the same size as elsewhere (3363360 vs 4036360 bytes)
+/srv/cfd/Nek5000/core/convect.f:1590:20:
+
+       common /scrdg/ uf(lf),uxf(lf),uyf(lf),uzf(lf),upwind_wgt(lf)
+                    1
+Warning: Named COMMON block ‘scrdg’ at (1) shall be of the same size as elsewhere (3363688 vs 4036360 bytes)
+/srv/cfd/Nek5000/core/convect.f:746:20:
+
+       common /scrcv/ uf(ltd),cf(ltd),cu(ltd)
+                    1
+Warning: Named COMMON block ‘scrcv’ at (1) shall be of the same size as elsewhere (3888 vs 6480 bytes)
+/srv/cfd/Nek5000/core/convect.f:979:20:
+
+       common /scruz/ phi  (lx1*ly1*lz1*lelt)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (2354352 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/convect.f:1204:20:
+
+       common /scruz/ cx  (lx1*ly1*lz1*lelt)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (3531528 vs 4708704 bytes)
+mpif77 -c  -O0 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental  /srv/cfd/Nek5000/core/convect2.f -o obj/convect2.o
+/srv/cfd/Nek5000/core/convect2.f:156:32:
+
+             call intp_rstd(rx(1,5,e),sym1(1,1,1,e),lx1,lxd,if3d,0) ! 0 --> fwd
+                                1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect2.f:157:32:
+
+             call intp_rstd(rx(1,6,e),szm1(1,1,1,e),lx1,lxd,if3d,0) ! 0 --> fwd
+                                1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect2.f:158:32:
+
+             call intp_rstd(rx(1,7,e),txm1(1,1,1,e),lx1,lxd,if3d,0) ! 0 --> fwd
+                                1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect2.f:159:32:
+
+             call intp_rstd(rx(1,8,e),tym1(1,1,1,e),lx1,lxd,if3d,0) ! 0 --> fwd
+                                1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 2
+/srv/cfd/Nek5000/core/convect2.f:160:32:
+
+             call intp_rstd(rx(1,9,e),tzm1(1,1,1,e),lx1,lxd,if3d,0) ! 0 --> fwd
+                                1
+Warning: Array reference at (1) is out of bounds (9 > 4) in dimension 2
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/induct.f -o obj/induct.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/perturb.f -o obj/perturb.o
+/srv/cfd/Nek5000/core/induct.f:1386:59:
+
+      $            rx(i,4,e)*zm(i,1)+rx(i,5,e)*zm(i,2)+rx(i,6,e)*zm(i,3)
+                                                           1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1386:41:
+
+      $            rx(i,4,e)*zm(i,1)+rx(i,5,e)*zm(i,2)+rx(i,6,e)*zm(i,3)
+                                         1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1388:59:
+
+      $            rx(i,7,e)*zm(i,1)+rx(i,8,e)*zm(i,2)+rx(i,9,e)*zm(i,3)
+                                                           1
+Warning: Array reference at (1) is out of bounds (9 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1388:41:
+
+      $            rx(i,7,e)*zm(i,1)+rx(i,8,e)*zm(i,2)+rx(i,9,e)*zm(i,3)
+                                         1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1388:23:
+
+      $            rx(i,7,e)*zm(i,1)+rx(i,8,e)*zm(i,2)+rx(i,9,e)*zm(i,3)
+                       1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1415:59:
+
+      $            rx(i,4,e)*zp(i,1)+rx(i,5,e)*zp(i,2)+rx(i,6,e)*zp(i,3)
+                                                           1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1415:41:
+
+      $            rx(i,4,e)*zp(i,1)+rx(i,5,e)*zp(i,2)+rx(i,6,e)*zp(i,3)
+                                         1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1417:59:
+
+      $            rx(i,7,e)*zp(i,1)+rx(i,8,e)*zp(i,2)+rx(i,9,e)*zp(i,3)
+                                                           1
+Warning: Array reference at (1) is out of bounds (9 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1417:41:
+
+      $            rx(i,7,e)*zp(i,1)+rx(i,8,e)*zp(i,2)+rx(i,9,e)*zp(i,3)
+                                         1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1417:23:
+
+      $            rx(i,7,e)*zp(i,1)+rx(i,8,e)*zp(i,2)+rx(i,9,e)*zp(i,3)
+                       1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1080:40:
+
+      $                         ,vproj(1,5),ivproj(1,5),binvm1)
+                                        1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:1084:40:
+
+      $                         ,vproj(1,6),ivproj(1,6),binvm1)
+                                        1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:904:21:
+
+       call incomprn (vx,vy,vz,pr) ! project U onto div-free space
+                     1
+Warning: Rank mismatch in argument ‘ux’ at (1) (scalar and rank-4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/induct.f:912:21:
+
+       call incomprn (bx,by,bz,pm) ! project B onto div-free space
+                     1
+Warning: Rank mismatch in argument ‘ux’ at (1) (scalar and rank-4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/induct.f:469:16:
+
+       call curl(lf,b1,b2,b3,.false.,w1,w2)
+                1
+Warning: Actual argument contains too few elements for dummy argument ‘vort’ (294294/441441) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/induct.f:474:35:
+
+          c1 = lf(i,2)*b3(i) - lf(i,3)*b2(i)
+                                   1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:475:19:
+
+          c2 = lf(i,3)*b1(i) - lf(i,1)*b3(i)
+                   1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:479:14:
+
+          lf(i,3) = c3
+              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/induct.f:304:20:
+
+       common /scrns/ w1    (lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7663656 vs 7063056 bytes)
+/srv/cfd/Nek5000/core/induct.f:189:20:
+
+       COMMON /SCRNS/ TA1(LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (8240232 vs 7663656 bytes)
+/srv/cfd/Nek5000/core/induct.f:151:20:
+
+       common /scrns/ ta1 (lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (3531528 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/induct.f:1338:20:
+
+       common /scrns/ wk(2*ltd)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (11424 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/induct.f:24:20:
+
+       common /scrns/  resv1 (lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/induct.f:1531:20:
+
+       common /scrns/ ta1 (lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/perturb.f:366:26:
+
+      $              +rx(i,7,e)*utz(i))
+                          1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:364:26:
+
+      $              +rx(i,7,e)*uty(i))+
+                          1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:362:26:
+
+      $              +rx(i,7,e)*utx(i))+
+                          1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:372:26:
+
+      $              +rx(i,8,e)*utz(i))
+                          1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:371:49:
+
+      $              fz(i)*(rx(i,2,e)*urz(i)+rx(i,5,e)*usz(i)
+                                                 1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:370:26:
+
+      $              +rx(i,8,e)*uty(i))+
+                          1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:369:49:
+
+      $              fy(i)*(rx(i,2,e)*ury(i)+rx(i,5,e)*usy(i)
+                                                 1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:368:26:
+
+      $              +rx(i,8,e)*utx(i))+
+                          1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:367:51:
+
+                uf5(i)=fx(i)*(rx(i,2,e)*urx(i)+rx(i,5,e)*usx(i)
+                                                   1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:378:26:
+
+      $              +rx(i,9,e)*utz(i))
+                          1
+Warning: Array reference at (1) is out of bounds (9 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:377:49:
+
+      $              fz(i)*(rx(i,3,e)*urz(i)+rx(i,6,e)*usz(i)
+                                                 1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:376:26:
+
+      $              +rx(i,9,e)*uty(i))+
+                          1
+Warning: Array reference at (1) is out of bounds (9 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:375:49:
+
+      $              fy(i)*(rx(i,3,e)*ury(i)+rx(i,6,e)*usy(i)
+                                                 1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:374:26:
+
+      $              +rx(i,9,e)*utx(i))+
+                          1
+Warning: Array reference at (1) is out of bounds (9 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:373:51:
+
+                uf6(i)=fx(i)*(rx(i,3,e)*urx(i)+rx(i,6,e)*usx(i)
+                                                   1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 2
+/srv/cfd/Nek5000/core/perturb.f:792:20:
+
+       COMMON /SCRNS/ TA (LX1,LY1,LZ1,LELT)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (3531528 vs 2354352 bytes)
+/srv/cfd/Nek5000/core/perturb.f:717:20:
+
+       common /scruz/ ta (lx1,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (4708704 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/perturb.f:39:20:
+
+       COMMON /SCRNS/  RESV1 (LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/perturb.f:862:20:
+
+       common /scrns/ w1    (lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7663656 vs 7063056 bytes)
+/srv/cfd/Nek5000/core/perturb.f:524:20:
+
+       common /scruz/ w1    (lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (4132128 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/perturb.f:477:20:
+
+       COMMON /SCRNS/ TA1(LX1,LY1,LZ1,LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (8240232 vs 7663656 bytes)
+/srv/cfd/Nek5000/core/perturb.f:439:20:
+
+       common /scrns/ ta1 (lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (3531528 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/perturb.f:222:20:
+
+       COMMON /SCRNS/ TA1 (LX1*LY1*LZ1*LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/perturb.f:143:20:
+
+       COMMON /SCRNS/ TA1 (LX1*LY1*LZ1*LELV)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 8240232 bytes)
+/srv/cfd/Nek5000/core/convect.f:1567:0:
+
+                wghtf(k)=wgtf(i)*wgtf(j)
+ 
+Warning: iteration 1 invokes undefined behavior [-Waggressive-loop-optimizations]
+/srv/cfd/Nek5000/core/convect.f:1564:0:
+
+             do j=1,lyd
+ 
+note: within this loop
+/srv/cfd/Nek5000/core/convect.f:1560:0:
+
+                wghtc(k)=wxm1(i)*wzm1(j)
+ 
+Warning: iteration 1 invokes undefined behavior [-Waggressive-loop-optimizations]
+/srv/cfd/Nek5000/core/convect.f:1557:0:
+
+             do j=1,ly1
+ 
+note: within this loop
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/navier5.f -o obj/navier5.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/navier6.f -o obj/navier6.o
+/srv/cfd/Nek5000/core/navier6.f:362:58:
+
+             x(ix,iy,1  ,ie)=abs(x(ix,iy,1  ,ie) - x(ix,iy,2    ,ie))
+                                                          1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+/srv/cfd/Nek5000/core/navier6.f:363:58:
+
+             x(ix,iy,lz1,ie)=abs(x(ix,iy,lz1,ie) - x(ix,iy,lz1-1,ie))
+                                                          1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 3
+/srv/cfd/Nek5000/core/navier6.f:93:72:
+
+                call set_fem_data_l2(nel_proc,ndom,n_o,x,y,z,tri)
+                                                                        1
+Warning: Type mismatch in argument ‘p’ at (1); passed INTEGER(4) to REAL(8) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier6.f:50:20:
+
+       common /ctmp0/ nv_to_t(2*ltotd)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1177176 vs 784 bytes)
+/srv/cfd/Nek5000/core/navier5.f:1535:27:
+
+          s21 = sij(j1,j2,1,4,e)
+                           1
+Warning: Array reference at (1) is out of bounds (4 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:1536:27:
+
+          s31 = sij(j1,j2,1,6,e)
+                           1
+Warning: Array reference at (1) is out of bounds (6 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:1538:27:
+
+          s12 = sij(j1,j2,1,4,e)
+                           1
+Warning: Array reference at (1) is out of bounds (4 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:1540:27:
+
+          s32 = sij(j1,j2,1,5,e)
+                           1
+Warning: Array reference at (1) is out of bounds (5 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:1542:27:
+
+          s13 = sij(j1,j2,1,6,e)
+                           1
+Warning: Array reference at (1) is out of bounds (6 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:1543:27:
+
+          s23 = sij(j1,j2,1,5,e)
+                           1
+Warning: Array reference at (1) is out of bounds (5 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:2124:14:
+
+          xt(l,3) = z(i,j,k)
+              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/navier5.f:2268:30:
+
+             s21 = sij(j1,j2,1,4,e)
+                              1
+Warning: Array reference at (1) is out of bounds (4 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:2269:30:
+
+             s31 = sij(j1,j2,1,6,e)
+                              1
+Warning: Array reference at (1) is out of bounds (6 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:2271:30:
+
+             s12 = sij(j1,j2,1,4,e)
+                              1
+Warning: Array reference at (1) is out of bounds (4 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:2273:30:
+
+             s32 = sij(j1,j2,1,5,e)
+                              1
+Warning: Array reference at (1) is out of bounds (5 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:2275:30:
+
+             s13 = sij(j1,j2,1,6,e)
+                              1
+Warning: Array reference at (1) is out of bounds (6 > 3) in dimension 4
+/srv/cfd/Nek5000/core/navier5.f:2276:30:
+
+             s23 = sij(j1,j2,1,5,e)
+                              1
+Warning: Array reference at (1) is out of bounds (5 > 3) in dimension 4
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/navier7.f -o obj/navier7.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/navier8.f -o obj/navier8.o
+/srv/cfd/Nek5000/core/navier5.f:524:20:
+
+       common /ctmp0/ ur,us,ut,vr,vs,vt,wr,ws,wt
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (3528 vs 8245608 bytes)
+/srv/cfd/Nek5000/core/navier5.f:1648:20:
+
+       common /scruz/         ur(lr),us(lr),ut(lr)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (3528 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/navier7.f:411:72:
+
+          call swap (bcsr(n1),nzero,n2,inverse)
+                                                                        1
+Warning: Type mismatch in argument ‘temp’ at (1); passed INTEGER(4) to REAL(8) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier5.f:1974:20:
+
+       common /scrsf/  ta(lt,ldimt)
+                    1
+Warning: Named COMMON block ‘scrsf’ at (1) shall be of the same size as elsewhere (1177176 vs 3531528 bytes)
+/srv/cfd/Nek5000/core/navier5.f:2157:20:
+
+       common /scruz/         ur(lr),us(lr),ut(lr)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (3528 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/navier5.f:2327:20:
+
+       common /scrns/ xb(lt,lelt),yb(lt,lelt),zb(lt,lelt)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (3531528 vs 7063056 bytes)
+/srv/cfd/Nek5000/core/navier5.f:2328:20:
+
+       common /scruz/ tmsk(lt,lelt),tmlt(lt,lelt),w1(lt),w2(lt)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (2355136 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/navier5.f:2788:20:
+
+       common /ctmp0/ f(lxx),wk1(lxyz),wk2(lxyz),wk3(lxyz)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1568 vs 8245608 bytes)
+/srv/cfd/Nek5000/core/navier5.f:2811:20:
+
+       common /ctmp0/ f(lxx),wk1(lxyz),wk2(lxyz),wk3(lxyz),diag(lx1)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (1624 vs 8245608 bytes)
+/srv/cfd/Nek5000/core/navier5.f:2838:20:
+
+       common /ctmp1/ w(lt,lelt),ur(lt),us(lt),ut(lt),w1(2*lt)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (1179136 vs 1176 bytes)
+/srv/cfd/Nek5000/core/navier5.f:3242:20:
+
+       common /ctmp1/ w(lw)
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (1176 vs 1179136 bytes)
+/srv/cfd/Nek5000/core/navier8.f:1737:33:
+
+       call ituple_sort(tuple,m,n,ky,nk,ind,wtuple)
+                                 1
+Warning: Rank mismatch in argument ‘key’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:16:43:
+
+          call setvert3d(glo_num,ngv,nx,nel,vertex,ifcenter)
+                                           1
+Warning: Actual argument contains too few elements for dummy argument ‘vertex’ (1/8) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:18:43:
+
+          call setvert2d(glo_num,ngv,nx,nel,vertex,ifcenter)
+                                           1
+Warning: Actual argument contains too few elements for dummy argument ‘vertex’ (1/4) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:1197:29:
+
+       call specmpn(b,nb,a,na,ibat,iba,if3d,w,ldw)
+                             1
+Warning: Rank mismatch in argument ‘ba’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:52:34:
+
+       call map_f_to_c_l2_bilin(uf,vf,w)
+                                  1
+Warning: Actual argument contains too few elements for dummy argument ‘uf’ (1/75075) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:1158:29:
+
+       call specmpn(a,na,b,nb,iba,ibat,if3d,w,ldw)
+                             1
+Warning: Rank mismatch in argument ‘ba’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:54:31:
+
+       call map_c_to_f_l2_bilin(uf,uc,w)
+                               1
+Warning: Actual argument contains too few elements for dummy argument ‘uf’ (1/75075) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:933:29:
+
+       call specmpn(a,na,b,nb,iba,ibat,if3d,w,ldw)
+                             1
+Warning: Rank mismatch in argument ‘ba’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:609:26:
+
+             call a_crs_3d(a_loc,h1,h2,x,y,z,ie)
+                          1
+Warning: Actual argument contains too few elements for dummy argument ‘a’ (16/64) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:1373:34:
+
+       call map_f_to_c_h1_bilin(vc,uf)   ! additive Schwarz
+                                  1
+Warning: Actual argument contains too few elements for dummy argument ‘uf’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:1383:31:
+
+       call map_c_to_f_h1_bilin(uf,uc)
+                               1
+Warning: Actual argument contains too few elements for dummy argument ‘uf’ (1/147147) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:2309:29:
+
+       call specmpn(a,na,b,nb,iba,ibat,if3d,w,ldw)
+                             1
+Warning: Rank mismatch in argument ‘ba’ at (1) (scalar and rank-1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/navier8.f:1466:20:
+
+       common /ctmp0/ w(2,2,lx1),v(2,ly1,lz1,lelt)
+                    1
+Warning: Named COMMON block ‘ctmp0’ at (1) shall be of the same size as elsewhere (336560 vs 337120 bytes)
+/srv/cfd/Nek5000/core/navier8.f:1762:21:
+
+       common  /scrmg/ edge,enum,fnum
+                     1
+Warning: Named COMMON block ‘scrmg’ at (1) shall be of the same size as elsewhere (504504 vs 144144 bytes)
+/srv/cfd/Nek5000/core/navier8.f:1767:21:
+
+       common  /scrns/ ind,etuple
+                     1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (5765760 vs 1921920 bytes)
+/srv/cfd/Nek5000/core/navier8.f:108:20:
+
+       common /scrns/ w(7*lx1*ly1*lz1*lelv)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (4120120 vs 5765760 bytes)
+/srv/cfd/Nek5000/core/navier8.f:109:21:
+
+       common /vptsol/ a(27*lx1*ly1*lz1*lelv)
+                     1
+Warning: Named COMMON block ‘vptsol’ at (1) shall be of the same size as elsewhere (31783752 vs 81585504 bytes)
+/srv/cfd/Nek5000/core/navier8.f:1354:21:
+
+       common /scrpre/ uc(lcr*lelt)
+                     1
+Warning: Named COMMON block ‘scrpre’ at (1) shall be of the same size as elsewhere (96096 vs 96880 bytes)
+/srv/cfd/Nek5000/core/navier8.f:1356:21:
+
+       common /scrxxt/ cmlt(lcr,lelv),mask(lcr,lelv)
+                     1
+Warning: Named COMMON block ‘scrxxt’ at (1) shall be of the same size as elsewhere (144144 vs 192192 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/fast3d.f -o obj/fast3d.o
+/srv/cfd/Nek5000/core/fast3d.f:553:46:
+
+       call set_up_1D_geom(dx,lbc,rbc,ll,lm,lr,z,nz)
+                                              1
+Warning: Actual argument contains too few elements for dummy argument ‘z’ (1/2) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/fast3d.f:1390:33:
+
+       call set_up_fast_1D_sem_op(s,eb0,eb1,l,r,ll,lm,lr,bh,dgl,0)
+                                 1
+Warning: Actual argument contains too few elements for dummy argument ‘g’ (1/49) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/fast3d.f:932:49:
+
+       call set_up_1D_geom_ax(dx,lbc,rbc,ll,lm,lr,z,y,nz)
+                                                 1
+Warning: Actual argument contains too few elements for dummy argument ‘z’ (1/2) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/fast3d.f:1585:27:
+
+             llr(e) = l(1,2,2,e)-lmr(e)
+                           1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+/srv/cfd/Nek5000/core/fast3d.f:1586:27:
+
+             lrr(e) = l(n,2,2,e)-lmr(e)
+                           1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+/srv/cfd/Nek5000/core/fast3d.f:1587:27:
+
+             lls(e) = l(2,1,2,e)-lms(e)
+                           1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+/srv/cfd/Nek5000/core/fast3d.f:1588:27:
+
+             lrs(e) = l(2,n,2,e)-lms(e)
+                           1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/fasts.f -o obj/fasts.o
+/srv/cfd/Nek5000/core/fasts.f:239:38:
+
+             x(ix,iy,1  ,ie) = x(ix,iy,2    ,ie)
+                                      1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:240:38:
+
+             x(ix,iy,lz1,ie) = x(ix,iy,lz1-1,ie)
+                                      1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:287:58:
+
+             x(ix,iy,1  ,ie) = x(ix,iy,1  ,ie) + c*x(ix,iy,2    ,ie)
+                                                          1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:288:58:
+
+             x(ix,iy,lz1,ie) = x(ix,iy,lz1,ie) + c*x(ix,iy,lz1-1,ie)
+                                                          1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:192:20:
+
+             x(ix,iy,2    ,ie) = c*x(ix,iy,1  ,ie) + x(ix,iy,2    ,ie)
+                    1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:192:60:
+
+             x(ix,iy,2    ,ie) = c*x(ix,iy,1  ,ie) + x(ix,iy,2    ,ie)
+                                                            1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:193:20:
+
+             x(ix,iy,lz1-1,ie) = c*x(ix,iy,lz1,ie) + x(ix,iy,lz1-1,ie)
+                    1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:193:60:
+
+             x(ix,iy,lz1-1,ie) = c*x(ix,iy,lz1,ie) + x(ix,iy,lz1-1,ie)
+                                                            1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:435:26:
+
+                   x(i,j,  1,e)=w(i,j,1,3,eb)*x(i,j,  1,e)
+                          1
+Warning: Array reference at (1) is out of bounds (1 > 0) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:435:53:
+
+                   x(i,j,  1,e)=w(i,j,1,3,eb)*x(i,j,  1,e)
+                                                     1
+Warning: Array reference at (1) is out of bounds (1 > 0) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:436:24:
+
+                   x(i,j,lz2,e)=w(i,j,2,3,eb)*x(i,j,lz2,e)
+                        1
+Warning: Array reference at (1) is out of bounds (1 > 0) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:436:51:
+
+                   x(i,j,lz2,e)=w(i,j,2,3,eb)*x(i,j,lz2,e)
+                                                   1
+Warning: Array reference at (1) is out of bounds (1 > 0) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:343:24:
+
+                   l(i,j,2,e)=1
+                        1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+/srv/cfd/Nek5000/core/fasts.f:384:46:
+
+                   w(i,j,1,3,eb)=1.0/l(i+1,j+1,2,e)
+                                              1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 3
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/calcz.f -o obj/calcz.o
+mpicc -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/byte.c -o obj/byte.o
+/srv/cfd/Nek5000/core/byte.c: In function ‘byte_read_’:
+/srv/cfd/Nek5000/core/byte.c:225:6: warning: ignoring return value of ‘fread’, declared with attribute warn_unused_result [-Wunused-result]
+      fread(buf,sizeof(float),*n,fp);
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+mpicc -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/chelpers.c -o obj/chelpers.o
+/srv/cfd/Nek5000/core/chelpers.c: In function ‘set_stdout_’:
+/srv/cfd/Nek5000/core/chelpers.c:72:5: warning: ignoring return value of ‘freopen’, declared with attribute warn_unused_result [-Wunused-result]
+     freopen(logfile, "w+", stdout);
+     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/byte_mpi.f -o obj/byte_mpi.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/postpro.f -o obj/postpro.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/interp.f -o obj/interp.o
+/srv/cfd/Nek5000/core/postpro.f:292:21:
+
+             gije(i,k,3) = dj*(
+                     1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 3
+/srv/cfd/Nek5000/core/postpro.f:583:72:
+
+           call gen_int_gz(j,jt,w,n,z,m)
+                                                                        1
+Warning: Type mismatch in argument ‘j’ at (1); passed INTEGER(4) to REAL(8) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/postpro.f:612:72:
+
+           call gen_int_gz(j,jt,w,n,z,m)
+                                                                        1
+Warning: Type mismatch in argument ‘j’ at (1); passed INTEGER(4) to REAL(8) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/postpro.f:765:25:
+
+                   xyz(li,3,kb) = zm1(1+i*nxs,1+j*nys,1+k*nzs,e)
+                         1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:799:34:
+
+                     buf2(5) = xyz(5,1,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:800:34:
+
+                     buf2(6) = xyz(6,1,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:801:34:
+
+                     buf2(7) = xyz(7,1,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:802:34:
+
+                     buf2(8) = xyz(8,1,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:809:34:
+
+                     buf2(13)= xyz(5,2,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:810:34:
+
+                     buf2(14)= xyz(6,2,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:811:34:
+
+                     buf2(15)= xyz(7,2,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:812:34:
+
+                     buf2(16)= xyz(8,2,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:814:36:
+
+                     buf2(17)= xyz(1,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:815:36:
+
+                     buf2(18)= xyz(2,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:816:36:
+
+                     buf2(19)= xyz(3,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:817:36:
+
+                     buf2(20)= xyz(4,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:819:34:
+
+                     buf2(21)= xyz(5,3,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:819:36:
+
+                     buf2(21)= xyz(5,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:820:34:
+
+                     buf2(22)= xyz(6,3,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:820:36:
+
+                     buf2(22)= xyz(6,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:821:34:
+
+                     buf2(23)= xyz(7,3,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:821:36:
+
+                     buf2(23)= xyz(7,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:822:34:
+
+                     buf2(24)= xyz(8,3,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:822:36:
+
+                     buf2(24)= xyz(8,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:847:34:
+
+                     buf(5)  = xyz(5,1,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:848:34:
+
+                     buf(6)  = xyz(6,1,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:849:34:
+
+                     buf(7)  = xyz(7,1,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:850:34:
+
+                     buf(8)  = xyz(8,1,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:857:34:
+
+                     buf(13) = xyz(5,2,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:858:34:
+
+                     buf(14) = xyz(6,2,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:859:34:
+
+                     buf(15) = xyz(7,2,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:860:34:
+
+                     buf(16) = xyz(8,2,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:862:36:
+
+                     buf(17) = xyz(1,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:863:36:
+
+                     buf(18) = xyz(2,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:864:36:
+
+                     buf(19) = xyz(3,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:865:36:
+
+                     buf(20) = xyz(4,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:867:34:
+
+                     buf(21) = xyz(5,3,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (5 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:867:36:
+
+                     buf(21) = xyz(5,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:868:34:
+
+                     buf(22) = xyz(6,3,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (6 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:868:36:
+
+                     buf(22) = xyz(6,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:869:34:
+
+                     buf(23) = xyz(7,3,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (7 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:869:36:
+
+                     buf(23) = xyz(7,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:870:34:
+
+                     buf(24) = xyz(8,3,kb)
+                                  1
+Warning: Array reference at (1) is out of bounds (8 > 4) in dimension 1
+/srv/cfd/Nek5000/core/postpro.f:870:36:
+
+                     buf(24) = xyz(8,3,kb)
+                                    1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:1207:25:
+
+                   xyz(li,3,kb) = zm1(1+i*nxs,1+j*nys,1+k*nzs,e)
+                         1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:1238:46:
+
+                   write(10,'(4g15.7)')(xyz(ic,3,kb),ic=1,4)
+                                              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:1242:46:
+
+                   write(10,'(4g15.7)')(xyz(ic,3,kb),ic=5,8)
+                                              1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 2
+/srv/cfd/Nek5000/core/postpro.f:1604:32:
+
+      &                      pts(3,1),ldim,npts)
+                                1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 1
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/cvode_driver.f -o obj/cvode_driver.o
+/srv/cfd/Nek5000/core/postpro.f:1272:20:
+
+       common /scrns/ vcurve(5,12,lblock),wk(5*12*lblock)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (480000 vs 240000 bytes)
+/srv/cfd/Nek5000/core/postpro.f:1273:20:
+
+       common /scruz/ icurve(12,lblock)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (24000 vs 12000 bytes)
+/srv/cfd/Nek5000/core/postpro.f:1167:20:
+
+       common /scrns/ xyz(lv,ldim,lblock),wk(lv*ldim*lblock)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (128000 vs 480000 bytes)
+/srv/cfd/Nek5000/core/postpro.f:1168:20:
+
+       common /scruz/ igr(lblock)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (4000 vs 24000 bytes)
+/srv/cfd/Nek5000/core/postpro.f:1713:20:
+
+       common /scrns/ xyz(ldim,lt2)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (4708704 vs 480000 bytes)
+/srv/cfd/Nek5000/core/postpro.f:1714:20:
+
+       common /scruz/ mid(lt2)  ! Target proc id
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (1177176 vs 24000 bytes)
+/srv/cfd/Nek5000/core/postpro.f:1454:20:
+
+       common /scrns/ x3(27),y3(27),z3(27),xyz(3,3)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (720 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/postpro.f:1026:20:
+
+       common /scrns/ vbc(5,6,lblock),wk(5*6*lblock)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (240000 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/postpro.f:1027:20:
+
+       common /scruz/ ibc(6,lblock)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (12000 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/postpro.f:915:20:
+
+       common /scrns/ vcurve(5,12,lblock),wk(5*12*lblock)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (480000 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/postpro.f:916:20:
+
+       common /scruz/ icurve(12,lblock)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (24000 vs 1177176 bytes)
+/srv/cfd/Nek5000/core/postpro.f:722:20:
+
+       common /scrns/ xyz(lv,ldim,lblock),wk(lv*ldim*lblock)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (128000 vs 4708704 bytes)
+/srv/cfd/Nek5000/core/postpro.f:723:20:
+
+       common /scruz/ igr(lblock)
+                    1
+Warning: Named COMMON block ‘scruz’ at (1) shall be of the same size as elsewhere (4000 vs 1177176 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/multimesh.f -o obj/multimesh.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/vprops.f -o obj/vprops.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/makeq_aux.f -o obj/makeq_aux.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/papi.f -o obj/papi.o
+/srv/cfd/Nek5000/core/papi.f:5:72:
+
+       call getflops_papi(flpops,mflops)
+                                                                        1
+Warning: Type mismatch in argument ‘flpops’ at (1); passed INTEGER(8) to REAL(8) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/papi.f:15:72:
+
+       call getflops_papi(flpops,mflops)
+                                                                        1
+Warning: Type mismatch in argument ‘flpops’ at (1); passed INTEGER(8) to REAL(8) [-Wargument-mismatch]
+mpif77 -c   -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/3rd_party/nek_in_situ.f -o obj/nek_in_situ.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/reader_rea.f -o obj/reader_rea.o
+/srv/cfd/Nek5000/core/multimesh.f:368:32:
+
+      &                    rsend(3),ldim,nbp)
+                                1
+Warning: Array reference at (1) is out of bounds (3 > 2) in dimension 1
+/srv/cfd/Nek5000/core/multimesh.f:444:33:
+
+       call field_eval(fieldout(1,2),1,vy)
+                                 1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 2
+/srv/cfd/Nek5000/core/multimesh.f:445:48:
+
+       if (ldim.eq.3) call field_eval(fieldout(1,ldim),1,vz)
+                                                1
+Warning: Array reference at (1) is out of bounds (2 > 1) in dimension 2
+/srv/cfd/Nek5000/core/multimesh.f:446:33:
+
+       call field_eval(fieldout(1,ldim+1),1,pm1)
+                                 1
+Warning: Array reference at (1) is out of bounds (3 > 1) in dimension 2
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/reader_par.f -o obj/reader_par.o
+/srv/cfd/Nek5000/core/multimesh.f:988:20:
+
+       common /scrns/ resv1 (lx1,ly1,lz1,lelv)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (11195184 vs 7663656 bytes)
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/reader_re2.f -o obj/reader_re2.o
+mpicc  -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental  /srv/cfd/Nek5000/core/3rd_party/finiparser.c -o obj/finiparser.o
+mpicc  -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental  /srv/cfd/Nek5000/core/3rd_party/iniparser.c -o obj/iniparser.o
+mpicc  -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental  /srv/cfd/Nek5000/core/3rd_party/dictionary.c -o obj/dictionary.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/hpf.f -o obj/hpf.o
+/srv/cfd/Nek5000/core/reader_re2.f:155:20:
+
+       common /ctmp1/  vi
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (2450448 vs 1225224 bytes)
+/srv/cfd/Nek5000/core/reader_re2.f:152:20:
+
+       common /scrns/  bufr
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (2306304 vs 1153152 bytes)
+/srv/cfd/Nek5000/core/reader_re2.f:83:20:
+
+       common /ctmp1/  vi
+                    1
+Warning: Named COMMON block ‘ctmp1’ at (1) shall be of the same size as elsewhere (240240 vs 2450448 bytes)
+/srv/cfd/Nek5000/core/reader_re2.f:80:20:
+
+       common /scrns/  bufr
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (216216 vs 2306304 bytes)
+mpicc -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental -I/srv/cfd/Nek5000/3rd_party/gslib/include  /srv/cfd/Nek5000/core/fcrs.c -o obj/fcrs.o
+mpicc -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental -I/srv/cfd/Nek5000/3rd_party/gslib/include /srv/cfd/Nek5000/core/crs_xxt.c -o obj/crs_xxt.o
+mpicc -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental -I/srv/cfd/Nek5000/3rd_party/gslib/include /srv/cfd/Nek5000/core/crs_amg.c -o obj/crs_amg.o
+mpicc -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental -I/srv/cfd/Nek5000/3rd_party/gslib/include  /srv/cfd/Nek5000/core/experimental/fem_amg_preco.c -o obj/fem_amg_preco.o
+mpicc -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental -I/srv/cfd/Nek5000/3rd_party/gslib/include  /srv/cfd/Nek5000/core/experimental/crs_hypre.c -o obj/crs_hypre.o
+mpicc -c  -O2  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental -I/srv/cfd/Nek5000/3rd_party/gslib/include  /srv/cfd/Nek5000/core/partitioner.c -o obj/partitioner.o
+mpif77 -c  -O3 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/mxm_std.f -o obj/mxm_std.o
+mpif77 -c  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental /srv/cfd/Nek5000/core/comm_mpi.f -o obj/comm_mpi.o
+'cyl.usr' -> 'cyl.f'
+mpif77  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental  -c /srv/cfd/Nek5000/run/cyl100/pod/pod_modes/cyl.f
+/srv/cfd/Nek5000/run/cyl100/pod/pod_modes/cyl.f:66:20:
+
+       common /scrns/ vort(lt*lelv,3),w1(lt),w2(lt)
+                    1
+Warning: Padding of 4 bytes required before ‘dvydxx’ in COMMON ‘scrns’ at (1); reorder elements or use -fno-align-commons [-Walign-commons]
+/srv/cfd/Nek5000/run/cyl100/pod/pod_modes/cyl.f:66:20:
+
+       common /scrns/ vort(lt*lelv,3),w1(lt),w2(lt)
+                    1
+Warning: Padding of 4 bytes required before ‘pm1’ in COMMON ‘scrns’ at (1); reorder elements or use -fno-align-commons [-Walign-commons]
+/srv/cfd/Nek5000/core/comm_mpi.f:81:24:
+
+       call err_chk(ierr,' Error while reading SESSION.NAME!$')
+                        1
+Warning: Actual argument contains too few elements for dummy argument ‘string’ (35/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:83:72:
+
+       call bcast(nsessions,ISIZE)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed INTEGER(4) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:85:21:
+
+      &   call exitti('nsessmax in SIZE too low!$',nsessmax)
+                     1
+Warning: Actual argument contains too few elements for dummy argument ‘stringi’ (26/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:88:72:
+
+       call bcast(ifneknekc,LSIZE)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed LOGICAL(4) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:90:72:
+
+          call bcast(npsess(n),ISIZE)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed INTEGER(4) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:91:72:
+
+          call bcast(session_mult(n),132*CSIZE)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed CHARACTER(1) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:92:72:
+
+          call bcast(path_mult(n),132*CSIZE)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed CHARACTER(1) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:111:21:
+
+      &   call exitti('Number of ranks does not match!$',npall)
+                     1
+Warning: Actual argument contains too few elements for dummy argument ‘stringi’ (32/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:128:11:
+
+      &     'More than 2 coupled sessions are currently not supported!$',
+           1
+Warning: Actual argument contains too few elements for dummy argument ‘stringi’ (58/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:165:21:
+
+      $   call exitti('Single precision mode not supported!',wdsize)
+                     1
+Warning: Actual argument contains too few elements for dummy argument ‘stringi’ (36/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:169:21:
+
+          call exitti('MPI real size does not match$',isize_mpi)
+                     1
+Warning: Actual argument contains too few elements for dummy argument ‘stringi’ (29/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:174:21:
+
+          call exitti('MPI integer size does not match$',isize_mpi)
+                     1
+Warning: Actual argument contains too few elements for dummy argument ‘stringi’ (32/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:179:21:
+
+          call exitti('MPI integer8 size does not match$',isize_mpi)
+                     1
+Warning: Actual argument contains too few elements for dummy argument ‘stringi’ (33/132) at (1) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:423:72:
+
+       call bcast(item,isize)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed INTEGER(4) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:1175:72:
+
+             call crecv(type,w,bytes)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:1197:72:
+
+       if (nid .ne. 0) call csend(type,x,bytes,parent,nullpid)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:1208:72:
+
+            call csend(typer,x,bytes,jnid,nullpid)
+                                                                        1
+Warning: Type mismatch in argument ‘mtype’ at (1); passed REAL(8) to INTEGER(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:1210:72:
+
+            call crecv(typer,x,bytes)
+                                                                        1
+Warning: Type mismatch in argument ‘mtype’ at (1); passed REAL(8) to INTEGER(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:955:15:
+
+       call gop(tmsg,t1,'+  ',1)
+               1
+Warning: Rank mismatch in argument ‘x’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:960:16:
+
+          msg  = irecv(1,y,1)
+                1
+Warning: Type mismatch in argument ‘x’ at (1); passed REAL(8) to INTEGER(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:961:72:
+
+          call csend(1,x,1,nodeb,0)   ! Initiate send, to synch.
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:966:19:
+
+             msg  = irecv(i,y,len)
+                   1
+Warning: Type mismatch in argument ‘x’ at (1); passed REAL(8) to INTEGER(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:967:72:
+
+             call csend(i,x,len,nodeb,0)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:976:72:
+
+          call crecv(1,y,1)           ! Initiate send, to synch.
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:977:72:
+
+          call csend(1,x,1,nodea,0)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:981:72:
+
+             call crecv(i,y,len)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:982:72:
+
+             call csend(i,x,len,nodea,0)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:990:15:
+
+       call gop(tmsg,t1,'+  ',1)
+               1
+Warning: Rank mismatch in argument ‘x’ at (1) (rank-1 and scalar) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:884:19:
+
+             msg  = irecv(itest,y,1)
+                   1
+Warning: Type mismatch in argument ‘x’ at (1); passed REAL(8) to INTEGER(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:885:72:
+
+             call csend(itest,x,1,nodeb,0)   ! Initiate send, to synch.
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:912:72:
+
+             call crecv(itest,y,1)           ! Initiate send, to synch.
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:913:72:
+
+             call csend(itest,x,1,nodea,0)
+                                                                        1
+Warning: Type mismatch in argument ‘buf’ at (1); passed REAL(8) to REAL(4) [-Wargument-mismatch]
+/srv/cfd/Nek5000/core/comm_mpi.f:945:20:
+
+       common /scrns/ x(3*lt),y(3*lt)
+                    1
+Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (7063056 vs 7063040 bytes)
+building libnek5000.a ... ar: `u' modifier ignored since `D' is the default (see `U')
+done
+mpif77  -O2 -mcmodel=large -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy -mcmodel=large -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/srv/cfd/Nek5000/run/cyl100/pod/pod_modes -I/srv/cfd/Nek5000/core -I./ -I /srv/cfd/Nek5000/core/experimental -o nek5000 /srv/cfd/Nek5000/core/drive.f /srv/cfd/Nek5000/run/cyl100/pod/pod_modes/cyl.o libnek5000.a -L/srv/cfd/Nek5000/3rd_party/blasLapack -lblasLapack -L/srv/cfd/Nek5000/3rd_party/gslib/lib -lgs -Wl,--allow-multiple-definition
+
+
+#############################################################
+#                  Compilation successful!                  #
+#############################################################
+   text	   data	    bss	    dec	    hex	filename
+2143588	  17528	73129945920	73132107036	110703651c	nek5000
+

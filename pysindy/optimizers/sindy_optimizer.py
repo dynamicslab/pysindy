@@ -5,7 +5,6 @@ from sklearn.linear_model import LinearRegression
 from ..utils.base import supports_multiple_targets
 from .base import _MultiTargetLinearRegressor
 
-
 COEF_THRESHOLD = 1e-14
 
 
@@ -49,7 +48,7 @@ class SINDyOptimizer(BaseEstimator):
         if len(y.shape) > 1 and y.shape[1] > 1:
             if not supports_multiple_targets(self.optimizer):
                 self.optimizer = _MultiTargetLinearRegressor(self.optimizer)
-       
+
         self.optimizer.fit(x, y)
         if not hasattr(self.optimizer, "coef_"):
             raise AttributeError("optimizer has no attribute coef_")

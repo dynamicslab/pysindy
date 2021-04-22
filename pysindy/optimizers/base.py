@@ -156,7 +156,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
             self.coef_ = self.initial_guess
 
         self.history_ = [self.coef_]
-            
+
         self._reduce(x, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
 

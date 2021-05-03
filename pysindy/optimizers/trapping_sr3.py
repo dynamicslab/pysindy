@@ -111,7 +111,7 @@ class trappingSR3(SR3):
     PL : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
         Linear coefficient part of the P matrix in ||Pw - A||^2
 
-    PQ : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
+    PQ : np.ndarray, shape (n_targets, n_targets, n_targets, n_targets, n_features)
         Quadratic coefficient part of the P matrix in ||Pw - A||^2
 
     fit_intercept : boolean, optional (default False)
@@ -308,7 +308,7 @@ class trappingSR3(SR3):
 
         n_samples, n_features = x.shape
         r = (self.PL).shape[0]
-        Nr = n_features
+        N = n_features
 
         # Set initial coefficients
         if self.initial_guess is not None:
@@ -340,15 +340,7 @@ class trappingSR3(SR3):
         # Precompute some objects for optimization
         PL = self.PL
         PQ = self.PQ
-        mPQ = np.zeros(PL.shape)
-        for i in range(r):
-            for j in range(i + 1, r):
-                mPQ[i, j, :, int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i] = m
-        for i in range(r):
-            mPQ[i, i, :, Nr - r + i] = m
-        for i in range(r):
-            for j in range(Nr):
-                mPQ[:, :, i, j] = 0.5 * (mPQ[:, :, i, j] + mPQ[:, :, i, j].T)
+        mPQ = np.tensordot(m, PQ, axes=([0], [0]))
         p = PL - mPQ
         x_expanded = np.zeros((n_samples, r, n_features, r))
         for i in range(r):
@@ -356,7 +348,7 @@ class trappingSR3(SR3):
         x_expanded = np.reshape(x_expanded, (n_samples * r, r * n_features))
         xTx = np.dot(x_expanded.T, x_expanded)
         xTy = np.dot(x_expanded.T, y.flatten())
-        Pmatrix = p.reshape(r * r, r * Nr)
+        Pmatrix = p.reshape(r * r, r * N)
 
         q = 0
 
@@ -369,22 +361,16 @@ class trappingSR3(SR3):
         for _ in range(self.max_iter):
 
             # update P tensor from the newest m
-            mPQ = np.zeros(PL.shape)
-            for i in range(r):
-                mPQ[i, i, :, Nr - r + i] = m
-                for j in range(i + 1, r):
-                    ind = int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i
-                    mPQ[i, j, :, ind] = m
-            mPQ = 0.5 * (mPQ + np.transpose(mPQ, [1, 0, 2, 3]))
+            mPQ = np.tensordot(m, PQ, axes=([0], [0]))
             p = PL - mPQ
-            Pmatrix = p.reshape(r * r, r * Nr)
+            Pmatrix = p.reshape(r * r, r * N)
 
             # update w
             if self.w_evo:
                 # Define and solve the CVXPY problem if threshold is nonzero.
                 if self.relax_optim:
                     if self.threshold > 0.0:
-                        xi = cp.Variable(Nr * r)
+                        xi = cp.Variable(N * r)
                         cost = cp.sum_squares(
                             x_expanded @ xi - y.flatten()
                         ) + self.threshold * cp.norm1(xi)
@@ -423,7 +409,7 @@ class trappingSR3(SR3):
                                 cho, xTy + P_transpose_A / self.eta
                             ).reshape(coef_sparse.shape)
                 else:
-                    xi = cp.Variable(Nr * r)
+                    xi = cp.Variable(N * r)
                     cost = cp.sum_squares(
                         x_expanded @ xi - y.flatten()
                     ) + self.threshold * cp.norm1(xi)
@@ -453,10 +439,10 @@ class trappingSR3(SR3):
                     m_cp = cp.Variable(r)
                     L = np.tensordot(PL, coef_sparse, axes=([3, 2], [0, 1]))
                     Q = np.reshape(
-                        np.tensordot(PQ, coef_sparse, axes=([2], [0])), (r * r, r)
+                        np.tensordot(PQ, coef_sparse, axes=([4, 3], [0, 1])), (r, r * r)
                     )
                     Ls = 0.5 * (L + L.T).flatten()
-                    cost_m = cp.lambda_max(cp.reshape(Ls - Q @ m_cp, (r, r)))
+                    cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (r, r)))
                     prob_m = cp.Problem(cp.Minimize(cost_m))
                     # start = time.time()
                     # default solver is SCS here
@@ -477,19 +463,14 @@ class trappingSR3(SR3):
                     tk = (1 + np.sqrt(1 + 4 * tk_prev ** 2)) / 2.0
                     m_partial = m + (tk_prev - 1.0) / tk * (m - m_prev)
                     tk_prev = tk
-                    mPQ = np.zeros(PL.shape)
-                    for i in range(r):
-                        mPQ[i, i, :, Nr - r + i] = m_partial
-                        for j in range(i + 1, r):
-                            ind = int((i + 1) / 2.0 * (2 * r - i)) + j - 1 - i
-                            mPQ[i, j, :, ind] = m_partial
-                    mPQ = 0.5 * (mPQ + np.transpose(mPQ, [1, 0, 2, 3]))
+                    mPQ = np.tensordot(m_partial, PQ, axes=([0], [0]))
                     p = PL - mPQ
-                    Pmatrix = p.reshape(r * r, r * Nr)
+                    Pmatrix = p.reshape(r * r, r * N)
                 PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
-                PQW = np.tensordot(PQ, coef_sparse, axes=([2], [0]))
+                PQW = np.tensordot(PQ, coef_sparse, axes=([4, 3], [0, 1]))
                 A_b = (A - PW) / self.eta
-                PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
+                PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
+                # PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
                 if self.accel:
                     m = m_partial - self.alpha_m * PQWT_PW
                 else:

@@ -44,7 +44,7 @@ class SINDyOptimizer(BaseEstimator):
         self.optimizer = optimizer
         self.unbias = unbias
 
-    def fit(self, x, y, p=None):
+    def fit(self, x, y):
         if len(y.shape) > 1 and y.shape[1] > 1:
             if not supports_multiple_targets(self.optimizer):
                 self.optimizer = _MultiTargetLinearRegressor(self.optimizer)

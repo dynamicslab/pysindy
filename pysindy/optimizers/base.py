@@ -101,7 +101,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         """
         raise NotImplementedError
 
-    def fit(self, x_, y, p=None, sample_weight=None, **reduce_kws):
+    def fit(self, x_, y, sample_weight=None, **reduce_kws):
         """
         Fit the model.
 

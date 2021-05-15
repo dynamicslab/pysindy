@@ -13,7 +13,7 @@ from ..utils import reorder_constraints
 from .sr3 import SR3
 
 
-class trappingSR3(SR3):
+class TrappingSR3(SR3):
     """
     Trapping variant of sparse relaxed regularized regression.
 
@@ -28,6 +28,10 @@ class trappingSR3(SR3):
     where :math:`R(w)` is a regularization function.
     See the following references for more details:
 
+        Kaptanoglu, Alan A., et al. "Promoting global stability in
+        data-driven models of quadratic nonlinear dynamics."
+        arXiv preprint arXiv:2105.01843 (2021).
+
         Zheng, Peng, et al. "A unified framework for sparse relaxed
         regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
 
@@ -35,11 +39,9 @@ class trappingSR3(SR3):
         to learn parsimonious physics-informed models from data."
         arXiv preprint arXiv:1906.10612 (2019).
 
-        New paper, Kaptanoglu et al. on trapping SINDy algorithms
-
     Parameters
     ----------
-    w_evo : bool, optional (default True)
+    evolve_w : bool, optional (default True)
         If false, don't update w and just minimize over (m, A)
 
     threshold : float, optional (default 0.1)
@@ -56,7 +58,7 @@ class trappingSR3(SR3):
     alpha_m : float, optional (default 5e19)
         Determines the step size in the prox-gradient descent over m.
         For convergence, need alpha_m <= eta / ||w^T * PQ^T * PQ * w||.
-        Typically alpha_m = 0.1 * eta - 0.01 * eta.
+        Typically 0.01 * eta <= alpha_m <= 0.1 * eta.
 
     alpha_A : float, optional (default 1.0e20)
         Determines the step size in the prox-gradient descent over A.
@@ -71,7 +73,7 @@ class trappingSR3(SR3):
         Tolerance used for determining convergence of the optimization
         algorithm over w.
 
-    mtol : float, optional (default 1e-5)
+    tol_m : float, optional (default 1e-5)
         Tolerance used for determining convergence of the optimization
         algorithm over m.
 
@@ -142,13 +144,13 @@ class trappingSR3(SR3):
     >>> import numpy as np
     >>> from scipy.integrate import odeint
     >>> from pysindy import SINDy
-    >>> from pysindy.optimizers import trappingSR3
+    >>> from pysindy.optimizers import TrappingSR3
     >>> lorenz = lambda z,t : [10*(z[1] - z[0]),
     >>>                        z[0]*(28 - z[2]) - z[1],
     >>>                        z[0]*z[1] - 8/3*z[2]]
     >>> t = np.arange(0,2,.002)
     >>> x = odeint(lorenz, [-8,8,27], t)
-    >>> opt = trappingSR3(threshold=0.1)
+    >>> opt = TrappingSR3(threshold=0.1)
     >>> model = SINDy(optimizer=opt)
     >>> model.fit(x, t=t[1]-t[0])
     >>> model.print()
@@ -159,7 +161,7 @@ class trappingSR3(SR3):
 
     def __init__(
         self,
-        w_evo=True,
+        evolve_w=True,
         threshold=0.1,
         eps_solver=1.0e-7,
         relax_optim=True,
@@ -168,7 +170,7 @@ class trappingSR3(SR3):
         alpha_m=5e19,
         gamma=-0.1,
         tol=1e-5,
-        mtol=1e-5,
+        tol_m=1e-5,
         thresholder="l1",
         max_iter=30,
         accel=False,
@@ -186,7 +188,7 @@ class trappingSR3(SR3):
         constraint_rhs=None,
         constraint_order="target",
     ):
-        super(trappingSR3, self).__init__(
+        super(TrappingSR3, self).__init__(
             max_iter=max_iter,
             initial_guess=initial_guess,
             normalize=normalize,
@@ -204,10 +206,10 @@ class trappingSR3(SR3):
             raise ValueError("alpha_A must be positive")
         if gamma >= 0:
             raise ValueError("gamma must be negative")
-        if tol <= 0 or mtol <= 0 or eps_solver <= 0:
-            raise ValueError("tol and mtol must be positive")
+        if tol <= 0 or tol_m <= 0 or eps_solver <= 0:
+            raise ValueError("tol and tol_m must be positive")
 
-        self.w_evo = w_evo
+        self.evolve_w = evolve_w
         self.threshold = threshold
         self.eps_solver = eps_solver
         self.relax_optim = relax_optim
@@ -221,7 +223,7 @@ class trappingSR3(SR3):
         self.PL = PL
         self.PQ = PQ
         self.tol = tol
-        self.mtol = mtol
+        self.tol_m = tol_m
         self.accel = accel
         self.thresholder = thresholder
         self.reg = get_regularization(thresholder)
@@ -230,6 +232,7 @@ class trappingSR3(SR3):
         self.m_history_ = []
         self.PW_history_ = []
         self.PWeigs_history_ = []
+        self.history_ = []
         self.objective_history = objective_history
         self.unbias = False
         self.use_constraints = (constraint_lhs is not None) and (
@@ -302,7 +305,7 @@ class trappingSR3(SR3):
     def _reduce(self, x, y):
         """
         Perform at most ``self.max_iter`` iterations of the
-        trappingSR3 algorithm.
+        TrappingSR3 algorithm.
         Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
 
@@ -350,15 +353,13 @@ class trappingSR3(SR3):
         xTy = np.dot(x_expanded.T, y.flatten())
         Pmatrix = p.reshape(r * r, r * N)
 
-        q = 0
-
         # if using acceleration
         tk_prev = 1
         m_prev = m
 
         # Begin optimization loop
         objective_history = []
-        for _ in range(self.max_iter):
+        for k in range(self.max_iter):
 
             # update P tensor from the newest m
             mPQ = np.tensordot(m, PQ, axes=([0], [0]))
@@ -366,7 +367,7 @@ class trappingSR3(SR3):
             Pmatrix = p.reshape(r * r, r * N)
 
             # update w
-            if self.w_evo:
+            if self.evolve_w:
                 # Define and solve the CVXPY problem if threshold is nonzero.
                 if self.relax_optim:
                     if self.threshold > 0.0:
@@ -385,14 +386,14 @@ class trappingSR3(SR3):
                         else:
                             prob = cp.Problem(cp.Minimize(cost))
 
-                        # start = time.time()
                         # default solver is OSQP here
                         prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
-                        # end = time.time()
-                        # print('Total cvxpy time = ', end - start)
-                        # print("\nThe optimal value is", prob.value)
+
                         if xi.value is None:
-                            print("Infeasible solve, increase/decrease eta")
+                            warnings.warn(
+                                "Infeasible solve, increase/decrease eta",
+                                ConvergenceWarning
+                            )
                             break
                         coef_sparse = (xi.value).reshape(coef_sparse.shape)
                     else:
@@ -425,12 +426,9 @@ class trappingSR3(SR3):
                     else:
                         prob = cp.Problem(cp.Minimize(cost))
 
-                    # start = time.time()
                     # default solver is SCS here I think
                     prob.solve(eps=self.eps_solver)
-                    # end = time.time()
-                    # print('Total cvxpy time = ', end - start)
-                    # print("\nThe optimal value is", prob.value)
+
                     if xi.value is None:
                         print("Infeasible solve, increase/decrease eta")
                         break
@@ -444,12 +442,10 @@ class trappingSR3(SR3):
                     Ls = 0.5 * (L + L.T).flatten()
                     cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (r, r)))
                     prob_m = cp.Problem(cp.Minimize(cost_m))
-                    # start = time.time()
+
                     # default solver is SCS here
-                    prob_m.solve(eps=self.eps_solver)  # , verbose=True)
-                    # end = time.time()
-                    # print('Total cvxpy time = ', end - start)
-                    # print("\nThe optimal m value is", prob_m.value)
+                    prob_m.solve(eps=self.eps_solver)
+
                     m = m_cp.value
                     if m is None:
                         print("Infeasible solve over m, increase/decrease eta")
@@ -470,7 +466,6 @@ class trappingSR3(SR3):
                 PQW = np.tensordot(PQ, coef_sparse, axes=([4, 3], [0, 1]))
                 A_b = (A - PW) / self.eta
                 PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
-                # PQWT_PW = np.tensordot(PQW.T, A_b, axes=([2, 1], [0, 1]))
                 if self.accel:
                     m = m_partial - self.alpha_m * PQWT_PW
                 else:
@@ -490,18 +485,17 @@ class trappingSR3(SR3):
             self.PWeigs_history_.append(np.sort(eigvals))
 
             # update objective
-            objective_history.append(self._objective(x, y, coef_sparse, A, PW, q))
-            q = q + 1
+            objective_history.append(self._objective(x, y, coef_sparse, A, PW, k))
 
             if (
-                self._m_convergence_criterion() < self.mtol
+                self._m_convergence_criterion() < self.tol_m
                 and self._convergence_criterion() < self.tol
             ):
                 # Could not (further) select important features
                 break
         else:
             warnings.warn(
-                "trappingSR3._reduce did not converge after {} iterations.".format(
+                "TrappingSR3._reduce did not converge after {} iterations.".format(
                     self.max_iter
                 ),
                 ConvergenceWarning,

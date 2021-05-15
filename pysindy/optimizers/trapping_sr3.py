@@ -392,7 +392,7 @@ class TrappingSR3(SR3):
                         if xi.value is None:
                             warnings.warn(
                                 "Infeasible solve, increase/decrease eta",
-                                ConvergenceWarning
+                                ConvergenceWarning,
                             )
                             break
                         coef_sparse = (xi.value).reshape(coef_sparse.shape)

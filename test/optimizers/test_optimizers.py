@@ -15,6 +15,7 @@ from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
+from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
 
 
@@ -53,6 +54,7 @@ class DummyModelNoCoef(BaseEstimator):
         (STLSQ, True),
         (SR3, True),
         (ConstrainedSR3, True),
+        (TrappingSR3, True),
         (DummyLinearModel, False),
     ],
 )
@@ -71,6 +73,7 @@ def data(request):
         STLSQ(),
         SR3(),
         ConstrainedSR3(),
+        TrappingSR3(),
         Lasso(fit_intercept=False),
         ElasticNet(fit_intercept=False),
         DummyLinearModel(),
@@ -124,7 +127,7 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
     check_is_fitted(model)
 
 
-@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3])
+@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3, TrappingSR3])
 @pytest.mark.parametrize("params", [dict(threshold=-1), dict(max_iter=0)])
 def test_general_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
@@ -137,6 +140,25 @@ def test_general_bad_parameters(optimizer, params):
     [dict(nu=0), dict(tol=0), dict(trimming_fraction=-1), dict(trimming_fraction=2)],
 )
 def test_sr3_bad_parameters(optimizer, params):
+    with pytest.raises(ValueError):
+        optimizer(**params)
+
+
+@pytest.mark.parametrize("optimizer", [TrappingSR3])
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(eta=-1),
+        dict(tol=0),
+        dict(tol_m=0),
+        dict(eps_solver=0),
+        dict(alpha_m=-1),
+        dict(alpha_A=-1),
+        dict(gamma=1),
+        dict(evolve_w=False, relax_optim=False),
+    ],
+)
+def test_trapping_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
         optimizer(**params)
 
@@ -178,7 +200,6 @@ def test_initial_guess_sr3(optimizer):
 
     initial_guess = np.random.standard_normal((x_dot.shape[1], x.shape[1]))
     guess_model = optimizer(max_iter=1, initial_guess=initial_guess).fit(x, x_dot)
-
     assert np.any(np.not_equal(control_model.coef_, guess_model.coef_))
 
 
@@ -319,7 +340,7 @@ def test_sr3_enable_trimming(optimizer, data_linear_oscillator_corrupted):
     np.testing.assert_allclose(model_plain.coef_, model_trimming.coef_)
 
 
-@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3, TrappingSR3])
 def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
     x, x_dot, _ = data_linear_oscillator_corrupted
     model = optimizer(max_iter=1, tol=1e-10)
@@ -330,7 +351,12 @@ def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
 
 @pytest.mark.parametrize(
     "optimizer",
-    [STLSQ(max_iter=1), SR3(max_iter=1), ConstrainedSR3(max_iter=1)],
+    [
+        STLSQ(max_iter=1),
+        SR3(max_iter=1),
+        ConstrainedSR3(max_iter=1),
+        TrappingSR3(max_iter=1),
+    ],
 )
 def test_fit_warn(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
@@ -364,8 +390,9 @@ def test_row_format_constraints(data_linear_combination, target_value):
     )
 
 
+@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3])
 @pytest.mark.parametrize("target_value", [0, -1, 3])
-def test_target_format_constraints(data_linear_combination, target_value):
+def test_target_format_constraints(data_linear_combination, optimizer, target_value):
     x, x_dot = data_linear_combination
 
     constraint_rhs = target_value * np.ones(2)
@@ -375,7 +402,7 @@ def test_target_format_constraints(data_linear_combination, target_value):
     constraint_lhs[0, 1] = 1
     constraint_lhs[1, 4] = 1
 
-    model = ConstrainedSR3(constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs)
+    model = optimizer(constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs)
     model.fit(x, x_dot)
-
-    np.testing.assert_allclose(model.coef_[:, 1], target_value)
+    print(model.coef_, target_value)
+    np.testing.assert_allclose(model.coef_[:, 1], target_value, atol=1e-10)

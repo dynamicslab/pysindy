@@ -51,9 +51,25 @@ class TrappingSR3(SR3):
         is chosen to threshold at the value given by this parameter.
         This is equivalent to choosing lambda = threshold^2 / (2 * nu).
 
+    thresholds : np.ndarray, shape (n_targets, n_features), optional \
+            (default None)
+        Array of thresholds for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``thresholds[i, j]`` should specify the threshold to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        threshold to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable. Last thing to note here is that
+        using a matrix of thresholds conflicts with using coefficient constraints,
+        so use with caution.
+
     eta : float, optional (default 1.0e20)
         Determines the strength of the stability term ||Pw-A||^2 in the
-        optimization. The default value is to ignore the stability term.
+        optimization. The default value is very large so that the
+        algorithm default is to ignore the stability term. In this limit,
+        this should be approximately equivalent to the ConstrainedSR3 method.
 
     alpha_m : float, optional (default 5e19)
         Determines the step size in the prox-gradient descent over m.
@@ -97,11 +113,6 @@ class TrappingSR3(SR3):
     accel : bool, optional (default False)
         Whether or not to use accelerated prox-gradient descent for (m, A).
 
-    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features),
-            optional (default None)
-        Initial guess for coefficients ``coef_``.
-        If None, least-squares is used to obtain an initial guess.
-
     m0 : np.ndarray, shape (n_targets), optional (default None)
         Initial guess for vector m in the optimization. Otherwise
         each component of m is randomly initialized in [-1, 1].
@@ -138,6 +149,28 @@ class TrappingSR3(SR3):
         History of sparse coefficients. ``history_[k]`` contains the
         sparse coefficients (v in the optimization objective function)
         at iteration k.
+
+    objective_history_ : list
+        History of the value of the objective at each step. Note that
+        the trapping SINDy problem is nonconvex, meaning that this value
+        may increase and decrease as the algorithm works.
+
+    A_history_ : list
+        History of the auxiliary variable A that approximates diag(PW).
+
+    m_history_ : list
+        History of the shift vector m that determines the origin of the
+        trapping region.
+
+    PW_history_ : list
+        History of PW = A^S, the quantity we are attempting to make
+        negative definite.
+
+    PWeigs_history_ : list
+        History of diag(PW), a list of the eigenvalues of A^S at
+        each iteration. Tracking this allows us to ascertain if
+        A^S is indeed being pulled towards the space of negative
+        definite matrices.
 
     Examples
     --------
@@ -177,7 +210,6 @@ class TrappingSR3(SR3):
         normalize=False,
         fit_intercept=False,
         copy_X=True,
-        initial_guess=None,
         m0=None,
         A0=None,
         PL=None,
@@ -190,7 +222,6 @@ class TrappingSR3(SR3):
     ):
         super(TrappingSR3, self).__init__(
             max_iter=max_iter,
-            initial_guess=initial_guess,
             normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
@@ -208,6 +239,8 @@ class TrappingSR3(SR3):
             raise ValueError("gamma must be negative")
         if tol <= 0 or tol_m <= 0 or eps_solver <= 0:
             raise ValueError("tol and tol_m must be positive")
+        if not evolve_w and not relax_optim:
+            raise ValueError("If doing direct solve, must evolve w")
 
         self.evolve_w = evolve_w
         self.threshold = threshold
@@ -302,6 +335,109 @@ class TrappingSR3(SR3):
             print("{0:12d} {1:12.5e} {2:12.5e} {3:12.5e}".format(*row))
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
+    def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
+        xi = cp.Variable(N * r)
+        cost = cp.sum_squares(
+            x_expanded @ xi - y.flatten()
+        ) + self.threshold * cp.norm1(xi)
+        cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+        if self.use_constraints:
+            prob = cp.Problem(
+                cp.Minimize(cost),
+                [self.constraint_lhs @ xi == self.constraint_rhs],
+            )
+        else:
+            prob = cp.Problem(cp.Minimize(cost))
+
+        # default solver is OSQP here
+        prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
+
+        if xi.value is None:
+            warnings.warn(
+                "Infeasible solve, increase/decrease eta",
+                ConvergenceWarning,
+            )
+            return None
+        coef_sparse = (xi.value).reshape(coef_prev.shape)
+        return coef_sparse
+
+    def _solve_m_relax_and_split(self, r, N, m_prev, m, A, coef_sparse, tk_previous):
+        # prox-grad for (A, m)
+        # Accelerated prox gradient descent
+        if self.accel:
+            tk = (1 + np.sqrt(1 + 4 * tk_previous ** 2)) / 2.0
+            m_partial = m + (tk_previous - 1.0) / tk * (m - m_prev)
+            tk_previous = tk
+            mPQ = np.tensordot(m_partial, self.PQ, axes=([0], [0]))
+        else:
+            mPQ = np.tensordot(m, self.PQ, axes=([0], [0]))
+        p = self.PL - mPQ
+        PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+        PQW = np.tensordot(self.PQ, coef_sparse, axes=([4, 3], [0, 1]))
+        A_b = (A - PW) / self.eta
+        PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
+        if self.accel:
+            m_new = m_partial - self.alpha_m * PQWT_PW
+        else:
+            m_new = m_prev - self.alpha_m * PQWT_PW
+        m_current = m_new
+
+        # Update A
+        A_new = self._update_A(A - self.alpha_A * A_b, PW)
+        return m_current, m_new, A_new, tk_previous
+
+    def _solve_nonsparse_relax_and_split(self, H, xTy, P_transpose_A, coef_prev):
+        if self.use_constraints:
+            coef_sparse = self._update_coef_constraints(H, xTy, P_transpose_A).reshape(
+                coef_prev.shape
+            )
+        else:
+            cho = cho_factor(H)
+            coef_sparse = cho_solve(cho, xTy + P_transpose_A / self.eta).reshape(
+                coef_prev.shape
+            )
+        return coef_sparse
+
+    def _solve_direct_cvxpy(self, r, N, x_expanded, y, Pmatrix, coef_prev):
+        xi = cp.Variable(N * r)
+        cost = cp.sum_squares(
+            x_expanded @ xi - y.flatten()
+        ) + self.threshold * cp.norm1(xi)
+        cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
+        if self.use_constraints:
+            prob = cp.Problem(
+                cp.Minimize(cost),
+                [self.constraint_lhs @ xi == self.constraint_rhs],
+            )
+        else:
+            prob = cp.Problem(cp.Minimize(cost))
+
+        # default solver is SCS here I think
+        prob.solve(eps=self.eps_solver)
+
+        if xi.value is None:
+            print("Infeasible solve, increase/decrease eta")
+            return None, None
+        coef_sparse = (xi.value).reshape(coef_prev.shape)
+
+        m_cp = cp.Variable(r)
+        L = np.tensordot(self.PL, coef_sparse, axes=([3, 2], [0, 1]))
+        Q = np.reshape(
+            np.tensordot(self.PQ, coef_sparse, axes=([4, 3], [0, 1])), (r, r * r)
+        )
+        Ls = 0.5 * (L + L.T).flatten()
+        cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (r, r)))
+        prob_m = cp.Problem(cp.Minimize(cost_m))
+
+        # default solver is SCS here
+        prob_m.solve(eps=self.eps_solver)
+
+        m = m_cp.value
+        if m is None:
+            print("Infeasible solve over m, increase/decrease eta")
+            return None, None
+        return m, coef_sparse
+
     def _reduce(self, x, y):
         """
         Perform at most ``self.max_iter`` iterations of the
@@ -310,14 +446,19 @@ class TrappingSR3(SR3):
         """
 
         n_samples, n_features = x.shape
-        r = (self.PL).shape[0]
-        N = n_features
+        r = y.shape[1]
+
+        # If these tensors are not passed or the shapes are incorrect, assume zeros
+        if self.PQ is None or (self.PQ).shape != (r, r, r, r, n_features):
+            self.PQ = np.zeros((r, r, r, r, n_features))
+        if self.PL is None or (self.PL).shape != (r, r, r, n_features):
+            self.PL = np.zeros((r, r, r, n_features))
 
         # Set initial coefficients
-        if self.initial_guess is not None:
-            self.coef_ = self.initial_guess
         if self.use_constraints and self.constraint_order.lower() == "target":
-            self.constraint_lhs = reorder_constraints(self.constraint_lhs, n_features)
+            self.constraint_lhs = reorder_constraints(
+                self.constraint_lhs, n_features, output_order="target"
+            )
 
         coef_sparse = self.coef_.T
 
@@ -341,17 +482,12 @@ class TrappingSR3(SR3):
         self.m_history_.append(m)
 
         # Precompute some objects for optimization
-        PL = self.PL
-        PQ = self.PQ
-        mPQ = np.tensordot(m, PQ, axes=([0], [0]))
-        p = PL - mPQ
         x_expanded = np.zeros((n_samples, r, n_features, r))
         for i in range(r):
             x_expanded[:, i, :, i] = x
         x_expanded = np.reshape(x_expanded, (n_samples * r, r * n_features))
         xTx = np.dot(x_expanded.T, x_expanded)
         xTy = np.dot(x_expanded.T, y.flatten())
-        Pmatrix = p.reshape(r * r, r * N)
 
         # if using acceleration
         tk_prev = 1
@@ -362,120 +498,41 @@ class TrappingSR3(SR3):
         for k in range(self.max_iter):
 
             # update P tensor from the newest m
-            mPQ = np.tensordot(m, PQ, axes=([0], [0]))
-            p = PL - mPQ
-            Pmatrix = p.reshape(r * r, r * N)
+            mPQ = np.tensordot(m, self.PQ, axes=([0], [0]))
+            p = self.PL - mPQ
+            Pmatrix = p.reshape(r * r, r * n_features)
 
             # update w
+            coef_prev = coef_sparse
             if self.evolve_w:
-                # Define and solve the CVXPY problem if threshold is nonzero.
                 if self.relax_optim:
                     if self.threshold > 0.0:
-                        xi = cp.Variable(N * r)
-                        cost = cp.sum_squares(
-                            x_expanded @ xi - y.flatten()
-                        ) + self.threshold * cp.norm1(xi)
-                        cost = (
-                            cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+                        coef_sparse = self._solve_sparse_relax_and_split(
+                            r, n_features, x_expanded, y, Pmatrix, A, coef_prev
                         )
-                        if self.use_constraints:
-                            prob = cp.Problem(
-                                cp.Minimize(cost),
-                                [self.constraint_lhs @ xi == self.constraint_rhs],
-                            )
-                        else:
-                            prob = cp.Problem(cp.Minimize(cost))
-
-                        # default solver is OSQP here
-                        prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
-
-                        if xi.value is None:
-                            warnings.warn(
-                                "Infeasible solve, increase/decrease eta",
-                                ConvergenceWarning,
-                            )
-                            break
-                        coef_sparse = (xi.value).reshape(coef_sparse.shape)
                     else:
                         pTp = np.dot(Pmatrix.T, Pmatrix)
                         H = xTx + pTp / self.eta
                         P_transpose_A = np.dot(Pmatrix.T, A.flatten())
-                        if self.use_constraints:
-                            coef_sparse = self._update_coef_constraints(
-                                H, xTy, P_transpose_A
-                            ).reshape(coef_sparse.shape)
-                        else:
-                            cho = cho_factor(H)
-                            coef_sparse = cho_solve(
-                                cho, xTy + P_transpose_A / self.eta
-                            ).reshape(coef_sparse.shape)
-                else:
-                    xi = cp.Variable(N * r)
-                    cost = cp.sum_squares(
-                        x_expanded @ xi - y.flatten()
-                    ) + self.threshold * cp.norm1(xi)
-                    cost = (
-                        cost
-                        + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
-                    )
-                    if self.use_constraints:
-                        prob = cp.Problem(
-                            cp.Minimize(cost),
-                            [self.constraint_lhs @ xi == self.constraint_rhs],
+                        coef_sparse = self._solve_nonsparse_relax_and_split(
+                            H, xTy, P_transpose_A, coef_prev
                         )
-                    else:
-                        prob = cp.Problem(cp.Minimize(cost))
-
-                    # default solver is SCS here I think
-                    prob.solve(eps=self.eps_solver)
-
-                    if xi.value is None:
-                        print("Infeasible solve, increase/decrease eta")
-                        break
-                    coef_sparse = (xi.value).reshape(coef_sparse.shape)
-
-                    m_cp = cp.Variable(r)
-                    L = np.tensordot(PL, coef_sparse, axes=([3, 2], [0, 1]))
-                    Q = np.reshape(
-                        np.tensordot(PQ, coef_sparse, axes=([4, 3], [0, 1])), (r, r * r)
-                    )
-                    Ls = 0.5 * (L + L.T).flatten()
-                    cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (r, r)))
-                    prob_m = cp.Problem(cp.Minimize(cost_m))
-
-                    # default solver is SCS here
-                    prob_m.solve(eps=self.eps_solver)
-
-                    m = m_cp.value
-                    if m is None:
-                        print("Infeasible solve over m, increase/decrease eta")
-                        break
-            self.history_.append(coef_sparse.T)
-
-            if self.relax_optim:
-                # prox-grad for (A, m)
-                # Accelerated prox gradient descent
-                if self.accel:
-                    tk = (1 + np.sqrt(1 + 4 * tk_prev ** 2)) / 2.0
-                    m_partial = m + (tk_prev - 1.0) / tk * (m - m_prev)
-                    tk_prev = tk
-                    mPQ = np.tensordot(m_partial, PQ, axes=([0], [0]))
-                    p = PL - mPQ
-                    Pmatrix = p.reshape(r * r, r * N)
-                PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
-                PQW = np.tensordot(PQ, coef_sparse, axes=([4, 3], [0, 1]))
-                A_b = (A - PW) / self.eta
-                PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
-                if self.accel:
-                    m = m_partial - self.alpha_m * PQWT_PW
                 else:
-                    m = m_prev - self.alpha_m * PQWT_PW
-                m_prev = m
+                    m, coef_sparse = self._solve_direct_cvxpy(
+                        r, n_features, x_expanded, y, Pmatrix, coef_prev
+                    )
+            if self.relax_optim:
+                m_prev, m, A, tk_prev = self._solve_m_relax_and_split(
+                    r, n_features, m_prev, m, A, coef_sparse, tk_prev
+                )
 
-                # Update A
-                A = self._update_A(A - self.alpha_A * A_b, PW)
-            else:
-                PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+            # If problem becomes infeasible, break out of the loop
+            if m is None or coef_sparse is None:
+                coef_sparse = coef_prev
+                m = m_prev
+                break
+            self.history_.append(coef_sparse.T)
+            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
 
             # (m,A) update finished, append the result
             self.m_history_.append(m)
@@ -493,17 +550,12 @@ class TrappingSR3(SR3):
             ):
                 # Could not (further) select important features
                 break
-        else:
+        if k == self.max_iter - 1:
             warnings.warn(
                 "TrappingSR3._reduce did not converge after {} iterations.".format(
                     self.max_iter
                 ),
                 ConvergenceWarning,
-            )
-
-        if self.use_constraints and self.constraint_order.lower() == "target":
-            self.constraint_lhs = reorder_constraints(
-                self.constraint_lhs, n_features, output_order="target"
             )
 
         self.coef_ = coef_sparse.T

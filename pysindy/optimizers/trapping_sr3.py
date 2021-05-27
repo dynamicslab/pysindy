@@ -270,20 +270,13 @@ class TrappingSR3(SR3):
             self.unbias = False
             self.constraint_order = constraint_order
 
-    def _bad_PL(self, r, N, PL):
+    def _bad_PL(self, PL):
         tol = 1e-10
         return np.any((np.transpose(PL, [1, 0, 2, 3]) - PL) > tol)
 
-    def _bad_PQ(self, r, N, PQ):
+    def _bad_PQ(self, PQ):
         tol = 1e-10
-        return np.any((np.transpose(PQ, [0, 2, 1, 3, 4]) - PQ) > tol) or np.any(
-            (
-                np.transpose(PQ, [0, 2, 1, 3, 4])
-                + PQ
-                + np.transpose(PQ, [1, 2, 0, 3, 4])
-                > tol
-            )
-        )
+        return np.any((np.transpose(PQ, [0, 2, 1, 3, 4]) - PQ) > tol)
 
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A):
         g = x_transpose_y + P_transpose_A / self.eta
@@ -473,9 +466,9 @@ class TrappingSR3(SR3):
             self.PL = np.zeros((r, r, r, n_features))
 
         # Check if the tensor symmetries are properly defined
-        if self._bad_PL(r, n_features, self.PL):
+        if self._bad_PL(self.PL):
             raise ValueError("PL tensor was passed but not properly")
-        if self._bad_PQ(r, n_features, self.PQ):
+        if self._bad_PQ(self.PQ):
             raise ValueError("PQ tensor was passed but not properly")
 
         # If PL/PQ finite and correct, so trapping theorem is being used,

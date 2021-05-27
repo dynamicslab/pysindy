@@ -51,20 +51,6 @@ class TrappingSR3(SR3):
         is chosen to threshold at the value given by this parameter.
         This is equivalent to choosing lambda = threshold^2 / (2 * nu).
 
-    thresholds : np.ndarray, shape (n_targets, n_features), optional \
-            (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable. Last thing to note here is that
-        using a matrix of thresholds conflicts with using coefficient constraints,
-        so use with caution.
-
     eta : float, optional (default 1.0e20)
         Determines the strength of the stability term ||Pw-A||^2 in the
         optimization. The default value is very large so that the
@@ -124,7 +110,8 @@ class TrappingSR3(SR3):
     PL : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
         Linear coefficient part of the P matrix in ||Pw - A||^2
 
-    PQ : np.ndarray, shape (n_targets, n_targets, n_targets, n_targets, n_features)
+    PQ : np.ndarray, shape (n_targets, n_targets,
+                            n_targets, n_targets, n_features)
         Quadratic coefficient part of the P matrix in ||Pw - A||^2
 
     fit_intercept : boolean, optional (default False)
@@ -214,7 +201,6 @@ class TrappingSR3(SR3):
         A0=None,
         PL=None,
         PQ=None,
-        thresholds=None,
         objective_history=None,
         constraint_lhs=None,
         constraint_rhs=None,
@@ -229,12 +215,14 @@ class TrappingSR3(SR3):
 
         if threshold < 0:
             raise ValueError("threshold cannot be negative")
+        if thresholder != "l1":
+            raise ValueError("Regularizer must be L1 for now")
         if eta <= 0:
             raise ValueError("eta must be positive")
-        if alpha_m < 0:
-            raise ValueError("alpha_m must be positive")
-        if alpha_A < 0:
-            raise ValueError("alpha_A must be positive")
+        if alpha_m < 0 or alpha_m > eta:
+            raise ValueError("0 <= alpha_m <= eta")
+        if alpha_A < 0 or alpha_A > eta:
+            raise ValueError("0 <= alpha_A <= eta")
         if gamma >= 0:
             raise ValueError("gamma must be negative")
         if tol <= 0 or tol_m <= 0 or eps_solver <= 0:
@@ -248,7 +236,6 @@ class TrappingSR3(SR3):
         self.relax_optim = relax_optim
         self.m0 = m0
         self.A0 = A0
-        self.thresholds = thresholds
         self.alpha_A = alpha_A
         self.alpha_m = alpha_m
         self.eta = eta
@@ -282,6 +269,21 @@ class TrappingSR3(SR3):
             self.constraint_rhs = constraint_rhs
             self.unbias = False
             self.constraint_order = constraint_order
+
+    def _bad_PL(self, r, N, PL):
+        tol = 1e-10
+        return np.any((np.transpose(PL, [1, 0, 2, 3]) - PL) > tol)
+
+    def _bad_PQ(self, r, N, PQ):
+        tol = 1e-10
+        return np.any((np.transpose(PQ, [0, 2, 1, 3, 4]) - PQ) > tol) or np.any(
+            (
+                np.transpose(PQ, [0, 2, 1, 3, 4])
+                + PQ
+                + np.transpose(PQ, [1, 2, 0, 3, 4])
+                > tol
+            )
+        )
 
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A):
         g = x_transpose_y + P_transpose_A / self.eta
@@ -447,12 +449,40 @@ class TrappingSR3(SR3):
 
         n_samples, n_features = x.shape
         r = y.shape[1]
+        N = int((r ** 2 + 3 * r) / 2.0)
 
-        # If these tensors are not passed or the shapes are incorrect, assume zeros
-        if self.PQ is None or (self.PQ).shape != (r, r, r, r, n_features):
+        # If these tensors are not passed, or incorrect shape, assume zeros
+        if self.PQ is None:
             self.PQ = np.zeros((r, r, r, r, n_features))
-        if self.PL is None or (self.PL).shape != (r, r, r, n_features):
+        elif (self.PQ).shape != (r, r, r, r, n_features) and (self.PQ).shape != (
+            r,
+            r,
+            r,
+            r,
+            N,
+        ):
+            self.PQ = np.zeros((r, r, r, r, n_features))
+        if self.PL is None:
             self.PL = np.zeros((r, r, r, n_features))
+        elif (self.PL).shape != (r, r, r, n_features) and (self.PL).shape != (
+            r,
+            r,
+            r,
+            N,
+        ):
+            self.PL = np.zeros((r, r, r, n_features))
+
+        # Check if the tensor symmetries are properly defined
+        if self._bad_PL(r, n_features, self.PL):
+            raise ValueError("PL tensor was passed but not properly")
+        if self._bad_PQ(r, n_features, self.PQ):
+            raise ValueError("PQ tensor was passed but not properly")
+
+        # If PL/PQ finite and correct, so trapping theorem is being used,
+        # then make sure library is quadratic and correct shape
+        print(np.any(self.PL != 0.0), np.any(self.PQ != 0.0), n_features, r, N)
+        if (np.any(self.PL != 0.0) or np.any(self.PQ != 0.0)) and n_features != N:
+            raise ValueError("Feature library is wrong shape or not quadratic")
 
         # Set initial coefficients
         if self.use_constraints and self.constraint_order.lower() == "target":
@@ -552,7 +582,7 @@ class TrappingSR3(SR3):
                 break
         if k == self.max_iter - 1:
             warnings.warn(
-                "TrappingSR3._reduce did not converge after {} iterations.".format(
+                "TrappingSR3._reduce did not converge after {} iters.".format(
                     self.max_iter
                 ),
                 ConvergenceWarning,

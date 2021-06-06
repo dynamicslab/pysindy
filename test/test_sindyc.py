@@ -310,8 +310,15 @@ def test_score_multiple_trajectories(data_multiple_trajctories):
     assert s <= 1
 
 
-def test_fit_discrete_time(data_discrete_time_c):
-    x, u = data_discrete_time_c
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.lazy_fixture("data_discrete_time_c"),
+        pytest.lazy_fixture("data_discrete_time_c_multivariable"),
+    ],
+)
+def test_fit_discrete_time(data):
+    x, u = data
 
     model = SINDy(discrete_time=True)
     model.fit(x, u=u)
@@ -322,8 +329,15 @@ def test_fit_discrete_time(data_discrete_time_c):
     check_is_fitted(model)
 
 
-def test_simulate_discrete_time(data_discrete_time_c):
-    x, u = data_discrete_time_c
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.lazy_fixture("data_discrete_time_c"),
+        pytest.lazy_fixture("data_discrete_time_c_multivariable"),
+    ],
+)
+def test_simulate_discrete_time(data):
+    x, u = data
     model = SINDy(discrete_time=True)
     model.fit(x, u=u)
     n_steps = x.shape[0]
@@ -334,15 +348,29 @@ def test_simulate_discrete_time(data_discrete_time_c):
     # TODO: implement test using the stop_condition option
 
 
-def test_predict_discrete_time(data_discrete_time_c):
-    x, u = data_discrete_time_c
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.lazy_fixture("data_discrete_time_c"),
+        pytest.lazy_fixture("data_discrete_time_c_multivariable"),
+    ],
+)
+def test_predict_discrete_time(data):
+    x, u = data
     model = SINDy(discrete_time=True)
     model.fit(x, u=u)
     assert len(model.predict(x, u=u)) == len(x)
 
 
-def test_score_discrete_time(data_discrete_time_c):
-    x, u = data_discrete_time_c
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.lazy_fixture("data_discrete_time_c"),
+        pytest.lazy_fixture("data_discrete_time_c_multivariable"),
+    ],
+)
+def test_score_discrete_time(data):
+    x, u = data
     model = SINDy(discrete_time=True)
     model.fit(x, u=u)
     assert model.score(x, u=u) > 0.75

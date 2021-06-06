@@ -754,10 +754,18 @@ class SINDy(BaseEstimator):
                     if check_stop_condition(x[i]):
                         return x[: i + 1]
             else:
-                for i in range(1, t):
-                    x[i] = self.predict(x[i - 1 : i], u=u[i - 1])
-                    if check_stop_condition(x[i]):
-                        return x[: i + 1]
+                # Ensure multiple control variables are interpreted
+                # as a row vector.
+                if ndim(u) == 2:
+                    for i in range(1, t):
+                        x[i] = self.predict(x[i - 1 : i], u=u[i - 1, newaxis])
+                        if check_stop_condition(x[i]):
+                            return x[: i + 1]
+                else:
+                    for i in range(1, t):
+                        x[i] = self.predict(x[i - 1 : i], u=u[i - 1])
+                        if check_stop_condition(x[i]):
+                            return x[: i + 1]
             return x
         else:
             if isscalar(t):

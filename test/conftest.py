@@ -225,6 +225,25 @@ def data_discrete_time_c():
 
 
 @pytest.fixture
+def data_discrete_time_c_multivariable():
+    def logistic_map(x, mu, u):
+        return mu * x * (1 - x) + u[0] * u[1]
+
+    n_steps = 100
+    mu = 3.6
+
+    u1 = 0.1 * np.random.randn(n_steps)
+    u2 = 0.1 * np.random.randn(n_steps)
+    u = np.column_stack((u1, u2))
+    x = np.zeros((n_steps))
+    x[0] = 0.5
+    for i in range(1, n_steps):
+        x[i] = logistic_map(x[i - 1], mu, u[i - 1])
+
+    return x, u
+
+
+@pytest.fixture
 def data_discrete_time_multiple_trajectories_c():
     def logistic_map(x, mu, ui):
         return mu * x * (1 - x) + ui

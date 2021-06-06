@@ -205,7 +205,7 @@ def test_trapping_quadratic_library(params):
     model.fit(x)
     assert opt.PL.shape == (3, 3, 3, 9)
     assert opt.PQ.shape == (3, 3, 3, 3, 9)
-    assert opt.coef_ is not None
+    check_is_fitted(model)
 
 
 @pytest.mark.parametrize(

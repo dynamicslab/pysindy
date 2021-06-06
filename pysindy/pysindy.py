@@ -755,7 +755,7 @@ class SINDy(BaseEstimator):
                         return x[: i + 1]
             else:
                 for i in range(1, t):
-                    x[i] = self.predict(x[i - 1 : i], u=u[i - 1])
+                    x[i] = self.predict(x[i - 1 : i], u=u[i - 1, newaxis])
                     if check_stop_condition(x[i]):
                         return x[: i + 1]
             return x

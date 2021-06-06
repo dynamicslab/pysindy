@@ -238,7 +238,7 @@ References
    IFAC-PapersOnLine 49.18 (2016): 710-715.
    `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
 
--  Kaptanoglu, Alan A., et al.
+-  Kaptanoglu, Alan A., Jared L. Callaham, Christopher J. Hansen, Aleksandr Aravkin, and Steven L. Brunton.
    *Promoting global stability in data-driven models of quadratic nonlinear dynamics.*
    arXiv preprint arXiv:2105.01843 (2021).
    `[arXiv] <https://arxiv.org/abs/2105.01843>`_

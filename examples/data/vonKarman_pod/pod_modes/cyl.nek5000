@@ -1,0 +1,3 @@
+filetemplate: cyl%01d.f%05d
+firsttimestep: 1
+numtimesteps:       10

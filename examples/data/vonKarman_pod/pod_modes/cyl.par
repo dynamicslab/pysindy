@@ -1,0 +1,38 @@
+#
+# nek parameter file
+#
+[GENERAL] 
+startFrom = ./cyl0.f00001
+stopAt = endTime
+endTime = 0
+
+dt = 1e-3
+timeStepper = bdf3 #char #steady
+variableDt = no
+targetCFL = 0.5
+
+writeControl = timeStep #runTime
+writeInterval = 60
+
+dealiasing = yes
+filtering = none
+
+[PROBLEMTYPE]
+equation = incompNS
+stressFormulation = no
+variableProperties = no
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1e-8
+residualProj = yes
+
+[VELOCITY]
+residualTol = 1e-8
+residualProj = yes
+density = 1.0
+viscosity = -100
+advection = yes
+
+#[SCALAR01] # vorticity
+#solver = none

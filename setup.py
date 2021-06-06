@@ -5,21 +5,20 @@ from setuptools import find_packages
 from setuptools import setup
 
 
-assert sys.version_info >= (3, 6, 0), "PySindy requires Python 3.6+"
+assert sys.version_info >= (3, 7, 0), "PySindy requires Python 3.7+"
 
 NAME = "pysindy"
 DESCRIPTION = "Sparse Identification of Nonlinear Dynamics"
 URL = "https://github.com/dynamicslab/pysindy"
 EMAIL = "bdesilva@uw.edu, kpchamp@uw.edu, info@markusqua.de"
 AUTHOR = "Brian de Silva, Kathleen Champion, Markus Quade"
-PYTHON = ">=3.6"
+PYTHON = ">=3.7"
 LICENSE = "MIT"
 CLASSIFIERS = [
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Topic :: Scientific/Engineering :: Mathematics",

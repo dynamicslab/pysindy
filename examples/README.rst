@@ -34,9 +34,19 @@ Shows how PySINDy interfaces with various Scikit-learn objects.
 ---------------------------------------------------------------------------------------------------------
 Explore the differentiation methods available in PySINDy on pure differentiation problems and as components in the SINDy algorithm.
 
-`Scikit-time compatibility <https://pysindy.readthedocs.io/en/latest/examples/6_scikit_time_compatibility.html>`_
+`Deeptime compatibility <https://pysindy.readthedocs.io/en/latest/examples/6_deeptime_compatibility.html>`_
 ------------------------------------------------------------------------------------------------------------------------
-See a demonstration of PySINDy objects designed to conform to the `Scikit-time <https://scikit-time.github.io/>`_ API.
+See a demonstration of PySINDy objects designed to conform to the `Deeptime <https://deeptime-ml.github.io/latest/index.html>`_ API.
+
+`Plasma physics <https://pysindy.readthedocs.io/en/latest/examples/7_plasma_example.htm>`_
+----------------------------------------------------------------------------------------------
+See the ``ConstrainedSR3`` optimizer used to build a constrained model for the temporal POD modes of a plasma simulation.
+
+
+`Plasma physics <https://pysindy.readthedocs.io/en/latest/examples/8_trapping_sindy_paper_examples.htm>`_
+----------------------------------------------------------------------------------------------
+This notebook applies the ``TrappingSR3`` optimizer, proposed in `this paper <https://arxiv.org/abs/2105.01843>`_, to various canonical fluid systems.
+
 
 Full table of contents
 ----------------------

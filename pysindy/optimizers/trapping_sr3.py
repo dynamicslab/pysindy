@@ -302,9 +302,9 @@ class TrappingSR3(SR3):
 
         # Check if the tensor symmetries are properly defined
         if self._bad_PL(self.PL):
-            raise ValueError("PL tensor was passed but not properly")
+            raise ValueError("PL tensor was passed but the symmetries are not correct")
         if self._bad_PQ(self.PQ):
-            raise ValueError("PQ tensor was passed but not properly")
+            raise ValueError("PQ tensor was passed but the symmetries are not correct")
 
         # If PL/PQ finite and correct, so trapping theorem is being used,
         # then make sure library is quadratic and correct shape

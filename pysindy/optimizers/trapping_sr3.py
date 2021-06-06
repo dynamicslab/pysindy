@@ -278,6 +278,39 @@ class TrappingSR3(SR3):
         tol = 1e-10
         return np.any((np.transpose(PQ, [0, 2, 1, 3, 4]) - PQ) > tol)
 
+    def _check_P_matrix(self, r, n_features, N):
+        # If these tensors are not passed, or incorrect shape, assume zeros
+        if self.PQ is None:
+            self.PQ = np.zeros((r, r, r, r, n_features))
+        elif (self.PQ).shape != (r, r, r, r, n_features) and (self.PQ).shape != (
+            r,
+            r,
+            r,
+            r,
+            N,
+        ):
+            self.PQ = np.zeros((r, r, r, r, n_features))
+        if self.PL is None:
+            self.PL = np.zeros((r, r, r, n_features))
+        elif (self.PL).shape != (r, r, r, n_features) and (self.PL).shape != (
+            r,
+            r,
+            r,
+            N,
+        ):
+            self.PL = np.zeros((r, r, r, n_features))
+
+        # Check if the tensor symmetries are properly defined
+        if self._bad_PL(self.PL):
+            raise ValueError("PL tensor was passed but not properly")
+        if self._bad_PQ(self.PQ):
+            raise ValueError("PQ tensor was passed but not properly")
+
+        # If PL/PQ finite and correct, so trapping theorem is being used,
+        # then make sure library is quadratic and correct shape
+        if (np.any(self.PL != 0.0) or np.any(self.PQ != 0.0)) and n_features != N:
+            raise ValueError("Feature library is wrong shape or not quadratic")
+
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A):
         g = x_transpose_y + P_transpose_A / self.eta
         inv1 = np.linalg.pinv(H, rcond=1e-15)
@@ -444,38 +477,7 @@ class TrappingSR3(SR3):
         r = y.shape[1]
         N = int((r ** 2 + 3 * r) / 2.0)
 
-        # If these tensors are not passed, or incorrect shape, assume zeros
-        if self.PQ is None:
-            self.PQ = np.zeros((r, r, r, r, n_features))
-        elif (self.PQ).shape != (r, r, r, r, n_features) and (self.PQ).shape != (
-            r,
-            r,
-            r,
-            r,
-            N,
-        ):
-            self.PQ = np.zeros((r, r, r, r, n_features))
-        if self.PL is None:
-            self.PL = np.zeros((r, r, r, n_features))
-        elif (self.PL).shape != (r, r, r, n_features) and (self.PL).shape != (
-            r,
-            r,
-            r,
-            N,
-        ):
-            self.PL = np.zeros((r, r, r, n_features))
-
-        # Check if the tensor symmetries are properly defined
-        if self._bad_PL(self.PL):
-            raise ValueError("PL tensor was passed but not properly")
-        if self._bad_PQ(self.PQ):
-            raise ValueError("PQ tensor was passed but not properly")
-
-        # If PL/PQ finite and correct, so trapping theorem is being used,
-        # then make sure library is quadratic and correct shape
-        print(np.any(self.PL != 0.0), np.any(self.PQ != 0.0), n_features, r, N)
-        if (np.any(self.PL != 0.0) or np.any(self.PQ != 0.0)) and n_features != N:
-            raise ValueError("Feature library is wrong shape or not quadratic")
+        self._check_P_matrix(r, n_features, N)
 
         # Set initial coefficients
         if self.use_constraints and self.constraint_order.lower() == "target":

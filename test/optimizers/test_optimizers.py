@@ -196,12 +196,12 @@ def test_trapping_quadratic_library(params):
         lambda x: x ** 3,
     ]
     library_function_names = [
-        lambda x: x,
-        lambda x, y: x + y,
-        lambda x: x + x,
-        lambda x, y, z: x + y + z,
-        lambda x, y: x + x + y,
-        lambda x: x + x + x,
+        lambda x: str(x),
+        lambda x, y: "{} * {}".format(x, y),
+        lambda x: "{}^2".format(x),
+        lambda x, y, z: "{} * {} * {}".format(x, y, z),
+        lambda x, y: "{}^2 * {}".format(x, y),
+        lambda x: "{}^3".format(x),
     ]
     sindy_library = CustomLibrary(
         library_functions=library_functions, function_names=library_function_names

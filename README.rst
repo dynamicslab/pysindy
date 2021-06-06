@@ -129,6 +129,17 @@ If you do not have pip you can instead use
 
 If you do not have root access, you should add the ``--user`` option to the above lines.
 
+Caveats
+^^^^^^^
+If you would like to use the ``TrappingSINDy`` optimizer you will also need to install the cvxpy package, e.g. with ``pip install cvxpy``.
+
+To run the unit tests, example notebooks, or build a local copy of the documentation, you should install the additional dependencies in ``requirements-dev.txt``
+
+.. code-block:: bash
+
+  pip install -r requirements-dev.txt
+
+
 Documentation
 -------------
 The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`__. There are numerous `examples <https://pysindy.readthedocs.io/en/latest/examples/index.html>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`__. A video overview of PySINDy can be found on `Youtube <https://www.youtube.com/watch?v=DvbbXX8Bd90>`__.
@@ -226,6 +237,11 @@ References
    *Sparse identification of nonlinear dynamics with control (SINDYc).*
    IFAC-PapersOnLine 49.18 (2016): 710-715.
    `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
+
+-  Kaptanoglu, Alan A., et al.
+   *Promoting global stability in data-driven models of quadratic nonlinear dynamics.*
+   arXiv preprint arXiv:2105.01843 (2021).
+   `[arXiv] <https://arxiv.org/abs/2105.01843>`_
 
 
 Related packages

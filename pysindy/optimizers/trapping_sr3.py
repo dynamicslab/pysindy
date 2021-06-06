@@ -477,6 +477,7 @@ class TrappingSR3(SR3):
         r = y.shape[1]
         N = int((r ** 2 + 3 * r) / 2.0)
 
+        # If PL and PQ are passed, make sure dimensions/symmetries are correct
         self._check_P_matrix(r, n_features, N)
 
         # Set initial coefficients
@@ -484,7 +485,7 @@ class TrappingSR3(SR3):
             self.constraint_lhs = reorder_constraints(
                 self.constraint_lhs, n_features, output_order="target"
             )
-
+        print(self.coef_)
         coef_sparse = self.coef_.T
 
         # Print initial values for each term in the optimization
@@ -535,6 +536,7 @@ class TrappingSR3(SR3):
                         coef_sparse = self._solve_sparse_relax_and_split(
                             r, n_features, x_expanded, y, Pmatrix, A, coef_prev
                         )
+                        print(coef_sparse)
                     else:
                         pTp = np.dot(Pmatrix.T, Pmatrix)
                         H = xTx + pTp / self.eta
@@ -546,14 +548,19 @@ class TrappingSR3(SR3):
                     m, coef_sparse = self._solve_direct_cvxpy(
                         r, n_features, x_expanded, y, Pmatrix, coef_prev
                     )
+
+            # If problem over xi becomes infeasible, break out of the loop
+            if coef_sparse is None:
+                coef_sparse = coef_prev
+                break
+
             if self.relax_optim:
                 m_prev, m, A, tk_prev = self._solve_m_relax_and_split(
                     r, n_features, m_prev, m, A, coef_sparse, tk_prev
                 )
 
-            # If problem becomes infeasible, break out of the loop
-            if m is None or coef_sparse is None:
-                coef_sparse = coef_prev
+            # If problem over m becomes infeasible, break out of the loop
+            if m is None:
                 m = m_prev
                 break
             self.history_.append(coef_sparse.T)

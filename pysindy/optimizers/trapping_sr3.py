@@ -495,8 +495,10 @@ class TrappingSR3(SR3):
         # initial A
         if self.A0 is not None:
             A = self.A0
-        else:
+        elif np.any(self.PQ != 0.0):
             A = np.diag(self.gamma * np.ones(r))
+        else:
+            A = np.diag(np.zeros(r))
         self.A_history_.append(A)
 
         # initial guess for m

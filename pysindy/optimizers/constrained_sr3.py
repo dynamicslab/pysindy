@@ -20,7 +20,7 @@ class ConstrainedSR3(SR3):
         0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
         + (0.5 / nu)\\|w-v\\|^2_2
 
-        subject to
+        \\text{subject to}
 
     .. math::
 
@@ -84,7 +84,6 @@ class ConstrainedSR3(SR3):
         "feature" indicates that the constraints are grouped by library feature:
         the first ``n_targets`` columns correspond to the first library feature,
         the next ``n_targets`` columns to the second library feature, and so on.
-        ""
 
     normalize : boolean, optional (default False)
         This parameter is ignored when fit_intercept is set to False. If True,

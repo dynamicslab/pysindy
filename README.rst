@@ -241,7 +241,7 @@ References
 -  Kaptanoglu, Alan A., Jared L. Callaham, Christopher J. Hansen, Aleksandr Aravkin, and Steven L. Brunton.
    *Promoting global stability in data-driven models of quadratic nonlinear dynamics.*
    arXiv preprint arXiv:2105.01843 (2021).
-   `[arXiv] <https://arxiv.org/abs/2105.01843>`_
+   `[arXiv] <https://arxiv.org/abs/2105.01843>`__
 
 
 Related packages

@@ -494,7 +494,7 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
 
 @pytest.mark.parametrize("thresholds", [0.005, 0.05])
 @pytest.mark.parametrize("relax_optim", [False, True])
-@pytest.mark.parametrize("noise_levels", [0.0, 0.05, 0.5, 2.0])
+@pytest.mark.parametrize("noise_levels", [0.0, 0.05, 0.5])
 def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
     t = np.arange(0, 40, 0.05)
     x = odeint(lorenz, [-8, 8, 27], t)

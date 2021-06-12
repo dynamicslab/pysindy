@@ -492,9 +492,9 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
     np.testing.assert_allclose(model.coef_[:, 1], target_value, atol=1e-8)
 
 
-@pytest.mark.parametrize("thresholds", [0.005, 0.05, 0.5])
+@pytest.mark.parametrize("thresholds", [0.005, 0.05])
 @pytest.mark.parametrize("relax_optim", [False, True])
-@pytest.mark.parametrize("noise_levels", [0.0, 0.5, 2.0])
+@pytest.mark.parametrize("noise_levels", [0.0, 0.05, 0.5, 2.0])
 def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
     t = np.arange(0, 40, 0.05)
     x = odeint(lorenz, [-8, 8, 27], t)
@@ -521,6 +521,7 @@ def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
         feature_names=feature_names,
     )
     model.fit(x, t=t[1] - t[0])
+    print(thresholds, relax_optim, noise_levels)
     print(
         np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
     )

@@ -488,7 +488,6 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
 
     model = optimizer(constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs)
     model.fit(x, x_dot)
-    print(model.coef_, target_value)
     np.testing.assert_allclose(model.coef_[:, 1], target_value, atol=1e-8)
 
 
@@ -521,10 +520,6 @@ def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
         feature_names=feature_names,
     )
     model.fit(x, t=t[1] - t[0])
-    print(thresholds, relax_optim, noise_levels)
-    print(
-        np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
-    )
     assert np.all(
         np.dot(constraint_matrix, (model.coefficients()).flatten("F")) <= constraint_rhs
     ) or np.allclose(

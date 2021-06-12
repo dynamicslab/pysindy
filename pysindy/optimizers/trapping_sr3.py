@@ -93,6 +93,10 @@ class TrappingSR3(SR3):
         If relax_optim = True, use the relax-and-split method. If False,
         try a direct minimization on the largest eigenvalue.
 
+    inequality_constraints : bool, optional
+        If True, relax_optim must be false or relax_optim = True AND threshold != 0,
+        so that the CVXPY methods are used.
+
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
@@ -185,6 +189,7 @@ class TrappingSR3(SR3):
         threshold=0.1,
         eps_solver=1.0e-7,
         relax_optim=True,
+        inequality_constraints=False,
         eta=1.0e20,
         alpha_A=1.0e20,
         alpha_m=5e19,
@@ -229,11 +234,20 @@ class TrappingSR3(SR3):
             raise ValueError("tol and tol_m must be positive")
         if not evolve_w and not relax_optim:
             raise ValueError("If doing direct solve, must evolve w")
+        if inequality_constraints and relax_optim and threshold == 0.0:
+            raise ValueError(
+                "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
+            )
+        if inequality_constraints and not evolve_w:
+            raise ValueError(
+                "Use of inequality constraints requires solving for xi (evolve_w=True)."
+            )
 
         self.evolve_w = evolve_w
         self.threshold = threshold
         self.eps_solver = eps_solver
         self.relax_optim = relax_optim
+        self.inequality_constraints = inequality_constraints
         self.m0 = m0
         self.A0 = A0
         self.alpha_A = alpha_A
@@ -311,7 +325,7 @@ class TrappingSR3(SR3):
         if (np.any(self.PL != 0.0) or np.any(self.PQ != 0.0)) and n_features != N:
             raise ValueError("Feature library is wrong shape or not quadratic")
 
-    def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A):
+    def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
         g = x_transpose_y + P_transpose_A / self.eta
         inv1 = np.linalg.pinv(H, rcond=1e-15)
         inv2 = np.linalg.pinv(
@@ -370,10 +384,16 @@ class TrappingSR3(SR3):
         ) + self.threshold * cp.norm1(xi)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
         if self.use_constraints:
-            prob = cp.Problem(
-                cp.Minimize(cost),
-                [self.constraint_lhs @ xi == self.constraint_rhs],
-            )
+            if self.inequality_constraints:
+                prob = cp.Problem(
+                    cp.Minimize(cost),
+                    [self.constraint_lhs @ xi <= self.constraint_rhs],
+                )
+            else:
+                prob = cp.Problem(
+                    cp.Minimize(cost),
+                    [self.constraint_lhs @ xi == self.constraint_rhs],
+                )
         else:
             prob = cp.Problem(cp.Minimize(cost))
 
@@ -416,9 +436,9 @@ class TrappingSR3(SR3):
 
     def _solve_nonsparse_relax_and_split(self, H, xTy, P_transpose_A, coef_prev):
         if self.use_constraints:
-            coef_sparse = self._update_coef_constraints(H, xTy, P_transpose_A).reshape(
-                coef_prev.shape
-            )
+            coef_sparse = self._update_coef_constraints(
+                H, xTy, P_transpose_A, coef_prev
+            ).reshape(coef_prev.shape)
         else:
             cho = cho_factor(H)
             coef_sparse = cho_solve(cho, xTy + P_transpose_A / self.eta).reshape(
@@ -433,10 +453,16 @@ class TrappingSR3(SR3):
         ) + self.threshold * cp.norm1(xi)
         cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
         if self.use_constraints:
-            prob = cp.Problem(
-                cp.Minimize(cost),
-                [self.constraint_lhs @ xi == self.constraint_rhs],
-            )
+            if self.inequality_constraints:
+                prob = cp.Problem(
+                    cp.Minimize(cost),
+                    [self.constraint_lhs @ xi <= self.constraint_rhs],
+                )
+            else:
+                prob = cp.Problem(
+                    cp.Minimize(cost),
+                    [self.constraint_lhs @ xi == self.constraint_rhs],
+                )
         else:
             prob = cp.Problem(cp.Minimize(cost))
 
@@ -448,23 +474,26 @@ class TrappingSR3(SR3):
             return None, None
         coef_sparse = (xi.value).reshape(coef_prev.shape)
 
-        m_cp = cp.Variable(r)
-        L = np.tensordot(self.PL, coef_sparse, axes=([3, 2], [0, 1]))
-        Q = np.reshape(
-            np.tensordot(self.PQ, coef_sparse, axes=([4, 3], [0, 1])), (r, r * r)
-        )
-        Ls = 0.5 * (L + L.T).flatten()
-        cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (r, r)))
-        prob_m = cp.Problem(cp.Minimize(cost_m))
+        if np.all(self.PL == 0.0) and np.all(self.PQ == 0.0):
+            return np.zeros(r), coef_sparse  # no optimization over m
+        else:
+            m_cp = cp.Variable(r)
+            L = np.tensordot(self.PL, coef_sparse, axes=([3, 2], [0, 1]))
+            Q = np.reshape(
+                np.tensordot(self.PQ, coef_sparse, axes=([4, 3], [0, 1])), (r, r * r)
+            )
+            Ls = 0.5 * (L + L.T).flatten()
+            cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (r, r)))
+            prob_m = cp.Problem(cp.Minimize(cost_m))
 
-        # default solver is SCS here
-        prob_m.solve(eps=self.eps_solver)
+            # default solver is SCS here
+            prob_m.solve(eps=self.eps_solver)
 
-        m = m_cp.value
-        if m is None:
-            print("Infeasible solve over m, increase/decrease eta")
-            return None, None
-        return m, coef_sparse
+            m = m_cp.value
+            if m is None:
+                print("Infeasible solve over m, increase/decrease eta")
+                return None, coef_sparse
+            return m, coef_sparse
 
     def _reduce(self, x, y):
         """

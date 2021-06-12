@@ -4,6 +4,7 @@ Unit tests for optimizers.
 import numpy as np
 import pytest
 from numpy.linalg import norm
+from scipy.integrate import odeint
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
@@ -11,6 +12,8 @@ from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
 
+from pysindy import FiniteDifference
+from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
 from pysindy.optimizers import ConstrainedSR3
@@ -19,6 +22,10 @@ from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
+
+
+def lorenz(z, t):
+    return 10 * (z[1] - z[0]), z[0] * (28 - z[2]) - z[1], z[0] * z[1] - 8 / 3 * z[2]
 
 
 class DummyLinearModel(BaseEstimator):
@@ -483,3 +490,58 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
     model.fit(x, x_dot)
     print(model.coef_, target_value)
     np.testing.assert_allclose(model.coef_[:, 1], target_value, atol=1e-8)
+
+
+@pytest.mark.parametrize("thresholds", [0.005, 0.05, 0.5])
+@pytest.mark.parametrize("relax_optim", [False, True])
+@pytest.mark.parametrize("noise_levels", [0.0, 0.5, 2.0])
+def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
+    t = np.arange(0, 40, 0.05)
+    x = odeint(lorenz, [-8, 8, 27], t)
+    x = x + np.random.normal(0.0, noise_levels, x.shape)
+    # if order is "feature"
+    constraint_rhs = np.array([-10.0, -2.0])
+    constraint_matrix = np.zeros((2, 30))
+    constraint_matrix[0, 6] = 1.0
+    constraint_matrix[1, 17] = 1.0
+    feature_names = ["x", "y", "z"]
+    opt = TrappingSR3(
+        threshold=thresholds,
+        constraint_lhs=constraint_matrix,
+        constraint_rhs=constraint_rhs,
+        constraint_order="feature",
+        inequality_constraints=True,
+        relax_optim=relax_optim,
+    )
+    poly_lib = PolynomialLibrary(degree=2)
+    model = SINDy(
+        optimizer=opt,
+        feature_library=poly_lib,
+        differentiation_method=FiniteDifference(drop_endpoints=True),
+        feature_names=feature_names,
+    )
+    model.fit(x, t=t[1] - t[0])
+    print(
+        np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
+    )
+    assert np.all(
+        np.dot(constraint_matrix, (model.coefficients()).flatten("F")) <= constraint_rhs
+    ) or np.allclose(
+        np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
+    )
+
+
+def test_inequality_constraints_reqs():
+    constraint_rhs = np.array([-10.0, -2.0])
+    constraint_matrix = np.zeros((2, 30))
+    constraint_matrix[0, 6] = 1.0
+    constraint_matrix[1, 17] = 1.0
+    with pytest.raises(ValueError):
+        TrappingSR3(
+            threshold=0.0,
+            constraint_lhs=constraint_matrix,
+            constraint_rhs=constraint_rhs,
+            constraint_order="feature",
+            inequality_constraints=True,
+            relax_optim=True,
+        )

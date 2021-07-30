@@ -1,13 +1,11 @@
 import warnings
 
+import cvxpy as cp
 import numpy as np
-from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import get_regularization
-from ..utils import reorder_constraints
 from .sr3 import SR3
-import cvxpy as cp
 
 
 class SINDyPIoptimizer(SR3):
@@ -124,18 +122,17 @@ class SINDyPIoptimizer(SR3):
             copy_X=copy_X,
         )
 
-        if thresholder != 'l1':
+        if thresholder != "l1":
             raise ValueError(
-                "l0 and other nonconvex regularizers are not implemented in current version of SINDy-PI"
+                "l0 and other nonconvex regularizers are not implemented "
+                " in current version of SINDy-PI"
             )
         if thresholder[:8].lower() == "weighted" and thresholds is None:
-            raise ValueError(
-                "weighted thresholder requires the thresholds parameter to be used"
-            )
+            raise ValueError("weighted thresholder requires the thresholds parameter")
         if thresholder[:8].lower() != "weighted" and thresholds is not None:
             raise ValueError(
-                "The thresholds argument cannot be used without a weighted thresholder,"
-                " e.g. thresholder='weighted_l0'"
+                "The thresholds argument cannot be used without a weighted"
+                " thresholder, e.g. thresholder='weighted_l0'"
             )
         if thresholds is not None and np.any(thresholds < 0):
             raise ValueError("thresholds cannot contain negative entries")
@@ -155,10 +152,13 @@ class SINDyPIoptimizer(SR3):
             cost = cp.sum_squares(x - x @ xi) + self.threshold * cp.norm1(xi)
         else:
             cost = cp.sum_squares(x - x @ xi) + cp.norm1(self.thresholds @ xi)
-        prob = cp.Problem(cp.Minimize(cost), [cp.diag(xi) == np.zeros(N)],)
+        prob = cp.Problem(
+            cp.Minimize(cost),
+            [cp.diag(xi) == np.zeros(N)],
+        )
 
-        # Beware: hard-coding the tolerances right now
-        prob.solve(max_iter=self.max_iter, verbose=True)  #eps_abs=1e-3, eps_rel=1e-3)
+        # Beware: hard-coding the tolerances sometimes
+        prob.solve(max_iter=self.max_iter, verbose=True)
 
         if xi.value is None:
             warnings.warn(
@@ -173,15 +173,9 @@ class SINDyPIoptimizer(SR3):
         """Objective function"""
         R2 = (x - np.dot(x, coef_full)) ** 2
         if self.thresholds is None:
-            return (
-                np.sum(R2)
-                + self.reg(coef_full, self.threshold)
-            )
+            return np.sum(R2) + self.reg(coef_full, self.threshold)
         else:
-            return (
-                np.sum(R2)
-                + self.reg(coef_full, self.thresholds)
-            )
+            return np.sum(R2) + self.reg(coef_full, self.thresholds)
 
     def _reduce(self, x, y):
         """

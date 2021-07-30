@@ -22,10 +22,12 @@ from .feature_library import CustomLibrary
 from .feature_library import FourierLibrary
 from .feature_library import IdentityLibrary
 from .feature_library import PolynomialLibrary
+from .feature_library import SINDyPILibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import TrappingSR3
 from .optimizers import SINDyOptimizer
+from .optimizers import SINDyPIoptimizer
 from .optimizers import SR3
 from .optimizers import STLSQ
 

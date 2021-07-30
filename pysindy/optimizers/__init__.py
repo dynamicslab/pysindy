@@ -4,6 +4,7 @@ from .sindy_optimizer import SINDyOptimizer
 from .sr3 import SR3
 from .stlsq import STLSQ
 from .trapping_sr3 import TrappingSR3
+from .sindypi_optimizer import SINDyPIoptimizer
 
 __all__ = [
     "BaseOptimizer",
@@ -11,5 +12,6 @@ __all__ = [
     "SR3",
     "STLSQ",
     "ConstrainedSR3",
+    "SINDyPIoptimizer",
     "TrappingSR3",
 ]

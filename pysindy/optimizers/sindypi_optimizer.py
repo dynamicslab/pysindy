@@ -52,7 +52,7 @@ class SINDyPIoptimizer(SR3):
         Regularization function to use. Currently implemented options
         are 'l1' (l1 norm) and 'weighted_l1' (weighted l1 norm).
 
-    max_iter : int, optional (default 30)
+    max_iter : int, optional (default 10000)
         Maximum iterations of the optimization algorithm.
 
     fit_intercept : boolean, optional (default False)
@@ -106,7 +106,7 @@ class SINDyPIoptimizer(SR3):
         threshold=0.1,
         tol=1e-5,
         thresholder="l1",
-        max_iter=30,
+        max_iter=10000,
         normalize=False,
         fit_intercept=False,
         copy_X=True,
@@ -143,6 +143,7 @@ class SINDyPIoptimizer(SR3):
         self.thresholds = thresholds
         self.reg = get_regularization(thresholder)
         self.unbias = False
+        self.Theta = None
 
     def _set_threshold(self, threshold):
         self.threshold = threshold
@@ -155,14 +156,17 @@ class SINDyPIoptimizer(SR3):
         else:
             cost = cp.sum_squares(x - x @ xi) + cp.norm1(self.thresholds @ xi)
         prob = cp.Problem(cp.Minimize(cost), [cp.diag(xi) == np.zeros(N)],)
-        prob.solve()
+
+        # Beware: hard-coding the tolerances right now
+        prob.solve(max_iter=self.max_iter, verbose=True)  #eps_abs=1e-3, eps_rel=1e-3)
 
         if xi.value is None:
             warnings.warn(
-                "Infeasible solve, increase/decrease eta",
+                "Infeasible solve, try changing your library",
                 ConvergenceWarning,
             )
             return None
+        print(xi.value)
         coef_sparse = (xi.value).reshape(coef_full.shape)
         return coef_sparse
 
@@ -187,22 +191,24 @@ class SINDyPIoptimizer(SR3):
 
         Set coefficients randomly
         """
-        # self.coef_.T
+        self.Theta = x
         n_samples, n_features = x.shape
         coef_full = np.random.rand(n_features, n_features)
         objective_history = []
-        for _ in range(self.max_iter):
-            coef_full = self._update_full_coef_constraints(x, coef_full)
-            objective_history.append(self._objective(x, y, coef_full))
-            if self._convergence_criterion() < self.tol or coef_full is None:
-                break
-        else:
-            warnings.warn(
-                "SINDyPI._reduce did not converge after {} iterations.".format(
-                    self.max_iter
-                ),
-                ConvergenceWarning,
-            )
+        #for _ in range(self.max_iter):
+        coef_full = self._update_full_coef_constraints(x, coef_full)
+        objective_history.append(self._objective(x, y, coef_full))
+        #if self._convergence_criterion() < self.tol or coef_full is None:
+        #    break
+        #else:
+        #    warnings.warn(
+        #        "SINDyPI._reduce did not converge after {} iterations.".format(
+        #            self.max_iter
+        #        ),
+        #        ConvergenceWarning,
+        #    )
 
         self.coef_full_ = coef_full.T
+        self.coef_ = coef_full.T
+        print(coef_full)
         self.objective_history = objective_history

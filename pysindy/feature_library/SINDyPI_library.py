@@ -1,7 +1,8 @@
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
-from numpy import empty
+from numpy import shape as shape
+from numpy import empty, hstack
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 from pysindy.differentiation import FiniteDifference
@@ -14,7 +15,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
     Parameters
     ----------
-    x_library_functions : list of mathematical functions
+    library_functions : list of mathematical functions
         Functions to include in the library. Each function will be
         applied to each input variable x.
 
@@ -83,7 +84,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         self.x_functions = library_functions
         self.xdot_functions = xdot_library_functions
         self.function_names = function_names
-        if function_names and (len(x_library_functions) * len(
+        if function_names and (len(library_functions) * len(
                                xdot_library_functions) != len(function_names)):
             raise ValueError(
                 "(x_library_functions * xdot_library_functions) and function_names must have the same"
@@ -114,6 +115,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
+        xdot_features = ["xdot%d" % i for i in range(self.n_input_features_)]
         if input_features is None:
             input_features = ["x%d" % i for i in range(self.n_input_features_)]
         feature_names = []
@@ -127,7 +129,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
                     ):
                         feature_names.append(
                             self.function_names[i](*[input_features[j] for j in c]
-                                ) + self.function_names[k](*[input_features[j] for j in d])
+                                ) + self.function_names[len(self.x_functions) + k](*[xdot_features[e] for e in d])
                         )
         return feature_names
 
@@ -176,12 +178,20 @@ class SINDyPILibrary(BaseFeatureLibrary):
                     range(len(self.x_functions)),
                 )
             )
-            (self.function_names).append(list(
+            print(shape(self.function_names))
+            # (self.function_names).append(list(
+            #     map(
+            #         lambda i: (lambda *xdot: "fdot" + str(i) + "(" + ",".join(xdot) + ")"),
+            #         range(len(self.xdot_functions)),
+            #     )
+            # ))
+            self.function_names = hstack((self.function_names, list(
                 map(
                     lambda i: (lambda *xdot: "fdot" + str(i) + "(" + ",".join(xdot) + ")"),
                     range(len(self.xdot_functions)),
                 )
-            ))
+            )))
+            print(shape(self.function_names))
         return self
 
     def transform(self, x):

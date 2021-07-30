@@ -166,7 +166,6 @@ class SINDyPIoptimizer(SR3):
                 ConvergenceWarning,
             )
             return None
-        print(xi.value)
         coef_sparse = (xi.value).reshape(coef_full.shape)
         return coef_sparse
 
@@ -195,18 +194,8 @@ class SINDyPIoptimizer(SR3):
         n_samples, n_features = x.shape
         coef_full = np.random.rand(n_features, n_features)
         objective_history = []
-        #for _ in range(self.max_iter):
         coef_full = self._update_full_coef_constraints(x, coef_full)
         objective_history.append(self._objective(x, y, coef_full))
-        #if self._convergence_criterion() < self.tol or coef_full is None:
-        #    break
-        #else:
-        #    warnings.warn(
-        #        "SINDyPI._reduce did not converge after {} iterations.".format(
-        #            self.max_iter
-        #        ),
-        #        ConvergenceWarning,
-        #    )
 
         self.coef_full_ = coef_full.T
         self.coef_ = coef_full.T

@@ -2,7 +2,7 @@ from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
 from numpy import shape as shape
-from numpy import empty, hstack
+from numpy import empty, hstack, nan_to_num
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 from pysindy.differentiation import FiniteDifference
@@ -77,7 +77,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
     ['f0(x0)', 'f0(x1)', 'f1(x0,x1)']
     """
 
-    def __init__(self, library_functions, xdot_library_functions=None,
+    def __init__(self, library_functions, t, xdot_library_functions=None,
                  function_names=None, interaction_only=True,
                  differentiation_method=None):
         super(SINDyPILibrary, self).__init__()
@@ -91,9 +91,10 @@ class SINDyPILibrary(BaseFeatureLibrary):
                 " number of elements"
             )
         if differentiation_method is None:
-            differentiation_method = FiniteDifference()
+            differentiation_method = FiniteDifference(drop_endpoints=False)
         self.differentiation_method = differentiation_method
         self.interaction_only = interaction_only
+        self.t = t
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
@@ -146,7 +147,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
         self : instance
         """
         n_samples, n_features = check_array(x).shape
-        xdot = self.differentiation_method(x)
+        dt = self.t[1] - self.t[0]
+        xdot = nan_to_num(self.differentiation_method(x, self.t) * dt)
         self.n_input_features_ = n_features
         n_x_output_features = 0
         for f in self.x_functions:
@@ -212,7 +214,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
         x = check_array(x)
         print(x.shape)
-        xdot = self.differentiation_method(x)
+        dt = self.t[1] - self.t[0]
+        xdot = nan_to_num(self.differentiation_method(x, self.t) * dt)
 
         n_samples, n_features = x.shape
 
@@ -232,6 +235,6 @@ class SINDyPILibrary(BaseFeatureLibrary):
                         self.interaction_only
                     ):
                         xp[:, library_idx] = f(*[x[:, j] for j in c]) * fdot(
-                                               *[xdot[:, j] for j in d])
+                                               *[xdot[:, e] for e in d])
                         library_idx += 1
         return xp

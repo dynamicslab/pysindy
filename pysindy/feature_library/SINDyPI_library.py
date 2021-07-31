@@ -92,7 +92,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         self.xdot_functions = xdot_library_functions
         self.function_names = function_names
         if function_names and (
-            len(library_functions) * len(xdot_library_functions) != len(function_names)
+            len(library_functions) + len(xdot_library_functions) != len(function_names)
         ):
             raise ValueError(
                 "(x_library_functions * xdot_library_functions) and "
@@ -223,8 +223,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
         x = check_array(x)
         print(x.shape)
-        dt = self.t[1] - self.t[0]
-        xdot = nan_to_num(self.differentiation_method(x, self.t) * dt)
+        # dt = self.t[1] - self.t[0]
+        xdot = nan_to_num(self.differentiation_method(x, self.t))
 
         n_samples, n_features = x.shape
 

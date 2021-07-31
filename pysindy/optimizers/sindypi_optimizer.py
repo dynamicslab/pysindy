@@ -158,7 +158,7 @@ class SINDyPIoptimizer(SR3):
         )
 
         # Beware: hard-coding the tolerances sometimes
-        prob.solve(max_iter=self.max_iter, verbose=True)
+        prob.solve(max_iter=self.max_iter, verbose=True, eps_abs=1e-6, eps_rel=1e-6)
 
         if xi.value is None:
             warnings.warn(

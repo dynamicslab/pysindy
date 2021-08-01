@@ -13,6 +13,7 @@ from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import IdentityLibrary
 from pysindy.feature_library import PolynomialLibrary
+from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
 
 
@@ -29,6 +30,12 @@ def test_form_custom_library():
 
     # Test without user-supplied function names
     CustomLibrary(library_functions=library_functions, function_names=None)
+
+    # Test with user-supplied function names
+    SINDyPILibrary(library_functions=library_functions, function_names=function_names)
+
+    # Test without user-supplied function names
+    SINDyPILibrary(library_functions=library_functions, function_names=None)
 
 
 def test_bad_parameters():
@@ -52,6 +59,23 @@ def test_bad_parameters():
         CustomLibrary(
             library_functions=library_functions, function_names=function_names
         )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
+        SINDyPILibrary(
+            library_functions=library_functions, function_names=function_names
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
+        SINDyPILibrary(
+            xdot_library_functions=library_functions, function_names=function_names
+        )
+    with pytest.raises(ValueError):
+        SINDyPILibrary()
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        SINDyPILibrary(xdot_library_functions=library_functions)
 
 
 @pytest.mark.parametrize(

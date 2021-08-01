@@ -80,8 +80,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
     def __init__(
         self,
-        library_functions,
-        t,
+        library_functions=None,
+        t=None,
         xdot_library_functions=None,
         function_names=None,
         interaction_only=True,
@@ -91,15 +91,39 @@ class SINDyPILibrary(BaseFeatureLibrary):
         self.x_functions = library_functions
         self.xdot_functions = xdot_library_functions
         self.function_names = function_names
-        if function_names and (
-            len(library_functions) + len(xdot_library_functions) != len(function_names)
-        ):
+        if library_functions is None and xdot_library_functions is None:
             raise ValueError(
-                "(x_library_functions * xdot_library_functions) and "
-                " function_names must have the same"
-                " number of elements"
+                "Either a library for X, Xdot, or both X and Xdot must " " be specified"
             )
-        if differentiation_method is None:
+        if xdot_library_functions is not None and t is None:
+            raise ValueError(
+                "If using a library that contains xdot terms,"
+                " you must specify a timebase t"
+            )
+        if function_names:
+            if xdot_library_functions is None:
+                if len(library_functions) != len(function_names):
+                    raise ValueError(
+                        "(x_library_functions + xdot_library_functions) and "
+                        " function_names must have the same"
+                        " number of elements"
+                    )
+            elif library_functions is None:
+                if len(xdot_library_functions) != len(function_names):
+                    raise ValueError(
+                        "(x_library_functions + xdot_library_functions) and "
+                        " function_names must have the same"
+                        " number of elements"
+                    )
+            elif (len(library_functions) + len(xdot_library_functions)) != len(
+                function_names
+            ):
+                raise ValueError(
+                    "(x_library_functions + xdot_library_functions) and "
+                    " function_names must have the same"
+                    " number of elements"
+                )
+        if differentiation_method is None and xdot_library_functions is not None:
             differentiation_method = FiniteDifference(drop_endpoints=False)
         self.differentiation_method = differentiation_method
         self.interaction_only = interaction_only
@@ -129,24 +153,45 @@ class SINDyPILibrary(BaseFeatureLibrary):
         if input_features is None:
             input_features = ["x%d" % i for i in range(self.n_input_features_)]
         feature_names = []
-        for i, f in enumerate(self.x_functions):
-            for k, fdot in enumerate(self.xdot_functions):
+        if self.xdot_functions is not None and self.x_functions is not None:
+            for i, f in enumerate(self.x_functions):
+                for k, fdot in enumerate(self.xdot_functions):
+                    for c in self._combinations(
+                        self.n_input_features_,
+                        f.__code__.co_argcount,
+                        self.interaction_only,
+                    ):
+                        for d in self._combinations(
+                            self.n_input_features_,
+                            fdot.__code__.co_argcount,
+                            self.interaction_only,
+                        ):
+                            feature_names.append(
+                                self.function_names[i](*[input_features[j] for j in c])
+                                + self.function_names[len(self.x_functions) + k](
+                                    *[xdot_features[e] for e in d]
+                                )
+                            )
+        elif self.xdot_functions is None:
+            for i, f in enumerate(self.x_functions):
                 for c in self._combinations(
                     self.n_input_features_,
                     f.__code__.co_argcount,
                     self.interaction_only,
                 ):
-                    for d in self._combinations(
-                        self.n_input_features_,
-                        fdot.__code__.co_argcount,
-                        self.interaction_only,
-                    ):
-                        feature_names.append(
-                            self.function_names[i](*[input_features[j] for j in c])
-                            + self.function_names[len(self.x_functions) + k](
-                                *[xdot_features[e] for e in d]
-                            )
-                        )
+                    feature_names.append(
+                        self.function_names[i](*[input_features[j] for j in c])
+                    )
+        elif self.x_functions is None:
+            for i, f in enumerate(self.xdot_functions):
+                for c in self._combinations(
+                    self.n_input_features_,
+                    fdot.__code__.co_argcount,
+                    self.interaction_only,
+                ):
+                    feature_names.append(
+                        self.function_names[i](*[input_features[j] for j in c])
+                    )
         return feature_names
 
     def fit(self, x, y=None):
@@ -164,11 +209,12 @@ class SINDyPILibrary(BaseFeatureLibrary):
         n_samples, n_features = check_array(x).shape
         self.n_input_features_ = n_features
         n_x_output_features = 0
-        for f in self.x_functions:
-            n_args = f.__code__.co_argcount
-            n_x_output_features += len(
-                list(self._combinations(n_features, n_args, self.interaction_only))
-            )
+        if self.x_functions is not None:
+            for f in self.x_functions:
+                n_args = f.__code__.co_argcount
+                n_x_output_features += len(
+                    list(self._combinations(n_features, n_args, self.interaction_only))
+                )
         if self.xdot_functions is None:
             self.n_output_features_ = n_x_output_features
         else:
@@ -223,8 +269,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
         x = check_array(x)
         print(x.shape)
-        # dt = self.t[1] - self.t[0]
-        xdot = nan_to_num(self.differentiation_method(x, self.t))
+        if self.xdot_functions is not None:
+            xdot = nan_to_num(self.differentiation_method(x, self.t))
 
         n_samples, n_features = x.shape
 
@@ -233,20 +279,39 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0
-        for f in self.x_functions:
-            for fdot in self.xdot_functions:
+        if self.xdot_functions is not None and self.x_functions is not None:
+            for f in self.x_functions:
+                for fdot in self.xdot_functions:
+                    for c in self._combinations(
+                        self.n_input_features_,
+                        f.__code__.co_argcount,
+                        self.interaction_only,
+                    ):
+                        for d in self._combinations(
+                            self.n_input_features_,
+                            fdot.__code__.co_argcount,
+                            self.interaction_only,
+                        ):
+                            xp[:, library_idx] = f(*[x[:, j] for j in c]) * fdot(
+                                *[xdot[:, e] for e in d]
+                            )
+                            library_idx += 1
+        elif self.xdot_functions is None:
+            for f in self.x_functions:
                 for c in self._combinations(
                     self.n_input_features_,
                     f.__code__.co_argcount,
                     self.interaction_only,
                 ):
-                    for d in self._combinations(
-                        self.n_input_features_,
-                        fdot.__code__.co_argcount,
-                        self.interaction_only,
-                    ):
-                        xp[:, library_idx] = f(*[x[:, j] for j in c]) * fdot(
-                            *[xdot[:, e] for e in d]
-                        )
-                        library_idx += 1
+                    xp[:, library_idx] = f(*[x[:, j] for j in c])
+                    library_idx += 1
+        elif self.x_functions is None:
+            for f in self.xdot_functions:
+                for c in self._combinations(
+                    self.n_input_features_,
+                    fdot.__code__.co_argcount,
+                    self.interaction_only,
+                ):
+                    xp[:, library_idx] = fdot(*[xdot[:, j] for j in c])
+                    library_idx += 1
         return xp

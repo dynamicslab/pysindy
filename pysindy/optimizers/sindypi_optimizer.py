@@ -122,6 +122,10 @@ class SINDyPIoptimizer(SR3):
             copy_X=copy_X,
         )
 
+        if max_iter <= 0:
+            raise ValueError("max_iter must be positive")
+        if threshold < 0.0:
+            raise ValueError("threshold must not be negative")
         if thresholder != "l1":
             raise ValueError(
                 "l0 and other nonconvex regularizers are not implemented "

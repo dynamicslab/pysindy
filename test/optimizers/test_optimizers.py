@@ -18,6 +18,7 @@ from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SINDyOptimizer
+from pysindy.optimizers import SINDyPIoptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
@@ -174,6 +175,20 @@ def test_sr3_bad_parameters(optimizer, params):
 def test_trapping_bad_parameters(params):
     with pytest.raises(ValueError):
         TrappingSR3(**params)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(tol=0),
+        dict(max_iter=-1),
+        dict(thresholder="l0"),
+        dict(threshold=-1),
+    ],
+)
+def test_sindypi_bad_parameters(params):
+    with pytest.raises(ValueError):
+        SINDyPIoptimizer(**params)
 
 
 @pytest.mark.parametrize(

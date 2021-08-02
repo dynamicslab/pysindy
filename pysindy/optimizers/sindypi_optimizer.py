@@ -215,7 +215,6 @@ class SINDyPIoptimizer(SR3):
         coef_full = self._update_parallel_coef_constraints(x, coef_full)
         objective_history.append(self._objective(x, y, coef_full))
 
-        self.coef_full_ = coef_full.T
-        self.coef_ = coef_full.T
-        print(coef_full)
+        self.coef_full_ = coef_full
+        self.coef_ = coef_full
         self.objective_history = objective_history

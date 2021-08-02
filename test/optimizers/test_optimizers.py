@@ -184,6 +184,8 @@ def test_trapping_bad_parameters(params):
         dict(max_iter=-1),
         dict(thresholder="l0"),
         dict(threshold=-1),
+        dict(thresholds=1),
+        dict(thresholder="weighted_l1"),
     ],
 )
 def test_sindypi_bad_parameters(params):

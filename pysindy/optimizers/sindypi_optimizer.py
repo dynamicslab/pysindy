@@ -162,7 +162,9 @@ class SINDyPIoptimizer(SR3):
         )
 
         # Beware: hard-coding the tolerances sometimes
-        prob.solve(max_iter=self.max_iter, verbose=True, eps_abs=1e-6, eps_rel=1e-6)
+        prob.solve(
+            max_iter=self.max_iter, verbose=True
+        )  # , eps_abs=1e-6, eps_rel=1e-6)
 
         if xi.value is None:
             warnings.warn(
@@ -172,6 +174,23 @@ class SINDyPIoptimizer(SR3):
             return None
         coef_sparse = (xi.value).reshape(coef_full.shape)
         return coef_sparse
+
+    def _update_parallel_coef_constraints(self, x, coef_full):
+        N = x.shape[1]
+        xi_final = np.zeros((N, N))
+        for i in range(N):
+            xi = cp.Variable(N)
+            if self.thresholds is None:
+                cost = cp.sum_squares(x[:, i] - x @ xi) + self.threshold * cp.norm1(xi)
+            else:
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.norm1(self.thresholds @ xi)
+            prob = cp.Problem(
+                cp.Minimize(cost),
+                [xi[i] == 0.0],
+            )
+            prob.solve()
+            xi_final[:, i] = xi.value
+        return xi_final
 
     def _objective(self, x, y, coef_full):
         """Objective function"""
@@ -192,7 +211,8 @@ class SINDyPIoptimizer(SR3):
         n_samples, n_features = x.shape
         coef_full = np.random.rand(n_features, n_features)
         objective_history = []
-        coef_full = self._update_full_coef_constraints(x, coef_full)
+        # coef_full = self._update_full_coef_constraints(x, coef_full)
+        coef_full = self._update_parallel_coef_constraints(x, coef_full)
         objective_history.append(self._objective(x, y, coef_full))
 
         self.coef_full_ = coef_full.T

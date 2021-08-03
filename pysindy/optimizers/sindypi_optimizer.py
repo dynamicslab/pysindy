@@ -10,28 +10,21 @@ from .sr3 import SR3
 
 class SINDyPIoptimizer(SR3):
     """
-    Sparse relaxed regularized regression with linear equality constraints.
+    SINDy-PI optimizer
 
     Attempts to minimize the objective function
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
-        + (0.5 / nu)\\|w-v\\|^2_2
+        0.5\\|X-Xw\\|^2_2 + \\lambda \\times R(v)
 
-        \\text{subject to}
-
-    .. math::
-
-        Cw = d
-
-    over v and w where :math:`R(v)` is a regularization function, C is a
-    constraint matrix, and d is a vector of values. See the following
+    over w where :math:`R(v)` is a regularization function. See the following
     reference for more details:
 
-        Champion, Kathleen, et al. "A unified sparse optimization framework
-        to learn parsimonious physics-informed models from data."
-        arXiv preprint arXiv:1906.10612 (2019).
+        Kaheman, Kadierdan, J. Nathan Kutz, and Steven L. Brunton. SINDy-PI:
+        a robust algorithm for parallel implicit sparse identification of
+        nonlinear dynamics.
+        Proceedings of the Royal Society A 476.2242 (2020): 20200279.
 
     Parameters
     ----------
@@ -65,11 +58,6 @@ class SINDyPIoptimizer(SR3):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
-                optional (default None)
-        Initial guess for coefficients ``coef_``, (v in the mathematical equations)
-        If None, least-squares is used to obtain an initial guess.
-
     thresholds : np.ndarray, shape (n_targets, n_features), optional \
             (default None)
         Array of thresholds for each library function coefficient.
@@ -88,10 +76,6 @@ class SINDyPIoptimizer(SR3):
         Regularized weight vector(s). This is the v in the objective
         function.
 
-    coef_full_ : array, shape (n_features,) or (n_targets, n_features)
-        Weight vector(s) that are not subjected to the regularization.
-        This is the w in the objective function.
-
     unbias : boolean
         Whether to perform an extra step of unregularized linear regression
         to unbias the coefficients for the identified support.
@@ -108,7 +92,6 @@ class SINDyPIoptimizer(SR3):
         normalize=False,
         fit_intercept=False,
         copy_X=True,
-        initial_guess=None,
         thresholds=None,
     ):
         super(SINDyPIoptimizer, self).__init__(
@@ -116,7 +99,6 @@ class SINDyPIoptimizer(SR3):
             tol=tol,
             thresholder=thresholder,
             max_iter=max_iter,
-            initial_guess=initial_guess,
             normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
@@ -149,7 +131,7 @@ class SINDyPIoptimizer(SR3):
     def _set_threshold(self, threshold):
         self.threshold = threshold
 
-    def _update_full_coef_constraints(self, x, coef_full):
+    def _update_full_coef_constraints(self, x):
         N = x.shape[1]
         xi = cp.Variable((N, N))
         if self.thresholds is None:
@@ -161,23 +143,23 @@ class SINDyPIoptimizer(SR3):
             [cp.diag(xi) == np.zeros(N)],
         )
 
-        # Beware: hard-coding the tolerances sometimes
+        # Beware: hard-coding the tolerances
         prob.solve(
-            max_iter=self.max_iter, verbose=True
-        )  # , eps_abs=1e-6, eps_rel=1e-6)
+            max_iter=self.max_iter, verbose=True, eps_abs=self.tol, eps_rel=self.tol
+        )
 
         if xi.value is None:
             warnings.warn(
                 "Infeasible solve, try changing your library",
                 ConvergenceWarning,
             )
-            return None
-        coef_sparse = (xi.value).reshape(coef_full.shape)
-        return coef_sparse
+        return xi.value
 
-    def _update_parallel_coef_constraints(self, x, coef_full):
+    def _update_parallel_coef_constraints(self, x):
         N = x.shape[1]
         xi_final = np.zeros((N, N))
+
+        # Todo: parallelize this for loop with Multiprocessing/joblib
         for i in range(N):
             xi = cp.Variable(N)
             if self.thresholds is None:
@@ -188,33 +170,34 @@ class SINDyPIoptimizer(SR3):
                 cp.Minimize(cost),
                 [xi[i] == 0.0],
             )
-            prob.solve()
+            prob.solve(verbose=True, eps_abs=self.tol, eps_rel=self.tol)
+            if xi.value is None:
+                warnings.warn(
+                    "Infeasible solve on iteration " + str(i) + ", try "
+                    "changing your library",
+                    ConvergenceWarning,
+                )
             xi_final[:, i] = xi.value
         return xi_final
 
-    def _objective(self, x, y, coef_full):
+    def _objective(self, x, coefs):
         """Objective function"""
-        R2 = (x - np.dot(x, coef_full)) ** 2
+        R2 = (x - x @ coefs) ** 2
         if self.thresholds is None:
-            return np.sum(R2) + self.reg(coef_full, self.threshold)
+            return np.sum(R2) + self.reg(coefs, self.threshold)
         else:
-            return np.sum(R2) + self.reg(coef_full, self.thresholds)
+            return np.sum(R2) + self.reg(coefs, self.thresholds)
 
     def _reduce(self, x, y):
         """
-        Perform at most ``self.max_iter`` iterations of the SR3 algorithm
-        with inequality constraints.
-
-        Set coefficients randomly
+        Perform at most ``self.max_iter`` iterations of the SINDy-PI
+        optimization problem, using CVXPY.
         """
-        self.Theta = x
+        self.Theta = x  # Need to save the library for post-processing
         n_samples, n_features = x.shape
-        coef_full = np.random.rand(n_features, n_features)
         objective_history = []
-        # coef_full = self._update_full_coef_constraints(x, coef_full)
-        coef_full = self._update_parallel_coef_constraints(x, coef_full)
-        objective_history.append(self._objective(x, y, coef_full))
-
-        self.coef_full_ = coef_full
-        self.coef_ = coef_full
+        # coefs = self._update_full_coef_constraints(x)
+        coefs = self._update_parallel_coef_constraints(x)
+        objective_history.append(self._objective(x, coefs))
+        self.coef_ = coefs
         self.objective_history = objective_history

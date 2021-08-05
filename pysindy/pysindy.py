@@ -7,7 +7,8 @@ from numpy import ndim
 from numpy import newaxis
 from numpy import vstack
 from numpy import zeros
-from scipy.integrate import solve_ivp, odeint
+from scipy.integrate import odeint
+from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 from scipy.linalg import LinAlgWarning
 from sklearn.base import BaseEstimator
@@ -18,6 +19,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
 from .feature_library import PolynomialLibrary
+from .feature_library import SINDyPILibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
 from .utils import drop_nan_rows
@@ -398,11 +400,16 @@ class SINDy(BaseEstimator):
             Precision to be used when printing out model coefficients.
         """
         eqns = self.equations(precision)
+        if isinstance(self.feature_library, SINDyPILibrary):
+            feature_names = self.get_feature_names()
+        else:
+            feature_names = self.feature_names
         for i, eqn in enumerate(eqns):
+            names = "(" + feature_names[i] + ")"
             if self.discrete_time:
-                print(self.feature_names[i] + "[k+1] = " + eqn)
+                print(names + "[k+1] = " + eqn)
             elif lhs is None:
-                print(self.feature_names[i] + "' = " + eqn)
+                print(names + "' = " + eqn)
             else:
                 print(lhs[i] + " = " + eqn)
 
@@ -664,10 +671,10 @@ class SINDy(BaseEstimator):
         x0,
         t,
         u=None,
-        integrator='solve_ivp',
+        integrator="solve_ivp",
         stop_condition=None,
         interpolator=None,
-        integrator_kws={'method': 'LSODA'},
+        integrator_kws={"method": "LSODA"},
         interpolator_kws={},
     ):
         """
@@ -803,12 +810,14 @@ class SINDy(BaseEstimator):
 
                     def rhs(t, x):
                         return self.predict(x[newaxis, :], u_fun(t))[0]
+
             # Need to hard-code below, because odeint and solve_ivp
             # have different syntax and integration options.
-            if integrator == 'solve_ivp':
-                return ((solve_ivp(rhs, (t[0], t[-1]), x0,
-                                   t_eval=t, **integrator_kws)).y).T
-            elif integrator == 'odeint':
+            if integrator == "solve_ivp":
+                return (
+                    (solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)).y
+                ).T
+            elif integrator == "odeint":
                 return odeint(rhs, x0, t, tfirst=True, **integrator_kws)
             else:
                 ValueError("Integrator not supported, exiting")

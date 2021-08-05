@@ -170,7 +170,9 @@ class SINDyPIoptimizer(SR3):
                 cp.Minimize(cost),
                 [xi[i] == 0.0],
             )
-            prob.solve(verbose=True, eps_abs=self.tol, eps_rel=self.tol)
+            prob.solve(
+                max_iter=self.max_iter, verbose=True, eps_abs=self.tol, eps_rel=self.tol
+            )
             if xi.value is None:
                 warnings.warn(
                     "Infeasible solve on iteration " + str(i) + ", try "

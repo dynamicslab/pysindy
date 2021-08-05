@@ -11,6 +11,22 @@ from .base import reorder_constraints
 from .base import supports_multiple_targets
 from .base import validate_control_variables
 from .base import validate_input
+from .ODEs import burgers_galerkin
+from .ODEs import cubic_damped_SHO
+from .ODEs import double_pendulum
+from .ODEs import enzyme
+from .ODEs import hopf
+from .ODEs import kinematic_commonroad
+from .ODEs import linear_3D
+from .ODEs import linear_damped_SHO
+from .ODEs import lorenz
+from .ODEs import lorenz_control
+from .ODEs import meanfield
+from .ODEs import mhd
+from .ODEs import oscillator
+from .ODEs import pendulum_on_cart
+from .ODEs import yeast
+
 
 __all__ = [
     "capped_simplex_projection",
@@ -26,4 +42,19 @@ __all__ = [
     "supports_multiple_targets",
     "validate_control_variables",
     "validate_input",
+    "linear_damped_SHO",
+    "cubic_damped_SHO",
+    "linear_3D",
+    "hopf",
+    "lorenz",
+    "lorenz_control",
+    "meanfield",
+    "oscillator",
+    "burgers_galerkin",
+    "mhd",
+    "enzyme",
+    "yeast",
+    "pendulum_on_cart",
+    "kinematic_commonroad",
+    "double_pendulum",
 ]

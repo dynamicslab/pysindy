@@ -21,6 +21,7 @@ from .ODEs import linear_3D
 from .ODEs import linear_damped_SHO
 from .ODEs import lorenz
 from .ODEs import lorenz_control
+from .ODEs import lorenz_u
 from .ODEs import meanfield
 from .ODEs import mhd
 from .ODEs import oscillator
@@ -48,6 +49,7 @@ __all__ = [
     "hopf",
     "lorenz",
     "lorenz_control",
+    "lorenz_u",
     "meanfield",
     "oscillator",
     "burgers_galerkin",

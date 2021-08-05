@@ -37,13 +37,13 @@ def lorenz(x, t, sigma=10, beta=2.66667, rho=28):
 
 
 # Control input for Lorenz + control
-def u_fun(t):
+def lorenz_u(t):
     return np.column_stack([np.sin(2 * t), t ** 2])
 
 
 # Lorenz equations with control input
 def lorenz_control(x, t, sigma=10, beta=2.66667, rho=28):
-    u = u_fun(t)
+    u = lorenz_u(t)
     return [
         sigma * (x[1] - x[0]) + u[0, 0] ** 2,
         x[0] * (rho - x[2]) - x[1],

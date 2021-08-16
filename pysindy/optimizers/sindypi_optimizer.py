@@ -70,6 +70,12 @@ class SINDyPIoptimizer(SR3):
         threshold to be used for the (j + 1)st library function in the equation
         for the (i + 1)st measurement variable.
 
+    model_subset : np.ndarray, shape(n_models), optional (default None)
+        List of indices to compute models for. If list is not provided,
+        the default is to compute SINDy-PI models for all possible
+        candidate functions. This can take a long time for 4D systems
+        or larger.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -93,6 +99,7 @@ class SINDyPIoptimizer(SR3):
         fit_intercept=False,
         copy_X=True,
         thresholds=None,
+        model_subset=None,
     ):
         super(SINDyPIoptimizer, self).__init__(
             threshold=threshold,
@@ -127,6 +134,7 @@ class SINDyPIoptimizer(SR3):
         self.reg = get_regularization(thresholder)
         self.unbias = False
         self.Theta = None
+        self.model_subset = model_subset
 
     def _set_threshold(self, threshold):
         self.threshold = threshold
@@ -160,7 +168,10 @@ class SINDyPIoptimizer(SR3):
         xi_final = np.zeros((N, N))
 
         # Todo: parallelize this for loop with Multiprocessing/joblib
-        for i in range(N):
+        # for i in range(N):
+        if self.model_subset is None:
+            self.model_subset = range(N)
+        for i in self.model_subset:
             xi = cp.Variable(N)
             if self.thresholds is None:
                 cost = cp.sum_squares(x[:, i] - x @ xi) + self.threshold * cp.norm1(xi)
@@ -170,16 +181,18 @@ class SINDyPIoptimizer(SR3):
                 cp.Minimize(cost),
                 [xi[i] == 0.0],
             )
-            prob.solve(
-                max_iter=self.max_iter, verbose=True, eps_abs=self.tol, eps_rel=self.tol
-            )
-            if xi.value is None:
-                warnings.warn(
-                    "Infeasible solve on iteration " + str(i) + ", try "
-                    "changing your library",
-                    ConvergenceWarning,
-                )
-            xi_final[:, i] = xi.value
+            try:
+                prob.solve(max_iter=self.max_iter, eps_abs=self.tol, eps_rel=self.tol)
+                if xi.value is None:
+                    warnings.warn(
+                        "Infeasible solve on iteration " + str(i) + ", try "
+                        "changing your library",
+                        ConvergenceWarning,
+                    )
+                xi_final[:, i] = xi.value
+            except cp.error.SolverError:
+                print("Solver failed on model ", str(i), ", setting coefs to zeros")
+                xi_final[:, i] = np.zeros(N)
         return xi_final
 
     def _objective(self, x, coefs):
@@ -201,5 +214,5 @@ class SINDyPIoptimizer(SR3):
         # coefs = self._update_full_coef_constraints(x)
         coefs = self._update_parallel_coef_constraints(x)
         objective_history.append(self._objective(x, coefs))
-        self.coef_ = coefs
+        self.coef_ = coefs.T
         self.objective_history = objective_history

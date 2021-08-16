@@ -31,6 +31,14 @@ def test_form_custom_library():
     # Test without user-supplied function names
     CustomLibrary(library_functions=library_functions, function_names=None)
 
+    # Test with linear control library
+    CustomLibrary(
+        library_functions=library_functions,
+        function_names=None,
+        linear_control=True,
+        n_control_features=2,
+    )
+
     # Test with user-supplied function names
     SINDyPILibrary(library_functions=library_functions, function_names=function_names)
 
@@ -58,6 +66,14 @@ def test_bad_parameters():
         function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
         CustomLibrary(
             library_functions=library_functions, function_names=function_names
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x]
+        function_names = [lambda s: s]
+        CustomLibrary(
+            library_functions=library_functions,
+            function_names=function_names,
+            linear_control=True,
         )
     with pytest.raises(ValueError):
         library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]

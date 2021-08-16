@@ -1,12 +1,11 @@
-import warnings
-
+# import warnings
 import numpy as np
-from sklearn.exceptions import ConvergenceWarning
+import tensorflow as tf
 from scipy.integrate import solve_ivp
 
 from ..utils import get_regularization
-from pysindy.differentiation import FiniteDifference
 from .sr3 import SR3
+from pysindy.differentiation import FiniteDifference
 
 
 class SINDyModifiedoptimizer(SR3):
@@ -70,15 +69,15 @@ class SINDyModifiedoptimizer(SR3):
         (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
         threshold to be used for the (j + 1)st library function in the equation
         for the (i + 1)st measurement variable.
-    
+
     differentiation_method : differentiation object, optional
         Method for differentiating the data. This must be a class extending
         :class:`pysindy.differentiation_methods.base.BaseDifferentiation` class.
         The default option is centered difference.
 
-    soft_start : boolean, optional (default False) 
-        If false, initialize the noise as all zeros. If true, 
-        calculate the noise in the signal y. 
+    soft_start : boolean, optional (default False)
+        If false, initialize the noise as all zeros. If true,
+        calculate the noise in the signal y.
 
     c : float, optional (default = 0.9)
         The value of the weights in the e_s error term in the
@@ -116,6 +115,8 @@ class SINDyModifiedoptimizer(SR3):
         thresholds=None,
         differentiation_method=None,
         t=None,
+        optimization_method=tf.keras.optimizers.Adam,
+        learning_rate=0.001,
         soft_start=False,
         q=3,
         c=0.9,
@@ -136,9 +137,7 @@ class SINDyModifiedoptimizer(SR3):
         if threshold < 0.0:
             raise ValueError("threshold must not be negative")
         if thresholder != "l1":
-            raise ValueError(
-                "l0 and other nonconvex regularizers are not implemented "
-            )
+            raise ValueError("l0 and other nonconvex regularizers are not implemented ")
         if thresholder[:8].lower() == "weighted" and thresholds is None:
             raise ValueError("weighted thresholder requires the thresholds parameter")
         if thresholder[:8].lower() != "weighted" and thresholds is not None:
@@ -154,57 +153,90 @@ class SINDyModifiedoptimizer(SR3):
         self.thresholds = thresholds
         self.reg = get_regularization(thresholder)
         self.unbias = False
+        self.optimization_method = optimization_method
+        self.learning_rate = learning_rate
         self.soft_start = soft_start
-        self.q = q 
+        self.q = q
         self.c = c
         self.t = t
         if feature_library is None:
-            raise ValueError("Modified SINDy requires a specified feature library"
+            raise ValueError(
+                "Modified SINDy requires a specified feature library"
                 " because the feature library is updated every algorithm iteration"
             )
         self.feature_library = feature_library
-    
+        if not tf.test.is_gpu_available():
+            raise ValueError("Modified SINDy algorithm requires tensorflow on a GPU")
+
     def _set_threshold(self, threshold):
         self.threshold = threshold
 
-    def _update_coefs(self, Theta, N, ydot):
-        n_samples = N.shape[0]
+    def _es(self, Theta, y_smooth, coefs):
+        n_samples = Theta.shape[0]
         # At each timestep j, compute esj
-        # es = np.zeros(n_samples)
-        #for j in range(n_samples):
-        #    for i in range(self.q):
-        #        es[j] += self.c ** (abs(i) - 1) * (yji - nji - Fji) ** 2
-        #solve_ivp(rhs, (
-        coefs = 0
-        N_new = 0 
-        return coefs, N_new
+        es = np.zeros(n_samples)
+        F = np.zeros((int(self.q * 2), n_samples))
+        for j in range(self.q, n_samples - self.q):
+            F[: self.q, j] = solve_ivp(
+                Theta[j - self.q : j, :] @ coefs,
+                (self.t[j - self.q], self.t[j]),
+                y_smooth[j - self.q, :],
+            )
+            F[self.q :, j] = solve_ivp(
+                Theta[j : j + self.q, :] @ coefs,
+                (self.t[j], self.t[j + self.q]),
+                y_smooth[j, :],
+            )
+            y_smooth_extended = y_smooth[j - self.q : j + self.q, :]
+            omega = [self.c ** (abs(i) - 1) for i in range(-self.q, self.q + 1)]
+            omega[self.q] = 0.0
+            es[j] = np.sum(
+                omega * np.linalg.norm(y_smooth_extended - F, axis=1) ** 2, axis=0
+            )
+        es_total = np.sum(es)
+        return es_total
 
-    def _objective(self, x, ydot, N, coefs):
+    def _objective(self, Theta, y_smooth, ydot, N, coefs):
         """Objective function"""
-        e_d = (ydot - x @ coefs) ** 2
-        # e_sj = 0
+        e_d = (ydot - Theta @ coefs) ** 2
+        e_s = self._es(Theta, y_smooth, coefs)
         if self.thresholds is None:
-            return np.sum(e_d) + self.reg(coefs, self.threshold)
+            return np.sum(e_d) + e_s + self.reg(coefs, self.threshold)
         else:
-            return np.sum(e_d) + self.reg(coefs, self.thresholds)
+            return np.sum(e_d) + e_s + self.reg(coefs, self.thresholds)
 
     def _noise(self, y, lam=20):
         n_samples, n_targets = y.shape
         D = np.zeros((n_samples, n_samples))
         D[0, :4] = [2, -5, 4, -1]
-        D[n_samples - 1, n_samples - 4:] = [-1, 4, -5, 2]
+        D[n_samples - 1, n_samples - 4 :] = [-1, 4, -5, 2]
 
         for i in range(1, n_samples - 1):
             D[i, i] = -2
             D[i, i + 1] = 1
             D[i, i - 1] = 1
         D2 = D.dot(D)
-        X_smooth = np.vstack([np.linalg.solve(np.eye(
-                              n_samples) + lam * D2.T.dot(D2),
-                              Y[j, :].reshape(n_samples, 1)).reshape(
-                              1, n_samples) for j in range(n_targets)])
+        X_smooth = np.vstack(
+            [
+                np.linalg.solve(
+                    np.eye(n_samples) + lam * D2.T.dot(D2),
+                    y[j, :].reshape(n_samples, 1),
+                ).reshape(1, n_samples)
+                for j in range(n_targets)
+            ]
+        )
         N = y - X_smooth
         return N, X_smooth
+
+    @tf.function
+    def _update_coefs(self, Theta, N, y_smooth, ydot, coefs):
+        # initial condition is y_smooth
+        with tf.GradientTape() as g:
+            # get objective function
+            weighted_loss = self._objective(self, Theta, y_smooth, ydot, N, coefs)
+        grad = g.gradient(weighted_loss, [coefs, N])
+        (self.optimization_method).apply_gradients(zip, grad, [coefs, N])  # coefs = Xi?
+        return weighted_loss
 
     def _reduce(self, x, y):
         """
@@ -227,17 +259,18 @@ class SINDyModifiedoptimizer(SR3):
             ydot = self.differentiation_method(y_smooth)
         else:
             ydot = self.differentiation_method(y_smooth, self.t)
-        objective_history.append(self._objective(Theta, ydot, N, coefs))
         objective_history = []
+        objective_history.append(self._objective(Theta, y_smooth, ydot, N, coefs))
+        self.optimization_method(learning_rate=self.learning_rate)
         for _ in range(self.max_iter):
-            coefs, N = self._update_coefs(Theta, N, ydot)
+            coefs, N = self._update_coefs(Theta, N, y_smooth, ydot, coefs)
             y_smooth = y - N
             if self.t is None:
                 ydot = self.differentiation_method(y_smooth)
             else:
                 ydot = self.differentiation_method(y_smooth, self.t)
             Theta = (self.feature_library).transform(y_smooth)
-            objective_history.append(self._objective(Theta, ydot, N, coefs))
+            objective_history.append(self._objective(Theta, y_smooth, ydot, N, coefs))
         self.coef_ = coefs
         self.N_ = N
         self.objective_history = objective_history

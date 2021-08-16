@@ -19,6 +19,31 @@ def linear_3D(x, t):
     return [-0.1 * x[0] + 2 * x[1], -2 * x[0] - 0.1 * x[1], -0.3 * x[2]]
 
 
+# Van der Pol ODE
+def van_der_pol(x, t, p=[0.5]):
+    return [x[1], p[0] * (1 - x[0] ** 2) * x[1] - x[0]]
+
+
+# Duffing ODE
+def duffing(x, t, p=[0.2, 0.05, 1]):
+    return [x[1], -p[0] * x[1] - p[1] * x[0] - p[2] * x[0] ** 3]
+
+
+# Lotka model
+def lotka(x, t, p=[1, 10]):
+    return [p[0] * x[0] - p[1] * x[0] * x[1], p[1] * x[0] * x[1] - 2 * p[0] * x[1]]
+
+
+# Generic cubic oscillator model
+def cubic_oscillator(x, t, p=[-0.1, 2, -2, -0.1]):
+    return [p[0] * x[0] ** 3 + p[1] * x[1] ** 3, p[2] * x[0] ** 3 + p[3] * x[1] ** 3]
+
+
+# Rossler model
+def rossler(x, t, p=[0.2, 0.2, 5.7]):
+    return [-x[1] - x[2], x[0] + p[0] * x[1], p[1] + (x[0] - p[2]) * x[2]]
+
+
 # Hopf bifurcation model
 def hopf(x, t, mu=-0.05, omega=1, A=1):
     return [
@@ -38,14 +63,14 @@ def lorenz(x, t, sigma=10, beta=2.66667, rho=28):
 
 # Control input for Lorenz + control
 def lorenz_u(t):
-    return np.column_stack([np.sin(2 * t), t ** 2])
+    return np.column_stack([np.sin(2 * t) ** 2, t ** 2])
 
 
 # Lorenz equations with control input
 def lorenz_control(x, t, sigma=10, beta=2.66667, rho=28):
     u = lorenz_u(t)
     return [
-        sigma * (x[1] - x[0]) + u[0, 0] ** 2,
+        sigma * (x[1] - x[0]) + u[0, 0],
         x[0] * (rho - x[2]) - x[1],
         x[0] * x[1] - beta * x[2] - u[0, 1],
     ]
@@ -297,7 +322,7 @@ def enzyme(x, t, jx=0.6, Vmax=1.5, Km=0.3):
     return jx - Vmax * x / (Km + x)
 
 
-# yeast glycolysis model, note that there are many typos in Kardy's paper for this eq'n
+# yeast glycolysis model, note that there are many typos in the sindy-pi paper
 def yeast(
     x,
     t,
@@ -343,17 +368,17 @@ def yeast(
 
 
 # Cart on a pendulum
-def pendulum_on_cart(x, t, m=1, M=1, L1=1, L2=1, F=0, g=0):
+def pendulum_on_cart(x, t, m=1, M=1, L=1, F=0, g=9.81):
     return [
         x[2],
         x[3],
         (
             (M + m) * g * np.sin(x[0])
             - F * np.cos(x[0])
-            - m * L1 * np.sin(x[0]) * np.cos(x[0]) * x[2] ** 2
+            - m * L * np.sin(x[0]) * np.cos(x[0]) * x[2] ** 2
         )
-        / (L1 * (M + m * np.sin(x[0]) ** 2)),
-        (m * L1 * np.sin(x[0]) * x[2] ** 2 + F - m * g * np.sin(x[0]) * np.cos(x[0]))
+        / (L * (M + m * np.sin(x[0]) ** 2)),
+        (m * L * np.sin(x[0]) * x[2] ** 2 + F - m * g * np.sin(x[0]) * np.cos(x[0]))
         / (M + m * np.sin(x[0]) ** 2),
     ]
 

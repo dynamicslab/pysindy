@@ -13,7 +13,9 @@ from .base import validate_control_variables
 from .base import validate_input
 from .ODEs import burgers_galerkin
 from .ODEs import cubic_damped_SHO
+from .ODEs import cubic_oscillator
 from .ODEs import double_pendulum
+from .ODEs import duffing
 from .ODEs import enzyme
 from .ODEs import hopf
 from .ODEs import kinematic_commonroad
@@ -22,10 +24,13 @@ from .ODEs import linear_damped_SHO
 from .ODEs import lorenz
 from .ODEs import lorenz_control
 from .ODEs import lorenz_u
+from .ODEs import lotka
 from .ODEs import meanfield
 from .ODEs import mhd
 from .ODEs import oscillator
 from .ODEs import pendulum_on_cart
+from .ODEs import rossler
+from .ODEs import van_der_pol
 from .ODEs import yeast
 
 
@@ -46,6 +51,11 @@ __all__ = [
     "linear_damped_SHO",
     "cubic_damped_SHO",
     "linear_3D",
+    "lotka",
+    "van_der_pol",
+    "duffing",
+    "rossler",
+    "cubic_oscillator",
     "hopf",
     "lorenz",
     "lorenz_control",

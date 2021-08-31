@@ -154,28 +154,28 @@ class SINDyPILibrary(BaseFeatureLibrary):
             input_features = ["x%d" % i for i in range(self.n_input_features_)]
         feature_names = []
         if self.xdot_functions is not None and self.x_functions is not None:
-            for i, f in enumerate(self.x_functions):
-                if i == 0 and (self.function_names[0]("0") == ""):
-                    nx_input_features_ = 1
-                else:
-                    nx_input_features_ = self.n_input_features_
-                for k, fdot in enumerate(self.xdot_functions):
-                    if k == 0 and (
+            for k, fdot in enumerate(self.xdot_functions):
+                if (k == 0 and 
                         self.function_names[-len(self.xdot_functions)]("0") == ""
-                    ):
-                        nxdot_input_features_ = 1
-                    else:
-                        nxdot_input_features_ = self.n_input_features_
-                    for c in self._combinations(
-                        nx_input_features_,
-                        f.__code__.co_argcount,
-                        self.interaction_only,
-                    ):
-                        for d in self._combinations(
-                            nxdot_input_features_,
-                            fdot.__code__.co_argcount,
-                            self.interaction_only,
-                        ):
+                   ):
+                    nxdot_input_features_ = 1
+                else:
+                    nxdot_input_features_ = self.n_input_features_
+                for d in self._combinations(
+                    nxdot_input_features_,
+                    fdot.__code__.co_argcount,
+                    self.interaction_only,
+                ):
+                    for i, f in enumerate(self.x_functions):
+                        if i == 0 and self.function_names[0]("0") == "":
+                            nx_input_features_ = 1
+                        else:
+                            nx_input_features_ = self.n_input_features_
+                        for c in self._combinations(
+                                nx_input_features_,
+                                f.__code__.co_argcount,
+                                self.interaction_only,
+                            ):
                             feature_names.append(
                                 self.function_names[i](*[input_features[j] for j in c])
                                 + self.function_names[len(self.x_functions) + k](
@@ -319,26 +319,27 @@ class SINDyPILibrary(BaseFeatureLibrary):
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0
         if self.xdot_functions is not None and self.x_functions is not None:
-            for i, f in enumerate(self.x_functions):
-                if i == 0 and (self.function_names[0]("0") == ""):
-                    nx_input_features_ = 1
+            for k, fdot in enumerate(self.xdot_functions):
+                if k == 0 and (
+                    self.function_names[-len(self.xdot_functions)]("0") == ""
+                ):
+                    nxdot_input_features_ = 1
                 else:
-                    nx_input_features_ = self.n_input_features_
-                for k, fdot in enumerate(self.xdot_functions):
-                    if k == 0 and (
-                        self.function_names[-len(self.xdot_functions)]("0") == ""
-                    ):
-                        nxdot_input_features_ = 1
-                    else:
-                        nxdot_input_features_ = self.n_input_features_
-                    for c in self._combinations(
-                        nx_input_features_,
-                        f.__code__.co_argcount,
-                        self.interaction_only,
-                    ):
-                        for d in self._combinations(
-                            nxdot_input_features_,
-                            fdot.__code__.co_argcount,
+                    nxdot_input_features_ = self.n_input_features_
+                for d in self._combinations(
+                    nxdot_input_features_,
+                    fdot.__code__.co_argcount,
+                    self.interaction_only,
+                ):
+
+                    for i, f in enumerate(self.x_functions):
+                        if i == 0 and (self.function_names[0]("0") == ""):
+                            nx_input_features_ = 1
+                        else:
+                            nx_input_features_ = self.n_input_features_
+                        for c in self._combinations(
+                            nx_input_features_,
+                            f.__code__.co_argcount,
                             self.interaction_only,
                         ):
                             xp[:, library_idx] = f(*[x[:, j] for j in c]) * fdot(

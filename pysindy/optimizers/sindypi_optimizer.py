@@ -115,7 +115,7 @@ class SINDyPIoptimizer(SR3):
             raise ValueError("max_iter must be positive")
         if threshold < 0.0:
             raise ValueError("threshold must not be negative")
-        if thresholder != "l1":
+        if thresholder != "l1" and thresholder != "weighted_l1":
             raise ValueError(
                 "l0 and other nonconvex regularizers are not implemented "
                 " in current version of SINDy-PI"
@@ -173,10 +173,11 @@ class SINDyPIoptimizer(SR3):
             self.model_subset = range(N)
         for i in self.model_subset:
             xi = cp.Variable(N)
+            # Note that norm choice below must be convex, so L1 is hard-coded for now
             if self.thresholds is None:
                 cost = cp.sum_squares(x[:, i] - x @ xi) + self.threshold * cp.norm1(xi)
             else:
-                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.norm1(self.thresholds @ xi)
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.norm1(self.thresholds[i, :] @ xi)
             prob = cp.Problem(
                 cp.Minimize(cost),
                 [xi[i] == 0.0],

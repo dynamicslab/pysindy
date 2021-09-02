@@ -100,6 +100,14 @@ def drop_nan_rows(x, x_dot):
     return x, x_dot
 
 
+def drop_random_rows(x, x_dot, n_subset):
+    # choose random n_subset points to use
+    rand_inds = np.random.randint(0, len(x), n_subset)
+    x = x[rand_inds, :]
+    x_dot = x_dot[rand_inds, :]
+    return x, x_dot
+
+
 def reorder_constraints(c, n_features, output_order="row"):
     """Reorder constraint matrix."""
     ret = c.copy()

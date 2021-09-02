@@ -11,6 +11,7 @@ from .base import reorder_constraints
 from .base import supports_multiple_targets
 from .base import validate_control_variables
 from .base import validate_input
+from .ODEs import bacterial
 from .ODEs import burgers_galerkin
 from .ODEs import cubic_damped_SHO
 from .ODEs import cubic_oscillator
@@ -32,7 +33,6 @@ from .ODEs import pendulum_on_cart
 from .ODEs import rossler
 from .ODEs import van_der_pol
 from .ODEs import yeast
-
 
 __all__ = [
     "capped_simplex_projection",
@@ -66,6 +66,7 @@ __all__ = [
     "mhd",
     "enzyme",
     "yeast",
+    "bacterial",
     "pendulum_on_cart",
     "kinematic_commonroad",
     "double_pendulum",

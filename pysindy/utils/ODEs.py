@@ -322,6 +322,14 @@ def enzyme(x, t, jx=0.6, Vmax=1.5, Km=0.3):
     return jx - Vmax * x / (Km + x)
 
 
+# Bacterial competence system (Mangan et al. 2016)
+def bacterial(x, t, a1=0.004, a2=0.07, a3=0.04, b1=0.82, b2=1854.5):
+    return [
+        a1 + a2 * x[0] ** 2 / (a3 + x[0] ** 2) - x[0] / (1 + x[0] + x[1]),
+        b1 / (1 + b2 * x[0] ** 5) - x[1] / (1 + x[0] + x[1]),
+    ]
+
+
 # yeast glycolysis model, note that there are many typos in the sindy-pi paper
 def yeast(
     x,
@@ -358,7 +366,7 @@ def yeast(
         d1 * x[0] * x[5] / (1 + d2 * x[5] ** 4) + d3 * x[1] - d4 * x[1] * x[6],
         e1 * x[1] + e2 * x[2] + e3 * x[1] * x[6] + e4 * x[2] * x[5],
         f1 * x[2] + f2 * x[3] + f3 * x[4] + f4 * x[2] * x[5] + f5 * x[3] * x[6],
-        g1 * x[0] + g2 * x[4],
+        g1 * x[3] + g2 * x[4],
         h3 * x[2]
         + h5 * x[5]
         + h4 * x[2] * x[6]

@@ -87,6 +87,11 @@ class SINDyPIoptimizer(SR3):
         to unbias the coefficients for the identified support.
         ``unbias`` is automatically set to False if a constraint is used and
         is otherwise left uninitialized.
+
+    Theta : np.ndarray, shape (n_samples, n_features)
+        The Theta matrix to be used in the optimization. We save it as
+        an attribute because access to the full library of terms is needed for
+        the SINDy-PI ODE after the optimization.
     """
 
     def __init__(
@@ -177,7 +182,9 @@ class SINDyPIoptimizer(SR3):
             if self.thresholds is None:
                 cost = cp.sum_squares(x[:, i] - x @ xi) + self.threshold * cp.norm1(xi)
             else:
-                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.norm1(self.thresholds[i, :] @ xi)
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.norm1(
+                    self.thresholds[i, :] @ xi
+                )
             prob = cp.Problem(
                 cp.Minimize(cost),
                 [xi[i] == 0.0],

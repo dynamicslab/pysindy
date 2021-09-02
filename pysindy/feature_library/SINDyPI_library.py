@@ -24,6 +24,9 @@ class SINDyPILibrary(BaseFeatureLibrary):
         Functions to include in the library. Each function will be
         applied to each input variable xdot.
 
+    t : np.ndarray of time slices
+        Time base to compute Xdot from X for the implicit terms
+
     differentiation_method : differentiation object, optional
         Method for differentiating the data. This must be a class extending
         :class:`pysindy.differentiation_methods.base.BaseDifferentiation` class.
@@ -155,9 +158,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         feature_names = []
         if self.xdot_functions is not None and self.x_functions is not None:
             for k, fdot in enumerate(self.xdot_functions):
-                if (k == 0 and 
-                        self.function_names[-len(self.xdot_functions)]("0") == ""
-                   ):
+                if k == 0 and self.function_names[-len(self.xdot_functions)]("0") == "":
                     nxdot_input_features_ = 1
                 else:
                     nxdot_input_features_ = self.n_input_features_
@@ -172,10 +173,10 @@ class SINDyPILibrary(BaseFeatureLibrary):
                         else:
                             nx_input_features_ = self.n_input_features_
                         for c in self._combinations(
-                                nx_input_features_,
-                                f.__code__.co_argcount,
-                                self.interaction_only,
-                            ):
+                            nx_input_features_,
+                            f.__code__.co_argcount,
+                            self.interaction_only,
+                        ):
                             feature_names.append(
                                 self.function_names[i](*[input_features[j] for j in c])
                                 + self.function_names[len(self.x_functions) + k](

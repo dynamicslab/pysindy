@@ -27,6 +27,7 @@ from .optimizers import ConstrainedSR3
 from .optimizers import TrappingSR3
 from .optimizers import SINDyOptimizer
 from .optimizers import SR3
+from .optimizers import SSR
 from .optimizers import STLSQ
 
 

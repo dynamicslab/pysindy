@@ -19,6 +19,7 @@ from pysindy.feature_library import CustomLibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SR3
+from pysindy.optimizers import SSR
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
@@ -61,6 +62,7 @@ class DummyModelNoCoef(BaseEstimator):
     [
         (Lasso, True),
         (STLSQ, True),
+        (SSR, True),
         (SR3, True),
         (ConstrainedSR3, True),
         (TrappingSR3, True),
@@ -80,6 +82,7 @@ def data(request):
     "optimizer",
     [
         STLSQ(),
+        SSR(),
         SR3(),
         ConstrainedSR3(),
         TrappingSR3(),
@@ -105,7 +108,7 @@ def test_fit(data, optimizer):
 
 @pytest.mark.parametrize(
     "optimizer",
-    [STLSQ(), SR3()],
+    [STLSQ(), SSR(), SR3()],
 )
 def test_not_fitted(optimizer):
     with pytest.raises(NotFittedError):
@@ -250,6 +253,9 @@ def test_trapping_cubic_library(params):
     "error, optimizer, params",
     [
         (ValueError, STLSQ, dict(alpha=-1)),
+        (ValueError, SSR, dict(alpha=-1)),
+        (ValueError, SSR, dict(criteria="None")),
+        (ValueError, SSR, dict(max_iter=-1)),
         (NotImplementedError, SR3, dict(thresholder="l2")),
         (NotImplementedError, ConstrainedSR3, dict(thresholder="l2")),
         (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),
@@ -436,6 +442,7 @@ def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
     "optimizer",
     [
         STLSQ(max_iter=1),
+        SSR(max_iter=1),
         SR3(max_iter=1),
         ConstrainedSR3(max_iter=1),
         TrappingSR3(max_iter=1),

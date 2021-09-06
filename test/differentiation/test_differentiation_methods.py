@@ -109,6 +109,12 @@ def test_order_error():
         FiniteDifference(order=3)
     with pytest.raises(ValueError):
         FiniteDifference(order=-1)
+    with pytest.raises(ValueError):
+        FiniteDifference(d=-1)
+    with pytest.raises(ValueError):
+        FiniteDifference(d=4)
+    with pytest.raises(ValueError):
+        FiniteDifference(d=2, order=1)
 
 
 def test_base_class(data_derivative_1d):

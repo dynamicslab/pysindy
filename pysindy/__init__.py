@@ -22,6 +22,7 @@ from .feature_library import CustomLibrary
 from .feature_library import FourierLibrary
 from .feature_library import IdentityLibrary
 from .feature_library import PolynomialLibrary
+from .feature_library import PDELibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import TrappingSR3

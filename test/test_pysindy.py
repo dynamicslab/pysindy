@@ -601,3 +601,58 @@ def test_linear_constraints(data_lorenz):
     np.testing.assert_allclose(
         np.array([coeffs[0, 3], coeffs[1, 0]]), np.array([1 / target_1, 1 / target_2])
     )
+
+
+def test_boosting(data_lorenz):
+    x, t = data_lorenz
+    library = PolynomialLibrary().fit(x)
+
+    constraint_rhs = np.ones(2)
+    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
+
+    target_1, target_2 = 1, 3
+    constraint_lhs[0, 3] = target_1
+    constraint_lhs[1, library.n_output_features_] = target_2
+
+    optimizer = ConstrainedSR3(
+        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
+    )
+    model = SINDy(feature_library=library, optimizer=optimizer).fit(
+        x, t, boosting=True, n_models=10, n_subset=len(t) // 2
+    )
+
+    np.testing.assert_allclose(np.shape(model.coef_list)[0], 10)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(boosting=False, n_models=-1, n_subset=1),
+        dict(boosting=False, n_models=0, n_subset=1),
+        dict(boosting=False, n_models=1, n_subset=0),
+        dict(boosting=False, n_models=1, n_subset=-1),
+        dict(boosting=True, n_models=-1, n_subset=1),
+        dict(boosting=True, n_models=0, n_subset=1),
+        dict(boosting=True, n_models=1, n_subset=0),
+        dict(boosting=True, n_models=1, n_subset=-1),
+        dict(boosting=True, n_models=1, n_subset=0),
+        dict(boosting=True, n_models=1, n_subset=None),
+        dict(boosting=True, n_models=None, n_subset=1),
+    ],
+)
+def test_bad_boosting_params(data_lorenz, params):
+    x, t = data_lorenz
+    library = PolynomialLibrary().fit(x)
+
+    constraint_rhs = np.ones(2)
+    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
+
+    target_1, target_2 = 1, 3
+    constraint_lhs[0, 3] = target_1
+    constraint_lhs[1, library.n_output_features_] = target_2
+
+    optimizer = ConstrainedSR3(
+        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
+    )
+    with pytest.raises(ValueError):
+        SINDy(feature_library=library, optimizer=optimizer).fit(x, t, **params)

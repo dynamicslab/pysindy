@@ -21,6 +21,7 @@ from .feature_library import PolynomialLibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
 from .utils import drop_nan_rows
+from .utils import drop_random_rows
 from .utils import equations
 from .utils import validate_control_variables
 from .utils import validate_input
@@ -175,6 +176,9 @@ class SINDy(BaseEstimator):
         multiple_trajectories=False,
         unbias=True,
         quiet=False,
+        boosting=False,
+        n_subset=None,
+        n_models=None,
     ):
         """
         Fit a SINDy model.
@@ -234,6 +238,15 @@ class SINDy(BaseEstimator):
         quiet: boolean, optional (default False)
             Whether or not to suppress warnings during model fitting.
 
+        boosting : boolean, optional (default False)
+            Whether or not to use boosting to generate n_models models
+
+        n_subset : int, optional (default None)
+            Number of time points to use for boosting
+
+        n_models : int, optional (default None)
+            Number of models to generate via boosting
+
         Returns
         -------
         self: a fitted :class:`SINDy` instance
@@ -252,6 +265,15 @@ class SINDy(BaseEstimator):
             )
             self.n_control_features_ = u.shape[1]
 
+        if boosting and ((n_models is None) or (n_subset is None)):
+            raise ValueError(
+                "If using boosting, need to specify the number of "
+                "models to generate, and the number of time points to use"
+            )
+        if (n_models is not None) and n_models <= 0:
+            raise ValueError("n_models must be a positive integer")
+        if (n_subset is not None) and n_subset <= 0:
+            raise ValueError("n_subset must be a positive integer")
         if multiple_trajectories:
             x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         else:
@@ -289,7 +311,14 @@ class SINDy(BaseEstimator):
             warnings.filterwarnings(action, category=LinAlgWarning)
             warnings.filterwarnings(action, category=UserWarning)
 
-            self.model.fit(x, x_dot)
+            if boosting:
+                self.coef_list = []
+                for i in range(n_models):
+                    x_boost, x_dot_boost = drop_random_rows(x, x_dot, n_subset)
+                    self.model.fit(x_boost, x_dot_boost)
+                    self.coef_list.append(self.model.steps[-1][1].coef_)
+            else:
+                self.model.fit(x, x_dot)
 
         self.n_input_features_ = self.model.steps[0][1].n_input_features_
         self.n_output_features_ = self.model.steps[0][1].n_output_features_

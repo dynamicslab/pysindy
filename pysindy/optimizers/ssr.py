@@ -162,12 +162,13 @@ class SSR(BaseOptimizer):
                             x[:, inds[i, :]], y[:, i], coef[i, :], inds[i, :]
                         )
                     inds[i, ind] = False
-                    if not np.any(inds[i, :]):
+                    if np.sum(np.asarray(inds[i, :], dtype=int)) <= n_targets:
                         # No terms left to sparsify
-                        continue
+                        break
                     coef[i, inds[i, :]] = self._regress(x[:, inds[i, :]], y[:, i])
+
             self.history_.append(np.copy(coef))
-            if np.sum(np.asarray(inds, dtype=int)) == 3:
+            if np.sum(np.asarray(inds, dtype=int)) == n_targets:
                 # each equation has one last term
                 break
         else:

@@ -2,6 +2,7 @@
 Unit tests for feature libraries.
 """
 import pytest
+from numpy import zeros
 from scipy.sparse import coo_matrix
 from scipy.sparse import csc_matrix
 from scipy.sparse import csr_matrix
@@ -77,7 +78,19 @@ def test_bad_parameters():
         PDELibrary(
             library_functions=library_functions,
             spatial_grid=range(10),
-            derivative_order=4,
+            derivative_order=-1,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=zeros((10, 10)),
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=zeros((10, 10, 10, 10, 10)),
         )
 
 

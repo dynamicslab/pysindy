@@ -259,7 +259,7 @@ def test_trapping_cubic_library(params):
         (ValueError, SSR, dict(alpha=-1)),
         (ValueError, SSR, dict(criteria="None")),
         (ValueError, SSR, dict(max_iter=-1)),
-        (ValueError, FROLS, dict(tol=-1)),
+        (ValueError, FROLS, dict(max_iter=-1)),
         (NotImplementedError, SR3, dict(thresholder="l2")),
         (NotImplementedError, ConstrainedSR3, dict(thresholder="l2")),
         (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),
@@ -446,7 +446,6 @@ def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
     "optimizer",
     [
         STLSQ(max_iter=1),
-        SSR(max_iter=1),
         SR3(max_iter=1),
         ConstrainedSR3(max_iter=1),
         TrappingSR3(max_iter=1),

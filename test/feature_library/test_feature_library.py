@@ -92,6 +92,52 @@ def test_bad_parameters():
             library_functions=library_functions,
             spatial_grid=zeros((10, 10, 10, 10, 10)),
         )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=range(10),
+            weak_form=True,
+            p=-1,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        PDELibrary(
+            library_functions=library_functions,
+            weak_form=True,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=range(10),
+            weak_form=True,
+            Hx=-1,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=range(10),
+            weak_form=True,
+            Hx=11,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=range(10),
+            weak_form=True,
+            domain_centers=zeros(10),
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=range(10),
+            weak_form=True,
+            domain_centers=zeros((10, 3)),
+        )
 
 
 @pytest.mark.parametrize(

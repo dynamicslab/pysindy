@@ -19,6 +19,11 @@ class FiniteDifference(BaseDifferentiation):
     d : int, 1, 2, 3, 4 optional (default 1)
         The order of derivative to take (d > 3 inaccurate).
 
+    is_uniform : boolean, optional (default False)
+        Parameter to tell the differentiation that, although a 1D or 2D
+        grid is passed, it is uniform so can use dx instead of the full
+        grid array.
+
     drop_endpoints: boolean, optional (default False)
         Whether or not derivatives are computed for endpoints.
         If False, endpoints will be set to np.nan.
@@ -40,7 +45,7 @@ class FiniteDifference(BaseDifferentiation):
            [ 0.53780339, -0.84443737]])
     """
 
-    def __init__(self, order=2, d=1, drop_endpoints=False):
+    def __init__(self, order=2, d=1, is_uniform=False, drop_endpoints=False):
         if order <= 0 or not isinstance(order, int):
             raise ValueError("order must be a positive int")
         elif order > 2:
@@ -58,6 +63,7 @@ class FiniteDifference(BaseDifferentiation):
         self.d = d
         self.order = order
         self.drop_endpoints = drop_endpoints
+        self.is_uniform = is_uniform
 
     def _differentiate(self, x, t):
         """
@@ -76,6 +82,8 @@ class FiniteDifference(BaseDifferentiation):
         Note that in order to maintain compatibility with sklearn the,
         array returned, x_dot, always satisfies np.ndim(x_dot) == 2.
         """
+        if self.is_uniform and not np.isscalar(t):
+            t = t[1] - t[0]
 
         x_dot = np.full_like(x, fill_value=np.nan)
 
@@ -107,8 +115,8 @@ class FiniteDifference(BaseDifferentiation):
         Note that in order to maintain compatibility with sklearn the,
         array returned, x_dot, always satisfies np.ndim(x_dot) == 2.
         """
-        # if d is not None:
-        #     print(d, np.any(np.isnan(x)))
+        if self.is_uniform and not np.isscalar(t):
+            t = t[1] - t[0]
 
         if d is None:
             d = self.d

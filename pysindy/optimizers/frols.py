@@ -8,16 +8,14 @@ class FROLS(BaseOptimizer):
 
     Attempts to minimize the objective function
     :math:`\\|y - Xw\\|^2_2 + \\alpha \\|w\\|^2_2`
-    by iteratively performing least squares and masking out
-    elements of the weight array w that are below a given threshold.
+    by iteractively selecting the most correlated
+    function in the library. This is a greedy algorithm.
 
     See the following reference for more details:
 
-        Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
-        "Discovering governing equations from data by sparse
-        identification of nonlinear dynamical systems."
-        Proceedings of the national academy of sciences
-        113.15 (2016): 3932-3937.
+        Billings, Stephen A. Nonlinear system identification:
+        NARMAX methods in the time, frequency, and spatio-temporal domains.
+        John Wiley & Sons, 2013.
 
     Parameters
     ----------
@@ -40,8 +38,9 @@ class FROLS(BaseOptimizer):
         If passed, compute the MSE errors with an extra L0 term with
         strength equal to L0_penalty times the condition number of Theta.
 
-    tol : float, optional (default 1e-2)
-        Rank tolerance for the global error (the stopping condition).
+    max_iter : int, optional (default 10)
+        Maximum iterations of the optimization algorithm. This determines
+        the number of nonzero terms chosen by the FROLS algorithm.
 
     Attributes
     ----------
@@ -83,19 +82,19 @@ class FROLS(BaseOptimizer):
         normalize_columns=False,
         fit_intercept=False,
         copy_X=True,
-        tol=1e-2,
         L0_penalty=None,
+        max_iter=10,
     ):
         super(FROLS, self).__init__(
             normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            max_iter=max_iter,
         )
         self.normalize_columns = normalize_columns
-        if tol <= 0:
-            raise ValueError("Tolerance must be >= 0")
-        self.tol = tol
         self.L0_penalty = L0_penalty
+        if self.max_iter <= 0:
+            raise ValueError("Max iteration must be > 0")
 
     def _normed_cov(self, a, b):
         return np.vdot(a, b) / np.vdot(a, a)
@@ -175,9 +174,7 @@ class FROLS(BaseOptimizer):
                 A[i, i] = 1.0
                 Q[:, i] = Qs[:, L[i]].copy()
                 Qs *= 0.0
-                # if sum(err_glob) < (1 - self.tol):
-                #     # could not (further) select important features
-                #     break
+
                 # Invert orthogonal coefficient vector
                 # to get coefficients for original functions
                 alpha = np.linalg.lstsq(A[:i, :i], g_glob[:i], rcond=1e-6)[0]
@@ -195,9 +192,8 @@ class FROLS(BaseOptimizer):
                 else:
                     self.history_[i, k, :] = np.copy(coef_k)
 
-                if i == n_features - 1:
-                    # Add to coefficient matrix
-                    coef[k, :] = np.copy(coef_k)
+                if i >= self.max_iter:
+                    break
 
         # Figure out lowest MSE coefficients
         err = np.zeros(n_features)

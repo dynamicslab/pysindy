@@ -1,7 +1,4 @@
-import warnings
-
 import numpy as np
-from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ridge_regression
 
 from .base import BaseOptimizer
@@ -210,20 +207,5 @@ class SSR(BaseOptimizer):
             if np.sum(np.asarray(inds[i, :], dtype=int)) <= n_targets:
                 # each equation has one last term
                 break
-        else:
-            warnings.warn(
-                "SSR._reduce did not converge after {} iterations.".format(
-                    self.max_iter
-                ),
-                ConvergenceWarning,
-            )
-            try:
-                coef
-            except NameError:
-                coef = self.coef_
-                warnings.warn(
-                    "SSR._reduce has no iterations left to determine coef",
-                    ConvergenceWarning,
-                )
         err_min = np.argmin(self.err_history_)
         self.coef_ = np.asarray(self.history_)[err_min, :, :]

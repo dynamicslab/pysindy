@@ -157,7 +157,7 @@ class STLSQ(BaseOptimizer):
         """
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess
-        self.cond_num_ = np.linalg.cond(x)
+        self.Theta = x
 
         ind = self.ind_
         n_samples, n_features = x.shape

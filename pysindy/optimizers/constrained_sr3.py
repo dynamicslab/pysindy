@@ -91,7 +91,8 @@ class ConstrainedSR3(SR3):
         the mean and dividing by the l2-norm.
 
     normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms)
+        Normalize the columns of x (the SINDy library terms). Note that
+        this parameter is incompatible with the constraints!
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -256,6 +257,7 @@ class ConstrainedSR3(SR3):
             for i in range(n_features):
                 reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
                 x_normed[:, i] = reg[i] * x[:, i]
+                coef_sparse[i, :] = coef_sparse[i, :] / reg[i]
 
         if self.use_trimming:
             coef_full = coef_sparse.copy()

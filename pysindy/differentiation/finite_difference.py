@@ -130,6 +130,11 @@ class FiniteDifference(BaseDifferentiation):
                         + 3 / 2 * x[-3, :]
                         - x[-4, :] / 3
                     ) / t
+                    # x_dot[0, :] = (-3.0 / 2 * x[0, :] +
+                    #                2 * x[1, :] - x[2, :] / 2) / t
+                    # x_dot[-1, :] = (
+                    #     3.0 / 2 * x[-1, :] - 2 * x[-2, :] + x[-3, :] / 2
+                    # ) / t
 
             # Variable timestep
             else:
@@ -145,6 +150,13 @@ class FiniteDifference(BaseDifferentiation):
                         + 3 / 2 * x[-3, :]
                         - x[-4, :] / 3
                     ) / (t_diff[-1] / 2)
+                    # x_dot[0, :] = (-3.0 / 2 * x[0, :] +
+                    #                 2 * x[1, :] - x[2, :] / 2) / (
+                    #     t_diff[0] / 2
+                    # )
+                    # x_dot[-1, :] = (
+                    #     3.0 / 2 * x[-1, :] - 2 * x[-2, :] + x[-3, :] / 2
+                    # ) / (t_diff[0] / 2)
 
         if d == 2:
 

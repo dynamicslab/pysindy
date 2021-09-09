@@ -17,6 +17,7 @@ from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
 from pysindy.optimizers import ConstrainedSR3
+from pysindy.optimizers import FROLS
 from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import SSR
@@ -63,6 +64,7 @@ class DummyModelNoCoef(BaseEstimator):
         (Lasso, True),
         (STLSQ, True),
         (SSR, True),
+        (FROLS, True),
         (SR3, True),
         (ConstrainedSR3, True),
         (TrappingSR3, True),
@@ -83,6 +85,7 @@ def data(request):
     [
         STLSQ(),
         SSR(),
+        FROLS(),
         SR3(),
         ConstrainedSR3(),
         TrappingSR3(),
@@ -108,7 +111,7 @@ def test_fit(data, optimizer):
 
 @pytest.mark.parametrize(
     "optimizer",
-    [STLSQ(), SSR(), SR3()],
+    [STLSQ(), SSR(), FROLS(), SR3()],
 )
 def test_not_fitted(optimizer):
     with pytest.raises(NotFittedError):
@@ -256,6 +259,7 @@ def test_trapping_cubic_library(params):
         (ValueError, SSR, dict(alpha=-1)),
         (ValueError, SSR, dict(criteria="None")),
         (ValueError, SSR, dict(max_iter=-1)),
+        (ValueError, FROLS, dict(tol=-1)),
         (NotImplementedError, SR3, dict(thresholder="l2")),
         (NotImplementedError, ConstrainedSR3, dict(thresholder="l2")),
         (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),

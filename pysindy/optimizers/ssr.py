@@ -35,8 +35,18 @@ class SSR(BaseOptimizer):
         the regressors X will be normalized before regression by subtracting
         the mean and dividing by the l2-norm.
 
+    normalize_columns : boolean, optional (default False)
+        Normalize the columns of x (the SINDy library terms).
+
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
+
+    L0_penalty : float, optional (default None)
+        If passed, compute the MSE errors with an extra L0 term with
+        strength equal to L0_penalty times the condition number of Theta.
+
+    criteria : string, optional (default "coefficient_value")
+        The criteria to use for truncating a coefficient each iteration.
 
     Attributes
     ----------
@@ -45,6 +55,10 @@ class SSR(BaseOptimizer):
 
     history_ : list
         History of ``coef_``. ``history_[k]`` contains the values of
+        ``coef_`` at iteration k of SSR
+
+    err_history_ : list
+        History of ``coef_``. ``history_[k]`` contains the MSE of each
         ``coef_`` at iteration k of SSR
 
     Examples
@@ -72,10 +86,12 @@ class SSR(BaseOptimizer):
         alpha=0.05,
         max_iter=20,
         ridge_kw=None,
+        normalize_columns=False,
         normalize=False,
         fit_intercept=False,
         copy_X=True,
         criteria="coefficient_value",
+        L0_penalty=None,
     ):
         super(SSR, self).__init__(
             max_iter=max_iter,
@@ -101,6 +117,8 @@ class SSR(BaseOptimizer):
         self.criteria = criteria
         self.alpha = alpha
         self.ridge_kw = ridge_kw
+        self.normalize_columns = normalize_columns
+        self.L0_penalty = L0_penalty
 
     def _coefficient_value(self, coef):
         """Eliminate the smallest element of the weight vector(s)"""
@@ -120,7 +138,7 @@ class SSR(BaseOptimizer):
             mask = np.ones(x_shape, dtype=bool)
             mask[i] = False
             c[i, :] = self._regress(x[:, mask], y)
-            err[i] = np.mean((y - x[:, mask] @ c[i, :]) ** 2)
+            err[i] = np.sum((y - x[:, mask] @ c[i, :]) ** 2)
         min_err = np.argmin(err)
         # Figure out where this index is in the larger coef matrix
         total_ind = min_err
@@ -150,8 +168,17 @@ class SSR(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
 
-        coef = self._regress(x, y)
+        self.Theta = x
+        x_normed = np.copy(x)
+        if self.normalize_columns:
+            reg = np.zeros(n_features)
+            for i in range(n_features):
+                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
+                x_normed[:, i] = reg[i] * x[:, i]
+
+        coef = self._regress(x_normed, y)
         inds = np.ones((n_targets, n_features), dtype=bool)
+        self.err_history_ = []
         for k in range(self.max_iter):
             for i in range(n_targets):
                 if not np.allclose(coef[i, :], 0.0):
@@ -159,16 +186,28 @@ class SSR(BaseOptimizer):
                         coef[i, :], ind = self._coefficient_value(coef[i, :])
                     else:
                         coef[i, :], ind = self._model_residual(
-                            x[:, inds[i, :]], y[:, i], coef[i, :], inds[i, :]
+                            x_normed[:, inds[i, :]], y[:, i], coef[i, :], inds[i, :]
                         )
                     inds[i, ind] = False
                     if np.sum(np.asarray(inds[i, :], dtype=int)) <= n_targets:
                         # No terms left to sparsify
                         break
-                    coef[i, inds[i, :]] = self._regress(x[:, inds[i, :]], y[:, i])
-
-            self.history_.append(np.copy(coef))
-            if np.sum(np.asarray(inds, dtype=int)) == n_targets:
+                    coef[i, inds[i, :]] = self._regress(
+                        x_normed[:, inds[i, :]], y[:, i]
+                    )
+            if self.normalize_columns:
+                self.history_.append(np.multiply(reg, np.copy(coef)))
+            else:
+                self.history_.append(np.copy(coef))
+            if self.L0_penalty is not None:
+                l0_penalty = self.L0_penalty * np.linalg.cond(x)
+                self.err_history_.append(
+                    np.sum((y - x_normed @ coef.T) ** 2)
+                    + l0_penalty * np.count_nonzero(coef)
+                )
+            else:
+                self.err_history_.append(np.sum((y - x_normed @ coef.T) ** 2))
+            if np.sum(np.asarray(inds[i, :], dtype=int)) <= n_targets:
                 # each equation has one last term
                 break
         else:
@@ -186,4 +225,5 @@ class SSR(BaseOptimizer):
                     "SSR._reduce has no iterations left to determine coef",
                     ConvergenceWarning,
                 )
-        self.coef_ = coef
+        err_min = np.argmin(self.err_history_)
+        self.coef_ = np.asarray(self.history_)[err_min, :, :]

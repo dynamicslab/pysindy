@@ -4,6 +4,7 @@ from itertools import combinations_with_replacement as combinations_w_r
 from numpy import asarray
 from numpy import empty
 from numpy import hstack
+from numpy import ones
 from numpy import reshape
 from numpy import zeros
 from sklearn.utils import check_array
@@ -47,6 +48,11 @@ class PDELibrary(BaseFeatureLibrary):
         will be included.
         If False, all combinations will be included.
 
+    include_bias : boolean, optional (default True)
+        If True (default), then include a bias column, the feature in which
+        all polynomial powers are zero (i.e. a column of ones - acts as an
+        intercept term in a linear model).
+
     Attributes
     ----------
     functions : list of functions
@@ -86,12 +92,14 @@ class PDELibrary(BaseFeatureLibrary):
         spatial_grid=None,
         function_names=None,
         interaction_only=True,
+        include_bias=True,
     ):
         super(PDELibrary, self).__init__()
         self.derivative_order = derivative_order
         self.spatial_grid = spatial_grid
         self.functions = library_functions
         self.function_names = function_names
+        self.include_bias = include_bias
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
                 "library_functions and function_names must have the same"
@@ -108,8 +116,8 @@ class PDELibrary(BaseFeatureLibrary):
             )
         if spatial_grid is not None and (
             (len(spatial_grid.shape) != 1)
-            or (len(spatial_grid.shape) != 3)
-            or (len(spatial_grid.shape) != 4)
+            and (len(spatial_grid.shape) != 3)
+            and (len(spatial_grid.shape) != 4)
         ):
             raise ValueError("Spatial grid size is incorrect")
         self.interaction_only = interaction_only
@@ -234,6 +242,8 @@ class PDELibrary(BaseFeatureLibrary):
         if input_features is None:
             input_features = ["x%d" % i for i in range(self.n_input_features_)]
         feature_names = []
+        if self.include_bias:
+            feature_names.append("1")
         for i, f in enumerate(self.functions):
             for c in self._combinations(
                 self.n_input_features_, f.__code__.co_argcount, self.interaction_only
@@ -283,7 +293,7 @@ class PDELibrary(BaseFeatureLibrary):
             if len((self.spatial_grid).shape) == 1:
                 num_gridpts = (self.spatial_grid).shape[0]
                 num_time = n_samples // num_gridpts
-                u = reshape(x, (num_gridpts, num_time, n_features))
+                u = reshape(x, (num_gridpts, num_time, n_features), "F")
                 self.u_derivs = zeros(
                     (num_gridpts, num_time, n_features, self.derivative_order)
                 )
@@ -291,13 +301,15 @@ class PDELibrary(BaseFeatureLibrary):
                     for j in range(self.derivative_order):
                         self.u_derivs[:, i, :, j] = FiniteDifference(
                             d=j + 1
-                        )._differentiate(u[:, i, :], self.spatial_grid)
+                        )._differentiate(
+                            u[:, i, :], self.spatial_grid[1] - self.spatial_grid[0]
+                        )  # self.spatial_grid)
             # 2D space
             elif len(self.spatial_grid.shape) == 3:
                 num_gridx = (self.spatial_grid).shape[0]
                 num_gridy = (self.spatial_grid).shape[1]
                 num_time = n_samples // num_gridx // num_gridy
-                u = reshape(x, (num_gridx, num_gridy, num_time, n_features))
+                u = reshape(x, (num_gridx, num_gridy, num_time, n_features), "F")
                 self.u_derivs = self._make_2D_derivatives(u)
 
         n_output_features = 0
@@ -311,7 +323,8 @@ class PDELibrary(BaseFeatureLibrary):
             n_output_features += n_output_features * n_features * self.num_derivs
             # Add the pure derivative library terms
             n_output_features += n_features * self.num_derivs
-
+        if self.include_bias:
+            n_output_features += 1
         self.n_output_features_ = n_output_features
         if self.function_names is None:
             self.function_names = list(
@@ -392,6 +405,9 @@ class PDELibrary(BaseFeatureLibrary):
 
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0
+        if self.include_bias:
+            xp[:, library_idx] = ones(n_samples)
+            library_idx += 1
         for f in self.functions:
             for c in self._combinations(
                 self.n_input_features_, f.__code__.co_argcount, self.interaction_only
@@ -406,31 +422,35 @@ class PDELibrary(BaseFeatureLibrary):
             if len((self.spatial_grid).shape) == 1:
                 num_gridpts = (self.spatial_grid).shape[0]
                 num_time = n_samples // num_gridpts
-                u = reshape(x, (num_gridpts, num_time, n_features))
+                u = reshape(x, (num_gridpts, num_time, n_features), "F")
                 u_derivs = zeros(
                     (num_gridpts, num_time, n_features, self.derivative_order)
                 )
                 for i in range(num_time):
                     for j in range(self.derivative_order):
                         u_derivs[:, i, :, j] = FiniteDifference(d=j + 1)._differentiate(
-                            u[:, i, :], self.spatial_grid
+                            u[:, i, :],
+                            self.spatial_grid[1]
+                            - self.spatial_grid[0],  # self.spatial_grid
                         )
                 u_derivs = asarray(
                     reshape(
                         u_derivs,
                         (num_gridpts * num_time, n_features, self.derivative_order),
+                        "F",
                     )
                 )
             elif len((self.spatial_grid).shape) == 3:
                 num_gridx = (self.spatial_grid).shape[0]
                 num_gridy = (self.spatial_grid).shape[1]
                 num_time = n_samples // num_gridx // num_gridy
-                u = reshape(x, (num_gridx, num_gridy, num_time, n_features))
+                u = reshape(x, (num_gridx, num_gridy, num_time, n_features), "F")
                 u_derivs = self._make_2D_derivatives(u)
                 u_derivs = asarray(
                     reshape(
                         u_derivs,
                         (num_gridx * num_gridy * num_time, n_features, self.num_derivs),
+                        "F",
                     )
                 )
 
@@ -438,13 +458,13 @@ class PDELibrary(BaseFeatureLibrary):
                 return y
 
             if len((self.spatial_grid).shape) == 1:
-                for k in range(self.derivative_order):
+                for k in range(self.num_derivs):
                     for kk in range(n_features):
                         xp[:, library_idx] = derivative_function(u_derivs[:, kk, k])
                         library_idx += 1
 
                 # All the mixed derivative/non-derivative terms
-                for k in range(self.derivative_order):
+                for k in range(self.num_derivs):
                     for kk in range(n_features):
                         for f in self.functions:
                             for c in self._combinations(
@@ -458,13 +478,13 @@ class PDELibrary(BaseFeatureLibrary):
                                 library_idx += 1
 
             if len((self.spatial_grid).shape) == 3:
-                for k in range(self.derivative_order):
+                for k in range(self.num_derivs):
                     for kk in range(n_features):
                         xp[:, library_idx] = derivative_function(u_derivs[:, kk, k])
                         library_idx += 1
 
                 # All the mixed derivative/non-derivative terms
-                for k in range(self.derivative_order):
+                for k in range(self.num_derivs):
                     for kk in range(n_features):
                         for f in self.functions:
                             for c in self._combinations(

@@ -6,11 +6,13 @@ from numpy import empty
 from numpy import hstack
 from numpy import linspace
 from numpy import ones
+from numpy import ravel
 from numpy import reshape
 from numpy import shape
 from numpy import zeros
 from numpy.random import uniform
 from scipy.integrate import trapezoid
+from scipy.interpolate import interp1d
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
@@ -71,14 +73,14 @@ class PDELibrary(BaseFeatureLibrary):
         specified, defaults to size (100, n_spatial_dims).
 
     Hx : float, optional (default None)
-        Length of the square subdomains. If weak_form is True but Hx is not
-        specified, defaults to Hx = Lx / 20, where Lx is the length of the
-        full domain.
+        Half of the length of the square subdomains. If weak_form is True
+        but Hx is not specified, defaults to Hx = Lx / 20, where
+        Lx is the length of the full domain.
 
-    Hx : float, optional (default None)
-        Height of the square subdomains. If weak_form is True but Hy is not
-        specified, defaults to Hy = Ly / 20, where Lx is the length of the
-        full domain.
+    Hy : float, optional (default None)
+        Half of the height of the square subdomains. If weak_form is True
+        but Hy is not specified, defaults to Hy = Ly / 20, where
+        Ly is the height of the full domain.
 
     p : int, optional (default 4)
         Positive integer to define the polynomial degree of the spatial weights
@@ -172,12 +174,13 @@ class PDELibrary(BaseFeatureLibrary):
         if weak_form and spatial_grid is None:
             raise ValueError("Weak form requires user to pass a spatial grid.")
         self.weak_form = weak_form
+        self.num_pts_per_domain = 50
         self.p = p
         if weak_form and spatial_grid is not None:
             if p < 0:
                 raise ValueError("Poly degree of the spatial weights must be > 0")
-            if self.Hx is not None:
-                if self.Hx <= 0:
+            if Hx is not None:
+                if Hx <= 0:
                     raise ValueError("Hx must be a positive float")
                 if len(spatial_grid.shape) == 1:
                     x1 = spatial_grid[0]
@@ -185,27 +188,25 @@ class PDELibrary(BaseFeatureLibrary):
                 if len(spatial_grid.shape) == 3:
                     x1 = spatial_grid[0, 0, 0]
                     x2 = spatial_grid[-1, 0, 0]
-                if self.Hx >= (x2 - x1):
-                    raise ValueError("Hx is bigger than the full domain")
+                if Hx >= (x2 - x1) / 2.0:
+                    raise ValueError("2 * Hx is bigger than the full domain length")
             else:
                 if len(spatial_grid.shape) == 1:
                     x1 = spatial_grid[0]
                     x2 = spatial_grid[-1]
-                    Lx = x2 - x1
-                    self.Hx = Lx / 20.0
                 if len(spatial_grid.shape) == 3:
                     x1 = spatial_grid[0, 0, 0]
                     x2 = spatial_grid[-1, 0, 0]
-                    Lx = x2 - x1
-                    self.Hx = Lx / 20.0
-            if self.Hy is not None and len(spatial_grid.shape) == 3:
-                if self.Hy <= 0:
+                Lx = x2 - x1
+                self.Hx = Lx / 20.0
+            if Hy is not None and len(spatial_grid.shape) == 3:
+                if Hy <= 0:
                     raise ValueError("Hy must be a positive float")
                 y1 = spatial_grid[0, 0, 1]
                 y2 = spatial_grid[0, -1, 1]
-                if self.Hy >= (y2 - y1):
-                    raise ValueError("Hy is bigger than the full domain")
-            elif self.Hy is None and len(spatial_grid.shape) == 3:
+                if Hy >= (y2 - y1) / 2.0:
+                    raise ValueError("2 * Hy is bigger than the full domain height")
+            elif Hy is None and len(spatial_grid.shape) == 3:
                 y1 = spatial_grid[0, 0, 0]
                 y2 = spatial_grid[0, -1, 1]
                 Ly = y2 - y1
@@ -215,7 +216,11 @@ class PDELibrary(BaseFeatureLibrary):
                     "Subdomain center points must have shape "
                     "(n_subdomains, n_spatial_dims)."
                 )
-            elif shape(domain_centers)[1] != 1 and shape(domain_centers)[1] != 2:
+            elif (
+                domain_centers is not None
+                and shape(domain_centers)[1] != 1
+                and shape(domain_centers)[1] != 2
+            ):
                 raise ValueError("Subdomains only supported in 1D or 2D")
             if domain_centers is None:
                 self.K = 100
@@ -223,7 +228,7 @@ class PDELibrary(BaseFeatureLibrary):
                     x1 = spatial_grid[0]
                     x2 = spatial_grid[-1]
                     domain_centers = uniform(
-                        x1 + self.Hx / 2.0, x2 - self.Hx / 2.0, size=(self.K, 1)
+                        x1 + self.Hx, x2 - self.Hx, size=(self.K, 1)
                     )
                 if len(spatial_grid.shape) == 3:
                     x1 = spatial_grid[0, 0, 0]
@@ -231,10 +236,10 @@ class PDELibrary(BaseFeatureLibrary):
                     y1 = spatial_grid[0, 0, 0]
                     y2 = spatial_grid[-1, 0, 0]
                     domain_centersx = uniform(
-                        x1 + self.Hx / 2.0, x2 - self.Hx / 2.0, size=(self.K, 1)
+                        x1 + self.Hx, x2 - self.Hx, size=(self.K, 1)
                     )
                     domain_centersy = uniform(
-                        y1 + self.Hy / 2.0, y2 - self.Hy / 2.0, size=(self.K, 1)
+                        y1 + self.Hy, y2 - self.Hy, size=(self.K, 1)
                     )
                     domain_centers = hstack((domain_centersx, domain_centersy))
             else:
@@ -252,14 +257,18 @@ class PDELibrary(BaseFeatureLibrary):
             x_tilde = zeros(shape(x)[0])
             for i in range(shape(x)[0]):
                 x_tilde[i] = (x[i] - self.domain_centers[k, 0]) / self.Hx
-            return (x_tilde ** 2 - 1) ** self.p
+            weights = (x_tilde ** 2 - 1) ** self.p
+            weights = reshape(weights, (len(weights), 1))
+            return weights
         if shape(x)[1] == 2:
             x_tilde = zeros(shape(x)[0])
             y_tilde = zeros(shape(x)[0])
             for i in range(shape(x)[0]):
                 x_tilde[i] = (x[i, 0] - self.domain_centers[k, 0]) / self.Hx
                 y_tilde[i] = (x[i, 1] - self.domain_centers[k, 1]) / self.Hy
-            return (x_tilde ** 2 - 1) ** self.p * (y_tilde ** 2 - 1) ** self.p
+            weights = (x_tilde ** 2 - 1) ** self.p * (y_tilde ** 2 - 1) ** self.p
+            weights = reshape(weights, (len(weights), 1))
+            return weights
 
     def _make_2D_derivatives(self, u):
         (num_gridx, num_gridy, num_time, n_features) = u.shape
@@ -431,39 +440,42 @@ class PDELibrary(BaseFeatureLibrary):
                 num_gridpts = (self.spatial_grid).shape[0]
                 num_time = n_samples // num_gridpts
                 u = reshape(x, (num_gridpts, num_time, n_features), "F")
-
+                self.u_derivs = zeros(
+                    (num_gridpts, num_time, n_features, self.num_derivs)
+                )
+                for i in range(num_time):
+                    for j in range(self.num_derivs):
+                        self.u_derivs[:, i, :, j] = FiniteDifference(
+                            d=j + 1, is_uniform=self.is_uniform
+                        )._differentiate(u[:, i, :], self.spatial_grid)
                 if self.weak_form:
-                    self.u_derivs = zeros(
-                        (self.K, num_time, n_features, self.derivative_order)
+                    self.u_integrals = zeros(
+                        (self.K, num_time, n_features, self.num_derivs)
                     )
+                    u_interp = interp1d(self.spatial_grid, u, axis=0, kind="cubic")
                     for k in range(self.K):
-                        xgrid_k = linspace(
-                            self.domain_centers[k, 0] - self.Hx / 2.0,
-                            self.domain_centers[k, 0] + self.Hx / 2.0,
-                            100,
-                        )
+                        x1_k = self.domain_centers[k, 0] - self.Hx
+                        x2_k = self.domain_centers[k, 0] + self.Hx
+                        xgrid_k = linspace(x1_k, x2_k, self.num_pts_per_domain)
+                        u_new = u_interp(xgrid_k)
                         for i in range(num_time):
-                            for j in range(self.derivative_order):
+                            for j in range(self.num_derivs):
                                 w_diff = FiniteDifference(
                                     d=j + 1, is_uniform=self.is_uniform
                                 )._differentiate(
                                     self._smooth_ppoly(
-                                        self.domain_centers, self.domain_centers, k
+                                        reshape(xgrid_k, (self.num_pts_per_domain, 1)),
+                                        k,
                                     ),
-                                    self.domain_centers[k, 0],
+                                    xgrid_k,
                                 )
-                                self.u_derivs[k, i, j] = trapezoid(
-                                    u[:, i, :] * w_diff, x=xgrid_k
+                                self.u_integrals[k, i, :, j] = (
+                                    trapezoid(
+                                        u_new[:, i, :] * w_diff, x=xgrid_k, axis=0
+                                    )
+                                    * (-1) ** j
                                 )
-                else:
-                    self.u_derivs = zeros(
-                        (num_gridpts, num_time, n_features, self.derivative_order)
-                    )
-                    for i in range(num_time):
-                        for j in range(self.derivative_order):
-                            self.u_derivs[:, i, :, j] = FiniteDifference(
-                                d=j + 1, is_uniform=self.is_uniform
-                            )._differentiate(u[:, i, :], self.spatial_grid)
+
             # 2D space
             elif len(self.spatial_grid.shape) == 3:
                 num_gridx = (self.spatial_grid).shape[0]
@@ -502,7 +514,7 @@ class PDELibrary(BaseFeatureLibrary):
                         list(
                             map(
                                 lambda i: (lambda *x: "".join(x) + "_" + "1" * i),
-                                range(1, self.derivative_order + 1),
+                                range(1, self.num_derivs + 1),
                             )
                         ),
                     )
@@ -563,41 +575,107 @@ class PDELibrary(BaseFeatureLibrary):
         if n_features != self.n_input_features_:
             raise ValueError("x shape does not match training shape")
 
+        if self.weak_form:
+            if len((self.spatial_grid).shape) == 1:
+                num_gridpts = (self.spatial_grid).shape[0]
+                num_time = n_samples // num_gridpts
+            n_samples = self.K * num_time
+
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0
         if self.include_bias:
             xp[:, library_idx] = ones(n_samples)
             library_idx += 1
-        for f in self.functions:
-            for c in self._combinations(
-                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
-            ):
-                xp[:, library_idx] = f(*[x[:, j] for j in c])
-                library_idx += 1
+        if self.weak_form:
+            if len((self.spatial_grid).shape) == 1:
+                for f in self.functions:
+                    for c in self._combinations(
+                        self.n_input_features_,
+                        f.__code__.co_argcount,
+                        self.interaction_only,
+                    ):
+                        vectorized_func = f(*[x[:, j] for j in c])
+                        func = reshape(vectorized_func, (num_gridpts, num_time), "F")
+                        func_final = zeros((self.K, num_time))
+                        func_interp = interp1d(
+                            self.spatial_grid, func, axis=0, kind="cubic"
+                        )
+                        for k in range(self.K):
+                            x1_k = self.domain_centers[k, 0] - self.Hx
+                            x2_k = self.domain_centers[k, 0] + self.Hx
+                            xgrid_k = linspace(x1_k, x2_k, self.num_pts_per_domain)
+                            func_new = func_interp(xgrid_k)
+                            w = self._smooth_ppoly(
+                                reshape(xgrid_k, (self.num_pts_per_domain, 1)), k
+                            )
+                            for i in range(num_time):
+                                func_final[k, i] = trapezoid(
+                                    func_new[:, i] * ravel(w), x=xgrid_k, axis=0
+                                )
+                        xp[:, library_idx] = reshape(func_final, self.K * num_time, "F")
+                        library_idx += 1
+        else:
+            for f in self.functions:
+                for c in self._combinations(
+                    self.n_input_features_,
+                    f.__code__.co_argcount,
+                    self.interaction_only,
+                ):
+                    xp[:, library_idx] = f(*[x[:, j] for j in c])
+                    library_idx += 1
 
         # Need to recompute derivatives because the training
         # and testing data may have different number of time points
         # Need to compute any derivatives now
         if self.spatial_grid is not None:
             if len((self.spatial_grid).shape) == 1:
-                num_gridpts = (self.spatial_grid).shape[0]
-                num_time = n_samples // num_gridpts
                 u = reshape(x, (num_gridpts, num_time, n_features), "F")
-                u_derivs = zeros(
-                    (num_gridpts, num_time, n_features, self.derivative_order)
-                )
+                u_derivs = zeros((num_gridpts, num_time, n_features, self.num_derivs))
                 for i in range(num_time):
-                    for j in range(self.derivative_order):
+                    for j in range(self.num_derivs):
                         u_derivs[:, i, :, j] = FiniteDifference(
                             d=j + 1, is_uniform=self.is_uniform
                         )._differentiate(u[:, i, :], self.spatial_grid)
                 u_derivs = asarray(
                     reshape(
                         u_derivs,
-                        (num_gridpts * num_time, n_features, self.derivative_order),
+                        (num_gridpts * num_time, n_features, self.num_derivs),
                         "F",
                     )
                 )
+                if self.weak_form:
+                    u_integrals = zeros((self.K, num_time, n_features, self.num_derivs))
+                    u_interp = interp1d(self.spatial_grid, u, axis=0, kind="cubic")
+                    for k in range(self.K):
+                        x1_k = self.domain_centers[k, 0] - self.Hx
+                        x2_k = self.domain_centers[k, 0] + self.Hx
+                        xgrid_k = linspace(x1_k, x2_k, self.num_pts_per_domain)
+                        u_new = u_interp(xgrid_k)
+                        for i in range(num_time):
+                            for j in range(self.num_derivs):
+                                w_diff = FiniteDifference(
+                                    d=j + 1, is_uniform=self.is_uniform
+                                )._differentiate(
+                                    self._smooth_ppoly(
+                                        reshape(xgrid_k, (self.num_pts_per_domain, 1)),
+                                        k,
+                                    ),
+                                    xgrid_k,
+                                )
+                                u_integrals[k, i, :, j] = (
+                                    trapezoid(
+                                        u_new[:, i, :] * w_diff, x=xgrid_k, axis=0
+                                    )
+                                    * (-1) ** j
+                                )
+                    u_integrals = asarray(
+                        reshape(
+                            u_integrals,
+                            (self.K * num_time, n_features, self.num_derivs),
+                            "F",
+                        )
+                    )
+
             elif len((self.spatial_grid).shape) == 3:
                 num_gridx = (self.spatial_grid).shape[0]
                 num_gridy = (self.spatial_grid).shape[1]
@@ -612,33 +690,128 @@ class PDELibrary(BaseFeatureLibrary):
                     )
                 )
 
-            def derivative_function(y):
+            def identity_function(y):
                 return y
 
             if len((self.spatial_grid).shape) == 1:
-                for k in range(self.num_derivs):
-                    for kk in range(n_features):
-                        xp[:, library_idx] = derivative_function(u_derivs[:, kk, k])
-                        library_idx += 1
+                if self.weak_form:
+                    for k in range(self.num_derivs):
+                        for kk in range(n_features):
+                            xp[:, library_idx] = identity_function(
+                                u_integrals[:, kk, k]
+                            )
+                            library_idx += 1
+                else:
+                    for k in range(self.num_derivs):
+                        for kk in range(n_features):
+                            xp[:, library_idx] = identity_function(u_derivs[:, kk, k])
+                            library_idx += 1
 
                 # All the mixed derivative/non-derivative terms
-                for k in range(self.num_derivs):
+                for d in range(self.num_derivs):
                     for kk in range(n_features):
-                        for f in self.functions:
-                            for c in self._combinations(
-                                self.n_input_features_,
-                                f.__code__.co_argcount,
-                                self.interaction_only,
-                            ):
-                                xp[:, library_idx] = f(
-                                    *[x[:, j] for j in c]
-                                ) * derivative_function(u_derivs[:, kk, k])
-                                library_idx += 1
+                        if self.weak_form:
+                            for f in self.functions:
+                                for c in self._combinations(
+                                    self.n_input_features_,
+                                    f.__code__.co_argcount,
+                                    self.interaction_only,
+                                ):
+                                    if d >= 1 and d < 3:
+                                        func = f(*[x[:, j] for j in c])
+                                        deriv_term = identity_function(
+                                            u_derivs[:, kk, d]
+                                        )
+                                    else:
+                                        func = f(*[x[:, j] for j in c])
+                                        deriv_term = identity_function(
+                                            u_derivs[:, kk, d - 1]
+                                        )
+                                    func = reshape(func, (num_gridpts, num_time), "F")
+                                    deriv_term = reshape(
+                                        deriv_term, (num_gridpts, num_time), "F"
+                                    )
+                                    func_final = zeros((self.K, num_time))
+                                    func_interp = interp1d(
+                                        self.spatial_grid, func, axis=0, kind="cubic"
+                                    )
+                                    deriv_interp = interp1d(
+                                        self.spatial_grid,
+                                        deriv_term,
+                                        axis=0,
+                                        kind="cubic",
+                                    )
+                                    for k in range(self.K):
+                                        x1_k = self.domain_centers[k, 0] - self.Hx
+                                        x2_k = self.domain_centers[k, 0] + self.Hx
+                                        xgrid_k = linspace(
+                                            x1_k, x2_k, self.num_pts_per_domain
+                                        )
+                                        func_new = func_interp(xgrid_k)
+                                        deriv_new = deriv_interp(xgrid_k)
+
+                                        if d == 0:
+                                            w_func = func_new * self._smooth_ppoly(
+                                                reshape(
+                                                    xgrid_k,
+                                                    (self.num_pts_per_domain, 1),
+                                                ),
+                                                k,
+                                            )
+                                        if d == 1 or d == 2:
+                                            w_func = (-1) * FiniteDifference(
+                                                d=d, is_uniform=self.is_uniform
+                                            )._differentiate(
+                                                func_new
+                                                * self._smooth_ppoly(
+                                                    reshape(
+                                                        xgrid_k,
+                                                        (self.num_pts_per_domain, 1),
+                                                    ),
+                                                    k,
+                                                ),
+                                                xgrid_k,
+                                            )
+                                        if d == 3:
+                                            w_func = FiniteDifference(
+                                                d=d - 1, is_uniform=self.is_uniform
+                                            )._differentiate(
+                                                func_new
+                                                * self._smooth_ppoly(
+                                                    reshape(
+                                                        xgrid_k,
+                                                        (self.num_pts_per_domain, 1),
+                                                    ),
+                                                    k,
+                                                ),
+                                                xgrid_k,
+                                            )
+                                        for i in range(num_time):
+                                            func_final[k, i] = trapezoid(
+                                                w_func[:, i] * deriv_new[:, i],
+                                                x=xgrid_k,
+                                                axis=0,
+                                            )
+                                    xp[:, library_idx] = reshape(
+                                        func_final, self.K * num_time, "F"
+                                    )
+                                    library_idx += 1
+                        else:
+                            for f in self.functions:
+                                for c in self._combinations(
+                                    self.n_input_features_,
+                                    f.__code__.co_argcount,
+                                    self.interaction_only,
+                                ):
+                                    xp[:, library_idx] = f(
+                                        *[x[:, j] for j in c]
+                                    ) * identity_function(u_derivs[:, kk, d])
+                                    library_idx += 1
 
             if len((self.spatial_grid).shape) == 3:
                 for k in range(self.num_derivs):
                     for kk in range(n_features):
-                        xp[:, library_idx] = derivative_function(u_derivs[:, kk, k])
+                        xp[:, library_idx] = identity_function(u_derivs[:, kk, k])
                         library_idx += 1
 
                 # All the mixed derivative/non-derivative terms
@@ -652,6 +825,6 @@ class PDELibrary(BaseFeatureLibrary):
                             ):
                                 xp[:, library_idx] = f(
                                     *[x[:, j] for j in c]
-                                ) * derivative_function(u_derivs[:, kk, k])
+                                ) * identity_function(u_derivs[:, kk, k])
                                 library_idx += 1
         return xp

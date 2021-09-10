@@ -85,19 +85,19 @@ def test_bad_parameters():
         library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
         function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
         SINDyPILibrary(
-            xdot_library_functions=library_functions, function_names=function_names
+            x_dot_library_functions=library_functions, function_names=function_names
         )
     with pytest.raises(ValueError):
         SINDyPILibrary()
     with pytest.raises(ValueError):
         library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        SINDyPILibrary(xdot_library_functions=library_functions)
+        SINDyPILibrary(x_dot_library_functions=library_functions)
     with pytest.raises(ValueError):
         library_functions = [lambda x: x, lambda x: x ** 2]
         function_names = [lambda s: s, lambda s: s + s]
         SINDyPILibrary(
             library_functions=library_functions,
-            xdot_library_functions=library_functions,
+            x_dot_library_functions=library_functions,
             function_names=function_names,
         )
 

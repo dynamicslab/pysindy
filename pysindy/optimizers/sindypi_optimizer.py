@@ -4,11 +4,10 @@ import cvxpy as cp
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 
-from ..utils import get_regularization
 from .sr3 import SR3
 
 
-class SINDyPIoptimizer(SR3):
+class SINDyPI(SR3):
     """
     SINDy-PI optimizer
 
@@ -41,7 +40,8 @@ class SINDyPIoptimizer(SR3):
 
     thresholder : string, optional (default 'l1')
         Regularization function to use. Currently implemented options
-        are 'l1' (l1 norm) and 'weighted_l1' (weighted l1 norm).
+        are 'l1' (l1 norm), 'weighted_l1' (weighted l1 norm), l2, and
+        'weighted_l2' (weighted l2 norm)
 
     max_iter : int, optional (default 10000)
         Maximum iterations of the optimization algorithm.
@@ -54,6 +54,11 @@ class SINDyPIoptimizer(SR3):
         This parameter is ignored when fit_intercept is set to False. If True,
         the regressors X will be normalized before regression by subtracting
         the mean and dividing by the l2-norm.
+
+    normalize_columns : boolean, optional (default False)
+        This parameter normalizes the columns of Theta before the
+        optimization is done. This tends to standardize the columns
+        to similar magnitudes, often improving performance.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -105,8 +110,9 @@ class SINDyPIoptimizer(SR3):
         copy_X=True,
         thresholds=None,
         model_subset=None,
+        normalize_columns=False,
     ):
-        super(SINDyPIoptimizer, self).__init__(
+        super(SINDyPI, self).__init__(
             threshold=threshold,
             tol=tol,
             thresholder=thresholder,
@@ -114,13 +120,19 @@ class SINDyPIoptimizer(SR3):
             normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            normalize_columns=normalize_columns,
         )
 
         if max_iter <= 0:
             raise ValueError("max_iter must be positive")
         if threshold < 0.0:
             raise ValueError("threshold must not be negative")
-        if thresholder != "l1" and thresholder != "weighted_l1":
+        if (
+            thresholder.lower() != "l1"
+            and thresholder.lower() != "l2"
+            and thresholder.lower() != "weighted_l1"
+            and thresholder.lower() != "weighted_l2"
+        ):
             raise ValueError(
                 "l0 and other nonconvex regularizers are not implemented "
                 " in current version of SINDy-PI"
@@ -136,7 +148,6 @@ class SINDyPIoptimizer(SR3):
             raise ValueError("thresholds cannot contain negative entries")
 
         self.thresholds = thresholds
-        self.reg = get_regularization(thresholder)
         self.unbias = False
         self.Theta = None
         self.model_subset = model_subset
@@ -147,10 +158,16 @@ class SINDyPIoptimizer(SR3):
     def _update_full_coef_constraints(self, x):
         N = x.shape[1]
         xi = cp.Variable((N, N))
-        if self.thresholds is None:
-            cost = cp.sum_squares(x - x @ xi) + self.threshold * cp.norm1(xi)
-        else:
-            cost = cp.sum_squares(x - x @ xi) + cp.norm1(self.thresholds @ xi)
+        if (self.thresholder).lower() in ("l1", "weighted_l1"):
+            if self.thresholds is None:
+                cost = cp.sum_squares(x - x @ xi) + self.threshold * cp.norm1(xi)
+            else:
+                cost = cp.sum_squares(x - x @ xi) + cp.norm1(self.thresholds @ xi)
+        if (self.thresholder).lower() in ("l2", "weighted_l2"):
+            if self.thresholds is None:
+                cost = cp.sum_squares(x - x @ xi) + self.threshold * cp.norm2(xi) ** 2
+            else:
+                cost = cp.sum_squares(x - x @ xi) + cp.norm2(self.thresholds @ xi) ** 2
         prob = cp.Problem(
             cp.Minimize(cost),
             [cp.diag(xi) == np.zeros(N)],
@@ -178,13 +195,28 @@ class SINDyPIoptimizer(SR3):
             self.model_subset = range(N)
         for i in self.model_subset:
             xi = cp.Variable(N)
-            # Note that norm choice below must be convex, so L1 is hard-coded for now
-            if self.thresholds is None:
-                cost = cp.sum_squares(x[:, i] - x @ xi) + self.threshold * cp.norm1(xi)
-            else:
-                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.norm1(
-                    self.thresholds[i, :] @ xi
-                )
+            # Note that norm choice below must be convex,
+            # so thresholder must be L1 or L2
+            if (self.thresholder).lower() in ("l1", "weighted_l1"):
+                if self.thresholds is None:
+                    cost = cp.sum_squares(x[:, i] - x @ xi) + self.threshold * cp.norm1(
+                        xi
+                    )
+                else:
+                    cost = cp.sum_squares(x[:, i] - x @ xi) + cp.norm1(
+                        self.thresholds[i, :] @ xi
+                    )
+            if (self.thresholder).lower() in ("l2", "weighted_l2"):
+                if self.thresholds is None:
+                    cost = (
+                        cp.sum_squares(x[:, i] - x @ xi)
+                        + self.threshold * cp.norm2(xi) ** 2
+                    )
+                else:
+                    cost = (
+                        cp.sum_squares(x[:, i] - x @ xi)
+                        + cp.norm2(self.thresholds[i, :] @ xi) ** 2
+                    )
             prob = cp.Problem(
                 cp.Minimize(cost),
                 [xi[i] == 0.0],
@@ -198,18 +230,22 @@ class SINDyPIoptimizer(SR3):
                         ConvergenceWarning,
                     )
                 xi_final[:, i] = xi.value
+            # Annoying error coming from L2 norm switching to use the ECOS
+            # solver, which uses "max_iters" instead of "max_iter", and
+            # similar semantic changes for the other variables.
+            except TypeError:
+                prob.solve(max_iters=self.max_iter, abstol=self.tol, reltol=self.tol)
+                if xi.value is None:
+                    warnings.warn(
+                        "Infeasible solve on iteration " + str(i) + ", try "
+                        "changing your library",
+                        ConvergenceWarning,
+                    )
+                xi_final[:, i] = xi.value
             except cp.error.SolverError:
                 print("Solver failed on model ", str(i), ", setting coefs to zeros")
                 xi_final[:, i] = np.zeros(N)
         return xi_final
-
-    def _objective(self, x, coefs):
-        """Objective function"""
-        R2 = (x - x @ coefs) ** 2
-        if self.thresholds is None:
-            return np.sum(R2) + self.reg(coefs, self.threshold)
-        else:
-            return np.sum(R2) + self.reg(coefs, self.thresholds)
 
     def _reduce(self, x, y):
         """
@@ -218,9 +254,15 @@ class SINDyPIoptimizer(SR3):
         """
         self.Theta = x  # Need to save the library for post-processing
         n_samples, n_features = x.shape
-        objective_history = []
-        # coefs = self._update_full_coef_constraints(x)
-        coefs = self._update_parallel_coef_constraints(x)
-        objective_history.append(self._objective(x, coefs))
-        self.coef_ = coefs.T
-        self.objective_history = objective_history
+        x_normed = np.copy(x)
+        if self.normalize_columns:
+            reg = np.zeros(n_features)
+            for i in range(n_features):
+                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
+                x_normed[:, i] = reg[i] * x[:, i]
+        # coef = self._update_full_coef_constraints(x_normed)
+        coef = self._update_parallel_coef_constraints(x_normed)
+        if self.normalize_columns:
+            self.coef_ = np.multiply(reg, coef.T)
+        else:
+            self.coef_ = coef.T

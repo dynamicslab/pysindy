@@ -38,7 +38,12 @@ class CustomLibrary(BaseFeatureLibrary):
         If False, all combinations will be included.
 
     linear_control : boolean, optional (default False)
-        Special option to allow for a pure linear control term in the SINDy library
+        Special option to allow for a pure linear control term
+        in the SINDy library. The default option is to take a tensor product
+        of the control term u, with all library terms in library_functions. So
+        a quadratic polynomial library would give you
+        [1, x, x^2, u, ux, ux^2]. If linear_control is True, it produces only
+        the pure linear u term, i.e. [1, x, x^2, u].
 
     n_control_features : int, optional (default None)
         If linear_control = True, then this specifies the shape

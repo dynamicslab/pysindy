@@ -408,12 +408,13 @@ class SINDy(BaseEstimator):
             if self.discrete_time:
                 names = "(" + feature_names[i] + ")"
                 print(names + "[k+1] = " + eqn)
-            elif lhs is None and not isinstance(self.feature_library, SINDyPILibrary):
-                names = "(" + feature_names[i] + ")"
-                print(names + "' = " + eqn)
-            elif lhs is None and isinstance(self.feature_library, SINDyPILibrary):
-                names = feature_names[i]
-                print(names + " = " + eqn)
+            elif lhs is None:
+                if not isinstance(self.feature_library, SINDyPILibrary):
+                    names = "(" + feature_names[i] + ")"
+                    print(names + "' = " + eqn)
+                else:
+                    names = feature_names[i]
+                    print(names + " = " + eqn)
             else:
                 print(lhs[i] + " = " + eqn)
 

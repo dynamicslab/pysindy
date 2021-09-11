@@ -296,7 +296,7 @@ class SINDy(BaseEstimator):
             x = concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known
-        x, x_dot = drop_nan_rows(x, x_dot)
+        # x, x_dot = drop_nan_rows(x, x_dot)
 
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias

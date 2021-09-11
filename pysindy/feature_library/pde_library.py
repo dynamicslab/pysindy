@@ -575,11 +575,12 @@ class PDELibrary(BaseFeatureLibrary):
         if n_features != self.n_input_features_:
             raise ValueError("x shape does not match training shape")
 
-        if self.weak_form:
+        if self.spatial_grid is not None:
             if len((self.spatial_grid).shape) == 1:
                 num_gridpts = (self.spatial_grid).shape[0]
                 num_time = n_samples // num_gridpts
-            n_samples = self.K * num_time
+            if self.weak_form:
+                n_samples = self.K * num_time
 
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0

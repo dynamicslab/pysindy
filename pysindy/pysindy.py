@@ -295,8 +295,9 @@ class SINDy(BaseEstimator):
         if self.n_control_features_ > 0:
             x = concatenate((x, u), axis=1)
 
-        # Drop rows where derivative isn't known
-        # x, x_dot = drop_nan_rows(x, x_dot)
+        # Drop rows where derivative isn't known unless using weak PDE form
+        if not hasattr(self.feature_library, "weak_form"):
+            x, x_dot = drop_nan_rows(x, x_dot)
 
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias

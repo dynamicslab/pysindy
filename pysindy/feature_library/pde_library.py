@@ -33,7 +33,7 @@ class PDELibrary(BaseFeatureLibrary):
         applied to each input variable (but not their derivatives)
 
     derivative_order : int, optional (default 0)
-        Order of derivative to take on each input variable, max 3
+        Order of derivative to take on each input variable, max 4
 
     spatial_grid : np.ndarray, optional (default None)
         The spatial grid for computing derivatives
@@ -68,10 +68,10 @@ class PDELibrary(BaseFeatureLibrary):
         If True, uses the weak/integral form of SINDy, requiring some extra
         parameters.
 
-    domain_centers : np.ndarray, optional (default None)
-        List of domain centers, corresponding to subdomain squares of length
-        Hx and height Hy. If weak_form is True but domain_centers is not
-        specified, defaults to size (self.K, n_spatial_dims + 1).
+    K : int, optional (default 100)
+        Number of domain centers, corresponding to subdomain squares of length
+        Hx and height Hy. If weak_form is True but K is not
+        specified, defaults to 100.
 
     Hx : float, optional (default None)
         Half of the length of the square subdomains. If weak_form is True
@@ -135,7 +135,7 @@ class PDELibrary(BaseFeatureLibrary):
         include_bias=True,
         is_uniform=False,
         weak_form=False,
-        domain_centers=None,
+        K=100,
         num_pts_per_domain=100,
         Hx=None,
         Hy=None,
@@ -184,6 +184,8 @@ class PDELibrary(BaseFeatureLibrary):
 
         # weak form checks now
         if weak_form and temporal_grid is not None:
+            if len(shape(temporal_grid)) != 1:
+                raise ValueError("Temporal grid must be 1D.")
             self.M = len(temporal_grid)
             t1 = temporal_grid[0]
             t2 = temporal_grid[-1]
@@ -192,6 +194,7 @@ class PDELibrary(BaseFeatureLibrary):
                     raise ValueError("Ht must be a positive float")
                 if Ht >= (t2 - t1) / 2.0:
                     raise ValueError("2 * Ht is larger than the time domain")
+                self.Ht = Ht
             else:
                 Lt = t2 - t1
                 self.Ht = Lt / 20.0
@@ -199,6 +202,7 @@ class PDELibrary(BaseFeatureLibrary):
             raise ValueError(
                 "Weak form requires user to pass both spatial and " "temporal grids."
             )
+
         self.weak_form = weak_form
         self.num_pts_per_domain = num_pts_per_domain
         self.p = p
@@ -216,6 +220,7 @@ class PDELibrary(BaseFeatureLibrary):
                     x2 = spatial_grid[-1, 0, 0]
                 if Hx >= (x2 - x1) / 2.0:
                     raise ValueError("2 * Hx is bigger than the full domain length")
+                self.Hx = Hx
             else:
                 if self.slen == 1:
                     x1 = spatial_grid[0]
@@ -232,52 +237,31 @@ class PDELibrary(BaseFeatureLibrary):
                 y2 = spatial_grid[0, -1, 1]
                 if Hy >= (y2 - y1) / 2.0:
                     raise ValueError("2 * Hy is bigger than the full domain height")
+                self.Hy = Hy
             elif Hy is None and self.slen == 3:
                 y1 = spatial_grid[0, 0, 0]
                 y2 = spatial_grid[0, -1, 1]
                 Ly = y2 - y1
                 self.Hy = Ly / 20.0
-            if domain_centers is not None and shape(domain_centers) != 2:
-                raise ValueError(
-                    "Subdomain center points must have shape "
-                    "(n_subdomains, n_spatial_dims + 1)."
-                )
-            elif (
-                domain_centers is not None
-                and shape(domain_centers)[1] != 2
-                and shape(domain_centers)[1] != 3
-            ):
-                raise ValueError("Subdomains only supported in 1D or 2D")
-            if domain_centers is None:
-                self.K = 100
-                if self.slen == 1:
-                    x1 = spatial_grid[0]
-                    x2 = spatial_grid[-1]
-                    domain_centersx = uniform(
-                        x1 + self.Hx, x2 - self.Hx, size=(self.K, 1)
-                    )
-                    domain_centerst = uniform(
-                        t1 + self.Ht, t2 - self.Ht, size=(self.K, 1)
-                    )
-                    domain_centers = hstack((domain_centersx, domain_centerst))
-                if self.slen == 3:
-                    x1 = spatial_grid[0, 0, 0]
-                    x2 = spatial_grid[-1, 0, 0]
-                    y1 = spatial_grid[0, 0, 0]
-                    y2 = spatial_grid[-1, 0, 0]
-                    domain_centersx = uniform(
-                        x1 + self.Hx, x2 - self.Hx, size=(self.K, 1)
-                    )
-                    domain_centersy = uniform(
-                        y1 + self.Hy, y2 - self.Hy, size=(self.K, 1)
-                    )
-                    domain_centerst = uniform(
-                        t1 + self.Ht, t2 - self.Ht, size=(self.K, 1)
-                    )
-                    domain_centers = hstack((domain_centersx, domain_centersy))
-                    domain_centers = hstack((domain_centers, domain_centerst))
-            else:
-                self.K = shape(domain_centers)[0]
+            if K <= 0:
+                raise ValueError("The number of subdomains must be > 0")
+            self.K = K
+            if self.slen == 1:
+                x1 = spatial_grid[0]
+                x2 = spatial_grid[-1]
+                domain_centersx = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
+                domain_centerst = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+                domain_centers = hstack((domain_centersx, domain_centerst))
+            if self.slen == 3:
+                x1 = spatial_grid[0, 0, 0]
+                x2 = spatial_grid[-1, 0, 0]
+                y1 = spatial_grid[0, 0, 0]
+                y2 = spatial_grid[-1, 0, 0]
+                domain_centersx = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
+                domain_centersy = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
+                domain_centerst = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+                domain_centers = hstack((domain_centersx, domain_centersy))
+                domain_centers = hstack((domain_centers, domain_centerst))
             self.domain_centers = domain_centers
 
     @staticmethod
@@ -526,11 +510,13 @@ class PDELibrary(BaseFeatureLibrary):
                                     w,
                                     xgrid_k,
                                 )
-                                self.u_integrals[k, kk, j] = trapezoid(
-                                    trapezoid(u_new * w_diff, x=xgrid_k, axis=0)
-                                    * (-1) ** j,
-                                    x=tgrid_k,
-                                    axis=0,
+                                self.u_integrals[k, kk, j] = (
+                                    trapezoid(
+                                        trapezoid(u_new * w_diff, x=xgrid_k, axis=0),
+                                        x=tgrid_k,
+                                        axis=0,
+                                    )
+                                    * (-1) ** j
                                 )
 
             # 2D space
@@ -642,6 +628,7 @@ class PDELibrary(BaseFeatureLibrary):
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0
         if self.include_bias:
+            # To do: put in a bias term for the weak form
             xp[:, library_idx] = ones(n_samples)
             library_idx += 1
         if self.weak_form:
@@ -652,8 +639,8 @@ class PDELibrary(BaseFeatureLibrary):
                         f.__code__.co_argcount,
                         self.interaction_only,
                     ):
-                        vectorized_func = f(*[x[:, j] for j in c])
-                        func = reshape(vectorized_func, (num_gridpts, num_time))
+                        func = f(*[x[:, j] for j in c])
+                        func = reshape(func, (num_gridpts, num_time))
                         func_final = zeros((self.K, 1))
                         func_interp = RectBivariateSpline(
                             self.spatial_grid, self.temporal_grid, func
@@ -746,18 +733,14 @@ class PDELibrary(BaseFeatureLibrary):
                                     w,
                                     xgrid_k,
                                 )
-                                u_integrals[k, kk, j] = trapezoid(
-                                    trapezoid(u_new * w_diff, x=xgrid_k, axis=0)
-                                    * (-1) ** j,
-                                    x=tgrid_k,
-                                    axis=0,
+                                u_integrals[k, kk, j] = (
+                                    trapezoid(
+                                        trapezoid(u_new * w_diff, x=xgrid_k, axis=0),
+                                        x=tgrid_k,
+                                        axis=0,
+                                    )
+                                    * (-1) ** j
                                 )
-                    u_integrals = asarray(
-                        reshape(
-                            u_integrals,
-                            (self.K, n_features, self.num_derivs),
-                        )
-                    )
 
             elif len((self.spatial_grid).shape) == 3:
                 num_gridx = (self.spatial_grid).shape[0]
@@ -799,15 +782,14 @@ class PDELibrary(BaseFeatureLibrary):
                                     f.__code__.co_argcount,
                                     self.interaction_only,
                                 ):
-                                    if d >= 1 and d < 3:
-                                        func = f(*[x[:, j] for j in c])
+                                    func = f(*[x[:, j] for j in c])
+                                    if d == 0 or d == 1:
                                         deriv_term = identity_function(
-                                            u_derivs[:, kk, d]
+                                            u_derivs[:, kk, 0]
                                         )
-                                    else:
-                                        func = f(*[x[:, j] for j in c])
+                                    elif d == 2 or d == 3:
                                         deriv_term = identity_function(
-                                            u_derivs[:, kk, d - 1]
+                                            u_derivs[:, kk, 1]
                                         )
                                     func = reshape(func, (num_gridpts, num_time))
                                     deriv_term = reshape(
@@ -865,14 +847,14 @@ class PDELibrary(BaseFeatureLibrary):
                                             w_func = func_new * w
                                         if d == 1 or d == 2:
                                             w_func = (-1) * FiniteDifference(
-                                                d=d, is_uniform=self.is_uniform
+                                                d=1, is_uniform=self.is_uniform
                                             )._differentiate(
                                                 func_new * w,
                                                 xgrid_k,
                                             )
                                         if d == 3:
                                             w_func = FiniteDifference(
-                                                d=d - 1, is_uniform=self.is_uniform
+                                                d=2, is_uniform=self.is_uniform
                                             )._differentiate(
                                                 func_new * w,
                                                 xgrid_k,

@@ -516,7 +516,7 @@ class PDELibrary(BaseFeatureLibrary):
                                         x=tgrid_k,
                                         axis=0,
                                     )
-                                    * (-1) ** j
+                                    * (-1) ** (j + 1)
                                 )
 
             # 2D space
@@ -739,7 +739,7 @@ class PDELibrary(BaseFeatureLibrary):
                                         x=tgrid_k,
                                         axis=0,
                                     )
-                                    * (-1) ** j
+                                    * (-1) ** (j + 1)
                                 )
 
             elif len((self.spatial_grid).shape) == 3:

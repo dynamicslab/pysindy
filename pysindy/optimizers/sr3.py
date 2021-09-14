@@ -51,7 +51,7 @@ class SR3(BaseOptimizer):
 
     thresholder : string, optional (default 'L0')
         Regularization function to use. Currently implemented options
-        are 'L0' (L0 norm), 'L1' (L1 norm), and 'CAD' (clipped
+        are 'L0' (L0 norm), 'L1' (L1 norm), 'L2' (L2 norm) and 'CAD' (clipped
         absolute deviation).
 
     trimming_fraction : float, optional (default 0.0)
@@ -123,6 +123,7 @@ class SR3(BaseOptimizer):
     def __init__(
         self,
         threshold=0.1,
+        thresholds=None,
         nu=1.0,
         tol=1e-5,
         thresholder="L0",
@@ -152,7 +153,31 @@ class SR3(BaseOptimizer):
         if (trimming_fraction < 0) or (trimming_fraction > 1):
             raise ValueError("trimming fraction must be between 0 and 1")
 
+        if thresholder[:8].lower() == "weighted" and thresholds is None:
+            raise ValueError(
+                "weighted thresholder requires the thresholds parameter to be used"
+            )
+        if thresholder[:8].lower() != "weighted" and thresholds is not None:
+            raise ValueError(
+                "The thresholds argument cannot be used without a weighted thresholder,"
+                " e.g. thresholder='weighted_l0'"
+            )
+        if thresholds is not None and np.any(thresholds < 0):
+            raise ValueError("thresholds cannot contain negative entries")
+
+        if (
+            thresholder.lower() != "l0"
+            and thresholder.lower() != "l1"
+            and thresholder.lower() != "l2"
+            and thresholder.lower() != "weighted_l0"
+            and thresholder.lower() != "weighted_l1"
+            and thresholder.lower() != "weighted_l2"
+            and thresholder.lower() != "cad"
+        ):
+            raise NotImplementedError("Please use a valid regularizer, l0, l1, l2, cad")
+
         self.threshold = threshold
+        self.thresholds = thresholds
         self.nu = nu
         self.tol = tol
         self.thresholder = thresholder

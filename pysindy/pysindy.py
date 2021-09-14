@@ -17,6 +17,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
+from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
@@ -315,7 +316,9 @@ class SINDy(BaseEstimator):
             if boosting:
                 self.coef_list = []
                 for i in range(n_models):
-                    x_boost, x_dot_boost = drop_random_rows(x, x_dot, n_subset)
+                    x_boost, x_dot_boost = drop_random_rows(
+                        x, x_dot, n_subset, self.feature_library, PDELibrary
+                    )
                     self.model.fit(x_boost, x_dot_boost)
                     self.coef_list.append(self.model.steps[-1][1].coef_)
             else:

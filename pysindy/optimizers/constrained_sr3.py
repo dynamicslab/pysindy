@@ -160,6 +160,7 @@ class ConstrainedSR3(SR3):
             nu=nu,
             tol=tol,
             thresholder=thresholder,
+            thresholds=thresholds,
             trimming_fraction=trimming_fraction,
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
@@ -167,22 +168,9 @@ class ConstrainedSR3(SR3):
             normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            normalize_columns=normalize_columns,
         )
 
-        if thresholder[:8].lower() == "weighted" and thresholds is None:
-            raise ValueError(
-                "weighted thresholder requires the thresholds parameter to be used"
-            )
-        if thresholder[:8].lower() != "weighted" and thresholds is not None:
-            raise ValueError(
-                "The thresholds argument cannot be used without a weighted thresholder,"
-                " e.g. thresholder='weighted_l0'"
-            )
-        if thresholds is not None and np.any(thresholds < 0):
-            raise ValueError("thresholds cannot contain negative entries")
-
-        self.thresholds = thresholds
-        self.normalize_columns = normalize_columns
         self.reg = get_regularization(thresholder)
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None

@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from numpy.linalg import norm
 from scipy.integrate import odeint
+from scipy.io import loadmat
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
@@ -13,6 +14,7 @@ from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import FiniteDifference
+from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
@@ -260,8 +262,22 @@ def test_trapping_cubic_library(params):
         (ValueError, SSR, dict(criteria="None")),
         (ValueError, SSR, dict(max_iter=-1)),
         (ValueError, FROLS, dict(max_iter=-1)),
-        (NotImplementedError, SR3, dict(thresholder="l2")),
-        (NotImplementedError, ConstrainedSR3, dict(thresholder="l2")),
+        (NotImplementedError, SR3, dict(thresholder="l3")),
+        (NotImplementedError, ConstrainedSR3, dict(thresholder="l3")),
+        (
+            ValueError,
+            ConstrainedSR3,
+            dict(
+                inequality_constraints=True,
+                constraint_lhs=np.zeros((1, 1)),
+                constraint_rhs=np.zeros(1),
+                thresholder="l0",
+            ),
+        ),
+        (ValueError, ConstrainedSR3, dict(inequality_constraints=True)),
+        (ValueError, SR3, dict(thresholder="weighted_l0", thresholds=None)),
+        (ValueError, SR3, dict(thresholder="weighted_l0", thresholds=None)),
+        (ValueError, SR3, dict(thresholds=-np.ones((5, 5)))),
         (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),
         (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),
         (ValueError, ConstrainedSR3, dict(thresholds=-np.ones((5, 5)))),
@@ -551,3 +567,90 @@ def test_inequality_constraints_reqs():
             inequality_constraints=True,
             relax_optim=True,
         )
+
+
+@pytest.mark.parametrize(
+    "optimizer",
+    [
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
+)
+def test_normalize_columns(data, optimizer):
+    x, x_dot = data
+    if len(x.shape) == 1:
+        x = x.reshape(-1, 1)
+    opt = optimizer(normalize_columns=True)
+    opt.fit(x, x_dot)
+    check_is_fitted(opt)
+    assert opt.complexity >= 0
+    if len(x_dot.shape) > 1:
+        assert opt.coef_.shape == (x.shape[1], x_dot.shape[1])
+    else:
+        assert opt.coef_.shape == (1, x.shape[1])
+
+
+@pytest.mark.parametrize(
+    "optimizer",
+    [
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
+)
+def test_boosting_odes(data, optimizer):
+    t = np.arange(0, 40, 0.05)
+    x = odeint(lorenz, [-8, 8, 27], t)
+    opt = optimizer(normalize_columns=True)
+    model = SINDy(optimizer=opt)
+    model.fit(x, boosting=True, n_models=10, n_subset=20)
+    assert np.shape(model.coef_list) == (10, 3, 10)
+
+
+@pytest.mark.parametrize(
+    "optimizer",
+    [
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
+)
+def test_boosting_pdes(optimizer):
+    kdV = loadmat("../../examples/data/kdv.mat")
+    t = np.ravel(kdV["t"])
+    x = np.ravel(kdV["x"])
+    u = np.real(kdV["usol"])
+    dt = t[1] - t[0]
+    u_shaped = np.reshape(u, (len(x), len(t), 1))
+    ut = np.zeros((len(x), len(t), 1))
+    for i in range(len(x)):
+        ut[i, :, :] = FiniteDifference()._differentiate(u_shaped[i, :, :], t=dt)
+    u_flattened = np.reshape(u, (len(x) * len(t), 1))
+    ut_flattened = np.reshape(ut, (len(x) * len(t), 1))
+
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=3,
+        spatial_grid=x,
+        include_bias=True,
+        is_uniform=True,
+    )
+    opt = optimizer(normalize_columns=True)
+    model = SINDy(optimizer=opt, feature_library=pde_lib)
+    model.fit(u_flattened, x_dot=ut_flattened, boosting=True, n_models=10, n_subset=20)
+    n_features = len(model.get_feature_names())
+    print(np.shape(opt.coef_))
+    assert np.shape(model.coef_list) == (10, 1, n_features)

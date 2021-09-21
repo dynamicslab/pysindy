@@ -2,6 +2,7 @@ from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
 from numpy import asarray
+from numpy import delete
 from numpy import empty
 from numpy import hstack
 from numpy import linspace
@@ -14,6 +15,8 @@ from numpy import zeros
 from numpy.random import uniform
 from scipy.integrate import trapezoid
 from scipy.interpolate import RectBivariateSpline
+from scipy.special import hyp2f1
+from scipy.special import poch
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
@@ -92,6 +95,10 @@ class PDELibrary(BaseFeatureLibrary):
         Positive integer to define the polynomial degree of the spatial weights
         used for weak/integral SINDy.
 
+    library_bagging : boolean, optional (default False)
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library)
+
     Attributes
     ----------
     functions : list of functions
@@ -141,6 +148,8 @@ class PDELibrary(BaseFeatureLibrary):
         Hy=None,
         Ht=None,
         p=4,
+        library_ensemble=False,
+        ensemble_indices=0,
     ):
         super(PDELibrary, self).__init__()
         self.derivative_order = derivative_order
@@ -148,6 +157,8 @@ class PDELibrary(BaseFeatureLibrary):
         self.temporal_grid = temporal_grid
         self.functions = library_functions
         self.function_names = function_names
+        self.library_ensemble = library_ensemble
+        self.ensemble_indices = ensemble_indices
         self.include_bias = include_bias
         self.is_uniform = is_uniform
         self.num_pts_per_domain = num_pts_per_domain
@@ -270,7 +281,25 @@ class PDELibrary(BaseFeatureLibrary):
         comb = combinations if interaction_only else combinations_w_r
         return comb(range(n_features), n_args)
 
-    def _smooth_ppoly(self, x, t, k):
+    def _poly_deriv(self, x, t, d_x, d_t):
+        """Compute analytic derivatives instead of relying on finite diffs"""
+        x_term = (
+            (2 * x) ** d_x
+            * (x ** 2 - 1) ** (self.p - d_x)
+            * hyp2f1((1 - d_x) / 2.0, -d_x / 2.0, self.p + 1 - d_x, 1 - 1 / x ** 2)
+            * poch(self.p + 1 - d_x, d_x)
+            / self.Hx ** d_x
+        )
+        t_term = (
+            (2 * t) ** d_t
+            * (t ** 2 - 1) ** (self.p - d_t)
+            * hyp2f1((1 - d_t) / 2.0, -d_t / 2.0, self.p + 1 - d_t, 1 - 1 / t ** 2)
+            * poch(self.p + 1 - d_t, d_t)
+            / self.Ht ** d_t
+        )
+        return x_term * t_term
+
+    def _smooth_ppoly(self, x, t, k, d_x, d_t):
         if shape(x)[1] == 1:
             x_tilde = zeros(shape(x)[0])
             t_tilde = zeros(shape(t)[0])
@@ -279,9 +308,7 @@ class PDELibrary(BaseFeatureLibrary):
                 x_tilde[i] = (x[i] - self.domain_centers[k, 0]) / self.Hx
                 t_tilde[i] = (t[i] - self.domain_centers[k, -1]) / self.Ht
             for i in range(shape(x)[0]):
-                weights[i, :, 0] = (x_tilde[i] ** 2 - 1) ** self.p * (
-                    t_tilde ** 2 - 1
-                ) ** self.p
+                weights[i, :, 0] = self._poly_deriv(x_tilde[i], t_tilde, d_x, d_t)
             return weights
         if shape(x)[1] == 2:
             x_tilde = zeros(shape(x)[0])
@@ -498,17 +525,24 @@ class PDELibrary(BaseFeatureLibrary):
                                 u_new,
                                 (self.num_pts_per_domain, self.num_pts_per_domain, 1),
                             )
-                            w = self._smooth_ppoly(
-                                reshape(xgrid_k, (self.num_pts_per_domain, 1)),
-                                tgrid_k,
-                                k,
-                            )
+                            # w_diff = self._smooth_ppoly(
+                            #     reshape(xgrid_k, (self.num_pts_per_domain, 1)),
+                            #     tgrid_k,
+                            #     k,
+                            # )
                             for j in range(self.num_derivs):
-                                w_diff = FiniteDifference(
-                                    d=j + 1, is_uniform=self.is_uniform
-                                )._differentiate(
-                                    w,
-                                    xgrid_k,
+                                # w_diff = FiniteDifference(
+                                #     d=j + 1, is_uniform=self.is_uniform
+                                # )._differentiate(
+                                #     w,
+                                #     xgrid_k,
+                                # )
+                                w_diff = self._smooth_ppoly(
+                                    reshape(xgrid_k, (self.num_pts_per_domain, 1)),
+                                    tgrid_k,
+                                    k,
+                                    j + 1,
+                                    0,
                                 )
                                 self.u_integrals[k, kk, j] = (
                                     trapezoid(
@@ -664,6 +698,8 @@ class PDELibrary(BaseFeatureLibrary):
                                 reshape(xgrid_k, (self.num_pts_per_domain, 1)),
                                 tgrid_k,
                                 k,
+                                0,
+                                0,
                             )
                             func_final[k] = trapezoid(
                                 trapezoid(func_new * w, x=xgrid_k, axis=0),
@@ -721,17 +757,24 @@ class PDELibrary(BaseFeatureLibrary):
                                 u_new,
                                 (self.num_pts_per_domain, self.num_pts_per_domain, 1),
                             )
-                            w = self._smooth_ppoly(
-                                reshape(xgrid_k, (self.num_pts_per_domain, 1)),
-                                tgrid_k,
-                                k,
-                            )
+                            # w = self._smooth_ppoly(
+                            #     reshape(xgrid_k, (self.num_pts_per_domain, 1)),
+                            #     tgrid_k,
+                            #     k,
+                            # )
                             for j in range(self.num_derivs):
-                                w_diff = FiniteDifference(
-                                    d=j + 1, is_uniform=self.is_uniform
-                                )._differentiate(
-                                    w,
-                                    xgrid_k,
+                                # w_diff = FiniteDifference(
+                                #     d=j + 1, is_uniform=self.is_uniform
+                                # )._differentiate(
+                                #     w,
+                                #     xgrid_k,
+                                # )
+                                w_diff = self._smooth_ppoly(
+                                    reshape(xgrid_k, (self.num_pts_per_domain, 1)),
+                                    tgrid_k,
+                                    k,
+                                    j + 1,
+                                    0,
                                 )
                                 u_integrals[k, kk, j] = (
                                     trapezoid(
@@ -836,12 +879,21 @@ class PDELibrary(BaseFeatureLibrary):
                                                 1,
                                             ),
                                         )
+                                        # w = self._smooth_ppoly(
+                                        #     reshape(
+                                        #         xgrid_k, (self.num_pts_per_domain, 1)
+                                        #     ),
+                                        #     tgrid_k,
+                                        #     k,
+                                        # )
                                         w = self._smooth_ppoly(
                                             reshape(
                                                 xgrid_k, (self.num_pts_per_domain, 1)
                                             ),
                                             tgrid_k,
                                             k,
+                                            0,
+                                            0,
                                         )
                                         if d == 0:
                                             w_func = func_new * w
@@ -901,4 +953,10 @@ class PDELibrary(BaseFeatureLibrary):
                                     *[x[:, j] for j in c]
                                 ) * identity_function(u_derivs[:, kk, k])
                                 library_idx += 1
-        return xp
+        # If library bagging, return xp missing a single column
+        if self.library_ensemble:
+            inds = range(self.n_output_features_)
+            inds = delete(inds, self.ensemble_indices)
+            return xp[:, inds]
+        else:
+            return xp

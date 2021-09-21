@@ -603,7 +603,7 @@ def test_linear_constraints(data_lorenz):
     )
 
 
-def test_boosting(data_lorenz):
+def test_ensemble(data_lorenz):
     x, t = data_lorenz
     library = PolynomialLibrary().fit(x)
 
@@ -618,29 +618,40 @@ def test_boosting(data_lorenz):
         constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
     )
     model = SINDy(feature_library=library, optimizer=optimizer).fit(
-        x, t, boosting=True, n_models=10, n_subset=len(t) // 2
+        x, t, ensemble=True, n_models=10, n_subset=len(t) // 2
     )
 
+    np.testing.assert_allclose(np.shape(model.coef_list)[0], 10)
+
+
+def test_library_ensemble(data_lorenz):
+    x, t = data_lorenz
+    library = PolynomialLibrary().fit(x)
+    optimizer = SR3()
+    model = SINDy(feature_library=library, optimizer=optimizer).fit(
+        x, t, library_ensemble=True, n_models=10
+    )
     np.testing.assert_allclose(np.shape(model.coef_list)[0], 10)
 
 
 @pytest.mark.parametrize(
     "params",
     [
-        dict(boosting=False, n_models=-1, n_subset=1),
-        dict(boosting=False, n_models=0, n_subset=1),
-        dict(boosting=False, n_models=1, n_subset=0),
-        dict(boosting=False, n_models=1, n_subset=-1),
-        dict(boosting=True, n_models=-1, n_subset=1),
-        dict(boosting=True, n_models=0, n_subset=1),
-        dict(boosting=True, n_models=1, n_subset=0),
-        dict(boosting=True, n_models=1, n_subset=-1),
-        dict(boosting=True, n_models=1, n_subset=0),
-        dict(boosting=True, n_models=1, n_subset=None),
-        dict(boosting=True, n_models=None, n_subset=1),
+        dict(ensemble=False, n_models=-1, n_subset=1),
+        dict(ensemble=False, n_models=0, n_subset=1),
+        dict(ensemble=False, n_models=1, n_subset=0),
+        dict(ensemble=False, n_models=1, n_subset=-1),
+        dict(ensemble=True, n_models=-1, n_subset=1),
+        dict(ensemble=True, n_models=0, n_subset=1),
+        dict(ensemble=True, n_models=1, n_subset=0),
+        dict(ensemble=True, n_models=1, n_subset=-1),
+        dict(ensemble=True, n_models=1, n_subset=0),
+        dict(ensemble=True, n_models=1, n_subset=None),
+        dict(ensemble=True, n_models=None, n_subset=1),
+        dict(library_ensemble=True, n_models=None),
     ],
 )
-def test_bad_boosting_params(data_lorenz, params):
+def test_bad_ensemble_params(data_lorenz, params):
     x, t = data_lorenz
     library = PolynomialLibrary().fit(x)
 

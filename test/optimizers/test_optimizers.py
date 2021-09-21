@@ -605,12 +605,12 @@ def test_normalize_columns(data, optimizer):
         TrappingSR3,
     ],
 )
-def test_boosting_odes(data, optimizer):
+def test_ensemble_odes(data, optimizer):
     t = np.arange(0, 40, 0.05)
     x = odeint(lorenz, [-8, 8, 27], t)
     opt = optimizer(normalize_columns=True)
     model = SINDy(optimizer=opt)
-    model.fit(x, boosting=True, n_models=10, n_subset=20)
+    model.fit(x, ensemble=True, n_models=10, n_subset=20)
     assert np.shape(model.coef_list) == (10, 3, 10)
 
 
@@ -625,8 +625,8 @@ def test_boosting_odes(data, optimizer):
         TrappingSR3,
     ],
 )
-def test_boosting_pdes(optimizer):
-    kdV = loadmat("../../examples/data/kdv.mat")
+def test_ensemble_pdes(optimizer):
+    kdV = loadmat("examples/data/kdv.mat")
     t = np.ravel(kdV["t"])
     x = np.ravel(kdV["x"])
     u = np.real(kdV["usol"])
@@ -650,7 +650,7 @@ def test_boosting_pdes(optimizer):
     )
     opt = optimizer(normalize_columns=True)
     model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u_flattened, x_dot=ut_flattened, boosting=True, n_models=10, n_subset=20)
+    model.fit(u_flattened, x_dot=ut_flattened, ensemble=True, n_models=10, n_subset=20)
     n_features = len(model.get_feature_names())
     print(np.shape(opt.coef_))
     assert np.shape(model.coef_list) == (10, 1, n_features)

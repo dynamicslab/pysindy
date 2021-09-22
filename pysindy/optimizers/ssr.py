@@ -204,7 +204,7 @@ class SSR(BaseOptimizer):
                 )
             else:
                 self.err_history_.append(np.sum((y - x_normed @ coef.T) ** 2))
-            if np.sum(np.asarray(inds, dtype=int)) <= n_targets:
+            if np.any(np.sum(np.asarray(inds, dtype=int), axis=1) <= n_targets):
                 # each equation has one last term
                 break
         err_min = np.argmin(self.err_history_)

@@ -182,6 +182,7 @@ class SINDy(BaseEstimator):
         quiet=False,
         ensemble=False,
         library_ensemble=False,
+        replace=True,
         n_candidates_to_drop=1,
         n_subset=None,
         n_models=None,
@@ -252,14 +253,17 @@ class SINDy(BaseEstimator):
             Whether or not to use ensemble methods to generate n_models models
             by subsampling library terms.
 
+        replace : boolean, optional (default True)
+            If ensemble true, whether or not to time sample with replacement.
+
         n_candidates_to_drop : int, optional (default 1)
             Number of candidate terms in the feature library to drop during
             library ensembling.
 
-        n_subset : int, optional (default None)
+        n_subset : int, optional (default len(time base))
             Number of time points to use for ensemble
 
-        n_models : int, optional (default None)
+        n_models : int, optional (default 20)
             Number of models to generate via ensemble
 
         Returns
@@ -280,16 +284,10 @@ class SINDy(BaseEstimator):
             )
             self.n_control_features_ = u.shape[1]
 
-        if ensemble and ((n_models is None) or (n_subset is None)):
-            raise ValueError(
-                "If using ensemble methods, need to specify the number of "
-                "models to generate, and the number of time points to use"
-            )
-        if library_ensemble and n_models is None:
-            raise ValueError(
-                "If using library ensemble, need to specify the number of "
-                "models to generate."
-            )
+        if (ensemble or library_ensemble) and n_models is None:
+            n_models = 20
+        if ensemble and n_subset is None:
+            n_subset = x.shape[0]
         if (n_models is not None) and n_models <= 0:
             raise ValueError("n_models must be a positive integer")
         if (n_subset is not None) and n_subset <= 0:
@@ -336,7 +334,7 @@ class SINDy(BaseEstimator):
                 self.coef_list = []
                 for i in range(n_models):
                     x_ensemble, x_dot_ensemble = drop_random_rows(
-                        x, x_dot, n_subset, self.feature_library, PDELibrary
+                        x, x_dot, n_subset, replace, self.feature_library, PDELibrary
                     )
                     self.model.fit(x_ensemble, x_dot_ensemble)
                     self.coef_list.append(self.model.steps[-1][1].coef_)
@@ -366,7 +364,7 @@ class SINDy(BaseEstimator):
                 self.coef_list = []
                 for i in range(n_models):
                     x_ensemble, x_dot_ensemble = drop_random_rows(
-                        x, x_dot, n_subset, self.feature_library, PDELibrary
+                        x, x_dot, n_subset, replace, self.feature_library, PDELibrary
                     )
                     for j in range(n_models):
                         self.feature_library.ensemble_indices = sort(

@@ -2,6 +2,7 @@ from itertools import repeat
 from typing import Sequence
 
 import numpy as np
+from numpy.random import choice
 from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
@@ -100,7 +101,7 @@ def drop_nan_rows(x, x_dot):
     return x, x_dot
 
 
-def drop_random_rows(x, x_dot, n_subset, feature_library, PDELibrary):
+def drop_random_rows(x, x_dot, n_subset, replace, feature_library, PDELibrary):
     # Can't choose random n_subset points if data is spatially local
     # Need to unfold it and just choose n_subset from the temporal slices
     if isinstance(feature_library, PDELibrary) and not feature_library.weak_form:
@@ -108,7 +109,7 @@ def drop_random_rows(x, x_dot, n_subset, feature_library, PDELibrary):
         num_gridx = (spatial_grid).shape[0]
         if len(np.shape(spatial_grid)) == 1:
             num_time = np.shape(x)[0] // num_gridx
-            rand_inds = np.random.randint(0, num_time, n_subset)
+            rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
             x_shaped = np.reshape(x, (num_gridx, num_time, x.shape[1]))
             x_dot_shaped = np.reshape(x_dot, (num_gridx, num_time, x.shape[1]))
             x_shaped = x_shaped[:, rand_inds, :]
@@ -118,7 +119,7 @@ def drop_random_rows(x, x_dot, n_subset, feature_library, PDELibrary):
         if len(np.shape(spatial_grid)) == 3:
             num_gridy = (spatial_grid).shape[1]
             num_time = np.shape(x)[0] // num_gridx // num_gridy
-            rand_inds = np.random.randint(0, num_time, n_subset)
+            rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
             x_shaped = np.reshape(x, (num_gridx, num_gridy, num_time, x.shape[1]))
             x_dot_shaped = np.reshape(
                 x_dot, (num_gridx, num_gridy, num_time, x.shape[1])
@@ -131,7 +132,7 @@ def drop_random_rows(x, x_dot, n_subset, feature_library, PDELibrary):
             )
     else:
         # choose random n_subset points to use
-        rand_inds = np.random.randint(0, np.shape(x)[0], n_subset)
+        rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))
         x = x[rand_inds, :]
         x_dot = x_dot[rand_inds, :]
     return x, x_dot

@@ -646,9 +646,6 @@ def test_library_ensemble(data_lorenz):
         dict(ensemble=True, n_models=1, n_subset=0),
         dict(ensemble=True, n_models=1, n_subset=-1),
         dict(ensemble=True, n_models=1, n_subset=0),
-        dict(ensemble=True, n_models=1, n_subset=None),
-        dict(ensemble=True, n_models=None, n_subset=1),
-        dict(library_ensemble=True, n_models=None),
     ],
 )
 def test_bad_ensemble_params(data_lorenz, params):

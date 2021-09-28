@@ -2,6 +2,7 @@ from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
 from numpy import asarray
+from numpy import array
 from numpy import delete
 from numpy import empty
 from numpy import hstack
@@ -211,7 +212,7 @@ class PDELibrary(BaseFeatureLibrary):
                 self.Ht = Lt / 20.0
         if weak_form and (spatial_grid is None or temporal_grid is None):
             raise ValueError(
-                "Weak form requires user to pass both spatial and " "temporal grids."
+                "Weak form requires user to pass both spatial and temporal grids."
             )
 
         self.weak_form = weak_form
@@ -250,7 +251,7 @@ class PDELibrary(BaseFeatureLibrary):
                     raise ValueError("2 * Hy is bigger than the full domain height")
                 self.Hy = Hy
             elif Hy is None and self.slen == 3:
-                y1 = spatial_grid[0, 0, 0]
+                y1 = spatial_grid[0, 0, 1]
                 y2 = spatial_grid[0, -1, 1]
                 Ly = y2 - y1
                 self.Hy = Ly / 20.0
@@ -263,6 +264,26 @@ class PDELibrary(BaseFeatureLibrary):
                 domain_centersx = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
                 domain_centerst = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
                 domain_centers = hstack((domain_centersx, domain_centerst))
+                self.domain_centers = domain_centers
+                xgrid_k = zeros((self.K, num_pts_per_domain))
+                tgrid_k = zeros((self.K, num_pts_per_domain))
+                X = zeros((self.K, num_pts_per_domain, num_pts_per_domain))
+                t = zeros((self.K, num_pts_per_domain, num_pts_per_domain))
+                for k in range(self.K):
+                    x1_k = self.domain_centers[k, 0] - self.Hx
+                    x2_k = self.domain_centers[k, 0] + self.Hx
+                    t1_k = self.domain_centers[k, -1] - self.Ht
+                    t2_k = self.domain_centers[k, -1] + self.Ht
+                    xgrid_k[k, :] = linspace(x1_k, x2_k, self.num_pts_per_domain)
+                    tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
+                    X[k, :, :], t[k, :, :] = meshgrid(xgrid_k[k, :],
+                                                      tgrid_k[k, :],
+                                                      indexing="ij",
+                                                      sparse=True)
+                self.xgrid_k = xgrid_k
+                self.tgrid_k = tgrid_k
+                self.X = X
+                self.t = t
             if self.slen == 3:
                 x1 = spatial_grid[0, 0, 0]
                 x2 = spatial_grid[-1, 0, 0]
@@ -273,7 +294,36 @@ class PDELibrary(BaseFeatureLibrary):
                 domain_centerst = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
                 domain_centers = hstack((domain_centersx, domain_centersy))
                 domain_centers = hstack((domain_centers, domain_centerst))
-            self.domain_centers = domain_centers
+                self.domain_centers = domain_centers
+                xgrid_k = zeros((self.K, num_pts_per_domain))
+                ygrid_k = zeros((self.K, num_pts_per_domain))
+                tgrid_k = zeros((self.K, num_pts_per_domain))
+                X = zeros((self.K, num_pts_per_domain, num_pts_per_domain, num_pts_per_domain))
+                Y = zeros((self.K, num_pts_per_domain, num_pts_per_domain, num_pts_per_domain))
+                t = zeros((self.K, num_pts_per_domain, num_pts_per_domain, num_pts_per_domain))
+                for k in range(self.K):
+                    x1_k = self.domain_centers[k, 0] - self.Hx
+                    x2_k = self.domain_centers[k, 0] + self.Hx
+                    y1_k = self.domain_centers[k, 1] - self.Hy
+                    y2_k = self.domain_centers[k, 1] + self.Hy
+                    t1_k = self.domain_centers[k, -1] - self.Ht
+                    t2_k = self.domain_centers[k, -1] + self.Ht
+                    xgrid_k[k, :] = linspace(x1_k, x2_k, self.num_pts_per_domain)
+                    ygrid_k[k, :] = linspace(y1_k, y2_k, self.num_pts_per_domain)
+                    tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
+                    X[k, :, :, :], Y[k, :, :, :], t[k, :, :, :] = meshgrid(
+                                                                xgrid_k[k, :],
+                                                                ygrid_k[k, :],
+                                                                tgrid_k[k, :],
+                                                                indexing="ij",
+                                                                sparse=True
+                                                                )
+                self.xgrid_k = xgrid_k
+                self.ygrid_k = ygrid_k
+                self.tgrid_k = tgrid_k
+                self.X = X
+                self.Y = Y
+                self.t = t
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
@@ -536,24 +586,15 @@ class PDELibrary(BaseFeatureLibrary):
                             self.spatial_grid, self.temporal_grid, u[:, :, kk]
                         )
                         for k in range(self.K):
-                            x1_k = self.domain_centers[k, 0] - self.Hx
-                            x2_k = self.domain_centers[k, 0] + self.Hx
-                            t1_k = self.domain_centers[k, -1] - self.Ht
-                            t2_k = self.domain_centers[k, -1] + self.Ht
-                            xgrid_k = linspace(x1_k, x2_k, self.num_pts_per_domain)
-                            tgrid_k = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                            X, T = meshgrid(xgrid_k, tgrid_k, indexing="ij")
-                            X = ravel(X)
-                            T = ravel(T)
-                            u_new = u_interp.ev(X, T)
+                            u_new = u_interp.ev(self.X[k, :, :], self.t[k, :, :])
                             u_new = reshape(
                                 u_new,
                                 (self.num_pts_per_domain, self.num_pts_per_domain, 1),
                             )
                             for j in range(self.num_derivs):
                                 w_diff = self._smooth_ppoly(
-                                    reshape(xgrid_k, (self.num_pts_per_domain, 1)),
-                                    tgrid_k,
+                                    reshape(self.xgrid_k[k, :], (self.num_pts_per_domain, 1)),
+                                    self.tgrid_k[k, :],
                                     k,
                                     j + 1,
                                     0,
@@ -561,8 +602,8 @@ class PDELibrary(BaseFeatureLibrary):
                                 )
                                 self.u_integrals[k, kk, j] = (
                                     trapezoid(
-                                        trapezoid(u_new * w_diff, x=xgrid_k, axis=0),
-                                        x=tgrid_k,
+                                        trapezoid(u_new * w_diff, x=self.xgrid_k[k, :], axis=0),
+                                        x=self.tgrid_k[k, :],
                                         axis=0,
                                     )
                                     * (-1) ** (j + 1)
@@ -606,20 +647,11 @@ class PDELibrary(BaseFeatureLibrary):
                             u[:, :, :, kk],
                         )
                         for k in range(self.K):
-                            x1_k = self.domain_centers[k, 0] - self.Hx
-                            x2_k = self.domain_centers[k, 0] + self.Hx
-                            y1_k = self.domain_centers[k, 1] - self.Hy
-                            y2_k = self.domain_centers[k, 1] + self.Hy
-                            t1_k = self.domain_centers[k, -1] - self.Ht
-                            t2_k = self.domain_centers[k, -1] + self.Ht
-                            xgrid_k = linspace(x1_k, x2_k, self.num_pts_per_domain)
-                            ygrid_k = linspace(y1_k, y2_k, self.num_pts_per_domain)
-                            tgrid_k = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                            X, Y, T = meshgrid(xgrid_k, ygrid_k, tgrid_k, indexing="ij")
-                            X = ravel(X)
-                            Y = ravel(Y)
-                            T = ravel(T)
-                            u_new = u_interp((X, Y, T))
+                            X = ravel(self.X[k, :, :, :])
+                            Y = ravel(self.Y[k, :, :, :])
+                            t = ravel(self.t[k, :, :, :])
+                            XYt = array((X, Y, t)).T
+                            u_new = u_interp(XYt)
                             u_new = reshape(
                                 u_new,
                                 (
@@ -631,8 +663,8 @@ class PDELibrary(BaseFeatureLibrary):
                             )
                             for j in range(self.num_derivs):
                                 w_diff = self._smooth_ppoly(
-                                    transpose((xgrid_k, ygrid_k)),
-                                    tgrid_k,
+                                    transpose((self.xgrid_k[k, :], self.ygrid_k[k, :])),
+                                    self.tgrid_k[k, :],
                                     k,
                                     deriv_list[j, 0],
                                     deriv_list[j, 1],
@@ -642,12 +674,14 @@ class PDELibrary(BaseFeatureLibrary):
                                     trapezoid(
                                         trapezoid(
                                             trapezoid(
-                                                u_new * w_diff, x=xgrid_k, axis=0
+                                                u_new * w_diff,
+                                                x=self.xgrid_k[k, :],
+                                                axis=0
                                             ),
-                                            x=ygrid_k,
+                                            x=self.ygrid_k[k, :],
                                             axis=0,
                                         ),
-                                        x=tgrid_k,
+                                        x=self.tgrid_k[k, :],
                                         axis=0,
                                     )
                                     * signs_list[j]
@@ -759,8 +793,48 @@ class PDELibrary(BaseFeatureLibrary):
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0
         if self.include_bias:
-            # To do: put in a bias term for the weak form
-            xp[:, library_idx] = ones(n_samples)
+            if self.weak_form:
+                func_final = zeros((self.K, 1))
+                if self.slen == 1:
+                    for k in range(self.K):
+                        X = ravel(self.X[k, :, :])
+                        t = ravel(self.t[k, :, :])
+                        w = self._smooth_ppoly(
+                            reshape(self.xgrid_k[k, :], (self.num_pts_per_domain, 1)),
+                            self.tgrid_k[k, :],
+                            k,
+                            0,
+                            0,
+                            0,
+                        )
+                        func_final[k] = trapezoid(
+                            trapezoid(w, x=self.xgrid_k[k, :], axis=0),
+                            x=self.tgrid_k[k, :],
+                            axis=0,
+                        )
+                if self.slen == 3:
+                    for k in range(self.K):
+                        w = self._smooth_ppoly(
+                            transpose((self.xgrid_k[k, :],
+                                       self.ygrid_k[k, :])),
+                            self.tgrid_k[k, :],
+                            k,
+                            0,
+                            0,
+                            0,
+                        )
+                        func_final[k] = trapezoid(
+                            trapezoid(
+                                trapezoid(w, x=self.xgrid_k[k, :], axis=0),
+                                x=self.ygrid_k[k, :],
+                                axis=0,
+                            ),
+                            x=self.tgrid_k[k, :],
+                            axis=0,
+                        )
+                xp[:, library_idx] = ravel(func_final)
+            else:
+                xp[:, library_idx] = ones(n_samples)
             library_idx += 1
         if self.weak_form:
             if self.slen == 1:
@@ -777,31 +851,24 @@ class PDELibrary(BaseFeatureLibrary):
                             self.spatial_grid, self.temporal_grid, func
                         )
                         for k in range(self.K):
-                            x1_k = self.domain_centers[k, 0] - self.Hx
-                            x2_k = self.domain_centers[k, 0] + self.Hx
-                            t1_k = self.domain_centers[k, -1] - self.Ht
-                            t2_k = self.domain_centers[k, -1] + self.Ht
-                            xgrid_k = linspace(x1_k, x2_k, self.num_pts_per_domain)
-                            tgrid_k = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                            X, T = meshgrid(xgrid_k, tgrid_k, indexing="ij")
-                            X = ravel(X)
-                            T = ravel(T)
-                            func_new = func_interp.ev(X, T)
+                            X = ravel(self.X[k, :, :])
+                            t = ravel(self.t[k, :, :])
+                            func_new = func_interp.ev(X, t)
                             func_new = reshape(
                                 func_new,
                                 (self.num_pts_per_domain, self.num_pts_per_domain, 1),
                             )
                             w = self._smooth_ppoly(
-                                reshape(xgrid_k, (self.num_pts_per_domain, 1)),
-                                tgrid_k,
+                                reshape(self.xgrid_k[k, :], (self.num_pts_per_domain, 1)),
+                                self.tgrid_k[k, :],
                                 k,
                                 0,
                                 0,
                                 0,
                             )
                             func_final[k] = trapezoid(
-                                trapezoid(func_new * w, x=xgrid_k, axis=0),
-                                x=tgrid_k,
+                                trapezoid(func_new * w, x=self.xgrid_k[k, :], axis=0),
+                                x=self.tgrid_k[k, :],
                                 axis=0,
                             )
                         xp[:, library_idx] = ravel(func_final)
@@ -825,20 +892,11 @@ class PDELibrary(BaseFeatureLibrary):
                             func,
                         )
                         for k in range(self.K):
-                            x1_k = self.domain_centers[k, 0] - self.Hx
-                            x2_k = self.domain_centers[k, 0] + self.Hx
-                            y1_k = self.domain_centers[k, 1] - self.Hy
-                            y2_k = self.domain_centers[k, 1] + self.Hy
-                            t1_k = self.domain_centers[k, -1] - self.Ht
-                            t2_k = self.domain_centers[k, -1] + self.Ht
-                            xgrid_k = linspace(x1_k, x2_k, self.num_pts_per_domain)
-                            ygrid_k = linspace(y1_k, y2_k, self.num_pts_per_domain)
-                            tgrid_k = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                            X, Y, T = meshgrid(xgrid_k, ygrid_k, tgrid_k, indexing="ij")
-                            X = ravel(X)
-                            Y = ravel(Y)
-                            T = ravel(T)
-                            func_new = func_interp((X, Y, T))
+                            X = self.X[k, :, :, :]
+                            Y = self.Y[k, :, :, :]
+                            t = self.t[k, :, :, :]
+                            XYt = array((X, Y, t)).T
+                            func_new = func_interp(XYt)
                             func_new = reshape(
                                 func_new,
                                 (
@@ -849,8 +907,9 @@ class PDELibrary(BaseFeatureLibrary):
                                 ),
                             )
                             w = self._smooth_ppoly(
-                                transpose((xgrid_k, ygrid_k)),
-                                tgrid_k,
+                                transpose((self.xgrid_k[k, :],
+                                           self.ygrid_k[k, :])),
+                                self.tgrid_k[k, :],
                                 k,
                                 0,
                                 0,
@@ -858,11 +917,14 @@ class PDELibrary(BaseFeatureLibrary):
                             )
                             func_final[k] = trapezoid(
                                 trapezoid(
-                                    trapezoid(func_new * w, x=xgrid_k, axis=0),
-                                    x=ygrid_k,
+                                    trapezoid(func_new * w,
+                                              x=self.xgrid_k[k, :],
+                                              axis=0
+                                              ),
+                                    x=self.ygrid_k[k, :],
                                     axis=0,
                                 ),
-                                x=tgrid_k,
+                                x=self.tgrid_k[k, :],
                                 axis=0,
                             )
                         xp[:, library_idx] = ravel(func_final)
@@ -902,24 +964,17 @@ class PDELibrary(BaseFeatureLibrary):
                             self.spatial_grid, self.temporal_grid, u[:, :, kk]
                         )
                         for k in range(self.K):
-                            x1_k = self.domain_centers[k, 0] - self.Hx
-                            x2_k = self.domain_centers[k, 0] + self.Hx
-                            t1_k = self.domain_centers[k, -1] - self.Ht
-                            t2_k = self.domain_centers[k, -1] + self.Ht
-                            xgrid_k = linspace(x1_k, x2_k, self.num_pts_per_domain)
-                            tgrid_k = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                            X, T = meshgrid(xgrid_k, tgrid_k, indexing="ij")
-                            X = ravel(X)
-                            T = ravel(T)
-                            u_new = u_interp.ev(X, T)
+                            X = ravel(self.X[k, :, :])
+                            t = ravel(self.t[k, :, :])
+                            u_new = u_interp.ev(X, t)
                             u_new = reshape(
                                 u_new,
                                 (self.num_pts_per_domain, self.num_pts_per_domain, 1),
                             )
                             for j in range(self.num_derivs):
                                 w_diff = self._smooth_ppoly(
-                                    reshape(xgrid_k, (self.num_pts_per_domain, 1)),
-                                    tgrid_k,
+                                    reshape(self.xgrid_k[k, :], (self.num_pts_per_domain, 1)),
+                                    self.tgrid_k[k, :],
                                     k,
                                     j + 1,
                                     0,
@@ -927,8 +982,8 @@ class PDELibrary(BaseFeatureLibrary):
                                 )
                                 u_integrals[k, kk, j] = (
                                     trapezoid(
-                                        trapezoid(u_new * w_diff, x=xgrid_k, axis=0),
-                                        x=tgrid_k,
+                                        trapezoid(u_new * w_diff, x=self.xgrid_k[k, :], axis=0),
+                                        x=self.tgrid_k[k, :],
                                         axis=0,
                                     )
                                     * (-1) ** (j + 1)
@@ -976,20 +1031,11 @@ class PDELibrary(BaseFeatureLibrary):
                             u[:, :, :, kk],
                         )
                         for k in range(self.K):
-                            x1_k = self.domain_centers[k, 0] - self.Hx
-                            x2_k = self.domain_centers[k, 0] + self.Hx
-                            y1_k = self.domain_centers[k, 1] - self.Hy
-                            y2_k = self.domain_centers[k, 1] + self.Hy
-                            t1_k = self.domain_centers[k, -1] - self.Ht
-                            t2_k = self.domain_centers[k, -1] + self.Ht
-                            xgrid_k = linspace(x1_k, x2_k, self.num_pts_per_domain)
-                            ygrid_k = linspace(y1_k, y2_k, self.num_pts_per_domain)
-                            tgrid_k = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                            X, Y, T = meshgrid(xgrid_k, ygrid_k, tgrid_k, indexing="ij")
-                            X = ravel(X)
-                            Y = ravel(Y)
-                            T = ravel(T)
-                            u_new = u_interp((X, Y, T))
+                            X = ravel(self.X[k, :, :, :])
+                            Y = ravel(self.Y[k, :, :, :])
+                            t = ravel(self.t[k, :, :, :])
+                            XYt = array((X, Y, t)).T
+                            u_new = u_interp(XYt)
                             u_new = reshape(
                                 u_new,
                                 (
@@ -1001,8 +1047,8 @@ class PDELibrary(BaseFeatureLibrary):
                             )
                             for j in range(self.num_derivs):
                                 w_diff = self._smooth_ppoly(
-                                    transpose((xgrid_k, ygrid_k)),
-                                    tgrid_k,
+                                    transpose((self.xgrid_k[k, :], self.ygrid_k[k, :])),
+                                    self.tgrid_k[k, :],
                                     k,
                                     deriv_list[j, 0],
                                     deriv_list[j, 1],
@@ -1012,12 +1058,14 @@ class PDELibrary(BaseFeatureLibrary):
                                     trapezoid(
                                         trapezoid(
                                             trapezoid(
-                                                u_new * w_diff, x=xgrid_k, axis=0
+                                                u_new * w_diff,
+                                                x=self.xgrid_k[k, :],
+                                                axis=0
                                             ),
-                                            x=ygrid_k,
+                                            x=self.ygrid_k[k, :],
                                             axis=0,
                                         ),
-                                        x=tgrid_k,
+                                        x=self.tgrid_k[k, :],
                                         axis=0,
                                     )
                                     * signs_list[j]
@@ -1070,21 +1118,10 @@ class PDELibrary(BaseFeatureLibrary):
                                         deriv_term,
                                     )
                                     for k in range(self.K):
-                                        x1_k = self.domain_centers[k, 0] - self.Hx
-                                        x2_k = self.domain_centers[k, 0] + self.Hx
-                                        t1_k = self.domain_centers[k, -1] - self.Ht
-                                        t2_k = self.domain_centers[k, -1] + self.Ht
-                                        xgrid_k = linspace(
-                                            x1_k, x2_k, self.num_pts_per_domain
-                                        )
-                                        tgrid_k = linspace(
-                                            t1_k, t2_k, self.num_pts_per_domain
-                                        )
-                                        X, T = meshgrid(xgrid_k, tgrid_k, indexing="ij")
-                                        X = ravel(X)
-                                        T = ravel(T)
-                                        func_new = func_interp.ev(X, T)
-                                        deriv_new = deriv_interp.ev(X, T)
+                                        X = ravel(self.X[k, :, :])
+                                        t = ravel(self.t[k, :, :])
+                                        func_new = func_interp.ev(X, t)
+                                        deriv_new = deriv_interp.ev(X, t)
                                         func_new = reshape(
                                             func_new,
                                             (
@@ -1103,9 +1140,9 @@ class PDELibrary(BaseFeatureLibrary):
                                         )
                                         w = self._smooth_ppoly(
                                             reshape(
-                                                xgrid_k, (self.num_pts_per_domain, 1)
+                                                self.xgrid_k[k, :], (self.num_pts_per_domain, 1)
                                             ),
-                                            tgrid_k,
+                                            self.tgrid_k[k, :],
                                             k,
                                             0,
                                             0,
@@ -1118,22 +1155,22 @@ class PDELibrary(BaseFeatureLibrary):
                                                 d=1, is_uniform=self.is_uniform
                                             )._differentiate(
                                                 func_new * w,
-                                                xgrid_k,
+                                                self.xgrid_k[k, :],
                                             )
                                         if d == 3:
                                             w_func = FiniteDifference(
                                                 d=2, is_uniform=self.is_uniform
                                             )._differentiate(
                                                 func_new * w,
-                                                xgrid_k,
+                                                self.xgrid_k[k, :],
                                             )
                                         func_final[k] = trapezoid(
                                             trapezoid(
                                                 w_func * deriv_new,
-                                                x=xgrid_k,
+                                                x=self.xgrid_k[k, :],
                                                 axis=0,
                                             ),
-                                            x=tgrid_k,
+                                            x=self.tgrid_k[k, :],
                                             axis=0,
                                         )
                                     xp[:, library_idx] = ravel(func_final)
@@ -1190,29 +1227,12 @@ class PDELibrary(BaseFeatureLibrary):
                                         deriv_term,
                                     )
                                     for k in range(self.K):
-                                        x1_k = self.domain_centers[k, 0] - self.Hx
-                                        x2_k = self.domain_centers[k, 0] + self.Hx
-                                        y1_k = self.domain_centers[k, 1] - self.Hy
-                                        y2_k = self.domain_centers[k, 1] + self.Hy
-                                        t1_k = self.domain_centers[k, -1] - self.Ht
-                                        t2_k = self.domain_centers[k, -1] + self.Ht
-                                        xgrid_k = linspace(
-                                            x1_k, x2_k, self.num_pts_per_domain
-                                        )
-                                        ygrid_k = linspace(
-                                            y1_k, y2_k, self.num_pts_per_domain
-                                        )
-                                        tgrid_k = linspace(
-                                            t1_k, t2_k, self.num_pts_per_domain
-                                        )
-                                        X, Y, T = meshgrid(
-                                            xgrid_k, ygrid_k, tgrid_k, indexing="ij"
-                                        )
-                                        X = ravel(X)
-                                        Y = ravel(Y)
-                                        T = ravel(T)
-                                        func_new = func_interp((X, Y, T))
-                                        deriv_new = deriv_interp((X, Y, T))
+                                        X = ravel(self.X[k, :, :, :])
+                                        Y = ravel(self.Y[k, :, :, :])
+                                        t = ravel(self.t[k, :, :, :])
+                                        XYt = array((X, Y, t)).T
+                                        func_new = func_interp(XYt)
+                                        deriv_new = deriv_interp(XYt)
                                         func_new = reshape(
                                             func_new,
                                             (
@@ -1232,8 +1252,9 @@ class PDELibrary(BaseFeatureLibrary):
                                             ),
                                         )
                                         w = self._smooth_ppoly(
-                                            transpose((xgrid_k, ygrid_k)),
-                                            tgrid_k,
+                                            transpose((self.xgrid_k[k, :],
+                                                       self.ygrid_k[k, :])),
+                                            self.tgrid_k[k, :],
                                             k,
                                             0,
                                             0,
@@ -1243,13 +1264,13 @@ class PDELibrary(BaseFeatureLibrary):
                                             trapezoid(
                                                 trapezoid(
                                                     w * func_new * deriv_new,
-                                                    x=xgrid_k,
+                                                    x=self.xgrid_k[k, :],
                                                     axis=0,
                                                 ),
-                                                x=ygrid_k,
+                                                x=self.ygrid_k[k, :],
                                                 axis=0,
                                             ),
-                                            x=tgrid_k,
+                                            x=self.tgrid_k[k, :],
                                             axis=0,
                                         )
                                     xp[:, library_idx] = ravel(func_final)

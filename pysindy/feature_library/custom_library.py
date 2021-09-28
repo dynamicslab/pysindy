@@ -3,6 +3,7 @@ from itertools import combinations_with_replacement as combinations_w_r
 
 from numpy import delete
 from numpy import empty
+from numpy import ones
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
@@ -77,6 +78,7 @@ class CustomLibrary(BaseFeatureLibrary):
         interaction_only=True,
         library_ensemble=False,
         ensemble_indices=0,
+        include_bias=False,
     ):
         super(CustomLibrary, self).__init__()
         self.functions = library_functions
@@ -86,6 +88,7 @@ class CustomLibrary(BaseFeatureLibrary):
                 "library_functions and function_names must have the same"
                 " number of elements"
             )
+        self.include_bias = include_bias
         self.interaction_only = interaction_only
         self.library_ensemble = library_ensemble
         self.ensemble_indices = ensemble_indices
@@ -113,6 +116,8 @@ class CustomLibrary(BaseFeatureLibrary):
         if input_features is None:
             input_features = ["x%d" % i for i in range(self.n_input_features_)]
         feature_names = []
+        if self.include_bias:
+            feature_names.append('1')
         for i, f in enumerate(self.functions):
             for c in self._combinations(
                 self.n_input_features_, f.__code__.co_argcount, self.interaction_only
@@ -142,6 +147,8 @@ class CustomLibrary(BaseFeatureLibrary):
             n_output_features += len(
                 list(self._combinations(n_features, n_args, self.interaction_only))
             )
+        if self.include_bias:
+            n_output_features += 1
         self.n_output_features_ = n_output_features
         if self.function_names is None:
             self.function_names = list(
@@ -150,6 +157,8 @@ class CustomLibrary(BaseFeatureLibrary):
                     range(len(self.functions)),
                 )
             )
+            if self.include_bias:
+                self.function_names.append('1')
         return self
 
     def transform(self, x):
@@ -177,6 +186,9 @@ class CustomLibrary(BaseFeatureLibrary):
 
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0
+        if self.include_bias:
+            xp[:, library_idx] = ones(n_samples)
+            library_idx += 1
         for f in self.functions:
             for c in self._combinations(
                 self.n_input_features_, f.__code__.co_argcount, self.interaction_only

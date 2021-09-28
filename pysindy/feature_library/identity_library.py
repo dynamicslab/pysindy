@@ -1,6 +1,7 @@
 from numpy import delete
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
+from sklearn import __version__
 
 from .base import BaseFeatureLibrary
 
@@ -14,6 +15,8 @@ class IdentityLibrary(BaseFeatureLibrary):
     ----------
     n_input_features_ : int
         The total number of input features.
+        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
+        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -60,12 +63,16 @@ class IdentityLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
+        if float(__version__[:3]) >= 1.0:
+            n_input_features = self.n_features_in_
+        else:
+            n_input_features = self.n_input_features_
         if input_features:
-            if len(input_features) == self.n_input_features_:
+            if len(input_features) == n_input_features:
                 return input_features
             else:
                 raise ValueError("input features list is not the right length")
-        return ["x%d" % i for i in range(self.n_input_features_)]
+        return ["x%d" % i for i in range(n_input_features)]
 
     def fit(self, x, y=None):
         """
@@ -81,7 +88,10 @@ class IdentityLibrary(BaseFeatureLibrary):
         self : instance
         """
         n_samples, n_features = check_array(x).shape
-        self.n_input_features_ = n_features
+        if float(__version__[:3]) >= 1.0:
+            self.n_features_in_ = n_features
+        else:
+            self.n_input_features_ = n_features
         self.n_output_features_ = n_features
         return self
 
@@ -104,7 +114,11 @@ class IdentityLibrary(BaseFeatureLibrary):
 
         n_samples, n_features = x.shape
 
-        if n_features != self.n_input_features_:
+        if float(__version__[:3]) >= 1.0:
+            n_input_features = self.n_features_in_
+        else:
+            n_input_features = self.n_input_features_
+        if n_features != n_input_features:
             raise ValueError("x shape does not match training shape")
 
         # If library bagging, return x missing a single column

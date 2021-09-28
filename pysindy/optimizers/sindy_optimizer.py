@@ -21,7 +21,9 @@ class SINDyOptimizer(BaseEstimator):
     optimizer: estimator object
         The optimizer/sparse regressor to be wrapped, implementing ``fit`` and
         ``predict``. ``optimizer`` should also have the attributes ``coef_``,
-        ``fit_intercept``, ``normalize``, and ``intercept_``.
+        ``fit_intercept``, and ``intercept_``. Note that attribute
+        ``normalize`` is deprecated as of sklearn versions >= 1.0 and will be
+        removed in future versions.
 
     unbias : boolean, optional (default True)
         Whether to perform an extra step of unregularized linear regression to unbias
@@ -66,14 +68,10 @@ class SINDyOptimizer(BaseEstimator):
             fit_intercept = self.optimizer.fit_intercept
         else:
             fit_intercept = False
-        if hasattr(self.optimizer, "normalize"):
-            normalize = self.optimizer.normalize
-        else:
-            normalize = False
         for i in range(self.ind_.shape[0]):
             if np.any(self.ind_[i]):
                 coef[i, self.ind_[i]] = (
-                    LinearRegression(fit_intercept=fit_intercept, normalize=normalize)
+                    LinearRegression(fit_intercept=fit_intercept)
                     .fit(x[:, self.ind_[i]], y[:, i])
                     .coef_
                 )

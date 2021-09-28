@@ -3,8 +3,10 @@ from itertools import combinations_with_replacement as combinations_w_r
 
 from numpy import delete
 from numpy import empty
+from numpy import ones
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
+from sklearn import __version__
 
 from .base import BaseFeatureLibrary
 
@@ -49,6 +51,8 @@ class CustomLibrary(BaseFeatureLibrary):
 
     n_input_features_ : int
         The total number of input features.
+        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
+        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -77,6 +81,7 @@ class CustomLibrary(BaseFeatureLibrary):
         interaction_only=True,
         library_ensemble=False,
         ensemble_indices=0,
+        include_bias=False,
     ):
         super(CustomLibrary, self).__init__()
         self.functions = library_functions
@@ -86,6 +91,7 @@ class CustomLibrary(BaseFeatureLibrary):
                 "library_functions and function_names must have the same"
                 " number of elements"
             )
+        self.include_bias = include_bias
         self.interaction_only = interaction_only
         self.library_ensemble = library_ensemble
         self.ensemble_indices = ensemble_indices
@@ -110,12 +116,18 @@ class CustomLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
+        if float(__version__[:3]) >= 1.0:
+            n_input_features = self.n_features_in_
+        else:
+            n_input_features = self.n_input_features_
         if input_features is None:
-            input_features = ["x%d" % i for i in range(self.n_input_features_)]
+            input_features = ["x%d" % i for i in range(n_input_features)]
         feature_names = []
+        if self.include_bias:
+            feature_names.append('1')
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
+                n_input_features, f.__code__.co_argcount, self.interaction_only
             ):
                 feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
@@ -135,13 +147,18 @@ class CustomLibrary(BaseFeatureLibrary):
         self : instance
         """
         n_samples, n_features = check_array(x).shape
-        self.n_input_features_ = n_features
+        if float(__version__[:3]) >= 1.0:
+            self.n_features_in_ = n_features
+        else:
+            self.n_input_features_ = n_features
         n_output_features = 0
         for f in self.functions:
             n_args = f.__code__.co_argcount
             n_output_features += len(
                 list(self._combinations(n_features, n_args, self.interaction_only))
             )
+        if self.include_bias:
+            n_output_features += 1
         self.n_output_features_ = n_output_features
         if self.function_names is None:
             self.function_names = list(
@@ -150,6 +167,8 @@ class CustomLibrary(BaseFeatureLibrary):
                     range(len(self.functions)),
                 )
             )
+            if self.include_bias:
+                self.function_names.append('1')
         return self
 
     def transform(self, x):
@@ -172,14 +191,22 @@ class CustomLibrary(BaseFeatureLibrary):
 
         n_samples, n_features = x.shape
 
-        if n_features != self.n_input_features_:
+        if float(__version__[:3]) >= 1.0:
+            n_input_features = self.n_features_in_
+        else:
+            n_input_features = self.n_input_features_
+
+        if n_features != n_input_features:
             raise ValueError("x shape does not match training shape")
 
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0
+        if self.include_bias:
+            xp[:, library_idx] = ones(n_samples)
+            library_idx += 1
         for f in self.functions:
             for c in self._combinations(
-                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
+                n_input_features, f.__code__.co_argcount, self.interaction_only
             ):
                 xp[:, library_idx] = f(*[x[:, j] for j in c])
                 library_idx += 1

@@ -86,13 +86,10 @@ class ConstrainedSR3(SR3):
         the first ``n_targets`` columns correspond to the first library feature,
         the next ``n_targets`` columns to the second library feature, and so on.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the l2-norm.
-
     normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms). Note that
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed. Note that
         this parameter is incompatible with the constraints!
 
     copy_X : boolean, optional (default True)
@@ -148,7 +145,6 @@ class ConstrainedSR3(SR3):
         constraint_rhs=None,
         constraint_order="target",
         normalize_columns=False,
-        normalize=False,
         fit_intercept=False,
         copy_X=True,
         initial_guess=None,
@@ -165,7 +161,6 @@ class ConstrainedSR3(SR3):
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
             initial_guess=initial_guess,
-            normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
@@ -297,15 +292,6 @@ class ConstrainedSR3(SR3):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
 
-        self.Theta = x
-        x_normed = np.copy(x)
-        if self.normalize_columns:
-            reg = np.zeros(n_features)
-            for i in range(n_features):
-                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
-                x_normed[:, i] = reg[i] * x[:, i]
-                coef_sparse[i, :] = coef_sparse[i, :] / reg[i]
-
         if self.use_trimming:
             trimming_array = np.repeat(1.0 - self.trimming_fraction, n_samples)
             self.history_trimming_ = [trimming_array]
@@ -315,17 +301,17 @@ class ConstrainedSR3(SR3):
 
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
-        H = np.dot(x_normed.T, x_normed) + np.diag(
-            np.full(x_normed.shape[1], 1.0 / self.nu)
+        H = np.dot(x.T, x) + np.diag(
+            np.full(x.shape[1], 1.0 / self.nu)
         )
-        x_transpose_y = np.dot(x_normed.T, y)
+        x_transpose_y = np.dot(x.T, y)
         if not self.use_constraints:
             cho = cho_factor(H)
         if self.inequality_constraints:
             # Precompute some objects for optimization
             x_expanded = np.zeros((n_samples, n_targets, n_features, n_targets))
             for i in range(n_targets):
-                x_expanded[:, i, :, i] = x_normed
+                x_expanded[:, i, :, i] = x
             x_expanded = np.reshape(
                 x_expanded, (n_samples * n_targets, n_targets * n_features)
             )
@@ -334,20 +320,20 @@ class ConstrainedSR3(SR3):
         if self.inequality_constraints:
             coef_sparse = self._update_coef_cvxpy(x_expanded, y, coef_sparse)
             objective_history.append(
-                self._objective(x_normed, y, coef_full, coef_sparse)
+                self._objective(x, y, coef_full, coef_sparse)
             )
         else:
             for _ in range(self.max_iter):
                 if self.use_trimming:
-                    x_weighted = x_normed * trimming_array.reshape(n_samples, 1)
-                    H = np.dot(x_weighted.T, x_normed) + np.diag(
-                        np.full(x_normed.shape[1], 1.0 / self.nu)
+                    x_weighted = x * trimming_array.reshape(n_samples, 1)
+                    H = np.dot(x_weighted.T, x) + np.diag(
+                        np.full(x.shape[1], 1.0 / self.nu)
                     )
                     x_transpose_y = np.dot(x_weighted.T, y)
                     if not self.use_constraints:
                         cho = cho_factor(H)
                     trimming_grad = 0.5 * np.sum(
-                        (y - x_normed.dot(coef_full)) ** 2, axis=1
+                        (y - x.dot(coef_full)) ** 2, axis=1
                     )
                 if self.use_constraints:
                     coef_full = self._update_full_coef_constraints(
@@ -356,6 +342,7 @@ class ConstrainedSR3(SR3):
                 else:
                     coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
                 coef_sparse = self._update_sparse_coef(coef_full)
+                self.history_.append(np.copy(coef_sparse).T)
 
                 if self.use_trimming:
                     trimming_array = self._update_trimming_array(
@@ -364,12 +351,12 @@ class ConstrainedSR3(SR3):
 
                     objective_history.append(
                         self._objective(
-                            x_normed, y, coef_full, coef_sparse, trimming_array
+                            x, y, coef_full, coef_sparse, trimming_array
                         )
                     )
                 else:
                     objective_history.append(
-                        self._objective(x_normed, y, coef_full, coef_sparse)
+                        self._objective(x, y, coef_full, coef_sparse)
                     )
                 if self._convergence_criterion() < self.tol:
                     # TODO: Update this for trimming/constraints
@@ -386,12 +373,8 @@ class ConstrainedSR3(SR3):
             self.constraint_lhs = reorder_constraints(
                 self.constraint_lhs, n_features, output_order="target"
             )
-        if self.normalize_columns:
-            self.coef_ = np.multiply(reg, coef_sparse.T)
-            self.coef_full_ = np.multiply(reg, coef_full.T)
-        else:
-            self.coef_ = coef_sparse.T
-            self.coef_full_ = coef_full.T
+        self.coef_ = coef_sparse.T
+        self.coef_full_ = coef_full.T
         if self.use_trimming:
             self.trimming_array = trimming_array
         self.objective_history = objective_history

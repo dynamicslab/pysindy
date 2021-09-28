@@ -22,6 +22,7 @@ from scipy.special import hyp2f1
 from scipy.special import poch
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
+from sklearn import __version__
 
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
@@ -111,6 +112,8 @@ class PDELibrary(BaseFeatureLibrary):
 
     n_input_features_ : int
         The total number of input features.
+        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
+        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -516,31 +519,35 @@ class PDELibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
+        if float(__version__[:3]) >= 1.0:
+            n_features = self.n_features_in_
+        else:
+            n_features = self.n_input_features
         if input_features is None:
-            input_features = ["x%d" % i for i in range(self.n_input_features_)]
+            input_features = ["x%d" % i for i in range(n_features)]
         feature_names = []
         if self.include_bias:
             feature_names.append("1")
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                self.n_input_features_, f.__code__.co_argcount, self.interaction_only
+                n_features, f.__code__.co_argcount, self.interaction_only
             ):
                 feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
                 )
         for k in range(self.num_derivs):
-            for j in range(self.n_input_features_):
+            for j in range(n_features):
                 feature_names.append(
                     self.function_names[len(self.functions) + k](input_features[j])
                 )
         for k in range(self.num_derivs):
             for i, f in enumerate(self.functions):
                 for c in self._combinations(
-                    self.n_input_features_,
+                    n_features,
                     f.__code__.co_argcount,
                     self.interaction_only,
                 ):
-                    for jj in range(self.n_input_features_):
+                    for jj in range(n_features):
                         feature_names.append(
                             self.function_names[i](*[input_features[j] for j in c])
                             + self.function_names[len(self.functions) + k](
@@ -562,7 +569,10 @@ class PDELibrary(BaseFeatureLibrary):
         self : instance
         """
         n_samples, n_features = check_array(x).shape
-        self.n_input_features_ = n_features
+        if float(__version__[:3]) >= 1.0:
+            self.n_features_in_ = n_features
+        else:
+            self.n_input_features_ = n_features
 
         # Need to compute any derivatives now
         if self.spatial_grid is not None:
@@ -775,9 +785,12 @@ class PDELibrary(BaseFeatureLibrary):
         x = check_array(x)
 
         n_samples, n_features = x.shape
-
-        if n_features != self.n_input_features_:
-            raise ValueError("x shape does not match training shape")
+        if float(__version__[:3]) >= 1.0:
+            if n_features != self.n_features_in_:
+                raise ValueError("x shape does not match training shape")
+        else:
+            if n_features != self.n_input_features_:
+                raise ValueError("x shape does not match training shape")
 
         if self.spatial_grid is not None:
             if self.slen == 1:
@@ -840,7 +853,7 @@ class PDELibrary(BaseFeatureLibrary):
             if self.slen == 1:
                 for f in self.functions:
                     for c in self._combinations(
-                        self.n_input_features_,
+                        n_features,
                         f.__code__.co_argcount,
                         self.interaction_only,
                     ):
@@ -932,7 +945,7 @@ class PDELibrary(BaseFeatureLibrary):
         else:
             for f in self.functions:
                 for c in self._combinations(
-                    self.n_input_features_,
+                    n_features,
                     f.__code__.co_argcount,
                     self.interaction_only,
                 ):
@@ -1091,7 +1104,7 @@ class PDELibrary(BaseFeatureLibrary):
                         if self.weak_form:
                             for f in self.functions:
                                 for c in self._combinations(
-                                    self.n_input_features_,
+                                    n_features,
                                     f.__code__.co_argcount,
                                     self.interaction_only,
                                 ):
@@ -1178,7 +1191,7 @@ class PDELibrary(BaseFeatureLibrary):
                         else:
                             for f in self.functions:
                                 for c in self._combinations(
-                                    self.n_input_features_,
+                                    n_features,
                                     f.__code__.co_argcount,
                                     self.interaction_only,
                                 ):
@@ -1196,7 +1209,7 @@ class PDELibrary(BaseFeatureLibrary):
                         if self.weak_form:
                             for f in self.functions:
                                 for c in self._combinations(
-                                    self.n_input_features_,
+                                    n_features,
                                     f.__code__.co_argcount,
                                     self.interaction_only,
                                 ):
@@ -1278,7 +1291,7 @@ class PDELibrary(BaseFeatureLibrary):
                         else:
                             for f in self.functions:
                                 for c in self._combinations(
-                                    self.n_input_features_,
+                                    n_features,
                                     f.__code__.co_argcount,
                                     self.interaction_only,
                                 ):

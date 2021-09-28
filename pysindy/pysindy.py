@@ -18,6 +18,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
+from sklearn import __version__
 
 from .differentiation import FiniteDifference
 from .feature_library import PDELibrary
@@ -383,12 +384,17 @@ class SINDy(BaseEstimator):
             else:
                 self.model.fit(x, x_dot)
 
-        self.n_input_features_ = self.model.steps[0][1].n_input_features_
-        self.n_output_features_ = self.model.steps[0][1].n_output_features_
+        # Annoying sklearn change that have to replace these everywhere
+        if float(__version__[:3]) >= 1.0:
+            self.n_features_in_ = self.model.steps[0][1].n_features_in_
+            n_input_features = self.model.steps[0][1].n_features_in_
+        else:
+            self.n_input_features_ = self.model.steps[0][1].n_input_features_
+            n_input_features = self.model.steps[0][1].n_input_features_
 
         if self.feature_names is None:
             feature_names = []
-            for i in range(self.n_input_features_ - self.n_control_features_):
+            for i in range(n_input_features - self.n_control_features_):
                 feature_names.append("x" + str(i))
             for i in range(self.n_control_features_):
                 feature_names.append("u" + str(i))
@@ -832,7 +838,11 @@ class SINDy(BaseEstimator):
                 def check_stop_condition(xi):
                     pass
 
-            x = zeros((t, self.n_input_features_ - self.n_control_features_))
+            # Annoying sklearn change that have to replace these everywhere
+            if float(__version__[:3]) >= 1.0:
+                x = zeros((t, self.n_features_in_ - self.n_control_features_))
+            else:
+                x = zeros((t, self.n_input_features_ - self.n_control_features_))
             x[0] = x0
 
             if u is None or self.n_control_features_ == 0:

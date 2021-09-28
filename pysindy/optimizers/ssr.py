@@ -27,13 +27,10 @@ class SSR(BaseOptimizer):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the l2-norm.
-
     normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms).
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -84,7 +81,6 @@ class SSR(BaseOptimizer):
         max_iter=20,
         ridge_kw=None,
         normalize_columns=False,
-        normalize=False,
         fit_intercept=False,
         copy_X=True,
         criteria="coefficient_value",
@@ -92,9 +88,9 @@ class SSR(BaseOptimizer):
     ):
         super(SSR, self).__init__(
             max_iter=max_iter,
-            normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            normalize_columns=normalize_columns
         )
 
         if alpha < 0:
@@ -114,7 +110,6 @@ class SSR(BaseOptimizer):
         self.criteria = criteria
         self.alpha = alpha
         self.ridge_kw = ridge_kw
-        self.normalize_columns = normalize_columns
         self.L0_penalty = L0_penalty
 
     def _coefficient_value(self, coef):
@@ -165,15 +160,7 @@ class SSR(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
 
-        self.Theta = x
-        x_normed = np.copy(x)
-        if self.normalize_columns:
-            reg = np.zeros(n_features)
-            for i in range(n_features):
-                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
-                x_normed[:, i] = reg[i] * x[:, i]
-
-        coef = self._regress(x_normed, y)
+        coef = self._regress(x, y)
         inds = np.ones((n_targets, n_features), dtype=bool)
         self.err_history_ = []
         for k in range(self.max_iter):
@@ -183,27 +170,25 @@ class SSR(BaseOptimizer):
                         coef[i, :], ind = self._coefficient_value(coef[i, :])
                     else:
                         coef[i, :], ind = self._model_residual(
-                            x_normed[:, inds[i, :]], y[:, i], coef[i, :], inds[i, :]
+                            x[:, inds[i, :]], y[:, i], coef[i, :], inds[i, :]
                         )
                     inds[i, ind] = False
                     if np.sum(np.asarray(inds[i, :], dtype=int)) <= n_targets:
                         # No terms left to sparsify
                         break
                     coef[i, inds[i, :]] = self._regress(
-                        x_normed[:, inds[i, :]], y[:, i]
+                        x[:, inds[i, :]], y[:, i]
                     )
-            if self.normalize_columns:
-                self.history_.append(np.multiply(reg, np.copy(coef)))
-            else:
-                self.history_.append(np.copy(coef))
+
+            self.history_.append(np.copy(coef))
             if self.L0_penalty is not None:
                 l0_penalty = self.L0_penalty * np.linalg.cond(x)
                 self.err_history_.append(
-                    np.sum((y - x_normed @ coef.T) ** 2)
+                    np.sum((y - x @ coef.T) ** 2)
                     + l0_penalty * np.count_nonzero(coef)
                 )
             else:
-                self.err_history_.append(np.sum((y - x_normed @ coef.T) ** 2))
+                self.err_history_.append(np.sum((y - x @ coef.T) ** 2))
             if np.any(np.sum(np.asarray(inds, dtype=int), axis=1) <= n_targets):
                 # each equation has one last term
                 break

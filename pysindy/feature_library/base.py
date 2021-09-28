@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.base import TransformerMixin
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
+from sklearn import __version__
 
 
 class BaseFeatureLibrary(TransformerMixin):
@@ -98,6 +99,8 @@ class ConcatLibrary(BaseFeatureLibrary):
 
     n_input_features_ : int
         The total number of input features.
+        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
+        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -136,7 +139,11 @@ class ConcatLibrary(BaseFeatureLibrary):
         self : instance
         """
         _, n_features = check_array(X).shape
-        self.n_input_features_ = n_features
+
+        if float(__version__[:3]) >= 1.0:
+            self.n_features_in_ = n_features
+        else:
+            self.n_input_features_ = n_features
 
         # First fit all libs provided below
         fitted_libs = [lib.fit(X, y) for lib in self.libraries_]

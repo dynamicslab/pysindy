@@ -23,13 +23,10 @@ class FROLS(BaseOptimizer):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the l2-norm.
-
     normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -78,7 +75,6 @@ class FROLS(BaseOptimizer):
 
     def __init__(
         self,
-        normalize=False,
         normalize_columns=False,
         fit_intercept=False,
         copy_X=True,
@@ -86,12 +82,11 @@ class FROLS(BaseOptimizer):
         max_iter=10,
     ):
         super(FROLS, self).__init__(
-            normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
             max_iter=max_iter,
+            normalize_columns=normalize_columns
         )
-        self.normalize_columns = normalize_columns
         self.L0_penalty = L0_penalty
         if self.max_iter <= 0:
             raise ValueError("Max iteration must be > 0")
@@ -131,13 +126,6 @@ class FROLS(BaseOptimizer):
         """
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
-        self.Theta = x
-        x_normed = np.copy(x)
-        if self.normalize_columns:
-            reg = np.zeros(n_features)
-            for i in range(n_features):
-                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
-                x_normed[:, i] = reg[i] * x[:, i]
 
         self.history_ = np.zeros((n_features, n_targets, n_features))
         coef = np.zeros_like(self.coef_)
@@ -162,7 +150,7 @@ class FROLS(BaseOptimizer):
                 for m in range(n_features):
                     if m not in L[:i]:
                         # Orthogonalize with respect to already selected functions
-                        Qs[:, m] = self._orthogonalize(x_normed[:, m], Q[:, :i])
+                        Qs[:, m] = self._orthogonalize(x[:, m], Q[:, :i])
 
                 L[i], err_glob[i], g_glob[i] = self._select_function(
                     Qs, y[:, k], sigma, L[:i]
@@ -170,7 +158,7 @@ class FROLS(BaseOptimizer):
 
                 # Store transformation from original functions to orthogonal library
                 for j in range(i):
-                    A[j, i] = self._normed_cov(Q[:, j], x_normed[:, L[i]])
+                    A[j, i] = self._normed_cov(Q[:, j], x[:, L[i]])
                 A[i, i] = 1.0
                 Q[:, i] = Qs[:, L[i]].copy()
                 Qs *= 0.0
@@ -187,10 +175,7 @@ class FROLS(BaseOptimizer):
                 ind = np.zeros(n_features, dtype=int)
                 ind[L[:i]] = 1
 
-                if self.normalize_columns:
-                    self.history_[i, k, :] = np.multiply(reg, np.copy(coef_k))
-                else:
-                    self.history_[i, k, :] = np.copy(coef_k)
+                self.history_[i, k, :] = np.copy(coef_k)
 
                 if i >= self.max_iter:
                     break
@@ -208,8 +193,4 @@ class FROLS(BaseOptimizer):
             )
         self.err_history_ = err
         err_min = np.argmin(err)
-        coef = np.asarray(self.history_[err_min, :, :])
-        if self.normalize_columns:
-            self.coef_ = np.multiply(reg, coef)
-        else:
-            self.coef_ = coef
+        self.coef_ = np.asarray(self.history_[err_min, :, :])

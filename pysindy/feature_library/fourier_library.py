@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
+from sklearn import __version__
 
 from .base import BaseFeatureLibrary
 
@@ -30,6 +31,8 @@ class FourierLibrary(BaseFeatureLibrary):
     ----------
     n_input_features_ : int
         The total number of input features.
+        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
+        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -84,8 +87,12 @@ class FourierLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
+        if float(__version__[:3]) >= 1.0:
+            n_input_features = self.n_features_in_
+        else:
+            n_input_features = self.n_input_features_
         if input_features is None:
-            input_features = ["x%d" % i for i in range(self.n_input_features_)]
+            input_features = ["x%d" % i for i in range(n_input_features)]
         feature_names = []
         for i in range(self.n_frequencies):
             for feature in input_features:
@@ -109,7 +116,10 @@ class FourierLibrary(BaseFeatureLibrary):
         self : instance
         """
         n_samples, n_features = check_array(x).shape
-        self.n_input_features_ = n_features
+        if float(__version__[:3]) >= 1.0:
+            self.n_features_in_ = n_features
+        else:
+            self.n_input_features_ = n_features
         if self.include_sin and self.include_cos:
             self.n_output_features_ = n_features * self.n_frequencies * 2
         else:
@@ -136,13 +146,17 @@ class FourierLibrary(BaseFeatureLibrary):
 
         n_samples, n_features = x.shape
 
-        if n_features != self.n_input_features_:
+        if float(__version__[:3]) >= 1.0:
+            n_input_features = self.n_features_in_
+        else:
+            n_input_features = self.n_input_features_
+        if n_features != n_input_features:
             raise ValueError("x shape does not match training shape")
 
         xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
         idx = 0
         for i in range(self.n_frequencies):
-            for j in range(self.n_input_features_):
+            for j in range(n_input_features):
                 if self.include_sin:
                     xp[:, idx] = np.sin((i + 1) * x[:, j])
                     idx += 1

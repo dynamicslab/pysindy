@@ -44,10 +44,10 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the l2-norm.
+    normalize_columns : boolean, optional (default False)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -73,13 +73,13 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
     def __init__(
         self,
         max_iter=20,
-        normalize=False,
+        normalize_columns=False,
         fit_intercept=False,
         initial_guess=None,
         copy_X=True,
     ):
         super(BaseOptimizer, self).__init__(
-            fit_intercept=fit_intercept, normalize=normalize, copy_X=copy_X
+            fit_intercept=fit_intercept, copy_X=copy_X
         )
 
         if max_iter <= 0:
@@ -90,6 +90,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         if np.ndim(initial_guess) == 1:
             initial_guess = initial_guess.reshape(1, -1)
         self.initial_guess = initial_guess
+        self.normalize_columns = normalize_columns
 
     # Force subclasses to implement this
     @abc.abstractmethod
@@ -130,10 +131,10 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
             x_,
             y,
             fit_intercept=self.fit_intercept,
-            normalize=self.normalize,
             copy=self.copy_X,
             sample_weight=sample_weight,
         )
+        n_features = x.shape[1]
 
         if sample_weight is not None:
             x, y = _rescale_data(x, y, sample_weight)
@@ -145,8 +146,16 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         coef_shape = (y.shape[1], x.shape[1])
         self.ind_ = np.ones(coef_shape, dtype=bool)
 
+        self.Theta = x
+        x_normed = np.copy(x)
+        if self.normalize_columns:
+            reg = np.zeros(n_features)
+            for i in range(n_features):
+                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
+                x_normed[:, i] = reg[i] * x[:, i]
+
         if self.initial_guess is None:
-            self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0].T
+            self.coef_ = np.linalg.lstsq(x_normed, y, rcond=None)[0].T
         else:
             if not self.initial_guess.shape == coef_shape:
                 raise ValueError(
@@ -157,8 +166,15 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         self.history_ = [self.coef_]
 
-        self._reduce(x, y, **reduce_kws)
+        self._reduce(x_normed, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
+
+        if self.normalize_columns:
+            self.coef_ = np.multiply(reg, self.coef_)
+            if hasattr(self, "coef_full_"):
+                self.coef_full_ = np.multiply(reg, self.coef_full_)
+            for i in range(np.shape(self.history_)[0]):
+                self.history_[i] = np.multiply(reg, self.history_[i])
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self

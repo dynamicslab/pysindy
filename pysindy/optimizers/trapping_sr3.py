@@ -122,13 +122,13 @@ class TrappingSR3(SR3):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the L2-norm.
-
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
+
+    normalize_columns : boolean, optional (default False)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed.
 
     Attributes
     ----------
@@ -199,7 +199,6 @@ class TrappingSR3(SR3):
         thresholder="l1",
         max_iter=30,
         accel=False,
-        normalize=False,
         normalize_columns=False,
         fit_intercept=False,
         copy_X=True,
@@ -214,7 +213,7 @@ class TrappingSR3(SR3):
     ):
         super(TrappingSR3, self).__init__(
             max_iter=max_iter,
-            normalize=normalize,
+            normalize_columns=normalize_columns,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
         )
@@ -269,7 +268,6 @@ class TrappingSR3(SR3):
         self.PWeigs_history_ = []
         self.history_ = []
         self.objective_history = objective_history
-        self.normalize_columns = normalize_columns
         self.unbias = False
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
@@ -508,15 +506,6 @@ class TrappingSR3(SR3):
         r = y.shape[1]
         N = int((r ** 2 + 3 * r) / 2.0)
 
-        self.Theta = x
-        x_normed = np.copy(x)
-        if self.normalize_columns:
-            reg = np.zeros(n_features)
-            for i in range(n_features):
-                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
-                x_normed[:, i] = reg[i] * x[:, i]
-        x = np.copy(x_normed)
-
         # If PL and PQ are passed, make sure dimensions/symmetries are correct
         self._check_P_matrix(r, n_features, N)
 
@@ -631,8 +620,5 @@ class TrappingSR3(SR3):
                 ConvergenceWarning,
             )
 
-        if self.normalize_columns:
-            self.coef_ = np.multiply(reg, coef_sparse.T)
-        else:
-            self.coef_ = coef_sparse.T
+        self.coef_ = coef_sparse.T
         self.objective_history = objective_history

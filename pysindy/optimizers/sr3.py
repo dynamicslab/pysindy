@@ -74,13 +74,10 @@ class SR3(BaseOptimizer):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the L2-norm.
-
     normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -130,18 +127,17 @@ class SR3(BaseOptimizer):
         trimming_fraction=0.0,
         trimming_step_size=1.0,
         max_iter=30,
-        normalize_columns=False,
-        normalize=False,
         fit_intercept=False,
         copy_X=True,
         initial_guess=None,
+        normalize_columns=False
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
             initial_guess=initial_guess,
-            normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            normalize_columns=normalize_columns,
         )
 
         if threshold < 0:
@@ -188,7 +184,6 @@ class SR3(BaseOptimizer):
             self.use_trimming = True
         self.trimming_fraction = trimming_fraction
         self.trimming_step_size = trimming_step_size
-        self.normalize_columns = normalize_columns
 
     def enable_trimming(self, trimming_fraction):
         """
@@ -261,14 +256,6 @@ class SR3(BaseOptimizer):
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 
-        self.Theta = x
-        x_normed = np.copy(x)
-        if self.normalize_columns:
-            reg = np.zeros(n_features)
-            for i in range(n_features):
-                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
-                x_normed[:, i] = reg[i] * x[:, i]
-
         if self.use_trimming:
             coef_full = coef_sparse.copy()
             trimming_array = np.repeat(1.0 - self.trimming_fraction, n_samples)
@@ -277,26 +264,23 @@ class SR3(BaseOptimizer):
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
         cho = cho_factor(
-            np.dot(x_normed.T, x_normed)
-            + np.diag(np.full(x_normed.shape[1], 1.0 / self.nu))
+            np.dot(x.T, x)
+            + np.diag(np.full(x.shape[1], 1.0 / self.nu))
         )
-        x_transpose_y = np.dot(x_normed.T, y)
+        x_transpose_y = np.dot(x.T, y)
 
         for _ in range(self.max_iter):
             if self.use_trimming:
-                x_weighted = x_normed * trimming_array.reshape(n_samples, 1)
+                x_weighted = x * trimming_array.reshape(n_samples, 1)
                 cho = cho_factor(
-                    np.dot(x_weighted.T, x_normed)
-                    + np.diag(np.full(x_normed.shape[1], 1.0 / self.nu))
+                    np.dot(x_weighted.T, x)
+                    + np.diag(np.full(x.shape[1], 1.0 / self.nu))
                 )
                 x_transpose_y = np.dot(x_weighted.T, y)
-                trimming_grad = 0.5 * np.sum((y - x_normed.dot(coef_full)) ** 2, axis=1)
+                trimming_grad = 0.5 * np.sum((y - x.dot(coef_full)) ** 2, axis=1)
             coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
             coef_sparse = self._update_sparse_coef(coef_full)
-            if self.normalize_columns:
-                self.history_.append(np.multiply(reg, coef_sparse.T))
-            else:
-                self.history_.append(coef_sparse.T)
+            self.history_.append(coef_sparse.T)
 
             if self.use_trimming:
                 trimming_array = self._update_trimming_array(
@@ -313,11 +297,7 @@ class SR3(BaseOptimizer):
                 ),
                 ConvergenceWarning,
             )
-        if self.normalize_columns:
-            self.coef_ = np.multiply(reg, coef_sparse.T)
-            self.coef_full_ = np.multiply(reg, coef_full.T)
-        else:
-            self.coef_ = coef_sparse.T
-            self.coef_full_ = coef_full.T
+        self.coef_ = coef_sparse.T
+        self.coef_full_ = coef_full.T
         if self.use_trimming:
             self.trimming_array = trimming_array

@@ -4,10 +4,10 @@ Base class for feature library classes.
 import abc
 
 import numpy as np
+from sklearn import __version__
 from sklearn.base import TransformerMixin
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
-from sklearn import __version__
 
 
 class BaseFeatureLibrary(TransformerMixin):

@@ -1,7 +1,7 @@
 import numpy as np
+from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
-from sklearn import __version__
 
 from .base import BaseFeatureLibrary
 
@@ -14,9 +14,9 @@ class FourierLibrary(BaseFeatureLibrary):
     ----------
     n_frequencies : int, optional (default 1)
         Number of frequencies to include in the library. The library will
-        include functions :math:`\\sin(x), \\sin(2x), \\dots \\sin(n_{frequencies}x)`
-        for each input feature :math:`x` (depending on which of sine and/or cosine
-        features are included).
+        include functions :math:`\\sin(x), \\sin(2x), \\dots
+        \\sin(n_{frequencies}x)` for each input feature :math:`x`
+        (depending on which of sine and/or cosine features are included).
 
     include_sin : boolean, optional (default True)
         If True, include sine terms in the library.

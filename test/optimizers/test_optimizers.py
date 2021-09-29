@@ -15,7 +15,6 @@ from sklearn.utils.validation import check_is_fitted
 
 from pysindy import FiniteDifference
 from pysindy import PDELibrary
-from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
 from pysindy.optimizers import ConstrainedSR3
@@ -26,6 +25,8 @@ from pysindy.optimizers import SSR
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
+
+# from pysindy import PolynomialLibrary
 
 
 def lorenz(z, t):
@@ -213,8 +214,7 @@ def test_trapping_quadratic_library(params):
         lambda x: "{}^2".format(x),
     ]
     sindy_library = CustomLibrary(
-        library_functions=library_functions,
-        function_names=library_function_names
+        library_functions=library_functions, function_names=library_function_names
     )
     opt = TrappingSR3(**params)
     model = SINDy(optimizer=opt, feature_library=sindy_library)
@@ -549,9 +549,11 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
 #     )
 #     model.fit(x, t=t[1] - t[0])
 #     assert np.all(
-#         np.dot(constraint_matrix, (model.coefficients()).flatten("F")) <= constraint_rhs
+#         np.dot(constraint_matrix,
+#                (model.coefficients()).flatten("F")) <= constraint_rhs
 #     ) or np.allclose(
-#         np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
+#         np.dot(constraint_matrix,
+#                (model.coefficients()).flatten("F")), constraint_rhs
 #     )
 
 

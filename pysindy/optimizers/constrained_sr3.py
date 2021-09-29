@@ -66,12 +66,14 @@ class ConstrainedSR3(SR3):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    constraint_lhs : numpy ndarray, shape (n_constraints, n_features * n_targets), \
+    constraint_lhs : numpy ndarray,
+            shape (n_constraints, n_features * n_targets),
             optional (default None)
         The left hand side matrix C of Cw <= d.
         There should be one row per constraint.
 
-    constraint_rhs : numpy ndarray, shape (n_constraints,), optional (default None)
+    constraint_rhs : numpy ndarray, shape (n_constraints,),
+            optional (default None)
         The right hand side vector d of Cw <= d.
 
     constraint_order : string, optional (default "target")
@@ -79,12 +81,13 @@ class ConstrainedSR3(SR3):
         Must be one of "target" or "feature".
         "target" indicates that the constraints are grouped by target:
         i.e. the first ``n_features`` columns
-        correspond to constraint coefficients on the library features for the first
-        target (variable), the next ``n_features`` columns to the library features
-        for the second target (variable), and so on.
-        "feature" indicates that the constraints are grouped by library feature:
-        the first ``n_targets`` columns correspond to the first library feature,
-        the next ``n_targets`` columns to the second library feature, and so on.
+        correspond to constraint coefficients on the library features
+        for the first target (variable), the next ``n_features`` columns to
+        the library features for the second target (variable), and so on.
+        "feature" indicates that the constraints are grouped by library
+        feature: the first ``n_targets`` columns correspond to the first
+        library feature, the next ``n_targets`` columns to the second library
+        feature, and so on.
 
     normalize_columns : boolean, optional (default False)
         Normalize the columns of x (the SINDy library terms) before regression
@@ -301,9 +304,7 @@ class ConstrainedSR3(SR3):
 
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
-        H = np.dot(x.T, x) + np.diag(
-            np.full(x.shape[1], 1.0 / self.nu)
-        )
+        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
         x_transpose_y = np.dot(x.T, y)
         if not self.use_constraints:
             cho = cho_factor(H)
@@ -319,9 +320,7 @@ class ConstrainedSR3(SR3):
         objective_history = []
         if self.inequality_constraints:
             coef_sparse = self._update_coef_cvxpy(x_expanded, y, coef_sparse)
-            objective_history.append(
-                self._objective(x, y, coef_full, coef_sparse)
-            )
+            objective_history.append(self._objective(x, y, coef_full, coef_sparse))
         else:
             for _ in range(self.max_iter):
                 if self.use_trimming:
@@ -332,9 +331,7 @@ class ConstrainedSR3(SR3):
                     x_transpose_y = np.dot(x_weighted.T, y)
                     if not self.use_constraints:
                         cho = cho_factor(H)
-                    trimming_grad = 0.5 * np.sum(
-                        (y - x.dot(coef_full)) ** 2, axis=1
-                    )
+                    trimming_grad = 0.5 * np.sum((y - x.dot(coef_full)) ** 2, axis=1)
                 if self.use_constraints:
                     coef_full = self._update_full_coef_constraints(
                         H, x_transpose_y, coef_sparse
@@ -350,9 +347,7 @@ class ConstrainedSR3(SR3):
                     )
 
                     objective_history.append(
-                        self._objective(
-                            x, y, coef_full, coef_sparse, trimming_array
-                        )
+                        self._objective(x, y, coef_full, coef_sparse, trimming_array)
                     )
                 else:
                     objective_history.append(

@@ -90,7 +90,7 @@ class SSR(BaseOptimizer):
             max_iter=max_iter,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
-            normalize_columns=normalize_columns
+            normalize_columns=normalize_columns,
         )
 
         if alpha < 0:
@@ -176,16 +176,13 @@ class SSR(BaseOptimizer):
                     if np.sum(np.asarray(inds[i, :], dtype=int)) <= n_targets:
                         # No terms left to sparsify
                         break
-                    coef[i, inds[i, :]] = self._regress(
-                        x[:, inds[i, :]], y[:, i]
-                    )
+                    coef[i, inds[i, :]] = self._regress(x[:, inds[i, :]], y[:, i])
 
             self.history_.append(np.copy(coef))
             if self.L0_penalty is not None:
                 l0_penalty = self.L0_penalty * np.linalg.cond(x)
                 self.err_history_.append(
-                    np.sum((y - x @ coef.T) ** 2)
-                    + l0_penalty * np.count_nonzero(coef)
+                    np.sum((y - x @ coef.T) ** 2) + l0_penalty * np.count_nonzero(coef)
                 )
             else:
                 self.err_history_.append(np.sum((y - x @ coef.T) ** 2))

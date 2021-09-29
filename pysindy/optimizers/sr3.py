@@ -21,8 +21,8 @@ class SR3(BaseOptimizer):
         0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
         + (0.5 / \\nu)\\|w-v\\|^2_2
 
-    where :math:`R(v)` is a regularization function. See the following references
-    for more details:
+    where :math:`R(v)` is a regularization function.
+    See the following references for more details:
 
         Zheng, Peng, et al. "A unified framework for sparse relaxed
         regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
@@ -130,7 +130,7 @@ class SR3(BaseOptimizer):
         fit_intercept=False,
         copy_X=True,
         initial_guess=None,
-        normalize_columns=False
+        normalize_columns=False,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
@@ -263,10 +263,7 @@ class SR3(BaseOptimizer):
 
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
-        cho = cho_factor(
-            np.dot(x.T, x)
-            + np.diag(np.full(x.shape[1], 1.0 / self.nu))
-        )
+        cho = cho_factor(np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu)))
         x_transpose_y = np.dot(x.T, y)
 
         for _ in range(self.max_iter):

@@ -4,12 +4,12 @@ from itertools import combinations_with_replacement as combinations_w_r
 
 import numpy as np
 from scipy import sparse
+from sklearn import __version__
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.preprocessing._csr_polynomial_expansion import _csr_polynomial_expansion
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import FLOAT_DTYPES
-from sklearn import __version__
 
 from .base import BaseFeatureLibrary
 
@@ -123,9 +123,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             self.interaction_only,
             self.include_bias,
         )
-        return np.vstack(
-            [np.bincount(c, minlength=n_features) for c in combinations]
-        )
+        return np.vstack([np.bincount(c, minlength=n_features) for c in combinations])
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.
@@ -207,9 +205,10 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
         Returns
         -------
-        xp : np.ndarray or CSR/CSC sparse matrix, shape (n_samples, n_output_features)
-            The matrix of features, where n_output_features is the number of polynomial
-            features generated from the combination of inputs.
+        xp : np.ndarray or CSR/CSC sparse matrix,
+                shape (n_samples, n_output_features)
+            The matrix of features, where n_output_features is the number
+            of polynomial features generated from the combination of inputs.
         """
         check_is_fitted(self)
 

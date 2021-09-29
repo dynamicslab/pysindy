@@ -1,7 +1,7 @@
 from numpy import delete
+from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
-from sklearn import __version__
 
 from .base import BaseFeatureLibrary
 
@@ -121,7 +121,8 @@ class IdentityLibrary(BaseFeatureLibrary):
         if n_features != n_input_features:
             raise ValueError("x shape does not match training shape")
 
-        # If library bagging, return x missing a single column
+        # If library bagging, return x missing the
+        # columns in self.ensemble_indices
         if self.library_ensemble:
             if n_features == 1:
                 raise ValueError(

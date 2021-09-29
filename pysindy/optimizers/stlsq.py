@@ -52,7 +52,7 @@ class STLSQ(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
+    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features),
             optional (default None)
         Initial guess for coefficients ``coef_``.
         If None, least-squares is used to obtain an initial guess.
@@ -106,7 +106,7 @@ class STLSQ(BaseOptimizer):
             max_iter=max_iter,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
-            normalize_columns=normalize_columns
+            normalize_columns=normalize_columns,
         )
 
         if threshold < 0:

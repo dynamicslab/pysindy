@@ -13,12 +13,12 @@ from numpy.random import choice
 from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 from scipy.linalg import LinAlgWarning
+from sklearn import __version__
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
-from sklearn import __version__
 
 from .differentiation import FiniteDifference
 from .feature_library import PDELibrary
@@ -391,6 +391,7 @@ class SINDy(BaseEstimator):
         else:
             self.n_input_features_ = self.model.steps[0][1].n_input_features_
             n_input_features = self.model.steps[0][1].n_input_features_
+        self.n_output_features_ = self.model.steps[0][1].n_output_features_
 
         if self.feature_names is None:
             feature_names = []

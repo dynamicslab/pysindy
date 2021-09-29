@@ -94,8 +94,8 @@ class TrappingSR3(SR3):
         try a direct minimization on the largest eigenvalue.
 
     inequality_constraints : bool, optional
-        If True, relax_optim must be false or relax_optim = True AND threshold != 0,
-        so that the CVXPY methods are used.
+        If True, relax_optim must be false or relax_optim = True
+        AND threshold != 0, so that the CVXPY methods are used.
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.

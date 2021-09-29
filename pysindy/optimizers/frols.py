@@ -85,7 +85,7 @@ class FROLS(BaseOptimizer):
             fit_intercept=fit_intercept,
             copy_X=copy_X,
             max_iter=max_iter,
-            normalize_columns=normalize_columns
+            normalize_columns=normalize_columns,
         )
         self.L0_penalty = L0_penalty
         if self.max_iter <= 0:
@@ -128,7 +128,6 @@ class FROLS(BaseOptimizer):
         n_targets = y.shape[1]
 
         self.history_ = np.zeros((n_features, n_targets, n_features))
-        coef = np.zeros_like(self.coef_)
         for k in range(n_targets):
             # Initialize arrays
             err_glob = np.zeros(n_features)

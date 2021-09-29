@@ -4,9 +4,9 @@ from itertools import combinations_with_replacement as combinations_w_r
 from numpy import delete
 from numpy import empty
 from numpy import ones
+from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
-from sklearn import __version__
 
 from .base import BaseFeatureLibrary
 
@@ -26,9 +26,10 @@ class CustomLibrary(BaseFeatureLibrary):
         a variable name), and output a string depiction of the respective
         mathematical function applied to that variable. For example, if the
         first library function is sine, the name function might return
-        :math:`\\sin(x)` given :math:`x` as input. The function_names list must be the
-        same length as library_functions. If no list of function names is
-        provided, defaults to using :math:`[ f_0(x),f_1(x), f_2(x), \\ldots ]`.
+        :math:`\\sin(x)` given :math:`x` as input. The function_names list
+        must be the same length as library_functions. If no list of function
+        names is provided, defaults to using
+        :math:`[ f_0(x),f_1(x), f_2(x), \\ldots ]`.
 
     interaction_only : boolean, optional (default True)
         Whether to omit self-interaction terms.
@@ -124,7 +125,7 @@ class CustomLibrary(BaseFeatureLibrary):
             input_features = ["x%d" % i for i in range(n_input_features)]
         feature_names = []
         if self.include_bias:
-            feature_names.append('1')
+            feature_names.append("1")
         for i, f in enumerate(self.functions):
             for c in self._combinations(
                 n_input_features, f.__code__.co_argcount, self.interaction_only
@@ -168,7 +169,7 @@ class CustomLibrary(BaseFeatureLibrary):
                 )
             )
             if self.include_bias:
-                self.function_names.append('1')
+                self.function_names.append("1")
         return self
 
     def transform(self, x):

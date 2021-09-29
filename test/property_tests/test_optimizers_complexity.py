@@ -111,4 +111,5 @@ def test_complexity_parameter(
         opt.fit(x, y)
 
     for less_complex, more_complex in zip(optimizers, optimizers[1:]):
+        print(less_complex.complexity, more_complex.complexity)
         assert less_complex.complexity <= more_complex.complexity

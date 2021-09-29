@@ -169,6 +169,7 @@ class FROLS(BaseOptimizer):
 
                 # Invert orthogonal coefficient vector
                 # to get coefficients for original functions
+                print(g_glob[:i])
                 alpha = lstsq(A[:i, :i], g_glob[:i], cond=1e-6)[0]
 
                 coef_k = np.zeros_like(g_glob)
@@ -192,7 +193,8 @@ class FROLS(BaseOptimizer):
             l0_penalty = 0.0
         for i in range(n_features):
             coef_i = np.asarray(self.history_[i, :, :])
-            err[i] = np.sum((y - x @ coef_i.T) ** 2) + l0_penalty * np.count_nonzero(
+            res = y - x @ coef_i.T
+            err[i] = np.vdot(res, res) + l0_penalty * np.count_nonzero(
                 coef_i
             )
         self.err_history_ = err

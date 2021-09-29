@@ -1,7 +1,7 @@
 import numpy as np
 
 from .base import BaseOptimizer
-
+from scipy.linalg import lstsq
 
 class FROLS(BaseOptimizer):
     """Sequentially thresholded least squares algorithm.
@@ -38,6 +38,10 @@ class FROLS(BaseOptimizer):
     max_iter : int, optional (default 10)
         Maximum iterations of the optimization algorithm. This determines
         the number of nonzero terms chosen by the FROLS algorithm.
+        
+    cond : float, optional (default 1e-6)
+        Condition number for inverting the matrix relating the orthonormal
+        functions to the original library at the end of FROLS
 
     Attributes
     ----------
@@ -80,6 +84,7 @@ class FROLS(BaseOptimizer):
         copy_X=True,
         L0_penalty=None,
         max_iter=10,
+        cond=1e-6,
     ):
         super(FROLS, self).__init__(
             fit_intercept=fit_intercept,
@@ -164,7 +169,7 @@ class FROLS(BaseOptimizer):
 
                 # Invert orthogonal coefficient vector
                 # to get coefficients for original functions
-                alpha = np.linalg.lstsq(A[:i, :i], g_glob[:i], rcond=1e-6)[0]
+                alpha = lstsq(A[:i, :i], g_glob[:i], cond=1e-6)[0]
 
                 coef_k = np.zeros_like(g_glob)
                 coef_k[L[:i]] = alpha

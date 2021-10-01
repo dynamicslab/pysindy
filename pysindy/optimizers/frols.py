@@ -169,8 +169,7 @@ class FROLS(BaseOptimizer):
 
                 # Invert orthogonal coefficient vector
                 # to get coefficients for original functions
-                print(g_glob[:i])
-                alpha = lstsq(A[:i, :i], g_glob[:i], cond=1e-6)[0]
+                alpha = lstsq(A[:i, :i], g_glob[:i], cond=cond)[0]
 
                 coef_k = np.zeros_like(g_glob)
                 coef_k[L[:i]] = alpha

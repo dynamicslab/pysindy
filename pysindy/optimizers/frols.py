@@ -138,7 +138,7 @@ class FROLS(BaseOptimizer):
         # History of selected functions: [iteration x output x coefficients]
         self.history_ = np.zeros((n_features, n_targets, n_features), dtype=x.dtype)
         # Error Reduction Ratio: [iteration x output]
-        self.ERR_global = np.zeros(n_features, n_targets)
+        self.ERR_global = np.zeros((n_features, n_targets))
         for k in range(n_targets):
             # Initialize arrays
             g_global = np.zeros(
@@ -206,18 +206,19 @@ class FROLS(BaseOptimizer):
         """
         
         if self.L0_penalty is not None:
-            l0_penalty = self.L0_penalty * np.linalg.cond(x)
+            l0_penalty = self.L0_penalty # * np.linalg.cond(x)
         else:
             l0_penalty = 0.0
             
         # Function selection: L2 error for output k at iteration i is given by
         #    sum(ERR_global[k, :i]), and the number of nonzero coefficients is (i+1)
-        l2_err = 1.0 - np.cumsum(self.ERR_global, axis=1)
+        l2_err = np.cumsum(self.ERR_global, axis=1)
         l0_norm = np.arange(1, n_features+1)[:, None]
         loss = l2_err + l0_penalty*l0_norm
+        self.loss = loss
         
         # For each output, choose the minimum L0-penalized loss function
         self.coef_ = np.zeros((n_targets, n_features), dtype=x.dtype)
         loss_min = np.argmin(loss, axis=0)  # Minimum loss for this output function
         for k in range(n_targets):
-            self.coef_[k, :] = self.history_[loss_min[k], :, :]
+            self.coef_[k, :] = self.history_[loss_min[k], k, :]

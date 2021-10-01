@@ -1,7 +1,8 @@
 import numpy as np
+from scipy.linalg import lstsq
 
 from .base import BaseOptimizer
-from scipy.linalg import lstsq
+
 
 class FROLS(BaseOptimizer):
     """Sequentially thresholded least squares algorithm.
@@ -38,7 +39,7 @@ class FROLS(BaseOptimizer):
     max_iter : int, optional (default 10)
         Maximum iterations of the optimization algorithm. This determines
         the number of nonzero terms chosen by the FROLS algorithm.
-        
+
     cond : float, optional (default 1e-6)
         Condition number for inverting the matrix relating the orthonormal
         functions to the original library at the end of FROLS
@@ -93,7 +94,7 @@ class FROLS(BaseOptimizer):
             normalize_columns=normalize_columns,
         )
         self.L0_penalty = L0_penalty
-        self.cond=cond
+        self.cond = cond
         if self.cond <= 0:
             raise ValueError("Cond must be > 0")
         if self.max_iter <= 0:
@@ -113,7 +114,9 @@ class FROLS(BaseOptimizer):
                     abs(g[m]) ** 2 * np.real(np.vdot(x[:, m], x[:, m])) / sigma
                 )  # Error reduction
 
-        best_idx = np.argmax(ERR)  # Select best function by maximum Error Reduction Ratio
+        best_idx = np.argmax(
+            ERR
+        )  # Select best function by maximum Error Reduction Ratio
 
         # Return index of best function, along with ERR and coefficient
         return best_idx, ERR[best_idx], g[best_idx]
@@ -183,8 +186,8 @@ class FROLS(BaseOptimizer):
                 coef_k[abs(coef_k) < 1e-10] = 0
 
                 # Indicator of selected terms
-                #ind = np.zeros(n_features, dtype=int)
-                #ind[L[:i]] = 1
+                # ind = np.zeros(n_features, dtype=int)
+                # ind[L[:i]] = 1
 
                 self.history_[i, k, :] = np.copy(coef_k)
 
@@ -192,7 +195,7 @@ class FROLS(BaseOptimizer):
                     break
 
         # Figure out lowest MSE coefficients
-        
+
         """err = np.zeros(n_features)
         for i in range(n_features):
             coef_i = np.asarray(self.history_[i, :, :])
@@ -204,21 +207,22 @@ class FROLS(BaseOptimizer):
         err_min = np.argmin(err)
         self.coef_ = np.asarray(self.history_[err_min, :, :])
         """
-        
+
         if self.L0_penalty is not None:
-            l0_penalty = self.L0_penalty # * np.linalg.cond(x)
+            l0_penalty = self.L0_penalty  # * np.linalg.cond(x)
         else:
             l0_penalty = 0.0
-            
+
         # Function selection: L2 error for output k at iteration i is given by
         #    sum(ERR_global[k, :i]), and the number of nonzero coefficients is (i+1)
         l2_err = np.cumsum(self.ERR_global, axis=1)
-        l0_norm = np.arange(1, n_features+1)[:, None]
-        loss = l2_err + l0_penalty*l0_norm
-        self.loss = loss
-        
+        l0_norm = np.arange(1, n_features + 1)[:, None]
+        self.loss_ = l2_err + l0_penalty * l0_norm  # Save for debugging
+
         # For each output, choose the minimum L0-penalized loss function
         self.coef_ = np.zeros((n_targets, n_features), dtype=x.dtype)
-        loss_min = np.argmin(loss, axis=0)  # Minimum loss for this output function
+        loss_min = np.argmin(
+            self.loss_[: self.max_iter + 1, :], axis=0
+        )  # Minimum loss for this output function
         for k in range(n_targets):
             self.coef_[k, :] = self.history_[loss_min[k], k, :]

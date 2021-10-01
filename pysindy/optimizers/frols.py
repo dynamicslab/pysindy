@@ -93,6 +93,9 @@ class FROLS(BaseOptimizer):
             normalize_columns=normalize_columns,
         )
         self.L0_penalty = L0_penalty
+        self.cond=cond
+        if self.cond <= 0:
+            raise ValueError("Cond must be > 0")
         if self.max_iter <= 0:
             raise ValueError("Max iteration must be > 0")
 
@@ -169,7 +172,7 @@ class FROLS(BaseOptimizer):
 
                 # Invert orthogonal coefficient vector
                 # to get coefficients for original functions
-                alpha = lstsq(A[:i, :i], g_glob[:i], cond=cond)[0]
+                alpha = lstsq(A[:i, :i], g_glob[:i], cond=self.cond)[0]
 
                 coef_k = np.zeros_like(g_glob)
                 coef_k[L[:i]] = alpha

@@ -30,7 +30,6 @@ from .optimizers import SINDyOptimizer
 from .optimizers import SR3
 from .optimizers import FROLS
 from .optimizers import SSR
-from .optimizers import BCG
 from .optimizers import STLSQ
 
 

@@ -1,5 +1,4 @@
 from .base import BaseOptimizer
-from .bcg_opt import BCG
 from .constrained_sr3 import ConstrainedSR3
 from .frols import FROLS
 from .sindy_optimizer import SINDyOptimizer
@@ -17,5 +16,4 @@ __all__ = [
     "TrappingSR3",
     "SSR",
     "FROLS",
-    "BCG",
 ]

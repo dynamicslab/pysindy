@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.linalg import lstsq
+from sklearn.linear_model import ridge_regression
 
 from .base import BaseOptimizer
 
@@ -32,17 +32,19 @@ class FROLS(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    L0_penalty : float, optional (default None)
+    kappa : float, optional (default None)
         If passed, compute the MSE errors with an extra L0 term with
-        strength equal to L0_penalty times the condition number of Theta.
+        strength equal to kappa times the condition number of Theta.
 
     max_iter : int, optional (default 10)
         Maximum iterations of the optimization algorithm. This determines
         the number of nonzero terms chosen by the FROLS algorithm.
 
-    cond : float, optional (default 1e-6)
-        Condition number for inverting the matrix relating the orthonormal
-        functions to the original library at the end of FROLS
+    alpha : float, optional (default 0.05)
+        Optional L2 (ridge) regularization on the weight vector.
+
+    ridge_kw : dict, optional (default None)
+        Optional keyword arguments to pass to the ridge regression.
 
     Attributes
     ----------
@@ -83,9 +85,10 @@ class FROLS(BaseOptimizer):
         normalize_columns=False,
         fit_intercept=False,
         copy_X=True,
-        L0_penalty=None,
+        kappa=None,
         max_iter=10,
-        cond=1e-6,
+        alpha=0.05,
+        ridge_kw=None,
     ):
         super(FROLS, self).__init__(
             fit_intercept=fit_intercept,
@@ -93,10 +96,10 @@ class FROLS(BaseOptimizer):
             max_iter=max_iter,
             normalize_columns=normalize_columns,
         )
-        self.L0_penalty = L0_penalty
-        self.cond = cond
-        if self.cond <= 0:
-            raise ValueError("Cond must be > 0")
+        self.alpha = alpha
+        self.ridge_kw = ridge_kw
+        self.normalize_columns = normalize_columns
+        self.kappa = kappa
         if self.max_iter <= 0:
             raise ValueError("Max iteration must be > 0")
 
@@ -178,7 +181,11 @@ class FROLS(BaseOptimizer):
                 # Invert orthogonal coefficient vector
                 # to get coefficients for original functions
                 # at this step of the iteration
-                alpha = lstsq(A[:i, :i], g_global[:i], cond=self.cond)[0]
+                if i != 0:
+                    kw = self.ridge_kw or {}
+                    alpha = ridge_regression(A[:i, :i], g_global[:i], self.alpha, **kw)
+                else:
+                    alpha = []
 
                 # Coefficients for the library functions
                 coef_k = np.zeros_like(g_global)
@@ -194,9 +201,13 @@ class FROLS(BaseOptimizer):
                 if i >= self.max_iter:
                     break
 
+        if self.kappa is not None:
+            l0_penalty = self.kappa * np.linalg.cond(x)
+        else:
+            l0_penalty = 0.0
         # Figure out lowest MSE coefficients
-
         """err = np.zeros(n_features)
+        # err = np.zeros(n_features)
         for i in range(n_features):
             coef_i = np.asarray(self.history_[i, :, :])
             res = y - x @ coef_i.T
@@ -207,11 +218,6 @@ class FROLS(BaseOptimizer):
         err_min = np.argmin(err)
         self.coef_ = np.asarray(self.history_[err_min, :, :])
         """
-
-        if self.L0_penalty is not None:
-            l0_penalty = self.L0_penalty  # * np.linalg.cond(x)
-        else:
-            l0_penalty = 0.0
 
         # Function selection: L2 error for output k at iteration i is given by
         #    sum(ERR_global[k, :i]), and the number of nonzero coefficients is (i+1)

@@ -35,12 +35,18 @@ class SSR(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    L0_penalty : float, optional (default None)
+    kappa : float, optional (default None)
         If passed, compute the MSE errors with an extra L0 term with
-        strength equal to L0_penalty times the condition number of Theta.
+        strength equal to kappa times the condition number of Theta.
 
     criteria : string, optional (default "coefficient_value")
         The criteria to use for truncating a coefficient each iteration.
+
+    alpha : float, optional (default 0.05)
+        Optional L2 (ridge) regularization on the weight vector.
+
+    ridge_kw : dict, optional (default None)
+        Optional keyword arguments to pass to the ridge regression.
 
     Attributes
     ----------
@@ -84,7 +90,7 @@ class SSR(BaseOptimizer):
         fit_intercept=False,
         copy_X=True,
         criteria="coefficient_value",
-        L0_penalty=None,
+        kappa=None,
     ):
         super(SSR, self).__init__(
             max_iter=max_iter,
@@ -110,7 +116,8 @@ class SSR(BaseOptimizer):
         self.criteria = criteria
         self.alpha = alpha
         self.ridge_kw = ridge_kw
-        self.L0_penalty = L0_penalty
+        self.normalize_columns = normalize_columns
+        self.kappa = kappa
 
     def _coefficient_value(self, coef):
         """Eliminate the smallest element of the weight vector(s)"""
@@ -179,8 +186,8 @@ class SSR(BaseOptimizer):
                     coef[i, inds[i, :]] = self._regress(x[:, inds[i, :]], y[:, i])
 
             self.history_.append(np.copy(coef))
-            if self.L0_penalty is not None:
-                l0_penalty = self.L0_penalty * np.linalg.cond(x)
+            if self.kappa is not None:
+                l0_penalty = self.kappa * np.linalg.cond(x)
                 self.err_history_.append(
                     np.sum((y - x @ coef.T) ** 2) + l0_penalty * np.count_nonzero(coef)
                 )

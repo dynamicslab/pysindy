@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.linear_model import ridge_regression
 
 from .base import BaseOptimizer
 
@@ -31,13 +32,19 @@ class FROLS(BaseOptimizer):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    L0_penalty : float, optional (default None)
+    kappa : float, optional (default None)
         If passed, compute the MSE errors with an extra L0 term with
-        strength equal to L0_penalty times the condition number of Theta.
+        strength equal to kappa times the condition number of Theta.
 
     max_iter : int, optional (default 10)
         Maximum iterations of the optimization algorithm. This determines
         the number of nonzero terms chosen by the FROLS algorithm.
+
+    alpha : float, optional (default 0.05)
+        Optional L2 (ridge) regularization on the weight vector.
+
+    ridge_kw : dict, optional (default None)
+        Optional keyword arguments to pass to the ridge regression.
 
     Attributes
     ----------
@@ -78,8 +85,10 @@ class FROLS(BaseOptimizer):
         normalize_columns=False,
         fit_intercept=False,
         copy_X=True,
-        L0_penalty=None,
+        kappa=None,
         max_iter=10,
+        alpha=0.05,
+        ridge_kw=None,
     ):
         super(FROLS, self).__init__(
             fit_intercept=fit_intercept,
@@ -87,7 +96,10 @@ class FROLS(BaseOptimizer):
             max_iter=max_iter,
             normalize_columns=normalize_columns,
         )
-        self.L0_penalty = L0_penalty
+        self.alpha = alpha
+        self.ridge_kw = ridge_kw
+        self.normalize_columns = normalize_columns
+        self.kappa = kappa
         if self.max_iter <= 0:
             raise ValueError("Max iteration must be > 0")
 
@@ -97,18 +109,20 @@ class FROLS(BaseOptimizer):
     def _select_function(self, x, y, sigma, skip=[]):
         n_features = x.shape[1]
         g = np.zeros(n_features)  # Coefficients to orthogonalized functions
-        error = np.zeros(n_features)  # Error reduction ratio at this step
+        ERR = np.zeros(n_features)  # Error Reduction Ratio at this step
         for m in range(n_features):
             if m not in skip:
                 g[m] = self._normed_cov(x[:, m], y)
-                error[m] = (
+                ERR[m] = (
                     abs(g[m]) ** 2 * np.real(np.vdot(x[:, m], x[:, m])) / sigma
                 )  # Error reduction
 
-        L = np.argmax(error)  # Select best function
+        best_idx = np.argmax(
+            ERR
+        )  # Select best function by maximum Error Reduction Ratio
 
         # Return index of best function, along with ERR and coefficient
-        return L, error[L], g[L]
+        return best_idx, ERR[best_idx], g[best_idx]
 
     def _orthogonalize(self, vec, Q):
         """
@@ -127,31 +141,33 @@ class FROLS(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
 
-        self.history_ = np.zeros((n_features, n_targets, n_features))
+        # History of selected functions: [iteration x output x coefficients]
+        self.history_ = np.zeros((n_features, n_targets, n_features), dtype=x.dtype)
+        # Error Reduction Ratio: [iteration x output]
+        self.ERR_global = np.zeros((n_features, n_targets))
         for k in range(n_targets):
             # Initialize arrays
-            err_glob = np.zeros(n_features)
-            g_glob = np.zeros(
-                n_features
+            g_global = np.zeros(
+                n_features, dtype=x.dtype
             )  # Coefficients for selected (orthogonal) functions
             L = np.zeros(
                 n_features, dtype=int
-            )  # Order of selection, i.e. l[0] is the first, l[1] second...
+            )  # Order of selection, i.e. L[0] is the first, L[1] second...
             A = np.zeros(
-                (n_features, n_features)
+                (n_features, n_features), dtype=x.dtype
             )  # Used for inversion to original function set (A @ coef = g)
 
             # Orthogonal function libraries
             Q = np.zeros_like(x)  # Global library (built over time)
             Qs = np.zeros_like(x)  # Same, but for each step
-            sigma = np.real(np.dot(y[:, k], y[:, k]))  # Variance of the signal
+            sigma = np.real(np.vdot(y[:, k], y[:, k]))  # Variance of the signal
             for i in range(n_features):
                 for m in range(n_features):
                     if m not in L[:i]:
                         # Orthogonalize with respect to already selected functions
                         Qs[:, m] = self._orthogonalize(x[:, m], Q[:, :i])
 
-                L[i], err_glob[i], g_glob[i] = self._select_function(
+                L[i], self.ERR_global[i, k], g_global[i] = self._select_function(
                     Qs, y[:, k], sigma, L[:i]
                 )
 
@@ -164,32 +180,55 @@ class FROLS(BaseOptimizer):
 
                 # Invert orthogonal coefficient vector
                 # to get coefficients for original functions
-                alpha = np.linalg.lstsq(A[:i, :i], g_glob[:i], rcond=1e-6)[0]
+                # at this step of the iteration
+                if i != 0:
+                    kw = self.ridge_kw or {}
+                    alpha = ridge_regression(A[:i, :i], g_global[:i], self.alpha, **kw)
+                else:
+                    alpha = []
 
-                coef_k = np.zeros_like(g_glob)
+                # Coefficients for the library functions
+                coef_k = np.zeros_like(g_global)
                 coef_k[L[:i]] = alpha
                 coef_k[abs(coef_k) < 1e-10] = 0
 
                 # Indicator of selected terms
-                ind = np.zeros(n_features, dtype=int)
-                ind[L[:i]] = 1
+                # ind = np.zeros(n_features, dtype=int)
+                # ind[L[:i]] = 1
 
                 self.history_[i, k, :] = np.copy(coef_k)
 
                 if i >= self.max_iter:
                     break
 
-        # Figure out lowest MSE coefficients
-        err = np.zeros(n_features)
-        if self.L0_penalty is not None:
-            l0_penalty = self.L0_penalty * np.linalg.cond(x)
+        if self.kappa is not None:
+            l0_penalty = self.kappa * np.linalg.cond(x)
         else:
             l0_penalty = 0.0
+        # Figure out lowest MSE coefficients
+        """err = np.zeros(n_features)
+        # err = np.zeros(n_features)
         for i in range(n_features):
             coef_i = np.asarray(self.history_[i, :, :])
-            err[i] = np.sum((y - x @ coef_i.T) ** 2) + l0_penalty * np.count_nonzero(
+            res = y - x @ coef_i.T
+            err[i] = np.real( np.vdot(res, res) ) + l0_penalty * np.count_nonzero(
                 coef_i
             )
         self.err_history_ = err
         err_min = np.argmin(err)
         self.coef_ = np.asarray(self.history_[err_min, :, :])
+        """
+
+        # Function selection: L2 error for output k at iteration i is given by
+        #    sum(ERR_global[k, :i]), and the number of nonzero coefficients is (i+1)
+        l2_err = np.cumsum(self.ERR_global, axis=1)
+        l0_norm = np.arange(1, n_features + 1)[:, None]
+        self.loss_ = l2_err + l0_penalty * l0_norm  # Save for debugging
+
+        # For each output, choose the minimum L0-penalized loss function
+        self.coef_ = np.zeros((n_targets, n_features), dtype=x.dtype)
+        loss_min = np.argmin(
+            self.loss_[: self.max_iter + 1, :], axis=0
+        )  # Minimum loss for this output function
+        for k in range(n_targets):
+            self.coef_[k, :] = self.history_[loss_min[k], k, :]

@@ -588,7 +588,8 @@ class SINDy(BaseEstimator):
                 x, t, x_dot, return_array=True
             )
         else:
-            x = validate_input(x, t)
+            if not hasattr(self.feature_library, "weak_form"):
+                x = validate_input(x, t)
             if x_dot is None:
                 if self.discrete_time:
                     x_dot = x[1:]
@@ -604,7 +605,10 @@ class SINDy(BaseEstimator):
             x = concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known (usually endpoints)
-        x, x_dot = drop_nan_rows(x, x_dot)
+        if not hasattr(self.feature_library, "weak_form"):
+            x, x_dot = drop_nan_rows(x, x_dot)
+        else:
+            self.feature_library.temporal_grid = t
 
         x_dot_predict = self.model.predict(x)
         return metric(x_dot, x_dot_predict, **metric_kws)

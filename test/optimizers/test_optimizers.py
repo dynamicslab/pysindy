@@ -554,6 +554,27 @@ def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
     ) or np.allclose(
         np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
     )
+    opt = ConstrainedSR3(
+        threshold=thresholds,
+        constraint_lhs=constraint_matrix,
+        constraint_rhs=constraint_rhs,
+        constraint_order="feature",
+        inequality_constraints=True,
+        thresholder="l1",
+    )
+    poly_lib = PolynomialLibrary(degree=2)
+    model = SINDy(
+        optimizer=opt,
+        feature_library=poly_lib,
+        differentiation_method=FiniteDifference(drop_endpoints=True),
+        feature_names=feature_names,
+    )
+    model.fit(x, t=t[1] - t[0])
+    assert np.all(
+        np.dot(constraint_matrix, (model.coefficients()).flatten("F")) <= constraint_rhs
+    ) or np.allclose(
+        np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
+    )
 
 
 def test_inequality_constraints_reqs():
@@ -657,3 +678,12 @@ def test_ensemble_pdes(optimizer):
     n_features = len(model.get_feature_names())
     print(np.shape(opt.coef_))
     assert np.shape(model.coef_list) == (10, 1, n_features)
+
+
+def test_ssr_criteria(data):
+    t = np.arange(0, 40, 0.05)
+    x = odeint(lorenz, [-8, 8, 27], t)
+    opt = SSR(normalize_columns=True, criteria="model_residual", kappa=1e-3)
+    model = SINDy(optimizer=opt)
+    model.fit(x)
+    assert np.shape(opt.coef_) == (3, 10)

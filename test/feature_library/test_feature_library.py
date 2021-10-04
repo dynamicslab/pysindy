@@ -1,6 +1,7 @@
 """
 Unit tests for feature libraries.
 """
+import numpy as np
 import pytest
 from scipy.sparse import coo_matrix
 from scipy.sparse import csc_matrix
@@ -8,6 +9,8 @@ from scipy.sparse import csr_matrix
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 
+from pysindy import SINDy
+from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import ConcatLibrary
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
@@ -15,6 +18,7 @@ from pysindy.feature_library import IdentityLibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
+from pysindy.optimizers import SINDyPI
 
 
 def test_form_custom_library():
@@ -31,14 +35,30 @@ def test_form_custom_library():
     # Test without user-supplied function names
     CustomLibrary(library_functions=library_functions, function_names=None)
 
+
+def test_form_custom_library_with_control(data_lorenz_control):
+    x, t = data_lorenz_control
+    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
     # Test with linear control library
-    CustomLibrary(
+    lib = CustomLibrary(
         library_functions=library_functions,
         function_names=None,
         linear_control=True,
         n_control_features=2,
     )
+    model = SINDy(
+        feature_library=lib,
+    )
+    model.fit(x, t=t)
 
+
+def test_form_sindy_pi_library():
+    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    function_names = [
+        lambda s: str(s),
+        lambda s: "{}^2".format(s),
+        lambda s: "0",
+    ]
     # Test with user-supplied function names
     SINDyPILibrary(library_functions=library_functions, function_names=function_names)
 
@@ -251,3 +271,47 @@ def test_not_fitted(data_lorenz, library):
 
     with pytest.raises(NotFittedError):
         library.transform(x)
+
+
+def test_sindypi_library(data_lorenz):
+    x, t = data_lorenz
+    x_library_functions = [
+        lambda x: 1,
+        lambda x: x,
+        lambda x, y: x * y,
+        lambda x: x ** 2,
+    ]
+    x_dot_library_functions = [lambda x: 1, lambda x: x]
+
+    library_function_names = [
+        lambda x: "",
+        lambda x: x,
+        lambda x, y: x + y,
+        lambda x: x + x,
+        lambda x: "",
+        lambda x: x,
+    ]
+    sindy_library = SINDyPILibrary(
+        library_functions=x_library_functions,
+        x_dot_library_functions=x_dot_library_functions,
+        t=t[1:-1],
+        function_names=library_function_names,
+    )
+    sindy_opt = SINDyPI(threshold=0.1, thresholder="l1")
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+        differentiation_method=FiniteDifference(drop_endpoints=True),
+    )
+    model.fit(x, t=t)
+    assert np.shape(sindy_opt.coef_) == (40, 40)
+    sindy_opt = SINDyPI(threshold=0.1, thresholder="l1", model_subset=[3])
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+        differentiation_method=FiniteDifference(drop_endpoints=True),
+    )
+    model.fit(x, t=t)
+    assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(
+        sindy_opt.coef_[3, :] != 0.0
+    )

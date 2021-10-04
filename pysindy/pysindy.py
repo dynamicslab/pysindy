@@ -710,7 +710,8 @@ class SINDy(BaseEstimator):
 
         integrator: string, optional (default ``solve_ivp``)
             Function to use to integrate the system.
-            Default is ``scipy.integrate.solve_ivp``.
+            Default is ``scipy.integrate.solve_ivp``. The only options
+            currently supported are solve_ivp and odeint.
 
         stop_condition: function object, optional
             If model is in discrete time, optional function that gives a

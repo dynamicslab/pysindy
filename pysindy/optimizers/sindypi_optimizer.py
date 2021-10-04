@@ -156,8 +156,8 @@ class SINDyPI(SR3):
         self.threshold = threshold
 
     def _update_full_coef_constraints(self, x):
-        N = x.shape[1]
-        xi = cp.Variable((N, N))
+        n_features = x.shape[1]
+        xi = cp.Variable((n_features, n_features))
         if (self.thresholder).lower() in ("l1", "weighted_l1"):
             if self.thresholds is None:
                 cost = cp.sum_squares(x - x @ xi) + self.threshold * cp.norm1(xi)
@@ -170,7 +170,7 @@ class SINDyPI(SR3):
                 cost = cp.sum_squares(x - x @ xi) + cp.norm2(self.thresholds @ xi) ** 2
         prob = cp.Problem(
             cp.Minimize(cost),
-            [cp.diag(xi) == np.zeros(N)],
+            [cp.diag(xi) == np.zeros(n_features)],
         )
 
         # Beware: hard-coding the tolerances
@@ -186,15 +186,14 @@ class SINDyPI(SR3):
         return xi.value
 
     def _update_parallel_coef_constraints(self, x):
-        N = x.shape[1]
-        xi_final = np.zeros((N, N))
+        n_features = x.shape[1]
+        xi_final = np.zeros((n_features, n_features))
 
         # Todo: parallelize this for loop with Multiprocessing/joblib
-        # for i in range(N):
         if self.model_subset is None:
-            self.model_subset = range(N)
+            self.model_subset = range(n_features)
         for i in self.model_subset:
-            xi = cp.Variable(N)
+            xi = cp.Variable(n_features)
             # Note that norm choice below must be convex,
             # so thresholder must be L1 or L2
             if (self.thresholder).lower() in ("l1", "weighted_l1"):
@@ -244,7 +243,7 @@ class SINDyPI(SR3):
                 xi_final[:, i] = xi.value
             except cp.error.SolverError:
                 print("Solver failed on model ", str(i), ", setting coefs to zeros")
-                xi_final[:, i] = np.zeros(N)
+                xi_final[:, i] = np.zeros(n_features)
         return xi_final
 
     def _reduce(self, x, y):
@@ -260,7 +259,6 @@ class SINDyPI(SR3):
             for i in range(n_features):
                 reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
                 x_normed[:, i] = reg[i] * x[:, i]
-        # coef = self._update_full_coef_constraints(x_normed)
         coef = self._update_parallel_coef_constraints(x_normed)
         if self.normalize_columns:
             self.coef_ = np.multiply(reg, coef.T)

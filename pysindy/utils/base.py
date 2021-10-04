@@ -180,20 +180,17 @@ def prox_cad(x, lower_threshold):
 
 
 def get_prox(regularization):
-    if regularization.lower() == "l0":
-        return prox_l0
-    if regularization.lower() == "weighted_l0":
-        return prox_weighted_l0
-    elif regularization.lower() == "l1":
-        return prox_l1
-    elif regularization.lower() == "weighted_l1":
-        return prox_weighted_l1
-    elif regularization.lower() == "l2":
-        return prox_l2
-    elif regularization.lower() == "weighted_l2":
-        return prox_weighted_l2
-    elif regularization.lower() == "cad":
-        return prox_cad
+    prox = {
+        "l0": prox_l0,
+        "weighted_l0": prox_weighted_l0,
+        "l1": prox_l1,
+        "weighted_l1": prox_weighted_l1,
+        "l2": prox_l2,
+        "weighted_l2": prox_weighted_l2,
+        "cad": prox_cad,
+    }
+    if regularization.lower() in prox.keys():
+        return prox[regularization.lower()]
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
 

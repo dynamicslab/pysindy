@@ -13,7 +13,7 @@ from ..utils import reorder_constraints
 from .sr3 import SR3
 
 
-class Trapping(SR3):
+class TrappingSR3(SR3):
     """
     Trapping variant of sparse relaxed regularized regression.
 
@@ -174,7 +174,7 @@ class Trapping(SR3):
     >>>                        z[0]*z[1] - 8/3*z[2]]
     >>> t = np.arange(0,2,.002)
     >>> x = odeint(lorenz, [-8,8,27], t)
-    >>> opt = Trapping(threshold=0.1)
+    >>> opt = TrappingSR3(threshold=0.1)
     >>> model = SINDy(optimizer=opt)
     >>> model.fit(x, t=t[1]-t[0])
     >>> model.print()
@@ -211,7 +211,7 @@ class Trapping(SR3):
         constraint_rhs=None,
         constraint_order="target",
     ):
-        super(Trapping, self).__init__(
+        super(TrappingSR3, self).__init__(
             max_iter=max_iter,
             normalize=normalize,
             fit_intercept=fit_intercept,
@@ -220,7 +220,7 @@ class Trapping(SR3):
 
         if threshold < 0:
             raise ValueError("threshold cannot be negative")
-        if thresholder.lower() != "l1" and thresholder.lower() != "l2":
+        if thresholder.lower() not in ("l1", "l2"):
             raise ValueError("Regularizer must be L1 or L2 for now")
         if eta <= 0:
             raise ValueError("eta must be positive")
@@ -400,14 +400,7 @@ class Trapping(SR3):
             prob = cp.Problem(cp.Minimize(cost))
 
         # default solver is OSQP here but switches to ECOS for L2
-        # try:
         prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
-        # Annoying error coming from L2 norm switching to use the ECOS
-        # solver, which uses "max_iters" instead of "max_iter", and
-        # similar semantic changes for the other variables.
-        # except TypeError:
-        # abstol=self.tol, reltol=self.tol
-        #    prob.solve(max_iters=self.max_iter, verbose=True)
 
         if xi.value is None:
             warnings.warn(
@@ -509,7 +502,7 @@ class Trapping(SR3):
     def _reduce(self, x, y):
         """
         Perform at most ``self.max_iter`` iterations of the
-        Trapping algorithm.
+        TrappingSR3 algorithm.
         Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
 

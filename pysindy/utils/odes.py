@@ -77,6 +77,8 @@ def lorenz_control(x, t, sigma=10, beta=2.66667, rho=28):
 
 
 # Mean field model from Noack et al. 2003
+# "A hierarchy of low-dimensional models for the transient and post-transient
+# cylinder wake", B.R. Noack et al.
 def meanfield(x, t, mu=0.01):
     return [
         mu * x[0] - x[1] - x[0] * x[2],

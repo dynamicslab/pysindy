@@ -1,3 +1,4 @@
+from numpy import any
 from numpy import delete
 from sklearn import __version__
 from sklearn.utils import check_array
@@ -23,7 +24,11 @@ class IdentityLibrary(BaseFeatureLibrary):
         is equal to the number of input features.
 
     library_ensemble : boolean, optional (default False)
-        Whether or not to do library bagging.
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library)
+
+    ensemble_indices : integer array, optional (default 0)
+        The indices to use for ensembling the library.
 
     Examples
     --------
@@ -44,6 +49,8 @@ class IdentityLibrary(BaseFeatureLibrary):
         library_ensemble=False,
         ensemble_indices=0,
     ):
+        if any(ensemble_indices < 0):
+            raise ValueError("Library ensemble indices must be 0 or positive integers.")
         super(IdentityLibrary, self).__init__()
         self.library_ensemble = library_ensemble
         self.ensemble_indices = ensemble_indices

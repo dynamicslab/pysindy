@@ -24,22 +24,31 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     ----------
     degree : integer, optional (default 2)
         The degree of the polynomial features.
+
     include_interaction : boolean, optional (default True)
         Determines whether interaction features are produced.
         If false, features are all of the form ``x[i] ** k``.
+
     interaction_only : boolean, optional (default False)
         If true, only interaction features are produced: features that are
         products of at most ``degree`` *distinct* input features (so not
         ``x[1] ** 2``, ``x[0] * x[2] ** 3``, etc.).
+
     include_bias : boolean, optional (default True)
         If True (default), then include a bias column, the feature in which
         all polynomial powers are zero (i.e. a column of ones - acts as an
         intercept term in a linear model).
+
     order : str in {'C', 'F'}, optional (default 'C')
         Order of output array in the dense case. 'F' order is faster to
         compute, but may slow down subsequent estimators.
+
     library_ensemble : boolean, optional (default False)
-        Whether or not to do library bagging.
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library)
+
+    ensemble_indices : integer array, optional (default 0)
+        The indices to use for ensembling the library.
 
     Attributes
     ----------
@@ -79,6 +88,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                 "Can't have include_interaction be False and interaction_only"
                 " be True"
             )
+        if np.any(ensemble_indices < 0):
+            raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.include_interaction = include_interaction
         self.library_ensemble = library_ensemble
         self.ensemble_indices = ensemble_indices
@@ -273,7 +284,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                 for i, comb in enumerate(combinations):
                     xp[:, i] = x[:, comb].prod(1)
 
-        # If library bagging, return xp missing a single column
+        # If library bagging, return xp missing the terms at ensemble_indices
         if self.library_ensemble:
             if self.n_output_features_ == 1:
                 raise ValueError(

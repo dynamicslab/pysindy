@@ -15,6 +15,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from pysindy import FiniteDifference
 from pysindy import PDELibrary
+from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
 from pysindy.optimizers import ConstrainedSR3
@@ -114,7 +115,7 @@ def test_fit(data, optimizer):
 
 @pytest.mark.parametrize(
     "optimizer",
-    [STLSQ(), SSR(), FROLS(), SR3()],
+    [STLSQ(), SSR(), SSR(criteria="model_residual"), FROLS(), SR3()],
 )
 def test_not_fitted(optimizer):
     with pytest.raises(NotFittedError):
@@ -519,42 +520,40 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
 
 
 # On my laptop this fails... not sure why OSQP not working.
-# @pytest.mark.parametrize("thresholds", [0.005, 0.05])
-# @pytest.mark.parametrize("relax_optim", [False, True])
-# @pytest.mark.parametrize("noise_levels", [0.0, 0.05, 0.5])
-# def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
-#     t = np.arange(0, 40, 0.05)
-#     x = odeint(lorenz, [-8, 8, 27], t)
-#     x = x + np.random.normal(0.0, noise_levels, x.shape)
-#     # if order is "feature"
-#     constraint_rhs = np.array([-10.0, -2.0])
-#     constraint_matrix = np.zeros((2, 30))
-#     constraint_matrix[0, 6] = 1.0
-#     constraint_matrix[1, 17] = 1.0
-#     feature_names = ["x", "y", "z"]
-#     opt = TrappingSR3(
-#         threshold=thresholds,
-#         constraint_lhs=constraint_matrix,
-#         constraint_rhs=constraint_rhs,
-#         constraint_order="feature",
-#         inequality_constraints=True,
-#         relax_optim=relax_optim,
-#     )
-#     poly_lib = PolynomialLibrary(degree=2)
-#     model = SINDy(
-#         optimizer=opt,
-#         feature_library=poly_lib,
-#         differentiation_method=FiniteDifference(drop_endpoints=True),
-#         feature_names=feature_names,
-#     )
-#     model.fit(x, t=t[1] - t[0])
-#     assert np.all(
-#         np.dot(constraint_matrix,
-#                (model.coefficients()).flatten("F")) <= constraint_rhs
-#     ) or np.allclose(
-#         np.dot(constraint_matrix,
-#                (model.coefficients()).flatten("F")), constraint_rhs
-#     )
+@pytest.mark.parametrize("thresholds", [0.005, 0.05])
+@pytest.mark.parametrize("relax_optim", [False, True])
+@pytest.mark.parametrize("noise_levels", [0.0, 0.05, 0.5])
+def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
+    t = np.arange(0, 40, 0.05)
+    x = odeint(lorenz, [-8, 8, 27], t)
+    x = x + np.random.normal(0.0, noise_levels, x.shape)
+    # if order is "feature"
+    constraint_rhs = np.array([-10.0, -2.0])
+    constraint_matrix = np.zeros((2, 30))
+    constraint_matrix[0, 6] = 1.0
+    constraint_matrix[1, 17] = 1.0
+    feature_names = ["x", "y", "z"]
+    opt = TrappingSR3(
+        threshold=thresholds,
+        constraint_lhs=constraint_matrix,
+        constraint_rhs=constraint_rhs,
+        constraint_order="feature",
+        inequality_constraints=True,
+        relax_optim=relax_optim,
+    )
+    poly_lib = PolynomialLibrary(degree=2)
+    model = SINDy(
+        optimizer=opt,
+        feature_library=poly_lib,
+        differentiation_method=FiniteDifference(drop_endpoints=True),
+        feature_names=feature_names,
+    )
+    model.fit(x, t=t[1] - t[0])
+    assert np.all(
+        np.dot(constraint_matrix, (model.coefficients()).flatten("F")) <= constraint_rhs
+    ) or np.allclose(
+        np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
+    )
 
 
 def test_inequality_constraints_reqs():

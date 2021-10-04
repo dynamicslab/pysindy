@@ -107,6 +107,13 @@ class ConcatLibrary(BaseFeatureLibrary):
         is the sum of the numbers of output features for each of the
         concatenated libraries.
 
+    library_ensemble : boolean, optional (default False)
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library)
+
+    ensemble_indices : integer array, optional (default 0)
+        The indices to use for ensembling the library.
+
     Examples
     --------
     >>> import numpy as np
@@ -121,9 +128,16 @@ class ConcatLibrary(BaseFeatureLibrary):
     >>> lib.transform(X)
     """
 
-    def __init__(self, libraries: list):
+    def __init__(
+        self,
+        libraries: list,
+        library_ensemble=False,
+        ensemble_indices=0,
+    ):
         super(ConcatLibrary, self).__init__()
         self.libraries_ = libraries
+        self.library_ensemble = library_ensemble
+        self.ensemble_indices = ensemble_indices
 
     def fit(self, X, y=None):
         """
@@ -191,7 +205,18 @@ class ConcatLibrary(BaseFeatureLibrary):
 
             current_feat += lib_n_output_features
 
-        return XP
+        # If library bagging, return xp missing the terms at ensemble_indices
+        if self.library_ensemble:
+            if self.n_output_features_ == 1:
+                raise ValueError(
+                    "Can't use library ensemble methods if your"
+                    " library is just one term!"
+                )
+            inds = range(self.n_output_features_)
+            inds = np.delete(inds, self.ensemble_indices)
+            return XP[:, inds]
+        else:
+            return XP
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.

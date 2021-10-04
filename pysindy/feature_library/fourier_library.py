@@ -25,7 +25,11 @@ class FourierLibrary(BaseFeatureLibrary):
         If True, include cosine terms in the library.
 
     library_ensemble : boolean, optional (default False)
-        Whether or not to do library bagging.
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library)
+
+    ensemble_indices : integer array, optional (default 0)
+        The indices to use for ensembling the library.
 
     Attributes
     ----------
@@ -66,6 +70,8 @@ class FourierLibrary(BaseFeatureLibrary):
             raise ValueError("include_sin and include_cos cannot both be False")
         if n_frequencies < 1 or not isinstance(n_frequencies, int):
             raise ValueError("n_frequencies must be a positive integer")
+        if np.any(ensemble_indices < 0):
+            raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.n_frequencies = n_frequencies
         self.include_sin = include_sin
         self.include_cos = include_cos
@@ -164,7 +170,7 @@ class FourierLibrary(BaseFeatureLibrary):
                     xp[:, idx] = np.cos((i + 1) * x[:, j])
                     idx += 1
 
-        # If library bagging, return xp missing a single column
+        # If library bagging, return xp missing the terms at ensemble_indices
         if self.library_ensemble:
             if self.n_output_features_ == 1:
                 raise ValueError(

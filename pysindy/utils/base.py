@@ -134,7 +134,8 @@ def drop_random_rows(x, x_dot, n_subset, replace, feature_library, PDELibrary):
         # choose random n_subset points to use
         rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))
         x = x[rand_inds, :]
-        x_dot = x_dot[rand_inds, :]
+        if not hasattr(feature_library, "weak_form") or not feature_library.weak_form:
+            x_dot = x_dot[rand_inds, :]
     return x, x_dot
 
 

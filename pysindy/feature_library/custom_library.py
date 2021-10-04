@@ -1,6 +1,7 @@
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
+from numpy import any
 from numpy import delete
 from numpy import empty
 from numpy import ones
@@ -39,7 +40,11 @@ class CustomLibrary(BaseFeatureLibrary):
         If False, all combinations will be included.
 
     library_ensemble : boolean, optional (default False)
-        Whether or not to do library bagging.
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library)
+
+    ensemble_indices : integer array, optional (default 0)
+        The indices to use for ensembling the library.
 
     Attributes
     ----------
@@ -92,6 +97,8 @@ class CustomLibrary(BaseFeatureLibrary):
                 "library_functions and function_names must have the same"
                 " number of elements"
             )
+        if any(ensemble_indices < 0):
+            raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.include_bias = include_bias
         self.interaction_only = interaction_only
         self.library_ensemble = library_ensemble
@@ -212,7 +219,7 @@ class CustomLibrary(BaseFeatureLibrary):
                 xp[:, library_idx] = f(*[x[:, j] for j in c])
                 library_idx += 1
 
-        # If library bagging, return xp missing a single column
+        # If library bagging, return xp missing the terms at ensemble_indices
         if self.library_ensemble:
             if self.n_output_features_ == 1:
                 raise ValueError(

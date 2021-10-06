@@ -145,6 +145,9 @@ def drop_random_rows(x, x_dot, n_subset, replace, tgrid, feature_library, PDELib
                 x_dot_new = np.reshape(
                     x_dot_shaped, (num_gridx * num_gridy * n_subset, x.shape[1])
                 )
+            elif feature_library.weak_form:
+                x_dot_new = x_dot
+                feature_library.temporal_grid = tgrid[rand_inds]
     else:
         # choose random n_subset points to use
         rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))

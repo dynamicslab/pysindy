@@ -2,6 +2,7 @@ import warnings
 from typing import Sequence
 
 from numpy import concatenate
+from numpy import copy
 from numpy import insert
 from numpy import isscalar
 from numpy import ndim
@@ -325,6 +326,11 @@ class SINDy(BaseEstimator):
         steps = [("features", self.feature_library), ("model", optimizer)]
         self.model = Pipeline(steps)
 
+        if hasattr(self.feature_library, "temporal_grid"):
+            tgrid = copy(self.feature_library.temporal_grid)
+        else:
+            tgrid = None
+
         action = "ignore" if quiet else "default"
         with warnings.catch_warnings():
             warnings.filterwarnings(action, category=ConvergenceWarning)
@@ -335,7 +341,13 @@ class SINDy(BaseEstimator):
                 self.coef_list = []
                 for i in range(n_models):
                     x_ensemble, x_dot_ensemble = drop_random_rows(
-                        x, x_dot, n_subset, replace, self.feature_library, PDELibrary
+                        x,
+                        x_dot,
+                        n_subset,
+                        replace,
+                        tgrid,
+                        self.feature_library,
+                        PDELibrary,
                     )
                     self.model.fit(x_ensemble, x_dot_ensemble)
                     self.coef_list.append(self.model.steps[-1][1].coef_)
@@ -365,7 +377,13 @@ class SINDy(BaseEstimator):
                 self.coef_list = []
                 for i in range(n_models):
                     x_ensemble, x_dot_ensemble = drop_random_rows(
-                        x, x_dot, n_subset, replace, self.feature_library, PDELibrary
+                        x,
+                        x_dot,
+                        n_subset,
+                        replace,
+                        tgrid,
+                        self.feature_library,
+                        PDELibrary,
                     )
                     for j in range(n_models):
                         self.feature_library.ensemble_indices = sort(

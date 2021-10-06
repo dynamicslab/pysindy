@@ -1140,7 +1140,6 @@ class PDELibrary(BaseFeatureLibrary):
                                     deriv_term = reshape(
                                         deriv_term, (num_gridpts, num_time)
                                     )
-                                    func_final = zeros((self.K, 1))
                                     func_interp = RectBivariateSpline(
                                         self.spatial_grid, self.temporal_grid, func
                                     )
@@ -1149,6 +1148,7 @@ class PDELibrary(BaseFeatureLibrary):
                                         self.temporal_grid,
                                         deriv_term,
                                     )
+                                    func_final = zeros((self.K, 1))
                                     for k in range(self.K):
                                         X = ravel(self.X[k, :, :])
                                         t = ravel(self.t[k, :, :])
@@ -1183,20 +1183,25 @@ class PDELibrary(BaseFeatureLibrary):
                                         )
                                         if d == 0:
                                             w_func = func_new * w
-                                        if d == 1 or d == 2:
-                                            w_func = (-1) * FiniteDifference(
-                                                d=1, is_uniform=self.is_uniform
-                                            )._differentiate(
-                                                func_new * w,
-                                                self.xgrid_k[k, :],
-                                            )
-                                        if d == 3:
-                                            w_func = FiniteDifference(
-                                                d=2, is_uniform=self.is_uniform
-                                            )._differentiate(
-                                                func_new * w,
-                                                self.xgrid_k[k, :],
-                                            )
+                                        else:
+                                            w_func = zeros(func_new.shape)
+                                            for i in range(self.num_pts_per_domain):
+                                                if d == 1 or d == 2:
+                                                    w_func[:, i, :] = (
+                                                        -1
+                                                    ) * FiniteDifference(
+                                                        d=1, is_uniform=self.is_uniform
+                                                    )._differentiate(
+                                                        (func_new * w)[:, i, :],
+                                                        self.xgrid_k[k, :],
+                                                    )
+                                                if d == 3:
+                                                    w_func[:, i, :] = FiniteDifference(
+                                                        d=2, is_uniform=self.is_uniform
+                                                    )._differentiate(
+                                                        (func_new * w)[:, i, :],
+                                                        self.xgrid_k[k, :],
+                                                    )
                                         func_final[k] = trapezoid(
                                             trapezoid(
                                                 w_func * deriv_new,

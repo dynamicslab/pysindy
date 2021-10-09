@@ -174,9 +174,14 @@ class SINDyPILibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        x_dot_features = ["x%d_dot" % i for i in range(self.n_input_features_)]
         if input_features is None:
             input_features = ["x%d" % i for i in range(self.n_input_features_)]
+            x_dot_features = ["x%d_dot" % i for i in range(self.n_input_features_)]
+        else:
+            x_dot_features = [
+                input_features[i] + "_dot" for i in range(self.n_input_features_)
+            ]
+
         feature_names = []
         if self.x_dot_functions is not None and self.x_functions is not None:
             for k, f_dot in enumerate(self.x_dot_functions):

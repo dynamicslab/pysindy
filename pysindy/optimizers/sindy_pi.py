@@ -260,7 +260,8 @@ class SINDyPI(SR3):
                 reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
                 x_normed[:, i] = reg[i] * x[:, i]
         coef = self._update_parallel_coef_constraints(x_normed)
-        if self.normalize_columns:
-            self.coef_ = np.multiply(reg, coef.T)
-        else:
-            self.coef_ = coef.T
+        # if self.normalize_columns:
+        #     self.coef_ = np.multiply(reg, coef.T)
+        # else:
+        #     self.coef_ = coef.T
+        self.coef_ = coef.T

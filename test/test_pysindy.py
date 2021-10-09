@@ -27,6 +27,7 @@ from pysindy.differentiation import FiniteDifference
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
+from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
@@ -664,3 +665,25 @@ def test_bad_ensemble_params(data_lorenz, params):
     )
     with pytest.raises(ValueError):
         SINDy(feature_library=library, optimizer=optimizer).fit(x, t, **params)
+
+
+def test_bad_ensemble_weakform():
+    x = np.linspace(0, 100, 100)
+    x_dot = np.zeros(100)
+    X = np.linspace(0, 10)
+    t = np.linspace(0, 10)
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatial_grid=X,
+        temporal_grid=t,
+        is_uniform=True,
+        weak_form=True,
+    )
+
+    model = SINDy(feature_library=pde_lib)
+    with pytest.raises(ValueError):
+        model.fit(x=x, x_dot=x_dot, ensemble=True)

@@ -314,11 +314,16 @@ def print_model(
     return eq
 
 
-def equations(pipeline, input_features=None, precision=3, input_fmt=None):
+def equations(
+    pipeline, input_features=None, precision=3, input_fmt=None, coef_list=None
+):
     input_features = pipeline.steps[0][1].get_feature_names(input_features)
     if input_fmt:
         input_features = [input_fmt(i) for i in input_features]
-    coef = pipeline.steps[-1][1].coef_
+    if coef_list is not None:
+        coef = np.median(coef_list, axis=0)
+    else:
+        coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
     if np.isscalar(intercept):
         intercept = intercept * np.ones(coef.shape[0])

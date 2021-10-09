@@ -290,6 +290,17 @@ class SINDy(BaseEstimator):
             n_models = 20
         if ensemble and n_subset is None:
             n_subset = x.shape[0]
+        if (
+            ensemble
+            and hasattr(self.feature_library, "weak_form")
+            and self.feature_library.weak_form
+            and self.feature_library.is_uniform
+        ):
+            raise ValueError(
+                "Cannot use a uniform grid and ensembling "
+                "together because ensembling will sub-sample the temporal "
+                "grid (only a problem with weak form PDEs)."
+            )
         if (n_models is not None) and n_models <= 0:
             raise ValueError("n_models must be a positive integer")
         if (n_subset is not None) and n_subset <= 0:
@@ -310,6 +321,10 @@ class SINDy(BaseEstimator):
                     x_dot = self.differentiation_method(x, t)
                 else:
                     x_dot = validate_input(x_dot, t)
+
+        # set ensemble variables
+        self.ensemble = ensemble
+        self.library_ensemble = library_ensemble
 
         # Append control variables
         if self.n_control_features_ > 0:
@@ -498,9 +513,20 @@ class SINDy(BaseEstimator):
             base_feature_names = [f + "[k]" for f in self.feature_names]
         else:
             base_feature_names = self.feature_names
-        return equations(
-            self.model, input_features=base_feature_names, precision=precision
-        )
+        # If using ensembling, return the average coefficients
+        if self.ensemble or self.library_ensemble:
+            return equations(
+                self.model,
+                input_features=base_feature_names,
+                precision=precision,
+                coef_list=self.coef_list,
+            )
+        else:
+            return equations(
+                self.model,
+                input_features=base_feature_names,
+                precision=precision,
+            )
 
     def print(self, lhs=None, precision=3):
         """Print the SINDy model equations.

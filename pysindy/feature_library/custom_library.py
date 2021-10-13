@@ -5,6 +5,7 @@ from numpy import any
 from numpy import delete
 from numpy import empty
 from numpy import ones
+from numpy import shape
 from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
@@ -18,8 +19,10 @@ class CustomLibrary(BaseFeatureLibrary):
     Parameters
     ----------
     library_functions : list of mathematical functions
-        Functions to include in the library. Each function will be
-        applied to each input variable.
+        Functions to include in the library. Default is to use same functions
+        for all variables. Can also be used so that each variable has an
+        associated library, in this case library_functions is shape
+        (n_input_features, num_library_functions)
 
     function_names : list of functions, optional (default None)
         List of functions used to generate feature names for each library
@@ -99,7 +102,9 @@ class CustomLibrary(BaseFeatureLibrary):
         super(CustomLibrary, self).__init__()
         self.functions = library_functions
         self.function_names = function_names
-        if function_names and (len(library_functions) != len(function_names)):
+        if function_names and (
+            shape(library_functions)[-1] != shape(function_names)[-1]
+        ):
             raise ValueError(
                 "library_functions and function_names must have the same"
                 " number of elements"
@@ -131,6 +136,7 @@ class CustomLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
+
         if float(__version__[:3]) >= 1.0:
             n_input_features = self.n_features_in_
         else:
@@ -182,8 +188,6 @@ class CustomLibrary(BaseFeatureLibrary):
                     range(len(self.functions)),
                 )
             )
-            if self.include_bias:
-                self.function_names.append("1")
         return self
 
     def transform(self, x):

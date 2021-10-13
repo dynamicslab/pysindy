@@ -112,13 +112,6 @@ def test_bad_parameters():
         PDELibrary(
             library_functions=library_functions,
             weak_form=True,
-            temporal_grid=range(10),
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            weak_form=True,
             spatial_grid=range(10),
         )
     with pytest.raises(ValueError):
@@ -456,7 +449,7 @@ def test_1D_weak_pdes():
         temporal_grid=t,
         include_bias=True,
         K=10,
-        is_uniform=True,
+        is_uniform=False,
         weak_form=True,
         num_pts_per_domain=10,
     )
@@ -521,7 +514,7 @@ def test_2D_weak_pdes():
         K=10,
         temporal_grid=t,
         include_bias=True,
-        is_uniform=True,
+        is_uniform=False,
         weak_form=True,
         num_pts_per_domain=10,
     )

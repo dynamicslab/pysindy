@@ -15,6 +15,7 @@ from numpy import reshape
 from numpy import shape
 from numpy import transpose
 from numpy import zeros
+from numpy.random import seed
 from numpy.random import uniform
 from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
@@ -63,10 +64,12 @@ class PDELibrary(BaseFeatureLibrary):
         will be included.
         If False, all combinations will be included.
 
-    include_bias : boolean, optional (default True)
+    include_bias : boolean, optional (default False)
         If True (default), then include a bias column, the feature in which
         all polynomial powers are zero (i.e. a column of ones - acts as an
         intercept term in a linear model).
+        This is hard to do with just lambda functions, because if the system
+        is not 1D, lambdas will generate duplicates.
 
     is_uniform : boolean, optional (default True)
         If True, assume the grid is uniform in all spatial directions, so
@@ -149,9 +152,10 @@ class PDELibrary(BaseFeatureLibrary):
         temporal_grid=None,
         function_names=None,
         interaction_only=True,
-        include_bias=True,
+        include_bias=False,
         is_uniform=False,
         weak_form=False,
+        rand_seed=100,
         K=100,
         num_pts_per_domain=100,
         Hx=None,
@@ -270,6 +274,7 @@ class PDELibrary(BaseFeatureLibrary):
             if K <= 0:
                 raise ValueError("The number of subdomains must be > 0")
             self.K = K
+            seed(rand_seed)
             if self.slen == 0:
                 self.domain_centers = uniform(t1 + self.Ht, t2 - self.Ht, size=self.K)
                 tgrid_k = zeros((self.K, num_pts_per_domain))
@@ -417,7 +422,7 @@ class PDELibrary(BaseFeatureLibrary):
             for i in range(shape(t)[0]):
                 t_tilde[i] = (t[i] - self.domain_centers[k]) / self.Ht
             weights = self._poly_deriv_0D(t_tilde, d_t)
-        if shape(x)[1] == 1:
+        elif shape(x)[1] == 1:
             x_tilde = zeros(shape(x)[0])
             t_tilde = zeros(shape(t)[0])
             weights = zeros((shape(x)[0], shape(t)[0], 1))
@@ -426,7 +431,7 @@ class PDELibrary(BaseFeatureLibrary):
                 t_tilde[i] = (t[i] - self.domain_centers[k, -1]) / self.Ht
             for i in range(shape(x)[0]):
                 weights[i, :, 0] = self._poly_deriv_1D(x_tilde[i], t_tilde, d_x, d_t)
-        if shape(x)[1] == 2:
+        elif shape(x)[1] == 2:
             x_tilde = zeros(shape(x)[0])
             y_tilde = zeros(shape(x)[0])
             t_tilde = zeros(shape(t)[0])

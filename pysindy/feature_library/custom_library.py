@@ -46,6 +46,13 @@ class CustomLibrary(BaseFeatureLibrary):
     ensemble_indices : integer array, optional (default 0)
         The indices to use for ensembling the library.
 
+    include_bias : boolean, optional (default False)
+        If True (default), then include a bias column, the feature in which
+        all polynomial powers are zero (i.e. a column of ones - acts as an
+        intercept term in a linear model).
+        This is hard to do with just lambda functions, because if the system
+        is not 1D, lambdas will generate duplicates.
+
     Attributes
     ----------
     functions : list of functions

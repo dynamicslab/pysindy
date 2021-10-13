@@ -16,10 +16,22 @@ class BaseFeatureLibrary(TransformerMixin):
 
     Forces subclasses to implement ``fit``, ``transform``,
     and ``get_feature_names`` methods.
+
+    Parameters
+    ----------
+    library_ensemble : boolean, optional (default False)
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library)
+
+    ensemble_indices : integer array, optional (default 0)
+        The indices to use for ensembling the library.
     """
 
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, library_ensemble=None, ensemble_indices=0):
+        self.library_ensemble = library_ensemble
+        if any(ensemble_indices < 0):
+            raise ValueError("Library ensemble indices must be 0 or positive integers.")
+        self.ensemble_indices = ensemble_indices
 
     # Force subclasses to implement this
     @abc.abstractmethod
@@ -73,6 +85,23 @@ class BaseFeatureLibrary(TransformerMixin):
         output_feature_names : list of string, length n_output_features
         """
         raise NotImplementedError
+
+    def _ensemble(self, xp):
+        """
+        If library bagging, return xp missing
+        the terms at ensemble_indices
+        """
+        if self.library_ensemble:
+            if self.n_output_features_ == 1:
+                raise ValueError(
+                    "Can't use library ensemble methods if your"
+                    " library is just one term!"
+                )
+            inds = range(self.n_output_features_)
+            inds = np.delete(inds, self.ensemble_indices)
+            return xp[:, inds]
+        else:
+            return xp
 
     def __add__(self, other):
         return ConcatLibrary([self, other])
@@ -134,10 +163,10 @@ class ConcatLibrary(BaseFeatureLibrary):
         library_ensemble=False,
         ensemble_indices=0,
     ):
-        super(ConcatLibrary, self).__init__()
+        super(ConcatLibrary, self).__init__(
+            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
+        )
         self.libraries_ = libraries
-        self.library_ensemble = library_ensemble
-        self.ensemble_indices = ensemble_indices
 
     def fit(self, X, y=None):
         """

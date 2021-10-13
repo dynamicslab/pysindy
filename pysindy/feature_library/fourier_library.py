@@ -65,18 +65,16 @@ class FourierLibrary(BaseFeatureLibrary):
         library_ensemble=False,
         ensemble_indices=0,
     ):
-        super(FourierLibrary, self).__init__()
+        super(FourierLibrary, self).__init__(
+            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
+        )
         if not (include_sin or include_cos):
             raise ValueError("include_sin and include_cos cannot both be False")
         if n_frequencies < 1 or not isinstance(n_frequencies, int):
             raise ValueError("n_frequencies must be a positive integer")
-        if np.any(ensemble_indices < 0):
-            raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.n_frequencies = n_frequencies
         self.include_sin = include_sin
         self.include_cos = include_cos
-        self.library_ensemble = library_ensemble
-        self.ensemble_indices = ensemble_indices
 
     def get_feature_names(self, input_features=None):
         """
@@ -171,14 +169,4 @@ class FourierLibrary(BaseFeatureLibrary):
                     idx += 1
 
         # If library bagging, return xp missing the terms at ensemble_indices
-        if self.library_ensemble:
-            if self.n_output_features_ == 1:
-                raise ValueError(
-                    "Can't use library ensemble methods if your"
-                    " library is just one term!"
-                )
-            inds = range(self.n_output_features_)
-            inds = np.delete(inds, self.ensemble_indices)
-            return xp[:, inds]
-        else:
-            return xp
+        return self._ensemble(xp)

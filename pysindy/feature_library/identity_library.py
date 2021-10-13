@@ -1,5 +1,3 @@
-from numpy import any
-from numpy import delete
 from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
@@ -49,11 +47,9 @@ class IdentityLibrary(BaseFeatureLibrary):
         library_ensemble=False,
         ensemble_indices=0,
     ):
-        if any(ensemble_indices < 0):
-            raise ValueError("Library ensemble indices must be 0 or positive integers.")
-        super(IdentityLibrary, self).__init__()
-        self.library_ensemble = library_ensemble
-        self.ensemble_indices = ensemble_indices
+        super(IdentityLibrary, self).__init__(
+            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
+        )
 
     def get_feature_names(self, input_features=None):
         """
@@ -130,14 +126,4 @@ class IdentityLibrary(BaseFeatureLibrary):
 
         # If library bagging, return x missing the
         # columns in self.ensemble_indices
-        if self.library_ensemble:
-            if n_features == 1:
-                raise ValueError(
-                    "Can't use library ensemble methods if your"
-                    " library is just one term!"
-                )
-            inds = range(self.n_output_features_)
-            inds = delete(inds, self.ensemble_indices)
-            return (x.copy())[:, inds]
-        else:
-            return x.copy()
+        return self._ensemble(x.copy())

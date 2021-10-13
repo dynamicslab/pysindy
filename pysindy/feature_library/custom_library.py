@@ -1,8 +1,6 @@
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
-from numpy import any
-from numpy import delete
 from numpy import empty
 from numpy import ones
 from sklearn import __version__
@@ -89,7 +87,9 @@ class CustomLibrary(BaseFeatureLibrary):
         ensemble_indices=0,
         include_bias=False,
     ):
-        super(CustomLibrary, self).__init__()
+        super(CustomLibrary, self).__init__(
+            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
+        )
         self.functions = library_functions
         self.function_names = function_names
         if function_names and (len(library_functions) != len(function_names)):
@@ -97,12 +97,8 @@ class CustomLibrary(BaseFeatureLibrary):
                 "library_functions and function_names must have the same"
                 " number of elements"
             )
-        if any(ensemble_indices < 0):
-            raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.include_bias = include_bias
         self.interaction_only = interaction_only
-        self.library_ensemble = library_ensemble
-        self.ensemble_indices = ensemble_indices
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
@@ -220,14 +216,4 @@ class CustomLibrary(BaseFeatureLibrary):
                 library_idx += 1
 
         # If library bagging, return xp missing the terms at ensemble_indices
-        if self.library_ensemble:
-            if self.n_output_features_ == 1:
-                raise ValueError(
-                    "Can't use library ensemble methods if your"
-                    " library is just one term!"
-                )
-            inds = range(self.n_output_features_)
-            inds = delete(inds, self.ensemble_indices)
-            return xp[:, inds]
-        else:
-            return xp
+        return self._ensemble(xp)

@@ -81,6 +81,9 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             include_bias=include_bias,
             order=order,
         )
+        BaseFeatureLibrary.__init__(
+            self, library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
+        )
         if degree < 0 or not isinstance(degree, int):
             raise ValueError("degree must be a nonnegative integer")
         if (not include_interaction) and interaction_only:
@@ -91,8 +94,6 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         if np.any(ensemble_indices < 0):
             raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.include_interaction = include_interaction
-        self.library_ensemble = library_ensemble
-        self.ensemble_indices = ensemble_indices
 
     @staticmethod
     def _combinations(
@@ -285,14 +286,4 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                     xp[:, i] = x[:, comb].prod(1)
 
         # If library bagging, return xp missing the terms at ensemble_indices
-        if self.library_ensemble:
-            if self.n_output_features_ == 1:
-                raise ValueError(
-                    "Can't use library ensemble methods if your"
-                    " library is just one term!"
-                )
-            inds = range(self.n_output_features_)
-            inds = np.delete(inds, self.ensemble_indices)
-            return xp[:, inds]
-        else:
-            return xp
+        return self._ensemble(xp)

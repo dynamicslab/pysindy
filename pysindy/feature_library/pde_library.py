@@ -1,10 +1,8 @@
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
-from numpy import any
 from numpy import array
 from numpy import asarray
-from numpy import delete
 from numpy import empty
 from numpy import hstack
 from numpy import linspace
@@ -161,19 +159,17 @@ class PDELibrary(BaseFeatureLibrary):
         library_ensemble=False,
         ensemble_indices=0,
     ):
-        super(PDELibrary, self).__init__()
+        super(PDELibrary, self).__init__(
+            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
+        )
         self.derivative_order = derivative_order
         self.spatial_grid = spatial_grid
         self.temporal_grid = temporal_grid
         self.functions = library_functions
         self.function_names = function_names
-        self.library_ensemble = library_ensemble
-        self.ensemble_indices = ensemble_indices
         self.include_bias = include_bias
         self.is_uniform = is_uniform
         self.num_pts_per_domain = num_pts_per_domain
-        if any(ensemble_indices < 0):
-            raise ValueError("Library ensemble indices must be 0 or positive integers.")
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
                 "library_functions and function_names must have the same"
@@ -1262,9 +1258,4 @@ class PDELibrary(BaseFeatureLibrary):
                                     ) * identity_function(u_derivs[:, kk, d])
                                     library_idx += 1
         # If library bagging, return xp missing the terms at ensemble_indices
-        if self.library_ensemble:
-            inds = range(self.n_output_features_)
-            inds = delete(inds, self.ensemble_indices)
-            return xp[:, inds]
-        else:
-            return xp
+        return self._ensemble(xp)

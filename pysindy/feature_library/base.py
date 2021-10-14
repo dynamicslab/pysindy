@@ -29,7 +29,7 @@ class BaseFeatureLibrary(TransformerMixin):
 
     def __init__(self, library_ensemble=None, ensemble_indices=0):
         self.library_ensemble = library_ensemble
-        if any(ensemble_indices < 0):
+        if np.any(ensemble_indices < 0):
             raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.ensemble_indices = ensemble_indices
 
@@ -92,10 +92,10 @@ class BaseFeatureLibrary(TransformerMixin):
         the terms at ensemble_indices
         """
         if self.library_ensemble:
-            if self.n_output_features_ == 1:
+            if self.n_output_features_ <= len(self.ensemble_indices):
                 raise ValueError(
-                    "Can't use library ensemble methods if your"
-                    " library is just one term!"
+                    "Error: you are trying to chop more library terms "
+                    "than are available to remove!"
                 )
             inds = range(self.n_output_features_)
             inds = np.delete(inds, self.ensemble_indices)

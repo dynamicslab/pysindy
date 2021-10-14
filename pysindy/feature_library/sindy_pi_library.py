@@ -1,7 +1,6 @@
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
-from numpy import delete
 from numpy import empty
 from numpy import hstack
 from numpy import nan_to_num
@@ -61,19 +60,19 @@ class SINDyPILibrary(BaseFeatureLibrary):
         will be included.
         If False, all combinations will be included.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default 0)
-        The indices to use for ensembling the library.
-
     include_bias : boolean, optional (default False)
         If True (default), then include a bias column, the feature in which
         all polynomial powers are zero (i.e. a column of ones - acts as an
         intercept term in a linear model).
         This is hard to do with just lambda functions, because if the system
         is not 1D, lambdas will generate duplicates.
+
+    library_ensemble : boolean, optional (default False)
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library)
+
+    ensemble_indices : integer array, optional (default 0)
+        The indices to use for ensembling the library.
 
     Attributes
     ----------
@@ -142,11 +141,13 @@ class SINDyPILibrary(BaseFeatureLibrary):
         function_names=None,
         interaction_only=True,
         differentiation_method=None,
+        include_bias=False,
         library_ensemble=False,
         ensemble_indices=0,
-        include_bias=False,
     ):
-        super(SINDyPILibrary, self).__init__()
+        super(SINDyPILibrary, self).__init__(
+            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
+        )
         self.x_functions = library_functions
         self.x_dot_functions = x_dot_library_functions
         self.function_names = function_names
@@ -175,8 +176,6 @@ class SINDyPILibrary(BaseFeatureLibrary):
         self.differentiation_method = differentiation_method
         self.interaction_only = interaction_only
         self.t = t
-        self.library_ensemble = library_ensemble
-        self.ensemble_indices = ensemble_indices
         self.include_bias = include_bias
 
     @staticmethod
@@ -415,15 +414,4 @@ class SINDyPILibrary(BaseFeatureLibrary):
                             ) * f_dot(*[x_dot[:, comb] for comb in f_dot_combs])
                             library_idx += 1
 
-        # If library bagging, return xp missing the terms at ensemble_indices
-        if self.library_ensemble:
-            if self.n_output_features_ == 1:
-                raise ValueError(
-                    "Can't use library ensemble methods if your"
-                    " library is just one term!"
-                )
-            inds = range(self.n_output_features_)
-            inds = delete(inds, self.ensemble_indices)
-            return xp[:, inds]
-        else:
-            return xp
+        return self._ensemble(xp)

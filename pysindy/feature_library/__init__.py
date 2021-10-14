@@ -4,6 +4,7 @@ from .fourier_library import FourierLibrary
 from .identity_library import IdentityLibrary
 from .pde_library import PDELibrary
 from .polynomial_library import PolynomialLibrary
+from .sindy_pi_library import SINDyPILibrary
 
 __all__ = [
     "ConcatLibrary",
@@ -12,4 +13,5 @@ __all__ = [
     "IdentityLibrary",
     "PolynomialLibrary",
     "PDELibrary",
+    "SINDyPILibrary",
 ]

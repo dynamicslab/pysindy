@@ -20,7 +20,9 @@ from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import IdentityLibrary
 from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
+from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
+from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import STLSQ
 
 
@@ -43,6 +45,20 @@ def test_form_custom_library():
 
     # Test without user-supplied function names
     PDELibrary(library_functions=library_functions, function_names=None)
+
+
+def test_form_sindy_pi_library():
+    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    function_names = [
+        lambda s: str(s),
+        lambda s: "{}^2".format(s),
+        lambda s: "0",
+    ]
+    # Test with user-supplied function names
+    SINDyPILibrary(library_functions=library_functions, function_names=function_names)
+
+    # Test without user-supplied function names
+    SINDyPILibrary(library_functions=library_functions, function_names=None)
 
 
 def test_bad_parameters():
@@ -112,13 +128,6 @@ def test_bad_parameters():
         PDELibrary(
             library_functions=library_functions,
             weak_form=True,
-            temporal_grid=range(10),
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            weak_form=True,
             spatial_grid=range(10),
         )
     with pytest.raises(ValueError):
@@ -173,6 +182,31 @@ def test_bad_parameters():
             spatial_grid=range(10),
             temporal_grid=np.zeros((10, 3)),
             weak_form=True,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
+        SINDyPILibrary(
+            library_functions=library_functions, function_names=function_names
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
+        SINDyPILibrary(
+            x_dot_library_functions=library_functions, function_names=function_names
+        )
+    with pytest.raises(ValueError):
+        SINDyPILibrary()
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        SINDyPILibrary(x_dot_library_functions=library_functions)
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2]
+        function_names = [lambda s: s, lambda s: s + s]
+        SINDyPILibrary(
+            library_functions=library_functions,
+            x_dot_library_functions=library_functions,
+            function_names=function_names,
         )
 
 
@@ -456,7 +490,7 @@ def test_1D_weak_pdes():
         temporal_grid=t,
         include_bias=True,
         K=10,
-        is_uniform=True,
+        is_uniform=False,
         weak_form=True,
         num_pts_per_domain=10,
     )
@@ -521,7 +555,7 @@ def test_2D_weak_pdes():
         K=10,
         temporal_grid=t,
         include_bias=True,
-        is_uniform=True,
+        is_uniform=False,
         weak_form=True,
         num_pts_per_domain=10,
     )
@@ -569,3 +603,45 @@ def test_2D_weak_pdes():
     assert np.shape(model.coef_list) == (10, 1, n_features)
     model.fit(u_flattened, x_dot=u_dot_integral, library_ensemble=True, n_models=10)
     assert np.shape(model.coef_list) == (10, 1, n_features)
+
+
+def test_sindypi_library(data_lorenz):
+    x, t = data_lorenz
+    x_library_functions = [
+        lambda x: x,
+        lambda x, y: x * y,
+        lambda x: x ** 2,
+    ]
+    x_dot_library_functions = [lambda x: x]
+
+    library_function_names = [
+        lambda x: x,
+        lambda x, y: x + y,
+        lambda x: x + x,
+        lambda x: x,
+    ]
+    sindy_library = SINDyPILibrary(
+        library_functions=x_library_functions,
+        x_dot_library_functions=x_dot_library_functions,
+        t=t[1:-1],
+        function_names=library_function_names,
+        include_bias=True,
+    )
+    sindy_opt = SINDyPI(threshold=0.1, thresholder="l1")
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+        differentiation_method=FiniteDifference(drop_endpoints=True),
+    )
+    model.fit(x, t=t)
+    assert np.shape(sindy_opt.coef_) == (40, 40)
+    sindy_opt = SINDyPI(threshold=0.1, thresholder="l1", model_subset=[3])
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+        differentiation_method=FiniteDifference(drop_endpoints=True),
+    )
+    model.fit(x, t=t)
+    assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(
+        sindy_opt.coef_[3, :] != 0.0
+    )

@@ -121,6 +121,14 @@ class ConcatLibrary(BaseFeatureLibrary):
     libraries : list of libraries
         Library instances to be applied to the input matrix.
 
+    library_ensemble : boolean, optional (default False)
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library).
+
+    ensemble_indices : integer array, optional (default 0)
+        The indices to use for ensembling the library. For instance, if
+        ensemble_indices = 0, it chops off the first column of the library.
+
     Attributes
     ----------
     libraries_ : list of libraries
@@ -135,13 +143,6 @@ class ConcatLibrary(BaseFeatureLibrary):
         The total number of output features. The number of output features
         is the sum of the numbers of output features for each of the
         concatenated libraries.
-
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default 0)
-        The indices to use for ensembling the library.
 
     Examples
     --------

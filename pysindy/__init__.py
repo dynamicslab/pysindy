@@ -23,6 +23,7 @@ from .feature_library import FourierLibrary
 from .feature_library import IdentityLibrary
 from .feature_library import PolynomialLibrary
 from .feature_library import PDELibrary
+from .feature_library import SINDyPILibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import TrappingSR3
@@ -31,6 +32,7 @@ from .optimizers import SR3
 from .optimizers import FROLS
 from .optimizers import SSR
 from .optimizers import STLSQ
+from .optimizers import SINDyPI
 
 
 __all__ = ["SINDy"]

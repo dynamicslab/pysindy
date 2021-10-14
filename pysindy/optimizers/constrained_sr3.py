@@ -55,9 +55,9 @@ class ConstrainedSR3(SR3):
 
     thresholder : string, optional (default 'l0')
         Regularization function to use. Currently implemented options
-        are 'l0' (l0 norm), 'l1' (l1 norm), 'cad' (clipped
-        absolute deviation), 'weighted_l0' (weighted l0 norm), and
-        'weighted_l1' (weighted l1 norm).
+        are 'l0' (l0 norm), 'l1' (l1 norm), 'l2' (l2 norm), 'cad' (clipped
+        absolute deviation), 'weighted_l0' (weighted l0 norm),
+        'weighted_l1' (weighted l1 norm), and 'weighted_l2' (weighted l2 norm).
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -202,9 +202,6 @@ class ConstrainedSR3(SR3):
             )
         self.inequality_constraints = inequality_constraints
 
-    def _set_threshold(self, threshold):
-        self.threshold = threshold
-
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
         g = x_transpose_y + coef_sparse / self.nu
         inv1 = np.linalg.inv(H)
@@ -290,6 +287,9 @@ class ConstrainedSR3(SR3):
 
         Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
+        if self.initial_guess is not None:
+            self.coef_ = self.initial_guess
+
         coef_sparse = self.coef_.T
         coef_full = coef_sparse.copy()
         n_samples, n_features = x.shape

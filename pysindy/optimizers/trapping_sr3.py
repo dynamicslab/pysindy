@@ -81,7 +81,7 @@ class TrappingSR3(SR3):
 
     thresholder : string, optional (default 'L1')
         Regularization function to use. For current trapping SINDy,
-        only the L1 norm is implemented. Note that other convex norms
+        only the L1 and L2 norms are implemented. Note that other convex norms
         could be straightforwardly implemented, but L0 requires
         reformulation because of nonconvexity.
 
@@ -168,7 +168,7 @@ class TrappingSR3(SR3):
     >>> import numpy as np
     >>> from scipy.integrate import odeint
     >>> from pysindy import SINDy
-    >>> from pysindy.optimizers import TrappingSR3
+    >>> from pysindy.optimizers import Trapping
     >>> lorenz = lambda z,t : [10*(z[1] - z[0]),
     >>>                        z[0]*(28 - z[2]) - z[1],
     >>>                        z[0]*z[1] - 8/3*z[2]]
@@ -220,8 +220,8 @@ class TrappingSR3(SR3):
 
         if threshold < 0:
             raise ValueError("threshold cannot be negative")
-        if thresholder != "l1":
-            raise ValueError("Regularizer must be L1 for now")
+        if thresholder.lower() not in ("l1", "l2"):
+            raise ValueError("Regularizer must be L1 or L2 for now")
         if eta <= 0:
             raise ValueError("eta must be positive")
         if alpha_m < 0 or alpha_m > eta:
@@ -379,9 +379,11 @@ class TrappingSR3(SR3):
 
     def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
         xi = cp.Variable(N * r)
-        cost = cp.sum_squares(
-            x_expanded @ xi - y.flatten()
-        ) + self.threshold * cp.norm1(xi)
+        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
+        if self.thresholder == "l1":
+            cost = cost + self.threshold * cp.norm1(xi)
+        else:
+            cost = cost + self.threshold * cp.norm2(xi) ** 2
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -397,7 +399,7 @@ class TrappingSR3(SR3):
         else:
             prob = cp.Problem(cp.Minimize(cost))
 
-        # default solver is OSQP here
+        # default solver is OSQP here but switches to ECOS for L2
         prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
 
         if xi.value is None:
@@ -448,9 +450,11 @@ class TrappingSR3(SR3):
 
     def _solve_direct_cvxpy(self, r, N, x_expanded, y, Pmatrix, coef_prev):
         xi = cp.Variable(N * r)
-        cost = cp.sum_squares(
-            x_expanded @ xi - y.flatten()
-        ) + self.threshold * cp.norm1(xi)
+        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
+        if self.thresholder == "l1":
+            cost = cost + self.threshold * cp.norm1(xi)
+        else:
+            cost = cost + self.threshold * cp.norm2(xi) ** 2
         cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -566,7 +570,6 @@ class TrappingSR3(SR3):
                         coef_sparse = self._solve_sparse_relax_and_split(
                             r, n_features, x_expanded, y, Pmatrix, A, coef_prev
                         )
-                        print(coef_sparse)
                     else:
                         pTp = np.dot(Pmatrix.T, Pmatrix)
                         H = xTx + pTp / self.eta
@@ -614,7 +617,7 @@ class TrappingSR3(SR3):
                 break
         if k == self.max_iter - 1:
             warnings.warn(
-                "TrappingSR3._reduce did not converge after {} iters.".format(
+                "Trapping._reduce did not converge after {} iters.".format(
                     self.max_iter
                 ),
                 ConvergenceWarning,

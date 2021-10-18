@@ -98,7 +98,6 @@ class FROLS(BaseOptimizer):
         )
         self.alpha = alpha
         self.ridge_kw = ridge_kw
-        self.normalize_columns = normalize_columns
         self.kappa = kappa
         if self.max_iter <= 0:
             raise ValueError("Max iteration must be > 0")

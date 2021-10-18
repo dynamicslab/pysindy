@@ -191,11 +191,11 @@ class ConstrainedSR3(SR3):
                 "constraint_rhs."
             )
 
-        if inequality_constraints and (
-            thresholder.lower() != "l1"
-            and thresholder.lower() != "l2"
-            and thresholder.lower() != "weighted_l1"
-            and thresholder.lower() != "weighted_l2"
+        if inequality_constraints and thresholder.lower() not in (
+            "l1",
+            "l2",
+            "weighted_l1",
+            "weighted_l2",
         ):
             raise ValueError(
                 "Use of inequality constraints requires a convex regularizer."
@@ -222,7 +222,7 @@ class ConstrainedSR3(SR3):
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
         elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(self.threshold * xi)
+            cost = cost + cp.norm1(self.thresholds * xi)
         elif self.thresholder.lower() == "l2":
             cost = cost + self.threshold * cp.norm2(xi)
         elif self.thresholder.lower() == "weighted_l2":
@@ -240,7 +240,19 @@ class ConstrainedSR3(SR3):
                 )
         else:
             prob = cp.Problem(cp.Minimize(cost))
-        prob.solve(max_iter=50000, eps_abs=self.tol, eps_rel=self.tol)
+
+        # default solver is OSQP here but switches to ECOS for L2
+        try:
+            prob.solve(max_iter=50000, eps_abs=self.tol, eps_rel=self.tol)
+        # Annoying error coming from L2 norm switching to use the ECOS
+        # solver, which uses "max_iters" instead of "max_iter", and
+        # similar semantic changes for the other variables.
+        except TypeError:
+            prob.solve(abstol=self.tol, reltol=self.tol)
+        except cp.error.SolverError:
+            print("Solver failed, setting coefs to zeros")
+            xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
+
         if xi.value is None:
             warnings.warn(
                 "Infeasible solve, probably an issue with the regularizer "
@@ -276,7 +288,7 @@ class ConstrainedSR3(SR3):
         else:
             return (
                 0.5 * np.sum(R2)
-                + self.reg(coef_full, 0.5 * self.thresholds.T ** 2 / self.nu)
+                + self.reg(coef_full, 0.5 * self.thresholds ** 2 / self.nu)
                 + 0.5 * np.sum(D2) / self.nu
             )
 

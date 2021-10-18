@@ -88,10 +88,6 @@ class SINDyPI(SR3):
         ``unbias`` is automatically set to False if a constraint is used and
         is otherwise left uninitialized.
 
-    Theta : np.ndarray, shape (n_samples, n_features)
-        The Theta matrix to be used in the optimization. We save it as
-        an attribute because access to the full library of terms is needed for
-        the SINDy-PI ODE after the optimization.
     """
 
     def __init__(
@@ -108,6 +104,7 @@ class SINDyPI(SR3):
     ):
         super(SINDyPI, self).__init__(
             threshold=threshold,
+            thresholds=thresholds,
             tol=tol,
             thresholder=thresholder,
             max_iter=max_iter,
@@ -116,10 +113,6 @@ class SINDyPI(SR3):
             normalize_columns=normalize_columns,
         )
 
-        if max_iter <= 0:
-            raise ValueError("max_iter must be positive")
-        if threshold < 0.0:
-            raise ValueError("threshold must not be negative")
         if (
             thresholder.lower() != "l1"
             and thresholder.lower() != "l2"
@@ -130,61 +123,35 @@ class SINDyPI(SR3):
                 "l0 and other nonconvex regularizers are not implemented "
                 " in current version of SINDy-PI"
             )
-        if thresholder[:8].lower() == "weighted" and thresholds is None:
-            raise ValueError("weighted thresholder requires the thresholds parameter")
-        if thresholder[:8].lower() != "weighted" and thresholds is not None:
-            raise ValueError(
-                "The thresholds argument cannot be used without a weighted"
-                " thresholder, e.g. thresholder='weighted_l0'"
-            )
-        if thresholds is not None and np.any(thresholds < 0):
-            raise ValueError("thresholds cannot contain negative entries")
 
-        self.thresholds = thresholds
         self.unbias = False
-        self.Theta = None
+        if model_subset is not None:
+            if not isinstance(model_subset, list):
+                raise ValueError("Model subset must be in list format.")
+            subset_integers = [set for set in model_subset if isinstance(set, int)]
+            if subset_integers != model_subset:
+                raise ValueError("Model subset list must consist of integers.")
+
         self.model_subset = model_subset
 
-    def _set_threshold(self, threshold):
-        self.threshold = threshold
-
-    def _update_full_coef_constraints(self, x):
-        n_features = x.shape[1]
-        xi = cp.Variable((n_features, n_features))
-        if (self.thresholder).lower() in ("l1", "weighted_l1"):
-            if self.thresholds is None:
-                cost = cp.sum_squares(x - x @ xi) + self.threshold * cp.norm1(xi)
-            else:
-                cost = cp.sum_squares(x - x @ xi) + cp.norm1(self.thresholds @ xi)
-        if (self.thresholder).lower() in ("l2", "weighted_l2"):
-            if self.thresholds is None:
-                cost = cp.sum_squares(x - x @ xi) + self.threshold * cp.norm2(xi) ** 2
-            else:
-                cost = cp.sum_squares(x - x @ xi) + cp.norm2(self.thresholds @ xi) ** 2
-        prob = cp.Problem(
-            cp.Minimize(cost),
-            [cp.diag(xi) == np.zeros(n_features)],
-        )
-
-        # Beware: hard-coding the tolerances
-        prob.solve(
-            max_iter=self.max_iter, verbose=True, eps_abs=self.tol, eps_rel=self.tol
-        )
-
-        if xi.value is None:
-            warnings.warn(
-                "Infeasible solve, try changing your library",
-                ConvergenceWarning,
-            )
-        return xi.value
-
     def _update_parallel_coef_constraints(self, x):
+        """
+        Solves each of the model fits separately, which can in principle be
+        parallelized. Unfortunately most parallel Python packages don't give
+        huge speedups. Instead, we allow the user to only solve a subset of
+        the models with the parameter model_subset.
+        """
         n_features = x.shape[1]
         xi_final = np.zeros((n_features, n_features))
 
         # Todo: parallelize this for loop with Multiprocessing/joblib
         if self.model_subset is None:
             self.model_subset = range(n_features)
+        elif np.max(np.abs(self.model_subset)) >= n_features:
+            raise ValueError(
+                "A value in model_subset is larger than the number "
+                "of features in the candidate library"
+            )
         for i in self.model_subset:
             xi = cp.Variable(n_features)
             # Note that norm choice below must be convex,
@@ -244,8 +211,5 @@ class SINDyPI(SR3):
         Perform at most ``self.max_iter`` iterations of the SINDy-PI
         optimization problem, using CVXPY.
         """
-        self.Theta = x  # Need to save the library for post-processing
-        n_samples, n_features = x.shape
-
         coef = self._update_parallel_coef_constraints(x)
         self.coef_ = coef.T

@@ -61,14 +61,13 @@ def lorenz(x, t, sigma=10, beta=2.66667, rho=28):
     ]
 
 
-# Control input for Lorenz + control
+# Sample control input for Lorenz + control
 def lorenz_u(t):
     return np.column_stack([np.sin(2 * t) ** 2, t ** 2])
 
 
 # Lorenz equations with control input
-def lorenz_control(x, t, sigma=10, beta=2.66667, rho=28):
-    u = lorenz_u(t)
+def lorenz_control(x, t, u, sigma=10, beta=2.66667, rho=28):
     return [
         sigma * (x[1] - x[0]) + u[0, 0],
         x[0] * (rho - x[2]) - x[1],
@@ -482,7 +481,7 @@ def double_pendulum(
                 + 2 * L1 ** 2 * g * m2 * np.sin(x[1])
                 + 2 * I1 * L1 * x[2] ** 2 * np.sin(x[0] - x[1])
                 + 2 * a1 ** 2 * g * m1 * np.sin(x[1])
-                + L1 ** 2 * a2 * x[3] ** 2 * m2 * np.sin(*(x[0] - x[1]))
+                + L1 ** 2 * a2 * x[3] ** 2 * m2 * np.sin(2 * (x[0] - x[1]))
                 + 2 * L1 * a1 ** 2 * x[2] ** 2 * m1 * np.sin(x[0] - x[1])
                 - 2 * L1 ** 2 * g * m2 * np.cos(x[0] - x[1]) * np.sin(x[0])
                 - 2 * L1 * a1 * g * m1 * np.cos(x[0] - x[1]) * np.sin(x[0])

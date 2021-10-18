@@ -209,8 +209,11 @@ def test_simulate(data):
     model = SINDy()
     model.fit(x, t)
     x1 = model.simulate(np.ravel(x[0]), t)
-
     assert len(x1) == len(t)
+    x1 = model.simulate(np.ravel(x[0]), t, integrator="odeint")
+    assert len(x1) == len(t)
+    with pytest.raises(ValueError):
+        x1 = model.simulate(np.ravel(x[0]), t, integrator="None")
 
 
 @pytest.mark.parametrize(
@@ -364,7 +367,12 @@ def test_simulate_discrete_time(data_discrete_time):
 
     assert len(x1) == n_steps
 
-    # TODO: implement test using the stop_condition option
+    def stop_func(xi):
+        # check if we are at the 2nd to last element
+        return np.isclose(xi[0], 0.874363)
+
+    x2 = model.simulate(x[0], n_steps, stop_condition=stop_func)
+    assert len(x2) == n_steps - 2
 
 
 def test_predict_discrete_time(data_discrete_time):
@@ -538,6 +546,14 @@ def test_simulate_errors(data_lorenz):
     with pytest.raises(ValueError):
         model.simulate(x[0], t=[1, 2])
 
+    model = SINDy(discrete_time=True)
+    with pytest.raises(ValueError):
+        model.simulate(x[0], t=-1)
+
+    model = SINDy(discrete_time=True)
+    with pytest.raises(ValueError):
+        model.simulate(x[0], t=0.5)
+
 
 @pytest.mark.parametrize(
     "params, warning",
@@ -633,6 +649,16 @@ def test_library_ensemble(data_lorenz):
         x, t, library_ensemble=True, n_models=10
     )
     np.testing.assert_allclose(np.shape(model.coef_list)[0], 10)
+
+
+def test_both_ensemble(data_lorenz):
+    x, t = data_lorenz
+    library = PolynomialLibrary().fit(x)
+    optimizer = SR3()
+    model = SINDy(feature_library=library, optimizer=optimizer).fit(
+        x, t, ensemble=True, library_ensemble=True, n_models=10
+    )
+    np.testing.assert_allclose(np.shape(model.coef_list)[0], 100)
 
 
 @pytest.mark.parametrize(

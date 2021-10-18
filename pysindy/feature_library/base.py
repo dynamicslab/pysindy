@@ -23,13 +23,13 @@ class BaseFeatureLibrary(TransformerMixin):
         Whether or not to use library bagging (regress on subset of the
         candidate terms in the library)
 
-    ensemble_indices : integer array, optional (default 0)
+    ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library.
     """
 
-    def __init__(self, library_ensemble=None, ensemble_indices=0):
+    def __init__(self, library_ensemble=None, ensemble_indices=[0]):
         self.library_ensemble = library_ensemble
-        if np.any(ensemble_indices < 0):
+        if np.any(np.asarray(ensemble_indices) < 0):
             raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.ensemble_indices = ensemble_indices
 
@@ -92,6 +92,7 @@ class BaseFeatureLibrary(TransformerMixin):
         the terms at ensemble_indices
         """
         if self.library_ensemble:
+            print(self.n_output_features_, self.ensemble_indices)
             if self.n_output_features_ <= len(self.ensemble_indices):
                 raise ValueError(
                     "Error: you are trying to chop more library terms "
@@ -125,9 +126,9 @@ class ConcatLibrary(BaseFeatureLibrary):
         Whether or not to use library bagging (regress on subset of the
         candidate terms in the library).
 
-    ensemble_indices : integer array, optional (default 0)
+    ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library. For instance, if
-        ensemble_indices = 0, it chops off the first column of the library.
+        ensemble_indices = [0], it chops off the first column of the library.
 
     Attributes
     ----------
@@ -162,7 +163,7 @@ class ConcatLibrary(BaseFeatureLibrary):
         self,
         libraries: list,
         library_ensemble=False,
-        ensemble_indices=0,
+        ensemble_indices=[0],
     ):
         super(ConcatLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices

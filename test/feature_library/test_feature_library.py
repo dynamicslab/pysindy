@@ -377,9 +377,9 @@ def test_library_ensemble(data_lorenz, library):
     library.library_ensemble = True
     xp = library.transform(x)
     assert N == xp.shape[1] + 1
-    library.ensemble_indices = [0, 1, 2]
+    library.ensemble_indices = [0, 1]
     xp = library.transform(x)
-    assert N == xp.shape[1] + 3
+    assert N == xp.shape[1] + 2
 
 
 @pytest.mark.parametrize(

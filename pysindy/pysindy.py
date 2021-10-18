@@ -975,9 +975,11 @@ class SINDy(BaseEstimator):
                     (solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)).y
                 ).T
             elif integrator == "odeint":
+                if integrator_kws == {"method": "LSODA"}:
+                    integrator_kws = {}
                 return odeint(rhs, x0, t, tfirst=True, **integrator_kws)
             else:
-                ValueError("Integrator not supported, exiting")
+                raise ValueError("Integrator not supported, exiting")
 
     @property
     def complexity(self):

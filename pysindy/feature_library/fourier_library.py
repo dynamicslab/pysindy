@@ -63,7 +63,7 @@ class FourierLibrary(BaseFeatureLibrary):
         include_sin=True,
         include_cos=True,
         library_ensemble=False,
-        ensemble_indices=0,
+        ensemble_indices=[0],
     ):
         super(FourierLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices

@@ -68,6 +68,12 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
     history_ : list
         History of ``coef_`` over iterations of the optimization algorithm.
+
+    Theta_ : np.ndarray, shape (n_samples, n_features)
+        The Theta matrix to be used in the optimization. We save it as
+        an attribute because access to the full library of terms is
+        sometimes needed for various applications.
+
     """
 
     def __init__(
@@ -144,7 +150,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         coef_shape = (y.shape[1], x.shape[1])
         self.ind_ = np.ones(coef_shape, dtype=bool)
 
-        self.Theta = x
+        self.Theta_ = x
         x_normed = np.copy(x)
         if self.normalize_columns:
             reg = np.zeros(n_features)
@@ -167,6 +173,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self._reduce(x_normed, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
 
+        # Rescale coefficients to original units
         if self.normalize_columns:
             self.coef_ = np.multiply(reg, self.coef_)
             if hasattr(self, "coef_full_"):

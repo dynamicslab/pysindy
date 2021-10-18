@@ -25,7 +25,7 @@ class IdentityLibrary(BaseFeatureLibrary):
         Whether or not to use library bagging (regress on subset of the
         candidate terms in the library)
 
-    ensemble_indices : integer array, optional (default 0)
+    ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library.
 
     Examples
@@ -45,7 +45,7 @@ class IdentityLibrary(BaseFeatureLibrary):
     def __init__(
         self,
         library_ensemble=False,
-        ensemble_indices=0,
+        ensemble_indices=[0],
     ):
         super(IdentityLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices

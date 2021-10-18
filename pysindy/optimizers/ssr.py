@@ -116,7 +116,6 @@ class SSR(BaseOptimizer):
         self.criteria = criteria
         self.alpha = alpha
         self.ridge_kw = ridge_kw
-        self.normalize_columns = normalize_columns
         self.kappa = kappa
 
     def _coefficient_value(self, coef):

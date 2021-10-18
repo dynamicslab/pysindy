@@ -47,7 +47,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         Whether or not to use library bagging (regress on subset of the
         candidate terms in the library)
 
-    ensemble_indices : integer array, optional (default 0)
+    ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library.
 
     Attributes
@@ -73,7 +73,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         include_bias=True,
         order="C",
         library_ensemble=False,
-        ensemble_indices=0,
+        ensemble_indices=[0],
     ):
         super(PolynomialLibrary, self).__init__(
             degree=degree,
@@ -91,8 +91,6 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                 "Can't have include_interaction be False and interaction_only"
                 " be True"
             )
-        if np.any(ensemble_indices < 0):
-            raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.include_interaction = include_interaction
 
     @staticmethod

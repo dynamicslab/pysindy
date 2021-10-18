@@ -18,6 +18,7 @@ from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
+from pysindy.feature_library import SINDyPILibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import FROLS
 from pysindy.optimizers import SINDyOptimizer
@@ -27,12 +28,8 @@ from pysindy.optimizers import SSR
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
-
-# from pysindy import PolynomialLibrary
-
-
-def lorenz(z, t):
-    return 10 * (z[1] - z[0]), z[0] * (28 - z[2]) - z[1], z[0] * z[1] - 8 / 3 * z[2]
+from pysindy.utils.odes import enzyme
+from pysindy.utils.odes import lorenz
 
 
 class DummyLinearModel(BaseEstimator):
@@ -180,6 +177,12 @@ def test_sr3_bad_parameters(optimizer, params):
         dict(max_iter=0),
         dict(eta=10, alpha_m=20),
         dict(eta=10, alpha_A=20),
+        dict(inequality_constraints=True, evolve_w=False),
+        dict(
+            constraint_lhs=np.zeros((10, 10)),
+            constraint_rhs=np.zeros(10),
+            constraint_order="None",
+        ),
     ],
 )
 def test_trapping_bad_parameters(params):
@@ -196,11 +199,87 @@ def test_trapping_bad_parameters(params):
         dict(threshold=-1),
         dict(thresholds=1),
         dict(thresholder="weighted_l1"),
+        dict(model_subset=0),
+        dict(model_subset=[50]),
+        dict(model_subset=[0, 0.5, 1]),
     ],
 )
 def test_sindypi_bad_parameters(params):
+    t = np.arange(0, 40, 0.05)
+    x = odeint(lorenz, [-8, 8, 27], t)
     with pytest.raises(ValueError):
-        SINDyPI(**params)
+        opt = SINDyPI(**params)
+        model = SINDy(optimizer=opt)
+        model.fit(x, t=t)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(tol=1e-3),
+        dict(thresholder="l1"),
+        dict(thresholder="weighted_l1", thresholds=np.zeros((10, 10))),
+        dict(thresholder="l2"),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((10, 10))),
+        dict(model_subset=[5]),
+    ],
+)
+def test_sindypi_fit(params):
+    dt = 0.01
+    T = 5
+    t = np.arange(0, T + dt, dt)
+    x0_train = [0.55]
+    x_train = odeint(enzyme, x0_train, t)
+
+    # initialize a quartic polynomial library for x
+    x_library_functions = [
+        lambda x: x,
+        lambda x, y: x * y,
+        lambda x: x ** 2,
+        lambda x, y, z: x * y * z,
+        lambda x, y: x * y ** 2,
+        lambda x: x ** 3,
+        lambda x, y, z, w: x * y * z * w,
+        lambda x, y, z: x * y * z ** 2,
+        lambda x, y: x * y ** 3,
+        lambda x: x ** 4,
+    ]
+    # initialize a linear polynomial library for x_dot
+    x_dot_library_functions = [lambda x: x]
+
+    # library function names includes both the x_library_functions
+    # and x_dot_library_functions names
+    library_function_names = [
+        lambda x: x,
+        lambda x, y: x + y,
+        lambda x: x + x,
+        lambda x, y, z: x + y + z,
+        lambda x, y: x + y + y,
+        lambda x: x + x + x,
+        lambda x, y, z, w: x + y + z + w,
+        lambda x, y, z: x + y + z + z,
+        lambda x, y: x + y + y + y,
+        lambda x: x + x + x + x,
+        lambda x: x,
+    ]
+
+    # Need to pass time base to the library so can build the x_dot library from x
+    sindy_library = SINDyPILibrary(
+        library_functions=x_library_functions,
+        x_dot_library_functions=x_dot_library_functions,
+        t=t[1:-1],
+        function_names=library_function_names,
+        include_bias=True,
+    )
+
+    opt = SINDyPI(**params)
+    model = SINDy(
+        optimizer=opt,
+        feature_library=sindy_library,
+        differentiation_method=FiniteDifference(drop_endpoints=True),
+    )
+    model.fit(x_train, t=t)
+    assert np.shape(opt.coef_) == (10, 10)
 
 
 @pytest.mark.parametrize(
@@ -217,9 +296,20 @@ def test_trapping_bad_tensors(params):
 
 @pytest.mark.parametrize(
     "params",
-    [dict(PL=np.ones((3, 3, 3, 9)), PQ=np.ones((3, 3, 3, 3, 9)))],
+    [
+        dict(thresholder="l1", threshold=0),
+        dict(thresholder="l1", threshold=1e-5),
+        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
+        dict(thresholder="l2", threshold=0),
+        dict(thresholder="l2", threshold=1e-5),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
+    ],
 )
-def test_trapping_quadratic_library(params):
+def test_sr3_variants_quadratic_library(params):
+    PL = np.ones((3, 3, 3, 9))
+    PQ = np.ones((3, 3, 3, 3, 9))
     x = np.random.standard_normal((100, 3))
     library_functions = [
         lambda x: x,
@@ -234,7 +324,50 @@ def test_trapping_quadratic_library(params):
     sindy_library = CustomLibrary(
         library_functions=library_functions, function_names=library_function_names
     )
-    opt = TrappingSR3(**params)
+
+    # Test SR3
+    opt = SR3(**params)
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    check_is_fitted(model)
+
+    # Test constrained SR3 without constraints
+    opt = ConstrainedSR3(**params)
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    check_is_fitted(model)
+
+    # Test trapping SR3 without constraints
+    opt = TrappingSR3(PL=PL, PQ=PQ, **params)
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    assert opt.PL.shape == (3, 3, 3, 9)
+    assert opt.PQ.shape == (3, 3, 3, 3, 9)
+    check_is_fitted(model)
+
+    # rerun with identity constraints
+    r = 3
+    N = 9
+    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
+    constraint_rhs = np.zeros(p)
+    constraint_matrix = np.eye(p, r * N)
+
+    # Test constrained SR3 with constraints
+    opt = ConstrainedSR3(
+        constraint_lhs=constraint_matrix, constraint_rhs=constraint_rhs, **params
+    )
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    check_is_fitted(model)
+
+    # Test trapping SR3 with constraints
+    opt = TrappingSR3(
+        PL=PL,
+        PQ=PQ,
+        constraint_lhs=constraint_matrix,
+        constraint_rhs=constraint_rhs,
+        **params
+    )
     model = SINDy(optimizer=opt, feature_library=sindy_library)
     model.fit(x)
     assert opt.PL.shape == (3, 3, 3, 9)
@@ -295,16 +428,24 @@ def test_trapping_cubic_library(params):
         ),
         (ValueError, ConstrainedSR3, dict(inequality_constraints=True)),
         (ValueError, SR3, dict(thresholder="weighted_l0", thresholds=None)),
-        (ValueError, SR3, dict(thresholder="weighted_l0", thresholds=None)),
+        (ValueError, SR3, dict(thresholder="weighted_l1", thresholds=None)),
+        (ValueError, SR3, dict(thresholder="weighted_l2", thresholds=None)),
         (ValueError, SR3, dict(thresholds=-np.ones((5, 5)))),
+        (ValueError, SR3, dict(initial_guess=np.zeros(3))),
         (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),
-        (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),
+        (ValueError, ConstrainedSR3, dict(thresholder="weighted_l1", thresholds=None)),
+        (ValueError, ConstrainedSR3, dict(thresholder="weighted_l2", thresholds=None)),
         (ValueError, ConstrainedSR3, dict(thresholds=-np.ones((5, 5)))),
+        (ValueError, ConstrainedSR3, dict(initial_guess=np.zeros(3))),
     ],
 )
 def test_specific_bad_parameters(error, optimizer, params):
+    t = np.arange(0, 40, 0.05)
+    x = odeint(lorenz, [-8, 8, 27], t)
     with pytest.raises(error):
-        optimizer(**params)
+        opt = optimizer(**params)
+        model = SINDy(optimizer=opt)
+        model.fit(x, t=t)
 
 
 def test_bad_optimizers(data_derivative_1d):
@@ -693,7 +834,6 @@ def test_ensemble_pdes(optimizer):
     model = SINDy(optimizer=opt, feature_library=pde_lib)
     model.fit(u_flattened, x_dot=ut_flattened, ensemble=True, n_models=10, n_subset=20)
     n_features = len(model.get_feature_names())
-    print(np.shape(opt.coef_))
     assert np.shape(model.coef_list) == (10, 1, n_features)
 
 

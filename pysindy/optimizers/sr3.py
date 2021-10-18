@@ -80,11 +80,6 @@ class SR3(BaseOptimizer):
         by dividing by the L2-norm. Note that the 'normalize' option in sklearn
         is deprecated in sklearn versions >= 1.0 and will be removed.
 
-    normalize_columns : boolean, optional (default False)
-        This parameter normalizes the columns of Theta before the
-        optimization is done. This tends to standardize the columns
-        to similar magnitudes, often improving performance.
-
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
@@ -203,14 +198,14 @@ class SR3(BaseOptimizer):
         if thresholds is not None and np.any(thresholds < 0):
             raise ValueError("thresholds cannot contain negative entries")
 
-        if (
-            thresholder.lower() != "l0"
-            and thresholder.lower() != "l1"
-            and thresholder.lower() != "l2"
-            and thresholder.lower() != "weighted_l0"
-            and thresholder.lower() != "weighted_l1"
-            and thresholder.lower() != "weighted_l2"
-            and thresholder.lower() != "cad"
+        if thresholder.lower() not in (
+            "l0",
+            "l1",
+            "l2",
+            "weighted_l0",
+            "weighted_l1",
+            "weighted_l2",
+            "cad",
         ):
             raise NotImplementedError("Please use a valid regularizer, l0, l1, l2, cad")
 
@@ -300,12 +295,6 @@ class SR3(BaseOptimizer):
 
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
-        x_normed = np.copy(x)
-        if self.normalize_columns:
-            reg = np.zeros(n_features)
-            for i in range(n_features):
-                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
-                x_normed[:, i] = reg[i] * x[:, i]
 
         if self.use_trimming:
             coef_full = coef_sparse.copy()
@@ -314,21 +303,18 @@ class SR3(BaseOptimizer):
 
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
-        cho = cho_factor(
-            np.dot(x_normed.T, x_normed)
-            + np.diag(np.full(x_normed.shape[1], 1.0 / self.nu))
-        )
-        x_transpose_y = np.dot(x_normed.T, y)
+        cho = cho_factor(np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu)))
+        x_transpose_y = np.dot(x.T, y)
 
         for _ in range(self.max_iter):
             if self.use_trimming:
-                x_weighted = x_normed * trimming_array.reshape(n_samples, 1)
+                x_weighted = x * trimming_array.reshape(n_samples, 1)
                 cho = cho_factor(
-                    np.dot(x_weighted.T, x_normed)
-                    + np.diag(np.full(x_normed.shape[1], 1.0 / self.nu))
+                    np.dot(x_weighted.T, x)
+                    + np.diag(np.full(x.shape[1], 1.0 / self.nu))
                 )
                 x_transpose_y = np.dot(x_weighted.T, y)
-                trimming_grad = 0.5 * np.sum((y - x_normed.dot(coef_full)) ** 2, axis=1)
+                trimming_grad = 0.5 * np.sum((y - x.dot(coef_full)) ** 2, axis=1)
             coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
             coef_sparse = self._update_sparse_coef(coef_full)
             self.history_.append(coef_sparse.T)

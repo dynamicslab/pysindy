@@ -44,7 +44,7 @@ class CustomLibrary(BaseFeatureLibrary):
         Whether or not to use library bagging (regress on subset of the
         candidate terms in the library)
 
-    ensemble_indices : integer array, optional (default 0)
+    ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library.
 
     include_bias : boolean, optional (default False)
@@ -94,7 +94,7 @@ class CustomLibrary(BaseFeatureLibrary):
         function_names=None,
         interaction_only=True,
         library_ensemble=False,
-        ensemble_indices=0,
+        ensemble_indices=[0],
         include_bias=False,
     ):
         super(CustomLibrary, self).__init__(

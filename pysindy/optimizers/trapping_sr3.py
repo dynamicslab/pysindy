@@ -85,6 +85,18 @@ class TrappingSR3(SR3):
         could be straightforwardly implemented, but L0 requires
         reformulation because of nonconvexity.
 
+    thresholds : np.ndarray, shape (n_targets, n_features), optional \
+            (default None)
+        Array of thresholds for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``thresholds[i, j]`` should specify the threshold to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        threshold to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
+
     eps_solver : float, optional
         If threshold != 0.0, this specifies the error tolerance in the
         CVXPY (OSQP) solve. Default is 1.0e-3 in OSQP.
@@ -197,6 +209,7 @@ class TrappingSR3(SR3):
         tol=1e-5,
         tol_m=1e-5,
         thresholder="l1",
+        thresholds=None,
         max_iter=30,
         accel=False,
         normalize_columns=False,
@@ -212,16 +225,16 @@ class TrappingSR3(SR3):
         constraint_order="target",
     ):
         super(TrappingSR3, self).__init__(
+            threshold=threshold,
             max_iter=max_iter,
             normalize_columns=normalize_columns,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            thresholder=thresholder,
+            thresholds=thresholds,
         )
-
-        if threshold < 0:
-            raise ValueError("threshold cannot be negative")
-        if thresholder.lower() not in ("l1", "l2"):
-            raise ValueError("Regularizer must be L1 or L2 for now")
+        if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
+            raise ValueError("Regularizer must be (weighted) L1 or L2")
         if eta <= 0:
             raise ValueError("eta must be positive")
         if alpha_m < 0 or alpha_m > eta:
@@ -244,7 +257,6 @@ class TrappingSR3(SR3):
             )
 
         self.evolve_w = evolve_w
-        self.threshold = threshold
         self.eps_solver = eps_solver
         self.relax_optim = relax_optim
         self.inequality_constraints = inequality_constraints
@@ -259,7 +271,6 @@ class TrappingSR3(SR3):
         self.tol = tol
         self.tol_m = tol_m
         self.accel = accel
-        self.thresholder = thresholder
         self.reg = get_regularization(thresholder)
         self.prox = get_prox(thresholder)
         self.A_history_ = []
@@ -380,10 +391,14 @@ class TrappingSR3(SR3):
     def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
         xi = cp.Variable(N * r)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder == "l1":
+        if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
-        else:
+        elif self.thresholder.lower() == "weighted_l1":
+            cost = cost + cp.norm1(np.ravel(self.thresholds) * xi)
+        elif self.thresholder.lower() == "l2":
             cost = cost + self.threshold * cp.norm2(xi) ** 2
+        elif self.thresholder.lower() == "weighted_l2":
+            cost = cost + cp.norm2(np.ravel(self.thresholds) * xi) ** 2
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -400,7 +415,16 @@ class TrappingSR3(SR3):
             prob = cp.Problem(cp.Minimize(cost))
 
         # default solver is OSQP here but switches to ECOS for L2
-        prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
+        try:
+            prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
+        # Annoying error coming from L2 norm switching to use the ECOS
+        # solver, which uses "max_iters" instead of "max_iter", and
+        # similar semantic changes for the other variables.
+        except TypeError:
+            prob.solve(abstol=self.eps_solver, reltol=self.eps_solver)
+        except cp.error.SolverError:
+            print("Solver failed, setting coefs to zeros")
+            xi.value = np.zeros(N * r)
 
         if xi.value is None:
             warnings.warn(
@@ -451,10 +475,14 @@ class TrappingSR3(SR3):
     def _solve_direct_cvxpy(self, r, N, x_expanded, y, Pmatrix, coef_prev):
         xi = cp.Variable(N * r)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder == "l1":
+        if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
-        else:
+        elif self.thresholder.lower() == "weighted_l1":
+            cost = cost + cp.norm1(np.ravel(self.thresholds) * xi)
+        elif self.thresholder.lower() == "l2":
             cost = cost + self.threshold * cp.norm2(xi) ** 2
+        elif self.thresholder.lower() == "weighted_l2":
+            cost = cost + cp.norm2(np.ravel(self.thresholds) * xi) ** 2
         cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -470,8 +498,17 @@ class TrappingSR3(SR3):
         else:
             prob = cp.Problem(cp.Minimize(cost))
 
-        # default solver is SCS here I think
-        prob.solve(eps=self.eps_solver)
+        # default solver is SCS here
+        try:
+            prob.solve(eps=self.eps_solver)
+        # Annoying error coming from L2 norm switching to use the ECOS
+        # solver, which uses "max_iters" instead of "max_iter", and
+        # similar semantic changes for the other variables.
+        except TypeError:
+            prob.solve(abstol=self.eps_solver, reltol=self.eps_solver)
+        except cp.error.SolverError:
+            print("Solver failed, setting coefs to zeros")
+            xi.value = np.zeros(N * r)
 
         if xi.value is None:
             print("Infeasible solve, increase/decrease eta")

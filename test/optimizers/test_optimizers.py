@@ -31,6 +31,8 @@ from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
 from pysindy.utils.odes import lorenz
 
+np.random.seed(100)
+
 
 class DummyLinearModel(BaseEstimator):
     # Does not natively support multiple targets

@@ -92,7 +92,6 @@ class BaseFeatureLibrary(TransformerMixin):
         the terms at ensemble_indices
         """
         if self.library_ensemble:
-            print(self.n_output_features_, self.ensemble_indices)
             if self.n_output_features_ <= len(self.ensemble_indices):
                 raise ValueError(
                     "Error: you are trying to chop more library terms "

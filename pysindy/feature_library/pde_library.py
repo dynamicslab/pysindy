@@ -19,6 +19,7 @@ from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
 from scipy.interpolate import RectBivariateSpline
 from scipy.interpolate import RegularGridInterpolator
+from scipy.special import comb as n_choose_k
 from scipy.special import hyp2f1
 from scipy.special import poch
 from sklearn import __version__
@@ -108,6 +109,10 @@ class PDELibrary(BaseFeatureLibrary):
     ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library.
 
+    rand_seed : integer, optional (default 100)
+        A random seed for the random seed generator. This determines the
+        selection of the center points in the PDE subdomains.
+
     Attributes
     ----------
     functions : list of functions
@@ -158,6 +163,7 @@ class PDELibrary(BaseFeatureLibrary):
         num_pts_per_domain=100,
         Hx=None,
         Hy=None,
+        Hz=None,
         Ht=None,
         p=4,
         library_ensemble=False,
@@ -204,6 +210,12 @@ class PDELibrary(BaseFeatureLibrary):
                 for i in range(2, derivative_order + 1):
                     num_derivs += i + 1
                 self.num_derivs = num_derivs
+            elif self.slen == 4:
+                k = 3
+                num_derivs = 0
+                for i in range(1, derivative_order + 1):
+                    num_derivs += int(n_choose_k(i + k - 1, k - 1))
+                self.num_derivs = num_derivs
         else:
             self.slen = 0
 
@@ -241,6 +253,9 @@ class PDELibrary(BaseFeatureLibrary):
                 if self.slen == 3:
                     x1 = spatial_grid[0, 0, 0]
                     x2 = spatial_grid[-1, 0, 0]
+                if self.slen == 4:
+                    x1 = spatial_grid[0, 0, 0, 0]
+                    x2 = spatial_grid[-1, 0, 0, 0]
                 if Hx >= (x2 - x1) / 2.0:
                     raise ValueError("2 * Hx is bigger than the full domain length")
                 self.Hx = Hx
@@ -251,21 +266,45 @@ class PDELibrary(BaseFeatureLibrary):
                 if self.slen == 3:
                     x1 = spatial_grid[0, 0, 0]
                     x2 = spatial_grid[-1, 0, 0]
+                if self.slen == 4:
+                    x1 = spatial_grid[0, 0, 0, 0]
+                    x2 = spatial_grid[-1, 0, 0, 0]
                 Lx = x2 - x1
                 self.Hx = Lx / 20.0
-            if Hy is not None and self.slen == 3:
+            if Hy is not None and self.slen >= 3:
                 if Hy <= 0:
                     raise ValueError("Hy must be a positive float")
-                y1 = spatial_grid[0, 0, 1]
-                y2 = spatial_grid[0, -1, 1]
+                if self.slen == 3:
+                    y1 = spatial_grid[0, 0, 1]
+                    y2 = spatial_grid[0, -1, 1]
+                if self.slen == 4:
+                    y1 = spatial_grid[0, 0, 0, 1]
+                    y2 = spatial_grid[0, -1, 0, 1]
                 if Hy >= (y2 - y1) / 2.0:
                     raise ValueError("2 * Hy is bigger than the full domain height")
                 self.Hy = Hy
-            elif Hy is None and self.slen == 3:
-                y1 = spatial_grid[0, 0, 1]
-                y2 = spatial_grid[0, -1, 1]
+            elif Hy is None and self.slen >= 3:
+                if self.slen == 3:
+                    y1 = spatial_grid[0, 0, 1]
+                    y2 = spatial_grid[0, -1, 1]
+                if self.slen == 4:
+                    y1 = spatial_grid[0, 0, 0, 1]
+                    y2 = spatial_grid[0, -1, 0, 1]
                 Ly = y2 - y1
                 self.Hy = Ly / 20.0
+            if Hz is not None and self.slen == 4:
+                if Hz <= 0:
+                    raise ValueError("Hz must be a positive float")
+                z1 = spatial_grid[0, 0, 0, 2]
+                z2 = spatial_grid[0, 0, -1, 2]
+                if Hz >= (z2 - z1) / 2.0:
+                    raise ValueError("2 * Hz is bigger than the full domain height")
+                self.Hz = Hz
+            elif Hz is None and self.slen == 4:
+                z1 = spatial_grid[0, 0, 0, 2]
+                z2 = spatial_grid[0, 0, -1, 2]
+                Lz = z2 - z1
+                self.Hz = Lz / 20.0
         if weak_form:
             if K <= 0:
                 raise ValueError("The number of subdomains must be > 0")
@@ -350,6 +389,95 @@ class PDELibrary(BaseFeatureLibrary):
                 self.X = X
                 self.Y = Y
                 self.t = t
+            if self.slen == 4:
+                x1 = spatial_grid[0, 0, 0, 0]
+                x2 = spatial_grid[-1, 0, 0, 0]
+                y1 = spatial_grid[0, 0, 0, 1]
+                y2 = spatial_grid[0, -1, 0, 1]
+                z1 = spatial_grid[0, 0, 0, 2]
+                z2 = spatial_grid[0, 0, -1, 2]
+                domain_centersx = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
+                domain_centersy = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
+                domain_centersz = uniform(z1 + self.Hz, z2 - self.Hz, size=(self.K, 1))
+                domain_centerst = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+                domain_centers = hstack((domain_centersx, domain_centersy))
+                domain_centers = hstack((domain_centers, domain_centersz))
+                domain_centers = hstack((domain_centers, domain_centerst))
+                self.domain_centers = domain_centers
+                xgrid_k = zeros((self.K, num_pts_per_domain))
+                ygrid_k = zeros((self.K, num_pts_per_domain))
+                zgrid_k = zeros((self.K, num_pts_per_domain))
+                tgrid_k = zeros((self.K, num_pts_per_domain))
+                X = zeros(
+                    (
+                        self.K,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                    )
+                )
+                Y = zeros(
+                    (
+                        self.K,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                    )
+                )
+                Z = zeros(
+                    (
+                        self.K,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                    )
+                )
+                t = zeros(
+                    (
+                        self.K,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                        num_pts_per_domain,
+                    )
+                )
+                for k in range(self.K):
+                    x1_k = self.domain_centers[k, 0] - self.Hx
+                    x2_k = self.domain_centers[k, 0] + self.Hx
+                    y1_k = self.domain_centers[k, 1] - self.Hy
+                    y2_k = self.domain_centers[k, 1] + self.Hy
+                    z1_k = self.domain_centers[k, 2] - self.Hz
+                    z2_k = self.domain_centers[k, 2] + self.Hz
+                    t1_k = self.domain_centers[k, -1] - self.Ht
+                    t2_k = self.domain_centers[k, -1] + self.Ht
+                    xgrid_k[k, :] = linspace(x1_k, x2_k, self.num_pts_per_domain)
+                    ygrid_k[k, :] = linspace(y1_k, y2_k, self.num_pts_per_domain)
+                    zgrid_k[k, :] = linspace(z1_k, z2_k, self.num_pts_per_domain)
+                    tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
+                    (
+                        X[k, :, :, :, :],
+                        Y[k, :, :, :, :],
+                        Z[k, :, :, :, :],
+                        t[k, :, :, :, :],
+                    ) = meshgrid(
+                        xgrid_k[k, :],
+                        ygrid_k[k, :],
+                        zgrid_k[k, :],
+                        tgrid_k[k, :],
+                        indexing="ij",
+                        # sparse=True,
+                    )
+                self.xgrid_k = xgrid_k
+                self.ygrid_k = ygrid_k
+                self.zgrid_k = zgrid_k
+                self.tgrid_k = tgrid_k
+                self.X = X
+                self.Y = Y
+                self.Z = Z
+                self.t = t
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
@@ -411,7 +539,39 @@ class PDELibrary(BaseFeatureLibrary):
         )
         return x_term * y_term * t_term
 
-    def _smooth_ppoly(self, x, t, k, d_x, d_y, d_t):
+    def _poly_deriv_3D(self, x, y, z, t, d_x, d_y, d_z, d_t):
+        """Compute analytic derivatives instead of relying on finite diffs"""
+        x_term = (
+            (2 * x) ** d_x
+            * (x ** 2 - 1) ** (self.p - d_x)
+            * hyp2f1((1 - d_x) / 2.0, -d_x / 2.0, self.p + 1 - d_x, 1 - 1 / x ** 2)
+            * poch(self.p + 1 - d_x, d_x)
+            / self.Hx ** d_x
+        )
+        y_term = (
+            (2 * y) ** d_y
+            * (y ** 2 - 1) ** (self.p - d_y)
+            * hyp2f1((1 - d_y) / 2.0, -d_y / 2.0, self.p + 1 - d_y, 1 - 1 / y ** 2)
+            * poch(self.p + 1 - d_y, d_y)
+            / self.Hy ** d_y
+        )
+        z_term = (
+            (2 * z) ** d_z
+            * (z ** 2 - 1) ** (self.p - d_z)
+            * hyp2f1((1 - d_z) / 2.0, -d_z / 2.0, self.p + 1 - d_z, 1 - 1 / z ** 2)
+            * poch(self.p + 1 - d_z, d_z)
+            / self.Hz ** d_z
+        )
+        t_term = (
+            (2 * t) ** d_t
+            * (t ** 2 - 1) ** (self.p - d_t)
+            * hyp2f1((1 - d_t) / 2.0, -d_t / 2.0, self.p + 1 - d_t, 1 - 1 / t ** 2)
+            * poch(self.p + 1 - d_t, d_t)
+            / self.Ht ** d_t
+        )
+        return x_term * y_term * z_term * t_term
+
+    def _smooth_ppoly(self, x, t, k, d_x, d_y, d_z, d_t):
         if shape(x)[0] == 0:
             t_tilde = zeros(shape(t)[0])
             weights = zeros((shape(t)[0], 1))
@@ -441,6 +601,30 @@ class PDELibrary(BaseFeatureLibrary):
                     weights[i, j, :, 0] = self._poly_deriv_2D(
                         x_tilde[i], y_tilde[j], t_tilde, d_x, d_y, d_t
                     )
+        elif shape(x)[1] == 3:
+            x_tilde = zeros(shape(x)[0])
+            y_tilde = zeros(shape(x)[0])
+            z_tilde = zeros(shape(x)[0])
+            t_tilde = zeros(shape(t)[0])
+            for i in range(shape(x)[0]):
+                x_tilde[i] = (x[i, 0] - self.domain_centers[k, 0]) / self.Hx
+                y_tilde[i] = (x[i, 1] - self.domain_centers[k, 1]) / self.Hy
+                z_tilde[i] = (x[i, 2] - self.domain_centers[k, 2]) / self.Hz
+                t_tilde[i] = (t[i] - self.domain_centers[k, -1]) / self.Ht
+            weights = zeros((shape(x)[0], shape(x)[0], shape(x)[0], shape(t)[0], 1))
+            for i in range(shape(x)[0]):
+                for j in range(shape(x)[0]):
+                    for k in range(shape(x)[0]):
+                        weights[i, j, k, :, 0] = self._poly_deriv_3D(
+                            x_tilde[i],
+                            y_tilde[j],
+                            z_tilde[j],
+                            t_tilde,
+                            d_x,
+                            d_y,
+                            d_z,
+                            d_t,
+                        )
         return weights
 
     def _make_2D_derivatives(self, u):
@@ -542,6 +726,321 @@ class PDELibrary(BaseFeatureLibrary):
                     u_derivs[kk, :, i, :, 13] = FiniteDifference(
                         d=4, is_uniform=self.is_uniform
                     )._differentiate(u[kk, :, i, :], self.spatial_grid[kk, :, 1])
+        return u_derivs
+
+    def _make_3D_derivatives(self, u):
+        (num_gridx, num_gridy, num_gridz, num_time, n_features) = u.shape
+        u_derivs = zeros(
+            (num_gridx, num_gridy, num_gridz, num_time, n_features, self.num_derivs)
+        )
+        # first derivatives
+        for i in range(num_time):
+            # u_x
+            for kk in range(num_gridy):
+                for jj in range(num_gridz):
+                    u_derivs[:, kk, jj, i, :, 0] = FiniteDifference(
+                        d=1, is_uniform=self.is_uniform
+                    )._differentiate(
+                        u[:, kk, jj, i, :], self.spatial_grid[:, kk, jj, 0]
+                    )
+            # u_y
+            for kk in range(num_gridx):
+                for jj in range(num_gridz):
+                    u_derivs[kk, :, jj, i, :, 1] = FiniteDifference(
+                        d=1, is_uniform=self.is_uniform
+                    )._differentiate(
+                        u[kk, :, jj, i, :], self.spatial_grid[kk, :, jj, 1]
+                    )
+            # u_z
+            for kk in range(num_gridx):
+                for jj in range(num_gridy):
+                    u_derivs[kk, jj, :, i, :, 2] = FiniteDifference(
+                        d=1, is_uniform=self.is_uniform
+                    )._differentiate(
+                        u[kk, jj, :, i, :], self.spatial_grid[kk, jj, :, 2]
+                    )
+
+        if self.derivative_order >= 2:
+            # second derivatives
+            for i in range(num_time):
+                # u_xx
+                for kk in range(num_gridy):
+                    for jj in range(num_gridz):
+                        u_derivs[:, kk, jj, i, :, 3] = FiniteDifference(
+                            d=2, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u[:, kk, jj, i, :], self.spatial_grid[:, kk, jj, 0]
+                        )
+                # u_xy
+                for kk in range(num_gridx):
+                    for jj in range(num_gridz):
+                        u_derivs[kk, :, jj, i, :, 4] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, :, jj, i, :, 0],
+                            self.spatial_grid[kk, :, jj, 1],
+                        )
+                # u_xz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 5] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 0],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_yy
+                for kk in range(num_gridx):
+                    for jj in range(num_gridz):
+                        u_derivs[kk, :, jj, i, :, 6] = FiniteDifference(
+                            d=2, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u[kk, :, jj, i, :], self.spatial_grid[kk, :, jj, 1]
+                        )
+                # u_yz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 7] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 1],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_zz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 8] = FiniteDifference(
+                            d=2, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u[kk, jj, :, i, :], self.spatial_grid[kk, jj, :, 2]
+                        )
+
+        if self.derivative_order >= 3:
+            # third derivatives
+            for i in range(num_time):
+                # u_xxx
+                for kk in range(num_gridy):
+                    for jj in range(num_gridz):
+                        u_derivs[:, kk, jj, i, :, 9] = FiniteDifference(
+                            d=3, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u[:, kk, jj, i, :], self.spatial_grid[:, kk, jj, 0]
+                        )
+                # u_xxy
+                for kk in range(num_gridx):
+                    for jj in range(num_gridz):
+                        u_derivs[kk, :, jj, i, :, 10] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, :, jj, i, :, 3],
+                            self.spatial_grid[kk, :, jj, 1],
+                        )
+                # u_xxz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 11] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 3],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_xyy
+                for kk in range(num_gridx):
+                    for jj in range(num_gridz):
+                        u_derivs[kk, :, jj, i, :, 12] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, :, jj, i, :, 4],
+                            self.spatial_grid[kk, :, jj, 1],
+                        )
+                # u_xyz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 13] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 4],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_xzz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 14] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 5],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_yyy
+                for kk in range(num_gridx):
+                    for jj in range(num_gridz):
+                        u_derivs[kk, :, jj, i, :, 15] = FiniteDifference(
+                            d=3, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u[kk, :, jj, i, :], self.spatial_grid[kk, :, jj, 1]
+                        )
+                # u_yyz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 16] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 6],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_yzz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 17] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 7],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_zzz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 18] = FiniteDifference(
+                            d=3, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u[kk, jj, :, i, :], self.spatial_grid[kk, jj, :, 2]
+                        )
+
+        if self.derivative_order >= 4:
+            # fourth derivatives
+            for i in range(num_time):
+                # u_xxxx
+                for kk in range(num_gridy):
+                    for jj in range(num_gridz):
+                        u_derivs[:, kk, jj, i, :, 19] = FiniteDifference(
+                            d=4, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u[:, kk, jj, i, :], self.spatial_grid[:, kk, jj, 0]
+                        )
+                # u_xxxy
+                for kk in range(num_gridx):
+                    for jj in range(num_gridz):
+                        u_derivs[kk, :, jj, i, :, 20] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, :, jj, i, :, 9],
+                            self.spatial_grid[kk, :, jj, 1],
+                        )
+                # u_xxxz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 21] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 9],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_xxyy
+                for kk in range(num_gridx):
+                    for jj in range(num_gridz):
+                        u_derivs[kk, :, jj, i, :, 22] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, :, jj, i, :, 10],
+                            self.spatial_grid[kk, :, jj, 1],
+                        )
+                # u_xxyz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 23] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 10],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_xxzz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 24] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 11],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_xyyy
+                for kk in range(num_gridx):
+                    for jj in range(num_gridz):
+                        u_derivs[kk, :, jj, i, :, 25] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, :, jj, i, :, 12],
+                            self.spatial_grid[kk, :, jj, 1],
+                        )
+                # u_xyyz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 26] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 12],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_xyzz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 27] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 13],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_xzzz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 28] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 14],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_yyyy
+                for kk in range(num_gridx):
+                    for jj in range(num_gridz):
+                        u_derivs[kk, :, jj, i, :, 29] = FiniteDifference(
+                            d=4, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u[kk, :, jj, i, :], self.spatial_grid[kk, :, jj, 1]
+                        )
+                # u_yyyz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 30] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 15],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_yyzz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 31] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 16],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_yzzz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 32] = FiniteDifference(
+                            d=1, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u_derivs[kk, jj, :, i, :, 17],
+                            self.spatial_grid[kk, jj, :, 2],
+                        )
+                # u_zzzz
+                for kk in range(num_gridx):
+                    for jj in range(num_gridy):
+                        u_derivs[kk, jj, :, i, :, 33] = FiniteDifference(
+                            d=4, is_uniform=self.is_uniform
+                        )._differentiate(
+                            u[kk, jj, :, i, :], self.spatial_grid[kk, jj, :, 2]
+                        )
         return u_derivs
 
     def get_feature_names(self, input_features=None):
@@ -675,7 +1174,58 @@ class PDELibrary(BaseFeatureLibrary):
                                 lambda i: (
                                     lambda *x: "".join(x) + "_" + deriv_strings[i]
                                 ),
-                                range(0, self.num_derivs),
+                                range(self.num_derivs),
+                            )
+                        ),
+                    )
+                )
+            elif self.slen == 4:
+                deriv_strings = [
+                    "1",
+                    "2",
+                    "3",
+                    "11",
+                    "12",
+                    "13",
+                    "22",
+                    "23",
+                    "33",
+                    "111",
+                    "112",
+                    "113",
+                    "122",
+                    "123",
+                    "133",
+                    "222",
+                    "223",
+                    "233",
+                    "333",
+                    "1111",
+                    "1112",
+                    "1113",
+                    "1122",
+                    "1123",
+                    "1133",
+                    "1222",
+                    "1223",
+                    "1233",
+                    "1333",
+                    "2222",
+                    "2223",
+                    "2233",
+                    "2333",
+                    "3333",
+                ]
+                # pure derivative terms
+                self.function_names = hstack(
+                    (
+                        self.function_names,
+                        list(
+                            map(
+                                lambda i: (
+                                    lambda *x: "".join(x) + "_" + deriv_strings[i]
+                                ),
+                                range(self.num_derivs),
                             )
                         ),
                     )
@@ -717,6 +1267,11 @@ class PDELibrary(BaseFeatureLibrary):
                 num_gridx = (self.spatial_grid).shape[0]
                 num_gridy = (self.spatial_grid).shape[1]
                 num_time = n_samples // num_gridx // num_gridy
+            if self.slen == 4:
+                num_gridx = (self.spatial_grid).shape[0]
+                num_gridy = (self.spatial_grid).shape[1]
+                num_gridz = (self.spatial_grid).shape[2]
+                num_time = n_samples // num_gridx // num_gridy // num_gridz
         if self.weak_form:
             n_samples = self.K
 
@@ -731,6 +1286,7 @@ class PDELibrary(BaseFeatureLibrary):
                             [],
                             self.tgrid_k[k, :],
                             k,
+                            0,
                             0,
                             0,
                             0,
@@ -749,6 +1305,7 @@ class PDELibrary(BaseFeatureLibrary):
                             0,
                             0,
                             0,
+                            0,
                         )
                         func_final[k] = trapezoid(
                             trapezoid(w, x=self.xgrid_k[k, :], axis=0),
@@ -764,11 +1321,42 @@ class PDELibrary(BaseFeatureLibrary):
                             0,
                             0,
                             0,
+                            0,
                         )
                         func_final[k] = trapezoid(
                             trapezoid(
                                 trapezoid(w, x=self.xgrid_k[k, :], axis=0),
                                 x=self.ygrid_k[k, :],
+                                axis=0,
+                            ),
+                            x=self.tgrid_k[k, :],
+                            axis=0,
+                        )
+                if self.slen == 4:
+                    for k in range(self.K):
+                        w = self._smooth_ppoly(
+                            transpose(
+                                (
+                                    self.xgrid_k[k, :],
+                                    self.ygrid_k[k, :],
+                                    self.zgrid_k[k, :],
+                                )
+                            ),
+                            self.tgrid_k[k, :],
+                            k,
+                            0,
+                            0,
+                            0,
+                            0,
+                        )
+                        func_final[k] = trapezoid(
+                            trapezoid(
+                                trapezoid(
+                                    trapezoid(w, x=self.xgrid_k[k, :], axis=0),
+                                    x=self.ygrid_k[k, :],
+                                    axis=0,
+                                ),
+                                x=self.zgrid_k[k, :],
                                 axis=0,
                             ),
                             x=self.tgrid_k[k, :],
@@ -797,6 +1385,7 @@ class PDELibrary(BaseFeatureLibrary):
                                 [],
                                 self.tgrid_k[k, :],
                                 k,
+                                0,
                                 0,
                                 0,
                                 0,
@@ -835,6 +1424,7 @@ class PDELibrary(BaseFeatureLibrary):
                                 ),
                                 self.tgrid_k[k, :],
                                 k,
+                                0,
                                 0,
                                 0,
                                 0,
@@ -885,6 +1475,7 @@ class PDELibrary(BaseFeatureLibrary):
                                 0,
                                 0,
                                 0,
+                                0,
                             )
                             func_final[k] = trapezoid(
                                 trapezoid(
@@ -892,6 +1483,80 @@ class PDELibrary(BaseFeatureLibrary):
                                         func_new * w, x=self.xgrid_k[k, :], axis=0
                                     ),
                                     x=self.ygrid_k[k, :],
+                                    axis=0,
+                                ),
+                                x=self.tgrid_k[k, :],
+                                axis=0,
+                            )
+                        xp[:, library_idx] = ravel(func_final)
+                        library_idx += 1
+            if self.slen == 4:
+                for f in self.functions:
+                    for c in self._combinations(
+                        n_features,
+                        f.__code__.co_argcount,
+                        self.interaction_only,
+                    ):
+                        func = f(*[x[:, j] for j in c])
+                        func = reshape(
+                            func, (num_gridx, num_gridy, num_gridz, num_time)
+                        )
+                        func_final = zeros((self.K, 1))
+                        func_interp = RegularGridInterpolator(
+                            (
+                                self.spatial_grid[:, 0, 0, 0],
+                                self.spatial_grid[0, :, 0, 1],
+                                self.spatial_grid[0, 0, :, 2],
+                                self.temporal_grid,
+                            ),
+                            func,
+                        )
+                        for k in range(self.K):
+                            func_new = func_interp(
+                                array(
+                                    (
+                                        self.X[k, :, :, :, :],
+                                        self.Y[k, :, :, :, :],
+                                        self.Z[k, :, :, :, :],
+                                        self.t[k, :, :, :, :],
+                                    )
+                                ).T
+                            )
+                            func_new = reshape(
+                                func_new,
+                                (
+                                    self.num_pts_per_domain,
+                                    self.num_pts_per_domain,
+                                    self.num_pts_per_domain,
+                                    self.num_pts_per_domain,
+                                    1,
+                                ),
+                            )
+                            w = self._smooth_ppoly(
+                                transpose(
+                                    (
+                                        self.xgrid_k[k, :],
+                                        self.ygrid_k[k, :],
+                                        self.zgrid_k[k, :],
+                                    )
+                                ),
+                                self.tgrid_k[k, :],
+                                k,
+                                0,
+                                0,
+                                0,
+                                0,
+                            )
+                            func_final[k] = trapezoid(
+                                trapezoid(
+                                    trapezoid(
+                                        trapezoid(
+                                            func_new * w, x=self.xgrid_k[k, :], axis=0
+                                        ),
+                                        x=self.ygrid_k[k, :],
+                                        axis=0,
+                                    ),
+                                    x=self.zgrid_k[k, :],
                                     axis=0,
                                 ),
                                 x=self.tgrid_k[k, :],
@@ -949,6 +1614,7 @@ class PDELibrary(BaseFeatureLibrary):
                                     self.tgrid_k[k, :],
                                     k,
                                     j + 1,
+                                    0,
                                     0,
                                     0,
                                 )
@@ -1026,6 +1692,7 @@ class PDELibrary(BaseFeatureLibrary):
                                     deriv_list[j, 0],
                                     deriv_list[j, 1],
                                     0,
+                                    0,
                                 )
                                 u_integrals[k, kk, j] = (
                                     trapezoid(
@@ -1036,6 +1703,164 @@ class PDELibrary(BaseFeatureLibrary):
                                                 axis=0,
                                             ),
                                             x=self.ygrid_k[k, :],
+                                            axis=0,
+                                        ),
+                                        x=self.tgrid_k[k, :],
+                                        axis=0,
+                                    )
+                                    * signs_list[j]
+                                )
+            elif self.slen == 4:
+                u = reshape(x, (num_gridx, num_gridy, num_gridz, num_time, n_features))
+                u_derivs = self._make_3D_derivatives(u)
+                u_derivs = asarray(
+                    reshape(
+                        u_derivs,
+                        (
+                            num_gridx * num_gridy * num_gridz * num_time,
+                            n_features,
+                            self.num_derivs,
+                        ),
+                    )
+                )
+                if self.weak_form:
+                    deriv_list = asarray(
+                        [
+                            [1, 0, 0],  # u_x
+                            [0, 1, 0],  # u_y
+                            [0, 0, 1],  # u_z
+                            [2, 0, 0],  # u_xx
+                            [1, 1, 0],  # u_xy
+                            [1, 0, 1],  # u_xz
+                            [0, 2, 0],  # u_yy
+                            [0, 1, 1],  # u_yz
+                            [0, 0, 2],  # u_zz
+                            [3, 0, 0],  # u_xxx
+                            [2, 1, 0],  # u_xxy
+                            [2, 0, 1],  # u_xxz
+                            [1, 2, 0],  # u_xyy
+                            [1, 1, 1],  # u_xyz
+                            [1, 0, 2],  # u_xzz
+                            [0, 3, 0],  # u_yyy
+                            [0, 2, 1],  # u_yyz
+                            [0, 1, 2],  # u_yzz
+                            [0, 0, 3],  # u_zzz
+                            [4, 0, 0],  # u_xxxx
+                            [3, 1, 0],  # u_xxxy
+                            [3, 0, 1],  # u_xxxz
+                            [2, 2, 0],  # u_xxyy
+                            [2, 1, 1],  # u_xxyz
+                            [2, 0, 2],  # u_xxzz
+                            [1, 3, 0],  # u_xyyy
+                            [1, 2, 1],  # u_xyyz
+                            [1, 1, 2],  # u_xyzz
+                            [1, 0, 3],  # u_xzzz
+                            [0, 4, 0],  # u_yyyy
+                            [0, 3, 1],  # u_yyyz
+                            [0, 2, 2],  # u_yyzz
+                            [0, 1, 3],  # u_yzzz
+                            [0, 0, 4],  # u_zzzz
+                        ]
+                    )
+                    signs_list = asarray(
+                        [
+                            -1,
+                            -1,
+                            -1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            -1,
+                            -1,
+                            -1,
+                            -1,
+                            -1,
+                            -1,
+                            -1,
+                            -1,
+                            -1,
+                            -1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                            1,
+                        ]
+                    )
+                    u_integrals = zeros((self.K, n_features, self.num_derivs))
+                    for kk in range(n_features):
+                        u_interp = RegularGridInterpolator(
+                            (
+                                self.spatial_grid[:, 0, 0, 0],
+                                self.spatial_grid[0, :, 0, 1],
+                                self.spatial_grid[0, 0, :, 2],
+                                self.temporal_grid,
+                            ),
+                            u[:, :, :, :, kk],
+                        )
+                        for k in range(self.K):
+                            u_new = u_interp(
+                                array(
+                                    (
+                                        self.X[k, :, :, :, :],
+                                        self.Y[k, :, :, :, :],
+                                        self.Z[k, :, :, :, :],
+                                        self.t[k, :, :, :, :],
+                                    )
+                                ).T
+                            )
+                            u_new = reshape(
+                                u_new,
+                                (
+                                    self.num_pts_per_domain,
+                                    self.num_pts_per_domain,
+                                    self.num_pts_per_domain,
+                                    self.num_pts_per_domain,
+                                    1,
+                                ),
+                            )
+                            for j in range(self.num_derivs):
+                                w_diff = self._smooth_ppoly(
+                                    transpose(
+                                        (
+                                            self.xgrid_k[k, :],
+                                            self.ygrid_k[k, :],
+                                            self.zgrid_k[k, :],
+                                        )
+                                    ),
+                                    self.tgrid_k[k, :],
+                                    k,
+                                    deriv_list[j, 0],
+                                    deriv_list[j, 1],
+                                    deriv_list[j, 2],
+                                    0,
+                                )
+                                u_integrals[k, kk, j] = (
+                                    trapezoid(
+                                        trapezoid(
+                                            trapezoid(
+                                                trapezoid(
+                                                    u_new * w_diff,
+                                                    x=self.xgrid_k[k, :],
+                                                    axis=0,
+                                                ),
+                                                x=self.ygrid_k[k, :],
+                                                axis=0,
+                                            ),
+                                            x=self.zgrid_k[k, :],
                                             axis=0,
                                         ),
                                         x=self.tgrid_k[k, :],
@@ -1114,6 +1939,7 @@ class PDELibrary(BaseFeatureLibrary):
                                             ),
                                             self.tgrid_k[k, :],
                                             k,
+                                            0,
                                             0,
                                             0,
                                             0,
@@ -1235,6 +2061,7 @@ class PDELibrary(BaseFeatureLibrary):
                                             0,
                                             0,
                                             0,
+                                            0,
                                         )
                                         func_final[k] = trapezoid(
                                             trapezoid(
@@ -1244,6 +2071,125 @@ class PDELibrary(BaseFeatureLibrary):
                                                     axis=0,
                                                 ),
                                                 x=self.ygrid_k[k, :],
+                                                axis=0,
+                                            ),
+                                            x=self.tgrid_k[k, :],
+                                            axis=0,
+                                        )
+                                    xp[:, library_idx] = ravel(func_final)
+                                    library_idx += 1
+                        else:
+                            for f in self.functions:
+                                for c in self._combinations(
+                                    n_features,
+                                    f.__code__.co_argcount,
+                                    self.interaction_only,
+                                ):
+                                    xp[:, library_idx] = f(
+                                        *[x[:, j] for j in c]
+                                    ) * identity_function(u_derivs[:, kk, d])
+                                    library_idx += 1
+            if self.slen == 4:
+                # All the mixed derivative/non-derivative terms
+                # Note this is really annoying to integrate these mixed terms
+                # by parts in 3D so we don't do it for now.
+                for d in range(self.num_derivs):
+                    for kk in range(n_features):
+                        if self.weak_form:
+                            for f in self.functions:
+                                for c in self._combinations(
+                                    n_features,
+                                    f.__code__.co_argcount,
+                                    self.interaction_only,
+                                ):
+                                    func = f(*[x[:, j] for j in c])
+                                    deriv_term = identity_function(u_derivs[:, kk, d])
+
+                                    func = reshape(
+                                        func,
+                                        (num_gridx, num_gridy, num_gridz, num_time),
+                                    )
+                                    deriv_term = reshape(
+                                        deriv_term,
+                                        (num_gridx, num_gridy, num_gridz, num_time),
+                                    )
+                                    func_final = zeros((self.K, 1))
+                                    func_interp = RegularGridInterpolator(
+                                        (
+                                            self.spatial_grid[:, 0, 0, 0],
+                                            self.spatial_grid[0, :, 0, 1],
+                                            self.spatial_grid[0, 0, :, 2],
+                                            self.temporal_grid,
+                                        ),
+                                        func,
+                                    )
+                                    deriv_interp = RegularGridInterpolator(
+                                        (
+                                            self.spatial_grid[:, 0, 0, 0],
+                                            self.spatial_grid[0, :, 0, 1],
+                                            self.spatial_grid[0, 0, :, 2],
+                                            self.temporal_grid,
+                                        ),
+                                        deriv_term,
+                                    )
+                                    for k in range(self.K):
+                                        XYt = array(
+                                            (
+                                                self.X[k, :, :, :, :],
+                                                self.Y[k, :, :, :, :],
+                                                self.Z[k, :, :, :, :],
+                                                self.t[k, :, :, :, :],
+                                            )
+                                        ).T
+                                        func_new = func_interp(XYt)
+                                        deriv_new = deriv_interp(XYt)
+                                        func_new = reshape(
+                                            func_new,
+                                            (
+                                                self.num_pts_per_domain,
+                                                self.num_pts_per_domain,
+                                                self.num_pts_per_domain,
+                                                self.num_pts_per_domain,
+                                                1,
+                                            ),
+                                        )
+                                        deriv_new = reshape(
+                                            deriv_new,
+                                            (
+                                                self.num_pts_per_domain,
+                                                self.num_pts_per_domain,
+                                                self.num_pts_per_domain,
+                                                self.num_pts_per_domain,
+                                                1,
+                                            ),
+                                        )
+                                        w = self._smooth_ppoly(
+                                            transpose(
+                                                (
+                                                    self.xgrid_k[k, :],
+                                                    self.ygrid_k[k, :],
+                                                    self.zgrid_k[k, :],
+                                                )
+                                            ),
+                                            self.tgrid_k[k, :],
+                                            k,
+                                            0,
+                                            0,
+                                            0,
+                                            0,
+                                        )
+                                        func_final[k] = trapezoid(
+                                            trapezoid(
+                                                trapezoid(
+                                                    trapezoid(
+                                                        w * func_new * deriv_new,
+                                                        x=self.xgrid_k[k, :],
+                                                        axis=0,
+                                                    ),
+                                                    x=self.ygrid_k[k, :],
+                                                    axis=0,
+                                                ),
+                                                x=self.zgrid_k[k, :],
                                                 axis=0,
                                             ),
                                             x=self.tgrid_k[k, :],

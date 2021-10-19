@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 from numpy.linalg import norm
 from scipy.integrate import odeint
-from scipy.io import loadmat
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
@@ -30,8 +29,6 @@ from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
 from pysindy.utils.odes import lorenz
-
-np.random.seed(100)
 
 
 class DummyLinearModel(BaseEstimator):
@@ -680,21 +677,19 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
 
 
 # On my laptop this fails... not sure why OSQP not working.
-@pytest.mark.parametrize("thresholds", [0.005, 0.05])
 @pytest.mark.parametrize("relax_optim", [False, True])
-@pytest.mark.parametrize("noise_levels", [0.0, 0.05, 0.5])
-def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
-    t = np.arange(0, 40, 0.05)
+def test_inequality_constraints(relax_optim):
+    np.random.seed(100)
+    t = np.arange(0, 40, 0.01)
     x = odeint(lorenz, [-8, 8, 27], t)
-    x = x + np.random.normal(0.0, noise_levels, x.shape)
-    # if order is "feature"
-    constraint_rhs = np.array([-10.0, -2.0])
+    threshold = 0.005
+    constraint_rhs = np.array([-10.0, 28.0])
     constraint_matrix = np.zeros((2, 30))
-    constraint_matrix[0, 6] = 1.0
-    constraint_matrix[1, 17] = 1.0
+    constraint_matrix[0, 1] = 1.0
+    constraint_matrix[1, 11] = 1.0
     feature_names = ["x", "y", "z"]
     opt = TrappingSR3(
-        threshold=thresholds,
+        threshold=threshold,
         constraint_lhs=constraint_matrix,
         constraint_rhs=constraint_rhs,
         constraint_order="feature",
@@ -710,12 +705,14 @@ def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
     )
     model.fit(x, t=t[1] - t[0])
     assert np.all(
-        np.dot(constraint_matrix, (model.coefficients()).flatten("F")) <= constraint_rhs
+        np.dot(constraint_matrix, (model.coefficients()).flatten()) <= constraint_rhs
     ) or np.allclose(
-        np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
+        np.dot(constraint_matrix, (model.coefficients()).flatten()),
+        constraint_rhs,
+        atol=1e-3,
     )
     opt = ConstrainedSR3(
-        threshold=thresholds,
+        threshold=threshold,
         constraint_lhs=constraint_matrix,
         constraint_rhs=constraint_rhs,
         constraint_order="feature",
@@ -731,9 +728,11 @@ def test_trapping_inequality_constraints(thresholds, relax_optim, noise_levels):
     )
     model.fit(x, t=t[1] - t[0])
     assert np.all(
-        np.dot(constraint_matrix, (model.coefficients()).flatten("F")) <= constraint_rhs
+        np.dot(constraint_matrix, (model.coefficients()).flatten()) <= constraint_rhs
     ) or np.allclose(
-        np.dot(constraint_matrix, (model.coefficients()).flatten("F")), constraint_rhs
+        np.dot(constraint_matrix, (model.coefficients()).flatten()),
+        constraint_rhs,
+        atol=1e-3,
     )
 
 
@@ -810,17 +809,15 @@ def test_ensemble_odes(data, optimizer):
     ],
 )
 def test_ensemble_pdes(optimizer):
-    kdV = loadmat("examples/data/kdv.mat")
-    t = np.ravel(kdV["t"])
-    x = np.ravel(kdV["x"])
-    u = np.real(kdV["usol"])
+    u = np.random.randn(10, 10, 2)
+    t = np.linspace(1, 10, 10)
+    x = np.linspace(1, 10, 10)
     dt = t[1] - t[0]
-    u_shaped = np.reshape(u, (len(x), len(t), 1))
-    ut = np.zeros((len(x), len(t), 1))
+    u_dot = np.zeros(u.shape)
     for i in range(len(x)):
-        ut[i, :, :] = FiniteDifference()._differentiate(u_shaped[i, :, :], t=dt)
-    u_flattened = np.reshape(u, (len(x) * len(t), 1))
-    ut_flattened = np.reshape(ut, (len(x) * len(t), 1))
+        u_dot[i, :, :] = FiniteDifference()._differentiate(u[i, :, :], t=dt)
+    u_flattened = np.reshape(u, (len(x) * len(t), 2))
+    u_dot_flattened = np.reshape(u_dot, (len(x) * len(t), 2))
 
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
@@ -834,9 +831,11 @@ def test_ensemble_pdes(optimizer):
     )
     opt = optimizer(normalize_columns=True)
     model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u_flattened, x_dot=ut_flattened, ensemble=True, n_models=10, n_subset=20)
+    model.fit(
+        u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10, n_subset=20
+    )
     n_features = len(model.get_feature_names())
-    assert np.shape(model.coef_list) == (10, 1, n_features)
+    assert np.shape(model.coef_list) == (10, 2, n_features)
 
 
 def test_ssr_criteria(data):

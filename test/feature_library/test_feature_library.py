@@ -150,6 +150,62 @@ def test_bad_parameters():
         )
     with pytest.raises(ValueError):
         library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        x = range(0, 10)
+        y = range(0, 10)
+        X, Y = np.meshgrid(x, y)
+        spatial_grid = np.asarray([X, Y]).T
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=spatial_grid,
+            temporal_grid=range(10),
+            weak_form=True,
+            Hy=-1,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        x = range(0, 10)
+        y = range(0, 10)
+        X, Y = np.meshgrid(x, y)
+        spatial_grid = np.asarray([X, Y]).T
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=range(10),
+            temporal_grid=range(10),
+            weak_form=True,
+            Hy=11,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        x = range(0, 10)
+        y = range(0, 10)
+        z = range(0, 10)
+        X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
+        spatial_grid = np.asarray([X, Y, Z])
+        spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=spatial_grid,
+            temporal_grid=range(10),
+            weak_form=True,
+            Hz=-1,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        x = range(0, 10)
+        y = range(0, 10)
+        z = range(0, 10)
+        X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
+        spatial_grid = np.asarray([X, Y, Z])
+        spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
+        PDELibrary(
+            library_functions=library_functions,
+            spatial_grid=spatial_grid,
+            temporal_grid=range(10),
+            weak_form=True,
+            Hz=11,
+        )
+    with pytest.raises(ValueError):
+        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
         PDELibrary(
             library_functions=library_functions,
             spatial_grid=range(10),
@@ -397,9 +453,9 @@ def test_bad_library_ensemble(data_lorenz, library):
 
 
 def test_1D_pdes():
-    t = np.linspace(0, 10)
+    t = np.linspace(0, 10, 8)
     dt = t[1] - t[0]
-    x = np.linspace(0, 10)
+    x = np.linspace(0, 10, 8)
     nx = len(x)
     u = np.random.randn(nx, len(t), 1)
     u_dot = np.zeros(u.shape)
@@ -413,7 +469,7 @@ def test_1D_pdes():
     pde_lib = PDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
-        derivative_order=3,
+        derivative_order=4,
         spatial_grid=x,
         include_bias=True,
         is_uniform=True,
@@ -423,30 +479,28 @@ def test_1D_pdes():
     model.fit(u_flattened, x_dot=u_dot_flattened)
     assert np.any(opt.coef_ != 0.0)
     n_features = len(model.get_feature_names())
-    model.fit(
-        u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10, n_subset=20
-    )
+    model.fit(u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10)
     assert np.shape(model.coef_list) == (10, 1, n_features)
     model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
     assert np.shape(model.coef_list) == (10, 1, n_features)
 
 
 def test_2D_pdes():
-    t = np.linspace(0, 10)
+    t = np.linspace(0, 10, 8)
     dt = t[1] - t[0]
-    x = np.linspace(0, 10)
-    y = np.linspace(0, 10)
+    x = np.linspace(0, 10, 8)
+    y = np.linspace(0, 10, 8)
     X, Y = np.meshgrid(x, y)
     spatial_grid = np.asarray([X, Y]).T
     nx = len(x)
     ny = len(y)
-    u = np.random.randn(nx, ny, len(t), 1)
+    u = np.random.randn(nx, ny, len(t), 2)
     u_dot = np.zeros(u.shape)
     for i in range(nx):
         for j in range(ny):
             u_dot[i, j, :, :] = FiniteDifference()._differentiate(u[i, j, :, :], t=dt)
-    u_flattened = np.reshape(u, (nx * ny * len(t), 1))
-    u_dot_flattened = np.reshape(u_dot, (nx * ny * len(t), 1))
+    u_flattened = np.reshape(u, (nx * ny * len(t), 2))
+    u_dot_flattened = np.reshape(u_dot, (nx * ny * len(t), 2))
 
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
@@ -455,7 +509,6 @@ def test_2D_pdes():
         function_names=library_function_names,
         derivative_order=2,
         spatial_grid=spatial_grid,
-        temporal_grid=t,
         include_bias=True,
         is_uniform=True,
     )
@@ -467,14 +520,62 @@ def test_2D_pdes():
     model.fit(
         u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10, n_subset=20
     )
-    assert np.shape(model.coef_list) == (10, 1, n_features)
+    assert np.shape(model.coef_list) == (10, 2, n_features)
     model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 1, n_features)
+    assert np.shape(model.coef_list) == (10, 2, n_features)
+
+
+def test_3D_pdes():
+    t = np.linspace(0, 10, 8)
+    dt = t[1] - t[0]
+    x = np.linspace(0, 10, 8)
+    y = np.linspace(0, 10, 8)
+    z = np.linspace(0, 10, 8)
+    (
+        X,
+        Y,
+        Z,
+    ) = np.meshgrid(x, y, z, indexing="ij")
+    spatial_grid = np.asarray([X, Y, Z])
+    spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
+    n = len(x)
+    u = np.random.randn(n, n, n, n, 2)
+    u_dot = np.zeros(u.shape)
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                u_dot[i, j, k, :, :] = FiniteDifference()._differentiate(
+                    u[i, j, k, :, :], t=dt
+                )
+    u_flattened = np.reshape(u, (n ** 4, 2))
+    u_dot_flattened = np.reshape(u_dot, (n ** 4, 2))
+
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatial_grid=spatial_grid,
+        include_bias=True,
+        is_uniform=True,
+    )
+    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
+    model = SINDy(optimizer=opt, feature_library=pde_lib)
+    model.fit(u_flattened, x_dot=u_dot_flattened)
+    assert np.any(opt.coef_ != 0.0)
+    n_features = len(model.get_feature_names())
+    model.fit(
+        u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10, n_subset=20
+    )
+    assert np.shape(model.coef_list) == (10, 2, n_features)
+    model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
+    assert np.shape(model.coef_list) == (10, 2, n_features)
 
 
 def test_1D_weak_pdes():
-    t = np.linspace(0, 10)
-    x = np.linspace(0, 10)
+    t = np.linspace(0, 10, 20)
+    x = np.linspace(0, 10, 20)
     nx = len(x)
     u = np.random.randn(nx, len(t), 1)
     u_flattened = np.reshape(u, (nx * len(t), 1))
@@ -489,10 +590,10 @@ def test_1D_weak_pdes():
         Ht=0.1,
         temporal_grid=t,
         include_bias=True,
-        K=10,
+        K=5,
         is_uniform=False,
         weak_form=True,
-        num_pts_per_domain=10,
+        num_pts_per_domain=20,
     )
 
     K = pde_lib.K
@@ -509,6 +610,7 @@ def test_1D_weak_pdes():
             np.reshape(pde_lib.xgrid_k[k, :], (num_pts_per_domain, 1)),
             pde_lib.tgrid_k[k, :],
             k,
+            0,
             0,
             0,
             1,
@@ -533,9 +635,9 @@ def test_1D_weak_pdes():
 
 
 def test_2D_weak_pdes():
-    t = np.linspace(0, 10)
-    x = np.linspace(0, 10)
-    y = np.linspace(0, 10)
+    t = np.linspace(0, 10, 8)
+    x = np.linspace(0, 10, 8)
+    y = np.linspace(0, 10, 8)
     X, Y = np.meshgrid(x, y)
     spatial_grid = np.asarray([X, Y]).T
     nx = len(x)
@@ -552,7 +654,7 @@ def test_2D_weak_pdes():
         Hx=0.1,
         Hy=0.1,
         Ht=0.1,
-        K=10,
+        K=2,
         temporal_grid=t,
         include_bias=True,
         is_uniform=False,
@@ -566,9 +668,9 @@ def test_2D_weak_pdes():
     u_shaped = np.reshape(u, (nx, ny, len(t), 1))
     u_interp = RegularGridInterpolator((x, y, t), u_shaped[:, :, :, 0])
     for k in range(K):
-        X = np.ravel(pde_lib.X[k, :])
-        Y = np.ravel(pde_lib.Y[k, :])
-        t = np.ravel(pde_lib.t[k, :])
+        X = np.ravel(pde_lib.X[k, :, :, :])
+        Y = np.ravel(pde_lib.Y[k, :, :, :])
+        t = np.ravel(pde_lib.t[k, :, :, :])
         XYt = np.array((X, Y, t)).T
         u_new = u_interp(XYt)
         u_new = np.reshape(
@@ -578,6 +680,7 @@ def test_2D_weak_pdes():
             np.transpose((pde_lib.xgrid_k[k, :], pde_lib.ygrid_k[k, :])),
             pde_lib.tgrid_k[k, :],
             k,
+            0,
             0,
             0,
             1,
@@ -603,6 +706,111 @@ def test_2D_weak_pdes():
     assert np.shape(model.coef_list) == (10, 1, n_features)
     model.fit(u_flattened, x_dot=u_dot_integral, library_ensemble=True, n_models=10)
     assert np.shape(model.coef_list) == (10, 1, n_features)
+
+
+def test_3D_weak_pdes():
+    t = np.linspace(0, 10, 7)
+    x = np.linspace(0, 10, 7)
+    y = np.linspace(0, 10, 7)
+    z = np.linspace(0, 10, 7)
+    X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
+    spatial_grid = np.asarray([X, Y, Z])
+    spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
+    n = len(x)
+    u = np.random.randn(n, n, n, n, 2)
+    u_flattened = np.reshape(u, (n ** 4, 2))
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatial_grid=spatial_grid,
+        Hx=0.1,
+        Hy=0.1,
+        Hz=0.1,
+        Ht=0.1,
+        K=2,
+        temporal_grid=t,
+        include_bias=True,
+        is_uniform=False,
+        weak_form=True,
+        num_pts_per_domain=4,
+    )
+
+    K = pde_lib.K
+    num_pts_per_domain = pde_lib.num_pts_per_domain
+    u_dot_integral = np.zeros((K, 2))
+    for kk in range(2):
+        u_interp = RegularGridInterpolator(
+            (
+                pde_lib.spatial_grid[:, 0, 0, 0],
+                pde_lib.spatial_grid[0, :, 0, 1],
+                pde_lib.spatial_grid[0, 0, :, 2],
+                t,
+            ),
+            u[:, :, :, :, kk],
+        )
+        for k in range(K):
+            XYZt = np.array(
+                (
+                    np.ravel(pde_lib.X[k, :, :, :, :]),
+                    np.ravel(pde_lib.Y[k, :, :, :, :]),
+                    np.ravel(pde_lib.Z[k, :, :, :, :]),
+                    np.ravel(pde_lib.t[k, :, :, :, :]),
+                )
+            ).T
+            u_new = u_interp(XYZt)
+            u_new = np.reshape(
+                u_new,
+                (
+                    num_pts_per_domain,
+                    num_pts_per_domain,
+                    num_pts_per_domain,
+                    num_pts_per_domain,
+                    1,
+                ),
+            )
+            w_diff = pde_lib._smooth_ppoly(
+                np.transpose(
+                    (
+                        pde_lib.xgrid_k[k, :],
+                        pde_lib.ygrid_k[k, :],
+                        pde_lib.zgrid_k[k, :],
+                    )
+                ),
+                pde_lib.tgrid_k[k, :],
+                k,
+                0,
+                0,
+                0,
+                1,
+            )
+            u_dot_integral[k, :] = (-1) * (
+                trapezoid(
+                    trapezoid(
+                        trapezoid(
+                            trapezoid(u_new * w_diff, x=pde_lib.xgrid_k[k, :], axis=0),
+                            x=pde_lib.ygrid_k[k, :],
+                            axis=0,
+                        ),
+                        x=pde_lib.zgrid_k[k, :],
+                        axis=0,
+                    ),
+                    x=pde_lib.tgrid_k[k, :],
+                    axis=0,
+                )
+            )
+
+    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
+    model = SINDy(optimizer=opt, feature_library=pde_lib)
+    model.fit(u_flattened, x_dot=u_dot_integral)
+    assert np.any(opt.coef_ != 0.0)
+    n_features = len(model.get_feature_names())
+    model.fit(u_flattened, x_dot=u_dot_integral, ensemble=True, n_models=10)
+    assert np.shape(model.coef_list) == (10, 2, n_features)
+    model.fit(u_flattened, x_dot=u_dot_integral, library_ensemble=True, n_models=10)
+    assert np.shape(model.coef_list) == (10, 2, n_features)
 
 
 def test_sindypi_library(data_lorenz):

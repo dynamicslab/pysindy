@@ -26,13 +26,13 @@ from .feature_library import PDELibrary
 from .feature_library import SINDyPILibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
-from .optimizers import TrappingSR3
+from .optimizers import FROLS
 from .optimizers import SINDyOptimizer
 from .optimizers import SR3
-from .optimizers import FROLS
 from .optimizers import SSR
 from .optimizers import STLSQ
 from .optimizers import SINDyPI
+from .optimizers import TrappingSR3
 
 
 __all__ = ["SINDy"]

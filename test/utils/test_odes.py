@@ -2,26 +2,26 @@ import numpy as np
 import pytest
 from scipy.integrate import odeint
 
-from .odes import bacterial
-from .odes import cubic_damped_SHO
-from .odes import cubic_oscillator
-from .odes import double_pendulum
-from .odes import duffing
-from .odes import enzyme
-from .odes import hopf
-from .odes import kinematic_commonroad
-from .odes import linear_3D
-from .odes import linear_damped_SHO
-from .odes import lorenz
-from .odes import lorenz_control
-from .odes import lotka
-from .odes import meanfield
-from .odes import mhd
-from .odes import oscillator
-from .odes import pendulum_on_cart
-from .odes import rossler
-from .odes import van_der_pol
-from .odes import yeast
+from pysindy.utils.odes import bacterial
+from pysindy.utils.odes import cubic_damped_SHO
+from pysindy.utils.odes import cubic_oscillator
+from pysindy.utils.odes import double_pendulum
+from pysindy.utils.odes import duffing
+from pysindy.utils.odes import enzyme
+from pysindy.utils.odes import hopf
+from pysindy.utils.odes import kinematic_commonroad
+from pysindy.utils.odes import linear_3D
+from pysindy.utils.odes import linear_damped_SHO
+from pysindy.utils.odes import lorenz
+from pysindy.utils.odes import lorenz_control
+from pysindy.utils.odes import lotka
+from pysindy.utils.odes import meanfield
+from pysindy.utils.odes import mhd
+from pysindy.utils.odes import oscillator
+from pysindy.utils.odes import pendulum_on_cart
+from pysindy.utils.odes import rossler
+from pysindy.utils.odes import van_der_pol
+from pysindy.utils.odes import yeast
 
 
 @pytest.mark.parametrize(

@@ -35,13 +35,13 @@ class BaseFeatureLibrary(TransformerMixin):
 
     # Force subclasses to implement this
     @abc.abstractmethod
-    def fit(self, X, y=None):
+    def fit(self, x, y=None):
         """
         Compute number of output features.
 
         Parameters
         ----------
-        X : array-like, shape (n_samples, n_features)
+        x : array-like, shape (n_samples, n_features)
             The data.
 
         Returns
@@ -52,18 +52,18 @@ class BaseFeatureLibrary(TransformerMixin):
 
     # Force subclasses to implement this
     @abc.abstractmethod
-    def transform(self, X):
+    def transform(self, x):
         """
         Transform data.
 
         Parameters
         ----------
-        X : array-like, shape [n_samples, n_features]
+        x : array-like, shape [n_samples, n_features]
             The data to transform, row by row.
 
         Returns
         -------
-        XP : np.ndarray, [n_samples, n_output_features]
+        xp : np.ndarray, [n_samples, n_output_features]
             The matrix of features, where n_output_features is the number
             of features generated from the combination of inputs.
         """
@@ -88,7 +88,7 @@ class BaseFeatureLibrary(TransformerMixin):
 
     def _ensemble(self, xp):
         """
-        If library bagging, return xp missing
+        If library bagging, return xp without
         the terms at ensemble_indices
         """
         if self.library_ensemble:
@@ -150,13 +150,13 @@ class ConcatLibrary(BaseFeatureLibrary):
     >>> import numpy as np
     >>> from pysindy.feature_library import FourierLibrary, CustomLibrary
     >>> from pysindy.feature_library import ConcatLibrary
-    >>> X = np.array([[0.,-1],[1.,0.],[2.,-1.]])
+    >>> x = np.array([[0.,-1],[1.,0.],[2.,-1.]])
     >>> functions = [lambda x : np.exp(x), lambda x,y : np.sin(x+y)]
     >>> lib_custom = CustomLibrary(library_functions=functions)
     >>> lib_fourier = FourierLibrary()
     >>> lib_concat = ConcatLibrary([lib_custom, lib_fourier])
     >>> lib_concat.fit()
-    >>> lib.transform(X)
+    >>> lib.transform(x)
     """
 
     def __init__(
@@ -170,20 +170,20 @@ class ConcatLibrary(BaseFeatureLibrary):
         )
         self.libraries_ = libraries
 
-    def fit(self, X, y=None):
+    def fit(self, x, y=None):
         """
         Compute number of output features.
 
         Parameters
         ----------
-        X : array-like, shape (n_samples, n_features)
+        x : array-like, shape (n_samples, n_features)
             The data.
 
         Returns
         -------
         self : instance
         """
-        _, n_features = check_array(X).shape
+        _, n_features = check_array(x).shape
 
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
@@ -191,7 +191,7 @@ class ConcatLibrary(BaseFeatureLibrary):
             self.n_input_features_ = n_features
 
         # First fit all libs provided below
-        fitted_libs = [lib.fit(X, y) for lib in self.libraries_]
+        fitted_libs = [lib.fit(x, y) for lib in self.libraries_]
 
         # Calculate the sum of output features
         self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
@@ -201,27 +201,27 @@ class ConcatLibrary(BaseFeatureLibrary):
 
         return self
 
-    def transform(self, X):
+    def transform(self, x):
         """Transform data with libs provided below.
 
         Parameters
         ----------
-        X : array-like, shape [n_samples, n_features]
+        x : array-like, shape [n_samples, n_features]
             The data to transform, row by row.
 
         Returns
         -------
-        XP : np.ndarray, shape [n_samples, NP]
+        xp : np.ndarray, shape [n_samples, NP]
             The matrix of features, where NP is the number of features
             generated from applying the custom functions to the inputs.
 
         """
         for lib in self.libraries_:
             check_is_fitted(lib)
-        n_samples = X.shape[0]
+        n_samples = x.shape[0]
 
         # preallocate matrix
-        XP = np.zeros((n_samples, self.n_output_features_))
+        xp = np.zeros((n_samples, self.n_output_features_))
 
         current_feat = 0
         for lib in self.libraries_:
@@ -232,22 +232,12 @@ class ConcatLibrary(BaseFeatureLibrary):
             start_feature_index = current_feat
             end_feature_index = start_feature_index + lib_n_output_features
 
-            XP[:, start_feature_index:end_feature_index] = lib.transform(X)
+            xp[:, start_feature_index:end_feature_index] = lib.transform(x)
 
             current_feat += lib_n_output_features
 
         # If library bagging, return xp missing the terms at ensemble_indices
-        if self.library_ensemble:
-            if self.n_output_features_ == 1:
-                raise ValueError(
-                    "Can't use library ensemble methods if your"
-                    " library is just one term!"
-                )
-            inds = range(self.n_output_features_)
-            inds = np.delete(inds, self.ensemble_indices)
-            return XP[:, inds]
-        else:
-            return XP
+        return self._ensemble(xp)
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.

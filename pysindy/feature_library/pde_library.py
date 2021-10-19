@@ -196,16 +196,16 @@ class PDELibrary(BaseFeatureLibrary):
             raise ValueError("Spatial grid size is incorrect")
         self.interaction_only = interaction_only
         if spatial_grid is not None:
-            self.slen = len((self.spatial_grid).shape)
-            if self.slen == 1:
-                self.num_derivs = derivative_order
-            elif self.slen == 3:
-                num_derivs = 2
+            self.s_len = len((self.spatial_grid).shape)
+            if self.s_len == 1:
+                self.num_derivatives = derivative_order
+            elif self.s_len == 3:
+                num_derivatives = 2
                 for i in range(2, derivative_order + 1):
-                    num_derivs += i + 1
-                self.num_derivs = num_derivs
+                    num_derivatives += i + 1
+                self.num_derivatives = num_derivatives
         else:
-            self.slen = 0
+            self.s_len = 0
 
         # weak form checks now
         if weak_form and temporal_grid is not None:
@@ -235,25 +235,25 @@ class PDELibrary(BaseFeatureLibrary):
             if Hx is not None:
                 if Hx <= 0:
                     raise ValueError("Hx must be a positive float")
-                if self.slen == 1:
+                if self.s_len == 1:
                     x1 = spatial_grid[0]
                     x2 = spatial_grid[-1]
-                if self.slen == 3:
+                if self.s_len == 3:
                     x1 = spatial_grid[0, 0, 0]
                     x2 = spatial_grid[-1, 0, 0]
                 if Hx >= (x2 - x1) / 2.0:
                     raise ValueError("2 * Hx is bigger than the full domain length")
                 self.Hx = Hx
             else:
-                if self.slen == 1:
+                if self.s_len == 1:
                     x1 = spatial_grid[0]
                     x2 = spatial_grid[-1]
-                if self.slen == 3:
+                if self.s_len == 3:
                     x1 = spatial_grid[0, 0, 0]
                     x2 = spatial_grid[-1, 0, 0]
                 Lx = x2 - x1
                 self.Hx = Lx / 20.0
-            if Hy is not None and self.slen == 3:
+            if Hy is not None and self.s_len == 3:
                 if Hy <= 0:
                     raise ValueError("Hy must be a positive float")
                 y1 = spatial_grid[0, 0, 1]
@@ -261,7 +261,7 @@ class PDELibrary(BaseFeatureLibrary):
                 if Hy >= (y2 - y1) / 2.0:
                     raise ValueError("2 * Hy is bigger than the full domain height")
                 self.Hy = Hy
-            elif Hy is None and self.slen == 3:
+            elif Hy is None and self.s_len == 3:
                 y1 = spatial_grid[0, 0, 1]
                 y2 = spatial_grid[0, -1, 1]
                 Ly = y2 - y1
@@ -271,7 +271,7 @@ class PDELibrary(BaseFeatureLibrary):
                 raise ValueError("The number of subdomains must be > 0")
             self.K = K
             seed(rand_seed)
-            if self.slen == 0:
+            if self.s_len == 0:
                 self.domain_centers = uniform(t1 + self.Ht, t2 - self.Ht, size=self.K)
                 tgrid_k = zeros((self.K, num_pts_per_domain))
                 for k in range(self.K):
@@ -279,12 +279,12 @@ class PDELibrary(BaseFeatureLibrary):
                     t2_k = self.domain_centers[k] + self.Ht
                     tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
                 self.tgrid_k = tgrid_k
-            if self.slen == 1:
+            if self.s_len == 1:
                 x1 = spatial_grid[0]
                 x2 = spatial_grid[-1]
-                domain_centersx = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
-                domain_centerst = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
-                domain_centers = hstack((domain_centersx, domain_centerst))
+                domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
+                domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+                domain_centers = hstack((domain_centers_x, domain_centers_t))
                 self.domain_centers = domain_centers
                 xgrid_k = zeros((self.K, num_pts_per_domain))
                 tgrid_k = zeros((self.K, num_pts_per_domain))
@@ -304,16 +304,16 @@ class PDELibrary(BaseFeatureLibrary):
                 self.tgrid_k = tgrid_k
                 self.X = X
                 self.t = t
-            if self.slen == 3:
+            if self.s_len == 3:
                 x1 = spatial_grid[0, 0, 0]
                 x2 = spatial_grid[-1, 0, 0]
                 y1 = spatial_grid[0, 0, 1]
                 y2 = spatial_grid[0, -1, 1]
-                domain_centersx = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
-                domain_centersy = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
-                domain_centerst = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
-                domain_centers = hstack((domain_centersx, domain_centersy))
-                domain_centers = hstack((domain_centers, domain_centerst))
+                domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
+                domain_centers_y = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
+                domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+                domain_centers = hstack((domain_centers_x, domain_centers_y))
+                domain_centers = hstack((domain_centers, domain_centers_t))
                 self.domain_centers = domain_centers
                 xgrid_k = zeros((self.K, num_pts_per_domain))
                 ygrid_k = zeros((self.K, num_pts_per_domain))
@@ -342,7 +342,6 @@ class PDELibrary(BaseFeatureLibrary):
                         ygrid_k[k, :],
                         tgrid_k[k, :],
                         indexing="ij",
-                        # sparse=True,
                     )
                 self.xgrid_k = xgrid_k
                 self.ygrid_k = ygrid_k
@@ -357,7 +356,7 @@ class PDELibrary(BaseFeatureLibrary):
         comb = combinations if interaction_only else combinations_w_r
         return comb(range(n_features), n_args)
 
-    def _poly_deriv_0D(self, t, d_t):
+    def _poly_derivative_0D(self, t, d_t):
         """Compute analytic derivatives instead of relying on finite diffs"""
         t_term = (
             (2 * t) ** d_t
@@ -368,7 +367,7 @@ class PDELibrary(BaseFeatureLibrary):
         )
         return t_term
 
-    def _poly_deriv_1D(self, x, t, d_x, d_t):
+    def _poly_derivative_1D(self, x, t, d_x, d_t):
         """Compute analytic derivatives instead of relying on finite diffs"""
         x_term = (
             (2 * x) ** d_x
@@ -386,7 +385,7 @@ class PDELibrary(BaseFeatureLibrary):
         )
         return x_term * t_term
 
-    def _poly_deriv_2D(self, x, y, t, d_x, d_y, d_t):
+    def _poly_derivative_2D(self, x, y, t, d_x, d_y, d_t):
         """Compute analytic derivatives instead of relying on finite diffs"""
         x_term = (
             (2 * x) ** d_x
@@ -417,7 +416,7 @@ class PDELibrary(BaseFeatureLibrary):
             weights = zeros((shape(t)[0], 1))
             for i in range(shape(t)[0]):
                 t_tilde[i] = (t[i] - self.domain_centers[k]) / self.Ht
-            weights = self._poly_deriv_0D(t_tilde, d_t)
+            weights = self._poly_derivative_0D(t_tilde, d_t)
         elif shape(x)[1] == 1:
             x_tilde = zeros(shape(x)[0])
             t_tilde = zeros(shape(t)[0])
@@ -426,7 +425,9 @@ class PDELibrary(BaseFeatureLibrary):
                 x_tilde[i] = (x[i] - self.domain_centers[k, 0]) / self.Hx
                 t_tilde[i] = (t[i] - self.domain_centers[k, -1]) / self.Ht
             for i in range(shape(x)[0]):
-                weights[i, :, 0] = self._poly_deriv_1D(x_tilde[i], t_tilde, d_x, d_t)
+                weights[i, :, 0] = self._poly_derivative_1D(
+                    x_tilde[i], t_tilde, d_x, d_t
+                )
         elif shape(x)[1] == 2:
             x_tilde = zeros(shape(x)[0])
             y_tilde = zeros(shape(x)[0])
@@ -438,24 +439,26 @@ class PDELibrary(BaseFeatureLibrary):
             weights = zeros((shape(x)[0], shape(x)[0], shape(t)[0], 1))
             for i in range(shape(x)[0]):
                 for j in range(shape(x)[0]):
-                    weights[i, j, :, 0] = self._poly_deriv_2D(
+                    weights[i, j, :, 0] = self._poly_derivative_2D(
                         x_tilde[i], y_tilde[j], t_tilde, d_x, d_y, d_t
                     )
         return weights
 
     def _make_2D_derivatives(self, u):
         (num_gridx, num_gridy, num_time, n_features) = u.shape
-        u_derivs = zeros((num_gridx, num_gridy, num_time, n_features, self.num_derivs))
+        u_derivatives = zeros(
+            (num_gridx, num_gridy, num_time, n_features, self.num_derivatives)
+        )
         # first derivatives
         for i in range(num_time):
             # u_x
             for kk in range(num_gridy):
-                u_derivs[:, kk, i, :, 0] = FiniteDifference(
+                u_derivatives[:, kk, i, :, 0] = FiniteDifference(
                     d=1, is_uniform=self.is_uniform
                 )._differentiate(u[:, kk, i, :], self.spatial_grid[:, kk, 0])
             # u_y
             for kk in range(num_gridx):
-                u_derivs[kk, :, i, :, 1] = FiniteDifference(
+                u_derivatives[kk, :, i, :, 1] = FiniteDifference(
                     d=1, is_uniform=self.is_uniform
                 )._differentiate(u[kk, :, i, :], self.spatial_grid[kk, :, 1])
 
@@ -464,19 +467,19 @@ class PDELibrary(BaseFeatureLibrary):
             for i in range(num_time):
                 # u_xx
                 for kk in range(num_gridy):
-                    u_derivs[:, kk, i, :, 2] = FiniteDifference(
+                    u_derivatives[:, kk, i, :, 2] = FiniteDifference(
                         d=2, is_uniform=self.is_uniform
                     )._differentiate(u[:, kk, i, :], self.spatial_grid[:, kk, 0])
                 # u_xy
                 for kk in range(num_gridx):
-                    u_derivs[kk, :, i, :, 3] = FiniteDifference(
+                    u_derivatives[kk, :, i, :, 3] = FiniteDifference(
                         d=1, is_uniform=self.is_uniform
                     )._differentiate(
-                        u_derivs[kk, :, i, :, 0], self.spatial_grid[kk, :, 1]
+                        u_derivatives[kk, :, i, :, 0], self.spatial_grid[kk, :, 1]
                     )
                 # u_yy
                 for kk in range(num_gridx):
-                    u_derivs[kk, :, i, :, 4] = FiniteDifference(
+                    u_derivatives[kk, :, i, :, 4] = FiniteDifference(
                         d=2, is_uniform=self.is_uniform
                     )._differentiate(u[kk, :, i, :], self.spatial_grid[kk, :, 1])
 
@@ -485,26 +488,26 @@ class PDELibrary(BaseFeatureLibrary):
             for i in range(num_time):
                 # u_xxx
                 for kk in range(num_gridy):
-                    u_derivs[:, kk, i, :, 5] = FiniteDifference(
+                    u_derivatives[:, kk, i, :, 5] = FiniteDifference(
                         d=3, is_uniform=self.is_uniform
                     )._differentiate(u[:, kk, i, :], self.spatial_grid[:, kk, 0])
                 # u_xxy
                 for kk in range(num_gridx):
-                    u_derivs[kk, :, i, :, 6] = FiniteDifference(
+                    u_derivatives[kk, :, i, :, 6] = FiniteDifference(
                         d=1, is_uniform=self.is_uniform
                     )._differentiate(
-                        u_derivs[kk, :, i, :, 2], self.spatial_grid[kk, :, 1]
+                        u_derivatives[kk, :, i, :, 2], self.spatial_grid[kk, :, 1]
                     )
                 # u_xyy
                 for kk in range(num_gridx):
-                    u_derivs[kk, :, i, :, 7] = FiniteDifference(
+                    u_derivatives[kk, :, i, :, 7] = FiniteDifference(
                         d=1, is_uniform=self.is_uniform
                     )._differentiate(
-                        u_derivs[kk, :, i, :, 3], self.spatial_grid[kk, :, 1]
+                        u_derivatives[kk, :, i, :, 3], self.spatial_grid[kk, :, 1]
                     )
                 # u_yyy
                 for kk in range(num_gridx):
-                    u_derivs[kk, :, i, :, 8] = FiniteDifference(
+                    u_derivatives[kk, :, i, :, 8] = FiniteDifference(
                         d=3, is_uniform=self.is_uniform
                     )._differentiate(u[kk, :, i, :], self.spatial_grid[kk, :, 1])
 
@@ -513,36 +516,36 @@ class PDELibrary(BaseFeatureLibrary):
             for i in range(num_time):
                 # u_xxxx
                 for kk in range(num_gridy):
-                    u_derivs[:, kk, i, :, 9] = FiniteDifference(
+                    u_derivatives[:, kk, i, :, 9] = FiniteDifference(
                         d=4, is_uniform=self.is_uniform
                     )._differentiate(u[:, kk, i, :], self.spatial_grid[:, kk, 0])
                 # u_xxxy
                 for kk in range(num_gridx):
-                    u_derivs[kk, :, i, :, 10] = FiniteDifference(
+                    u_derivatives[kk, :, i, :, 10] = FiniteDifference(
                         d=1, is_uniform=self.is_uniform
                     )._differentiate(
-                        u_derivs[kk, :, i, :, 5], self.spatial_grid[kk, :, 1]
+                        u_derivatives[kk, :, i, :, 5], self.spatial_grid[kk, :, 1]
                     )
                 # u_xxyy
                 for kk in range(num_gridx):
-                    u_derivs[kk, :, i, :, 11] = FiniteDifference(
+                    u_derivatives[kk, :, i, :, 11] = FiniteDifference(
                         d=1, is_uniform=self.is_uniform
                     )._differentiate(
-                        u_derivs[kk, :, i, :, 6], self.spatial_grid[kk, :, 1]
+                        u_derivatives[kk, :, i, :, 6], self.spatial_grid[kk, :, 1]
                     )
                 # u_xyyy
                 for kk in range(num_gridx):
-                    u_derivs[kk, :, i, :, 12] = FiniteDifference(
+                    u_derivatives[kk, :, i, :, 12] = FiniteDifference(
                         d=1, is_uniform=self.is_uniform
                     )._differentiate(
-                        u_derivs[kk, :, i, :, 7], self.spatial_grid[kk, :, 1]
+                        u_derivatives[kk, :, i, :, 7], self.spatial_grid[kk, :, 1]
                     )
                 # u_yyyy
                 for kk in range(num_gridx):
-                    u_derivs[kk, :, i, :, 13] = FiniteDifference(
+                    u_derivatives[kk, :, i, :, 13] = FiniteDifference(
                         d=4, is_uniform=self.is_uniform
                     )._differentiate(u[kk, :, i, :], self.spatial_grid[kk, :, 1])
-        return u_derivs
+        return u_derivatives
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.
@@ -574,13 +577,13 @@ class PDELibrary(BaseFeatureLibrary):
                 feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
                 )
-        if self.slen != 0:
-            for k in range(self.num_derivs):
+        if self.s_len != 0:
+            for k in range(self.num_derivatives):
                 for j in range(n_features):
                     feature_names.append(
                         self.function_names[len(self.functions) + k](input_features[j])
                     )
-            for k in range(self.num_derivs):
+            for k in range(self.num_derivatives):
                 for i, f in enumerate(self.functions):
                     for c in self._combinations(
                         n_features,
@@ -620,11 +623,11 @@ class PDELibrary(BaseFeatureLibrary):
             n_output_features += len(
                 list(self._combinations(n_features, n_args, self.interaction_only))
             )
-        if self.slen != 0:
+        if self.s_len != 0:
             # Add the mixed derivative library_terms
-            n_output_features += n_output_features * n_features * self.num_derivs
+            n_output_features += n_output_features * n_features * self.num_derivatives
             # Add the pure derivative library terms
-            n_output_features += n_features * self.num_derivs
+            n_output_features += n_features * self.num_derivatives
         if self.include_bias:
             n_output_features += 1
         self.n_output_features_ = n_output_features
@@ -636,7 +639,7 @@ class PDELibrary(BaseFeatureLibrary):
                 )
             )
         if self.spatial_grid is not None:
-            if self.slen == 1:
+            if self.s_len == 1:
                 # pure derivative terms
                 self.function_names = hstack(
                     (
@@ -644,13 +647,13 @@ class PDELibrary(BaseFeatureLibrary):
                         list(
                             map(
                                 lambda i: (lambda *x: "".join(x) + "_" + "1" * i),
-                                range(1, self.num_derivs + 1),
+                                range(1, self.num_derivatives + 1),
                             )
                         ),
                     )
                 )
-            elif self.slen == 3:
-                deriv_strings = [
+            elif self.s_len == 3:
+                derivative_strings = [
                     "1",
                     "2",
                     "11",
@@ -673,9 +676,9 @@ class PDELibrary(BaseFeatureLibrary):
                         list(
                             map(
                                 lambda i: (
-                                    lambda *x: "".join(x) + "_" + deriv_strings[i]
+                                    lambda *x: "".join(x) + "_" + derivative_strings[i]
                                 ),
-                                range(0, self.num_derivs),
+                                range(0, self.num_derivatives),
                             )
                         ),
                     )
@@ -710,10 +713,10 @@ class PDELibrary(BaseFeatureLibrary):
                 raise ValueError("x shape does not match training shape")
 
         if self.spatial_grid is not None:
-            if self.slen == 1:
+            if self.s_len == 1:
                 num_gridpts = (self.spatial_grid).shape[0]
                 num_time = n_samples // num_gridpts
-            if self.slen == 3:
+            if self.s_len == 3:
                 num_gridx = (self.spatial_grid).shape[0]
                 num_gridy = (self.spatial_grid).shape[1]
                 num_time = n_samples // num_gridx // num_gridy
@@ -725,7 +728,7 @@ class PDELibrary(BaseFeatureLibrary):
         if self.include_bias:
             if self.weak_form:
                 func_final = zeros((self.K, 1))
-                if self.slen == 0:
+                if self.s_len == 0:
                     for k in range(self.K):
                         w = self._smooth_ppoly(
                             [],
@@ -740,7 +743,7 @@ class PDELibrary(BaseFeatureLibrary):
                             x=self.tgrid_k[k, :],
                             axis=0,
                         )
-                if self.slen == 1:
+                if self.s_len == 1:
                     for k in range(self.K):
                         w = self._smooth_ppoly(
                             reshape(self.xgrid_k[k, :], (self.num_pts_per_domain, 1)),
@@ -755,7 +758,7 @@ class PDELibrary(BaseFeatureLibrary):
                             x=self.tgrid_k[k, :],
                             axis=0,
                         )
-                if self.slen == 3:
+                if self.s_len == 3:
                     for k in range(self.K):
                         w = self._smooth_ppoly(
                             transpose((self.xgrid_k[k, :], self.ygrid_k[k, :])),
@@ -779,7 +782,7 @@ class PDELibrary(BaseFeatureLibrary):
                 xp[:, library_idx] = ones(n_samples)
             library_idx += 1
         if self.weak_form:
-            if self.slen == 0:
+            if self.s_len == 0:
                 for f in self.functions:
                     for c in self._combinations(
                         n_features,
@@ -808,7 +811,7 @@ class PDELibrary(BaseFeatureLibrary):
                             )
                         xp[:, library_idx] = ravel(func_final)
                         library_idx += 1
-            if self.slen == 1:
+            if self.s_len == 1:
                 for f in self.functions:
                     for c in self._combinations(
                         n_features,
@@ -846,7 +849,7 @@ class PDELibrary(BaseFeatureLibrary):
                             )
                         xp[:, library_idx] = ravel(func_final)
                         library_idx += 1
-            if self.slen == 3:
+            if self.s_len == 3:
                 for f in self.functions:
                     for c in self._combinations(
                         n_features,
@@ -913,22 +916,24 @@ class PDELibrary(BaseFeatureLibrary):
         # and testing data may have different number of time points
         # Need to compute any derivatives now
         if self.spatial_grid is not None:
-            if self.slen == 1:
+            if self.s_len == 1:
                 u = reshape(x, (num_gridpts, num_time, n_features))
-                u_derivs = zeros((num_gridpts, num_time, n_features, self.num_derivs))
+                u_derivatives = zeros(
+                    (num_gridpts, num_time, n_features, self.num_derivatives)
+                )
                 for i in range(num_time):
-                    for j in range(self.num_derivs):
-                        u_derivs[:, i, :, j] = FiniteDifference(
+                    for j in range(self.num_derivatives):
+                        u_derivatives[:, i, :, j] = FiniteDifference(
                             d=j + 1, is_uniform=self.is_uniform
                         )._differentiate(u[:, i, :], self.spatial_grid)
-                u_derivs = asarray(
+                u_derivatives = asarray(
                     reshape(
-                        u_derivs,
-                        (num_gridpts * num_time, n_features, self.num_derivs),
+                        u_derivatives,
+                        (num_gridpts * num_time, n_features, self.num_derivatives),
                     )
                 )
                 if self.weak_form:
-                    u_integrals = zeros((self.K, n_features, self.num_derivs))
+                    u_integrals = zeros((self.K, n_features, self.num_derivatives))
                     for kk in range(n_features):
                         u_interp = RectBivariateSpline(
                             self.spatial_grid, self.temporal_grid, u[:, :, kk]
@@ -941,7 +946,7 @@ class PDELibrary(BaseFeatureLibrary):
                                 u_new,
                                 (self.num_pts_per_domain, self.num_pts_per_domain, 1),
                             )
-                            for j in range(self.num_derivs):
+                            for j in range(self.num_derivatives):
                                 w_diff = self._smooth_ppoly(
                                     reshape(
                                         self.xgrid_k[k, :], (self.num_pts_per_domain, 1)
@@ -963,17 +968,21 @@ class PDELibrary(BaseFeatureLibrary):
                                     * (-1) ** (j + 1)
                                 )
 
-            elif self.slen == 3:
+            elif self.s_len == 3:
                 u = reshape(x, (num_gridx, num_gridy, num_time, n_features))
-                u_derivs = self._make_2D_derivatives(u)
-                u_derivs = asarray(
+                u_derivatives = self._make_2D_derivatives(u)
+                u_derivatives = asarray(
                     reshape(
-                        u_derivs,
-                        (num_gridx * num_gridy * num_time, n_features, self.num_derivs),
+                        u_derivatives,
+                        (
+                            num_gridx * num_gridy * num_time,
+                            n_features,
+                            self.num_derivatives,
+                        ),
                     )
                 )
                 if self.weak_form:
-                    deriv_list = asarray(
+                    derivative_list = asarray(
                         [
                             [1, 0],
                             [0, 1],
@@ -994,7 +1003,7 @@ class PDELibrary(BaseFeatureLibrary):
                     signs_list = asarray(
                         [-1, -1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, 1, 1]
                     )
-                    u_integrals = zeros((self.K, n_features, self.num_derivs))
+                    u_integrals = zeros((self.K, n_features, self.num_derivatives))
                     for kk in range(n_features):
                         u_interp = RegularGridInterpolator(
                             (
@@ -1018,13 +1027,13 @@ class PDELibrary(BaseFeatureLibrary):
                                     1,
                                 ),
                             )
-                            for j in range(self.num_derivs):
+                            for j in range(self.num_derivatives):
                                 w_diff = self._smooth_ppoly(
                                     transpose((self.xgrid_k[k, :], self.ygrid_k[k, :])),
                                     self.tgrid_k[k, :],
                                     k,
-                                    deriv_list[j, 0],
-                                    deriv_list[j, 1],
+                                    derivative_list[j, 0],
+                                    derivative_list[j, 1],
                                     0,
                                 )
                                 u_integrals[k, kk, j] = (
@@ -1047,19 +1056,19 @@ class PDELibrary(BaseFeatureLibrary):
             def identity_function(y):
                 return y
 
-            if self.weak_form and self.slen >= 1:
-                for k in range(self.num_derivs):
+            if self.weak_form and self.s_len >= 1:
+                for k in range(self.num_derivatives):
                     for kk in range(n_features):
                         xp[:, library_idx] = identity_function(u_integrals[:, kk, k])
                         library_idx += 1
             elif not self.weak_form:
-                for k in range(self.num_derivs):
+                for k in range(self.num_derivatives):
                     for kk in range(n_features):
-                        xp[:, library_idx] = identity_function(u_derivs[:, kk, k])
+                        xp[:, library_idx] = identity_function(u_derivatives[:, kk, k])
                         library_idx += 1
-            if self.slen == 1:
+            if self.s_len == 1:
                 # All the mixed derivative/non-derivative terms
-                for d in range(self.num_derivs):
+                for d in range(self.num_derivatives):
                     for kk in range(n_features):
                         if self.weak_form:
                             for f in self.functions:
@@ -1070,27 +1079,27 @@ class PDELibrary(BaseFeatureLibrary):
                                 ):
                                     func = f(*[x[:, j] for j in c])
                                     if d == 0 or d == 1:
-                                        deriv_term = u_derivs[:, kk, 0]
+                                        derivative_term = u_derivatives[:, kk, 0]
                                     elif d == 2 or d == 3:
-                                        deriv_term = u_derivs[:, kk, 1]
+                                        derivative_term = u_derivatives[:, kk, 1]
                                     func = reshape(func, (num_gridpts, num_time))
-                                    deriv_term = reshape(
-                                        deriv_term, (num_gridpts, num_time)
+                                    derivative_term = reshape(
+                                        derivative_term, (num_gridpts, num_time)
                                     )
                                     func_interp = RectBivariateSpline(
                                         self.spatial_grid, self.temporal_grid, func
                                     )
-                                    deriv_interp = RectBivariateSpline(
+                                    derivative_interp = RectBivariateSpline(
                                         self.spatial_grid,
                                         self.temporal_grid,
-                                        deriv_term,
+                                        derivative_term,
                                     )
                                     func_final = zeros((self.K, 1))
                                     for k in range(self.K):
                                         X = ravel(self.X[k, :, :])
                                         t = ravel(self.t[k, :, :])
                                         func_new = func_interp.ev(X, t)
-                                        deriv_new = deriv_interp.ev(X, t)
+                                        derivative_new = derivative_interp.ev(X, t)
                                         func_new = reshape(
                                             func_new,
                                             (
@@ -1099,8 +1108,8 @@ class PDELibrary(BaseFeatureLibrary):
                                                 1,
                                             ),
                                         )
-                                        deriv_new = reshape(
-                                            deriv_new,
+                                        derivative_new = reshape(
+                                            derivative_new,
                                             (
                                                 self.num_pts_per_domain,
                                                 self.num_pts_per_domain,
@@ -1141,7 +1150,7 @@ class PDELibrary(BaseFeatureLibrary):
                                                     )
                                         func_final[k] = trapezoid(
                                             trapezoid(
-                                                w_func * deriv_new,
+                                                w_func * derivative_new,
                                                 x=self.xgrid_k[k, :],
                                                 axis=0,
                                             ),
@@ -1159,14 +1168,14 @@ class PDELibrary(BaseFeatureLibrary):
                                 ):
                                     xp[:, library_idx] = f(
                                         *[x[:, j] for j in c]
-                                    ) * identity_function(u_derivs[:, kk, d])
+                                    ) * identity_function(u_derivatives[:, kk, d])
                                     library_idx += 1
 
-            if self.slen == 3:
+            if self.s_len == 3:
                 # All the mixed derivative/non-derivative terms
                 # Note this is really annoying to integrate these mixed terms
                 # by parts in 2D so we don't do it for now.
-                for d in range(self.num_derivs):
+                for d in range(self.num_derivatives):
                     for kk in range(n_features):
                         if self.weak_form:
                             for f in self.functions:
@@ -1176,13 +1185,16 @@ class PDELibrary(BaseFeatureLibrary):
                                     self.interaction_only,
                                 ):
                                     func = f(*[x[:, j] for j in c])
-                                    deriv_term = identity_function(u_derivs[:, kk, d])
+                                    derivative_term = identity_function(
+                                        u_derivatives[:, kk, d]
+                                    )
 
                                     func = reshape(
                                         func, (num_gridx, num_gridy, num_time)
                                     )
-                                    deriv_term = reshape(
-                                        deriv_term, (num_gridx, num_gridy, num_time)
+                                    derivative_term = reshape(
+                                        derivative_term,
+                                        (num_gridx, num_gridy, num_time),
                                     )
                                     func_final = zeros((self.K, 1))
                                     func_interp = RegularGridInterpolator(
@@ -1193,13 +1205,13 @@ class PDELibrary(BaseFeatureLibrary):
                                         ),
                                         func,
                                     )
-                                    deriv_interp = RegularGridInterpolator(
+                                    derivative_interp = RegularGridInterpolator(
                                         (
                                             self.spatial_grid[:, 0, 0],
                                             self.spatial_grid[0, :, 1],
                                             self.temporal_grid,
                                         ),
-                                        deriv_term,
+                                        derivative_term,
                                     )
                                     for k in range(self.K):
                                         X = ravel(self.X[k, :, :, :])
@@ -1207,7 +1219,7 @@ class PDELibrary(BaseFeatureLibrary):
                                         t = ravel(self.t[k, :, :, :])
                                         XYt = array((X, Y, t)).T
                                         func_new = func_interp(XYt)
-                                        deriv_new = deriv_interp(XYt)
+                                        derivative_new = derivative_interp(XYt)
                                         func_new = reshape(
                                             func_new,
                                             (
@@ -1217,8 +1229,8 @@ class PDELibrary(BaseFeatureLibrary):
                                                 1,
                                             ),
                                         )
-                                        deriv_new = reshape(
-                                            deriv_new,
+                                        derivative_new = reshape(
+                                            derivative_new,
                                             (
                                                 self.num_pts_per_domain,
                                                 self.num_pts_per_domain,
@@ -1239,7 +1251,7 @@ class PDELibrary(BaseFeatureLibrary):
                                         func_final[k] = trapezoid(
                                             trapezoid(
                                                 trapezoid(
-                                                    w * func_new * deriv_new,
+                                                    w * func_new * derivative_new,
                                                     x=self.xgrid_k[k, :],
                                                     axis=0,
                                                 ),
@@ -1260,7 +1272,7 @@ class PDELibrary(BaseFeatureLibrary):
                                 ):
                                     xp[:, library_idx] = f(
                                         *[x[:, j] for j in c]
-                                    ) * identity_function(u_derivs[:, kk, d])
+                                    ) * identity_function(u_derivatives[:, kk, d])
                                     library_idx += 1
         # If library bagging, return xp missing the terms at ensemble_indices
         return self._ensemble(xp)

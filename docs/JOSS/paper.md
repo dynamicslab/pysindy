@@ -65,12 +65,12 @@ where $\boldsymbol{\Xi} = [\boldsymbol{\xi}_1,\boldsymbol{\xi}_2,\dots,\boldsymb
 In order for this strategy to be successful, a reasonably accurate approximation of $\mathbf{f}(\mathbf{q})$ should exist as a sparse expansion in the span of $\boldsymbol{\theta}$. Therefore, background scientific knowledge about expected terms in $\mathbf{f}(\mathbf{q})$ can be used to choose the library $\boldsymbol{\theta}$. 
 To pose SINDy as a regression problem, we assume we have a set of state measurements sampled at time steps $t_1, ..., t_m$ and rearrange the data into the data matrix $\mathbf{Q} \in \mathbb{R}^{m\times n}$, 
 \begin{eqnarray}\label{eq:Q_matrix}
-\mathbf{Q} = \overset{\text{\normalsize state}}{\left.\overrightarrow{\overset{~~}{\begin{bmatrix}
+\mathbf{Q} = \begin{bmatrix}
 q_1(t_1) & q_2(t_1) & \cdots & q_n(t_1)\\
 q_1(t_2) & q_2(t_2) & \cdots & q_n(t_2)\\
 \vdots & \vdots & \ddots & \vdots \\
 q_1(t_m) & q_2(t_m) & \cdots & q_n(t_m)
-\end{bmatrix}}}\right\downarrow}\begin{rotate}{270}\hspace{-.125in}time~~\end{rotate} \hspace{.125in}
+\end{bmatrix}
 \label{Eq:DataMatrix}.
 \end{eqnarray}
 A matrix of derivatives in time, $\mathbf{Q}_t$, is defined similarly and can be numerically computed from $\mathbf{Q}$. 

@@ -138,7 +138,6 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
             copy=self.copy_X,
             sample_weight=sample_weight,
         )
-        n_features = x.shape[1]
 
         if sample_weight is not None:
             x, y = _rescale_data(x, y, sample_weight)
@@ -153,10 +152,8 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self.Theta_ = x
         x_normed = np.copy(x)
         if self.normalize_columns:
-            reg = np.zeros(n_features)
-            for i in range(n_features):
-                reg[i] = 1.0 / np.linalg.norm(x[:, i], 2)
-                x_normed[:, i] = reg[i] * x[:, i]
+            reg = 1 / np.linalg.norm(x, 2)
+            x_normed = x * reg
 
         if self.initial_guess is None:
             self.coef_ = np.linalg.lstsq(x_normed, y, rcond=None)[0].T

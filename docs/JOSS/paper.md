@@ -76,7 +76,7 @@ q_1(t_m) & q_2(t_m) & \cdots & q_n(t_m)
 A matrix of derivatives in time, $\mathbf{Q}_t$, is defined similarly and can be numerically computed from $\mathbf{Q}$. 
 In this case, Eq.~\eqref{eq:sindy_expansion} becomes $\mathbf{Q}_t \approx \mathbf{\Theta}(\mathbf{Q})\mathbf{\Xi}$ and the goal of the SINDy sparse regression problem is to choose a sparse set of coefficients $\mathbf{\Xi}$ that accurately fits the measured data in $\mathbf{Q}_t$. We can promote sparsity in the identified coefficients via a sparse regularizer $R(\mathbf{\Xi})$, such as the $l_0$ or $l_1$ norm, and use a sparse regression algorithm such as SR3[@champion2020unified] to solve the resulting optimization problem,
 \begin{equation}\label{eq:sindy_regression}
-  \argmin_{\boldsymbol{\Xi}}\|\mathbf{Q}_t - \boldsymbol{\Theta}(\mathbf{Q}) \boldsymbol{\Xi}\|^2 + R(\boldsymbol{\Xi}).
+  \text{argmin}_{\boldsymbol{\Xi}}\|\mathbf{Q}_t - \boldsymbol{\Theta}(\mathbf{Q}) \boldsymbol{\Xi}\|^2 + R(\boldsymbol{\Xi}).
 \end{equation}
 
 The original PySINDy package was developed to identify a particular class of systems described by Eq.~\eqref{eq:sindy_eq}.

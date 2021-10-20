@@ -152,7 +152,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self.Theta_ = x
         x_normed = np.copy(x)
         if self.normalize_columns:
-            reg = 1 / np.linalg.norm(x, 2)
+            reg = 1 / np.linalg.norm(x, 2, axis=0)
             x_normed = x * reg
 
         if self.initial_guess is None:

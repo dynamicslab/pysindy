@@ -57,7 +57,7 @@ assumes that the dynamical evolution of a state variable $\mathbf{q}(t)\in\mathb
 \end{equation}
 SINDy approximates the dynamical system $\mathbf{f}$ in Eq. \eqref{eq:sindy_eq} as a sparse combination of terms from a library of candidate basis functions $\boldsymbol{\theta}(\mathbf{q}) = [\theta_1(\mathbf{q}),\theta_2(\mathbf{q}),\dots,\theta_p(\mathbf{q})]$ 
 \begin{equation}\label{eq:sindy_expansion}
-\mathbf{f}(\mathbf{q})\approx \sum_{k=1}^{p}\theta_k(\mathbf{q})\boldsymbol{\xi}_k, \quad \text{or equivalently} \quad \frac{d}{dt}\mathbf{q} \approx \mathbf{\Theta}(\mathbf{q})\mathbf{\Xi},
+\mathbf{f}(\mathbf{q})\approx \sum_{k=1}^{p}\theta_k(\mathbf{q})\boldsymbol\xi_k, \quad \text{or equivalently} \quad \frac{d}{dt}\mathbf{q} \approx \mathbf{\Theta}(\mathbf{q})\mathbf{\Xi},
 \end{equation}
 where $\boldsymbol{\Xi} = [\boldsymbol{\xi}_1,\boldsymbol{\xi}_2,\dots,\boldsymbol{\xi}_p]$ contain the sparse coefficients. In order for this strategy to be successful, a reasonably accurate approximation of $\mathbf{f}(\mathbf{q})$ should exist as a sparse expansion in the span of $\boldsymbol{\theta}$. Therefore, background scientific knowledge about expected terms in $\mathbf{f}(\mathbf{q})$ can be used to choose the library $\boldsymbol{\theta}$. 
 To pose SINDy as a regression problem, we assume we have a set of state measurements sampled at time steps $t_1, ..., t_m$ and rearrange the data into the data matrix $\mathbf{Q} \in \mathbb{R}^{m\times n}$, \begin{eqnarray}\label{eq:Q_matrix}

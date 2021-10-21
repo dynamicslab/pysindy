@@ -421,7 +421,11 @@ class TrappingSR3(SR3):
         # solver, which uses "max_iters" instead of "max_iter", and
         # similar semantic changes for the other variables.
         except TypeError:
-            prob.solve(abstol=self.eps_solver, reltol=self.eps_solver)
+            try:
+                prob.solve(abstol=self.eps_solver, reltol=self.eps_solver)
+            except cp.error.SolverError:
+                print("Solver failed, setting coefs to zeros")
+                xi.value = np.zeros(N * r)
         except cp.error.SolverError:
             print("Solver failed, setting coefs to zeros")
             xi.value = np.zeros(N * r)

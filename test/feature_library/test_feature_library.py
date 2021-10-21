@@ -274,6 +274,9 @@ def test_bad_parameters():
         FourierLibrary(),
         IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_ode_library"),
+        pytest.lazy_fixture("data_pde_library"),
+        pytest.lazy_fixture("data_sindypi_library"),
     ],
 )
 def test_fit_transform(data_lorenz, library):
@@ -290,6 +293,9 @@ def test_fit_transform(data_lorenz, library):
         FourierLibrary(),
         IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_ode_library"),
+        pytest.lazy_fixture("data_pde_library"),
+        pytest.lazy_fixture("data_sindypi_library"),
     ],
 )
 def test_change_in_data_shape(data_lorenz, library):
@@ -307,6 +313,9 @@ def test_change_in_data_shape(data_lorenz, library):
         (IdentityLibrary() + PolynomialLibrary(), 13),
         (FourierLibrary(), 6),
         (pytest.lazy_fixture("data_custom_library"), 12),
+        (pytest.lazy_fixture("data_ode_library"), 9),
+        (pytest.lazy_fixture("data_pde_library"), 129),
+        (pytest.lazy_fixture("data_sindypi_library"), 39),
     ],
 )
 def test_output_shape(data_lorenz, library, shape):
@@ -325,6 +334,9 @@ def test_output_shape(data_lorenz, library, shape):
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_ode_library"),
+        pytest.lazy_fixture("data_pde_library"),
+        pytest.lazy_fixture("data_sindypi_library"),
     ],
 )
 def test_get_feature_names(data_lorenz, library):
@@ -408,6 +420,9 @@ def test_concat():
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_ode_library"),
+        pytest.lazy_fixture("data_pde_library"),
+        pytest.lazy_fixture("data_sindypi_library"),
     ],
 )
 def test_not_fitted(data_lorenz, library):
@@ -853,3 +868,5 @@ def test_sindypi_library(data_lorenz):
     assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(
         sindy_opt.coef_[3, :] != 0.0
     )
+
+    sindy_library.get_feature_names()

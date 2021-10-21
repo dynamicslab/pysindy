@@ -5,7 +5,7 @@ from .base import BaseOptimizer
 
 
 class FROLS(BaseOptimizer):
-    """Sequentially thresholded least squares algorithm.
+    """Forward Regression Orthogonal Least-Squares (FROLS) optimizer.
 
     Attempts to minimize the objective function
     :math:`\\|y - Xw\\|^2_2 + \\alpha \\|w\\|^2_2`
@@ -50,11 +50,6 @@ class FROLS(BaseOptimizer):
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s).
-
-    ind_ : array, shape (n_features,) or (n_targets, n_features)
-        Array of 0s and 1s indicating which coefficients of the
-        weight vector have not been masked out, i.e. the support of
-        ``self.coef_``.
 
     history_ : list
         History of ``coef_``. ``history_[k]`` contains the values of
@@ -134,7 +129,8 @@ class FROLS(BaseOptimizer):
         return Qs
 
     def _reduce(self, x, y):
-        """Performs at most n_feature iterations of the
+        """
+        Performs at most n_feature iterations of the
         greedy Forward Regression Orthogonal Least Squares (FROLS) algorithm
         """
         n_samples, n_features = x.shape
@@ -191,10 +187,6 @@ class FROLS(BaseOptimizer):
                 coef_k[L[:i]] = alpha
                 coef_k[abs(coef_k) < 1e-10] = 0
 
-                # Indicator of selected terms
-                # ind = np.zeros(n_features, dtype=int)
-                # ind[L[:i]] = 1
-
                 self.history_[i, k, :] = np.copy(coef_k)
 
                 if i >= self.max_iter:
@@ -204,19 +196,6 @@ class FROLS(BaseOptimizer):
             l0_penalty = self.kappa * np.linalg.cond(x)
         else:
             l0_penalty = 0.0
-        # Figure out lowest MSE coefficients
-        """err = np.zeros(n_features)
-        # err = np.zeros(n_features)
-        for i in range(n_features):
-            coef_i = np.asarray(self.history_[i, :, :])
-            res = y - x @ coef_i.T
-            err[i] = np.real( np.vdot(res, res) ) + l0_penalty * np.count_nonzero(
-                coef_i
-            )
-        self.err_history_ = err
-        err_min = np.argmin(err)
-        self.coef_ = np.asarray(self.history_[err_min, :, :])
-        """
 
         # Function selection: L2 error for output k at iteration i is given by
         #    sum(ERR_global[k, :i]), and the number of nonzero coefficients is (i+1)

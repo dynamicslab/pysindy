@@ -222,11 +222,11 @@ class ConstrainedSR3(SR3):
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
         elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(self.thresholds * xi)
+            cost = cost + cp.norm1(np.ravel(self.thresholds) * xi)
         elif self.thresholder.lower() == "l2":
             cost = cost + self.threshold * cp.norm2(xi)
         elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(self.thresholds * xi)
+            cost = cost + cp.norm2(np.ravel(self.thresholds) * xi)
         if self.use_constraints:
             if self.inequality_constraints:
                 prob = cp.Problem(
@@ -248,7 +248,11 @@ class ConstrainedSR3(SR3):
         # solver, which uses "max_iters" instead of "max_iter", and
         # similar semantic changes for the other variables.
         except TypeError:
-            prob.solve(abstol=self.tol, reltol=self.tol)
+            try:
+                prob.solve(abstol=self.tol, reltol=self.tol)
+            except cp.error.SolverError:
+                print("Solver failed, setting coefs to zeros")
+                xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
         except cp.error.SolverError:
             print("Solver failed, setting coefs to zeros")
             xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])

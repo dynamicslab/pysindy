@@ -7,6 +7,8 @@ from scipy.integrate import odeint
 
 from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import CustomLibrary
+from pysindy.feature_library import PDELibrary
+from pysindy.feature_library import SINDyPILibrary
 from pysindy.utils.odes import lorenz
 from pysindy.utils.odes import lorenz_control
 
@@ -149,6 +151,71 @@ def data_custom_library():
 
     return CustomLibrary(
         library_functions=library_functions, function_names=function_names
+    )
+
+
+@pytest.fixture
+def data_sindypi_library():
+    library_functions = [
+        lambda x: x,
+        lambda x: x ** 2,
+        lambda x, y: x * y,
+    ]
+    x_dot_library_functions = [lambda x: x]
+    function_names = [
+        lambda s: str(s),
+        lambda s: str(s) + "^2",
+        lambda s, t: str(s) + " " + str(t),
+        lambda s: str(s),
+    ]
+    t = np.linspace(0, 5, 500)
+
+    return SINDyPILibrary(
+        library_functions=library_functions,
+        x_dot_library_functions=x_dot_library_functions,
+        function_names=function_names,
+        t=t,
+    )
+
+
+@pytest.fixture
+def data_ode_library():
+    library_functions = [
+        lambda x: x,
+        lambda x: x ** 2,
+        lambda x, y: x * y,
+    ]
+    function_names = [
+        lambda s: str(s),
+        lambda s: str(s) + "^2",
+        lambda s, t: str(s) + " " + str(t),
+    ]
+
+    return PDELibrary(
+        library_functions=library_functions,
+        function_names=function_names,
+    )
+
+
+@pytest.fixture
+def data_pde_library():
+    spatial_grid = np.linspace(0, 10)
+    library_functions = [
+        lambda x: x,
+        lambda x: x ** 2,
+        lambda x, y: x * y,
+    ]
+    function_names = [
+        lambda s: str(s),
+        lambda s: str(s) + "^2",
+        lambda s, t: str(s) + " " + str(t),
+    ]
+
+    return PDELibrary(
+        library_functions=library_functions,
+        function_names=function_names,
+        spatial_grid=spatial_grid,
+        derivative_order=4,
     )
 
 

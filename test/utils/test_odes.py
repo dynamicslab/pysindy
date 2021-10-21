@@ -3,6 +3,7 @@ import pytest
 from scipy.integrate import odeint
 
 from pysindy.utils.odes import bacterial
+from pysindy.utils.odes import burgers_galerkin
 from pysindy.utils.odes import cubic_damped_SHO
 from pysindy.utils.odes import cubic_oscillator
 from pysindy.utils.odes import double_pendulum
@@ -57,4 +58,30 @@ def test_odes(ode_params):
         x_sim = odeint(ode_params[0], x0, t, args=(u,))
     else:
         x_sim = odeint(ode_params[0], x0, t)
+    assert np.max(abs(x_sim)) <= 1e5  # avoided unbounded growth
+
+
+# define analytic galerkin model for quadratic nonlinear systems
+def galerkin_model(a, L, Q):
+    """RHS of POD-Galerkin model, for time integration"""
+    return (L @ a) + np.einsum("ijk,j,k->i", Q, a, a)
+
+
+def test_galerkin_models():
+    # get analytic L and Q operators and galerkin model
+    L, Q = burgers_galerkin()
+
+    def rhs(a, t):
+        return galerkin_model(a, L, Q)
+
+    # Generate initial condition from unstable eigenvectors
+    lamb, Phi = np.linalg.eig(L)
+    idx = np.argsort(-np.real(lamb))
+    lamb, Phi = lamb[idx], Phi[:, idx]
+    a0 = np.real(1e-4 * Phi[:, :2] @ np.random.random((2)))
+
+    # define parameters
+    dt = 1e-3
+    t_sim = np.arange(0, 300, dt)
+    x_sim = odeint(rhs, a0, t_sim, h0=1e-5, rtol=1e-20).T
     assert np.max(abs(x_sim)) <= 1e5  # avoided unbounded growth

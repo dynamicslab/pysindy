@@ -128,7 +128,9 @@ class SINDyPI(SR3):
         if model_subset is not None:
             if not isinstance(model_subset, list):
                 raise ValueError("Model subset must be in list format.")
-            subset_integers = [set for set in model_subset if isinstance(set, int)]
+            subset_integers = [
+                model_ind for model_ind in model_subset if isinstance(model_ind, int)
+            ]
             if subset_integers != model_subset:
                 raise ValueError("Model subset list must consist of integers.")
 

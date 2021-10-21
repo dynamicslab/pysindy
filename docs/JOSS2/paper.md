@@ -38,6 +38,7 @@ affiliations:
  - name: Arts et Métiers Institute of Technology, CNAM, DynFluid, HESAM Université
    index: 4
 date: 21 October 2021
+output: bookdown::html_document2
 bibliography: paper.bib
 ---
 
@@ -57,9 +58,9 @@ assumes that the dynamical evolution of a state variable $\mathbf{q}(t)\in\mathb
 \end{equation}
 SINDy approximates the dynamical system $\mathbf{f}$ in Eq. \eqref{eq:sindy_eq} as a sparse combination of terms from a library of candidate basis functions $\boldsymbol{\theta}(\mathbf{q}) = [\theta_1(\mathbf{q}),\theta_2(\mathbf{q}),\dots,\theta_p(\mathbf{q})]$ 
 \begin{equation}\label{eq:sindy_expansion}
-\mathbf{f}(\mathbf{q})\approx \sum_{k=1}^{p}\theta_k(\mathbf{q})\boldsymbol{\xi}_k, \quad \text{or equivalently} \quad \frac{d}{dt}\mathbf{q} \approx \mathbf{\Theta}(\mathbf{q})\mathbf{\Xi},
+\mathbf{f}(\mathbf{q})\approx \sum_{k=1}^{p}\theta_k(\mathbf{q})\boldsymbol\xi_k, \quad \text{or equivalently} \quad \frac{d}{dt}\mathbf{q} \approx \mathbf{\Theta}(\mathbf{q})\mathbf{\Xi},
 \end{equation}
-where $\boldsymbol{\Xi} = [\boldsymbol{\xi}_1,\boldsymbol{\xi}_2,\dots,\boldsymbol{\xi}_p]$ contain the sparse coefficients. In order for this strategy to be successful, a reasonably accurate approximation of $\mathbf{f}(\mathbf{q})$ should exist as a sparse expansion in the span of $\boldsymbol{\theta}$. Therefore, background scientific knowledge about expected terms in $\mathbf{f}(\mathbf{q})$ can be used to choose the library $\boldsymbol{\theta}$. 
+where $\boldsymbol{\Xi} = [\boldsymbol\xi_1,\boldsymbol\xi_2,\dots,\boldsymbol\xi_p]$ contain the sparse coefficients. In order for this strategy to be successful, a reasonably accurate approximation of $\mathbf{f}(\mathbf{q})$ should exist as a sparse expansion in the span of $\boldsymbol{\theta}$. Therefore, background scientific knowledge about expected terms in $\mathbf{f}(\mathbf{q})$ can be used to choose the library $\boldsymbol{\theta}$. 
 To pose SINDy as a regression problem, we assume we have a set of state measurements sampled at time steps $t_1, ..., t_m$ and rearrange the data into the data matrix $\mathbf{Q} \in \mathbb{R}^{m\times n}$, \begin{eqnarray}\label{eq:Q_matrix}
 \mathbf{Q} = \begin{bmatrix}
 q_1(t_1) & q_2(t_1) & \cdots & q_n(t_1)\\
@@ -69,10 +70,10 @@ q_1(t_m) & q_2(t_m) & \cdots & q_n(t_m)
 \end{bmatrix}
 \label{Eq:DataMatrix}.
 \end{eqnarray}
-A matrix of derivatives in time, $\mathbf{Q}_t$, is defined similarly and can be numerically computed from $\mathbf{Q}$. 
-In this case, Eq. \eqref{eq:sindy_expansion} becomes $\mathbf{Q}_t \approx \mathbf{\Theta}(\mathbf{Q})\mathbf{\Xi}$ and the goal of the SINDy sparse regression problem is to choose a sparse set of coefficients $\mathbf{\Xi}$ that accurately fits the measured data in $\mathbf{Q}_t$. We can promote sparsity in the identified coefficients via a sparse regularizer $R(\mathbf{\Xi})$, such as the $l_0$ or $l_1$ norm, and use a sparse regression algorithm such as SR3 [@champion2020unified] to solve the resulting optimization problem,
+A matrix of derivatives in time, $\mathbf Q_t$, is defined similarly and can be numerically computed from $\mathbf{Q}$. 
+In this case, Eq. \eqref{eq:sindy_expansion} becomes $\mathbf Q_t \approx \mathbf{\Theta}(\mathbf{Q})\mathbf{\Xi}$ and the goal of the SINDy sparse regression problem is to choose a sparse set of coefficients $\mathbf{\Xi}$ that accurately fits the measured data in $\mathbf Q_t$. We can promote sparsity in the identified coefficients via a sparse regularizer $R(\mathbf{\Xi})$, such as the $l_0$ or $l_1$ norm, and use a sparse regression algorithm such as SR3 [@champion2020unified] to solve the resulting optimization problem,
 \begin{equation}\label{eq:sindy_regression}
-  \text{argmin}_{\boldsymbol{\Xi}}\|\mathbf{Q}_t - \boldsymbol{\Theta}(\mathbf{Q}) \boldsymbol{\Xi}\|^2 + R(\boldsymbol{\Xi}).
+  \text{argmin}_{\boldsymbol\Xi}\|\mathbf Q_t - \boldsymbol\Theta(\mathbf{Q}) \boldsymbol\Xi\|^2 + R(\boldsymbol\Xi).
 \end{equation}
 
 The original `PySINDy` package was developed to identify a particular class of systems described by Eq. \eqref{eq:sindy_eq}.
@@ -82,15 +83,15 @@ In order to incorporate these new developments and accommodate the wide variety 
 # New features
 Given spatiotemporal data $\mathbf{Q}(\mathbf{x}, t) \in \mathbb{R}^{m\times n}$, and optional control inputs $\mathbf{u} \in \mathbb{R}^{m \times r}$ (note $m$ has been redefined here to be the product of the number of spatial measurements and the number of time samples), `PySINDy` can now approximate algebraic systems of PDEs (and corresponding weak forms) in up to 3 spatial dimensions. Assuming the system is described by a function $\mathbf{g}$, we have
 \begin{equation}\label{eq:pysindy_eq}
-    \mathbf{g}(\mathbf{q},\mathbf{q}_t, \mathbf{q}_x, \mathbf{q}_y, \mathbf{q}_{xx}, ..., \mathbf{u}) = 0.
+    \mathbf{g}(\mathbf{q},\mathbf q_t, \mathbf q_x, \mathbf q_y, \mathbf q_{xx}, ..., \mathbf{u}) = 0.
 \end{equation}
-ODEs, implicit ODEs, PDEs, and other dynamical systems are subsets of Eq. \eqref{eq:pysindy_eq}. We can accommodate control terms and partial derivatives in the SINDy library by adding them as columns in $\mathbf{\Theta}(\mathbf{Q})$, which becomes $\mathbf{\Theta}(\mathbf{Q}, \mathbf{Q}_t, \mathbf{Q}_x, ..., \mathbf{u})$. 
+ODEs, implicit ODEs, PDEs, and other dynamical systems are subsets of Eq. \eqref{eq:pysindy_eq}. We can accommodate control terms and partial derivatives in the SINDy library by adding them as columns in $\mathbf{\Theta}(\mathbf{Q})$, which becomes $\mathbf{\Theta}(\mathbf{Q}, \mathbf Q_t, \mathbf Q_x, ..., \mathbf{u})$. 
 
-In addition, we have extended `PySINDy` to handle more complex modeling scenarios, including trapping SINDy for provably stable ODE models for fluids [@kaptanoglu2021promoting], models trained using multiple dynamic trajectories, and the generation of many models with sub-sampling and ensembling methods for cross-validation and probabilistic system identification. In order to solve Eq. \eqref{eq:pysindy_eq}, `PySINDy` implements several different sparse regression algorithms. Greedy sparse regression algorithms, including step-wise sparse regression (SSR) [@boninsegna2018sparse] and forward regression orthogonal least squares (FROLS) [@Billings2013book], are now available. Figure \autoref{fig:package-structure} illustrates the `PySINDy` code structure, changes, and high-level goals for future work.
+In addition, we have extended `PySINDy` to handle more complex modeling scenarios, including trapping SINDy for provably stable ODE models for fluids [@kaptanoglu2021promoting], models trained using multiple dynamic trajectories, and the generation of many models with sub-sampling and ensembling methods for cross-validation and probabilistic system identification. In order to solve Eq. \eqref{eq:pysindy_eq}, `PySINDy` implements several different sparse regression algorithms. Greedy sparse regression algorithms, including step-wise sparse regression (SSR) [@boninsegna2018sparse] and forward regression orthogonal least squares (FROLS) [@Billings2013book], are now available. \autoref{fig:package-structure} illustrates the `PySINDy` code structure, changes, and high-level goals for future work.
 
 `PySINDy` includes extensive Jupyter notebook tutorials that demonstrate the usage of various features of the package and reproduce nearly the entirety of the examples from the original SINDy paper [@brunton2016pnas], trapping SINDy paper [@kaptanoglu2021promoting], and the PDE-FIND paper [@Rudy2017sciadv]. 
 We include an extended example for the quasiperiodic shear-driven cavity flow [@callaham2021role].
-As a simple illustration of the new functionality, we demonstrate how SINDy can be used to identify the Kuramoto-Sivashinsky (KS) PDE from data. We train the model on the first 60\% of the data from Rudy et al. [@Rudy2017sciadv], which in total contains 1024 spatial grid points and 251 time steps. The KS model is identified correctly and the prediction for $\dot{\mathbf{q}}$ on the remaining testing data indicates strong performance in Fig. \autoref{fig:pde_id}. 
+As a simple illustration of the new functionality, we demonstrate how SINDy can be used to identify the Kuramoto-Sivashinsky (KS) PDE from data. We train the model on the first 60\% of the data from Rudy et al. [@Rudy2017sciadv], which in total contains 1024 spatial grid points and 251 time steps. The KS model is identified correctly and the prediction for $\dot{\mathbf{q}}$ on the remaining testing data indicates strong performance in \autoref{fig:pde_id}. 
 
 # Conclusion
 The goal of the `PySINDy` package is to enable anyone with access to measurement data to engage in scientific model discovery. The package is designed to be accessible to inexperienced users, adhere to `scikit-learn` standards, include most of the existing SINDy variations in the literature, and provide a large variety of functionality for more advanced users. We hope that researchers will use and contribute to the code in the future, pushing the boundaries of what is possible in system identification.
@@ -99,10 +100,9 @@ The goal of the `PySINDy` package is to enable anyone with access to measurement
 `PySINDy` is a fork of [`sparsereg`](https://github.com/Ohjeah/sparsereg) [@markus_quade_sparsereg].
 SLB, AAK, KK, and UF acknowledge support from the Army Research Office (ARO  W911NF-19-1-0045). JLC acknowledges support from funding support from the Department of Defense (DoD) through the National Defense Science \& Engineering Graduate (NDSEG) Fellowship Program. 
 
-# Figures
-
 ![Summary of SINDy features organized by (a) `PySINDy` structure and (b) functionality. (a) Hierarchy from the sparse regression problem solved by SINDy, to the submodules of `PySINDy`, to the individual optimizers, libraries, and differentiation methods implemented in the code.
 (b) Flow chart for organizing the SINDy variants and functionality in the literature. Bright color boxes indicate the features that have been implemented through this work, roughly organized by functionality. Semi-transparent boxes indicate features that have not yet been implemented.\label{fig:package-structure}](Fig1.png)
+
 ![`PySINDy` can now be used for PDE identification; we illustrate this new capability by accurately capturing a set of testing data from the Kuramoto-Sivashinsky system, described by $q_t = -qq_x - q_{xx} - q_{xxxx}$. The identified model is $q_t = -0.98qq_x -0.99q_{xx} - 1.0q_{xxxx}$.\label{fig:pde_id}](Fig2.png)
 
 # References

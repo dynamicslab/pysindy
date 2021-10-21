@@ -131,7 +131,7 @@ If you do not have root access, you should add the ``--user`` option to the abov
 
 Caveats
 ^^^^^^^
-If you would like to use the ``TrappingSINDy`` optimizer you will also need to install the cvxpy package, e.g. with ``pip install cvxpy``.
+If you would like to use the ``SINDy-PI'' optimizer, the ``Trapping SINDy`` optimizer (TrappingSR3), or the other SR3 optimizations with inequality constraints, you will also need to install the cvxpy package, e.g. with ``pip install cvxpy``.
 
 To run the unit tests, example notebooks, or build a local copy of the documentation, you should install the additional dependencies in ``requirements-dev.txt``
 
@@ -227,21 +227,25 @@ References
    Academy of Sciences 113.15 (2016): 3932-3937.
    `[DOI] <http://dx.doi.org/10.1073/pnas.1517384113>`__
 
--  Champion, Kathleen, Peng Zheng, Aleksandr Y. Aravkin, Steven L.
-   Brunton, and J. Nathan Kutz. *A unified sparse optimization
-   framework to learn parsimonious physics-informed models from
-   data.* arXiv preprint arXiv:1906.10612 (2019).
-   `[arXiv] <https://arxiv.org/abs/1906.10612>`__
+-  Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N. (2020). 
+   *A unified sparse optimization framework to learn parsimonious physics-informed 
+   models from data.* IEEE Access, 8, 169259-169271.
+   `[DOI] <https://doi.org/10.1109/ACCESS.2020.3023625>`__
    
 -  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
    *Sparse identification of nonlinear dynamics with control (SINDYc).*
    IFAC-PapersOnLine 49.18 (2016): 710-715.
    `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
+   
+- Kaheman, K., Kutz, J. N., & Brunton, S. L. (2020). 
+  *SINDy-PI: a robust algorithm for parallel implicit sparse identification 
+  of nonlinear dynamics.* Proceedings of the Royal Society A, 476(2242), 20200279.
+  `[DOI] <https://doi.org/10.1098/rspa.2020.0279>`_
 
--  Kaptanoglu, Alan A., Jared L. Callaham, Christopher J. Hansen, Aleksandr Aravkin, and Steven L. Brunton.
+-  Kaptanoglu, A. A., Callaham, J. L., Aravkin, A., Hansen, C. J., & Brunton, S. L. (2021). 
    *Promoting global stability in data-driven models of quadratic nonlinear dynamics.*
-   arXiv preprint arXiv:2105.01843 (2021).
-   `[arXiv] <https://arxiv.org/abs/2105.01843>`__
+   Physical Review Fluids, 6(9), 094401.
+   `[DOI] <https://doi.org/10.1103/PhysRevFluids.6.094401>`__
 
 
 Related packages
@@ -259,8 +263,6 @@ Thanks to the members of the community who have contributed to PySINDy!
 | `billtubbs <https://github.com/kopytjuk>`_            | Bug fix `#68 <https://github.com/dynamicslab/pysindy/issues/68>`_                                                                                          |
 +-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | `kopytjuk <https://github.com/kopytjuk>`_             | Concatenation feature for libraries `#72 <https://github.com/dynamicslab/pysindy/pull/72>`_                                                                |
-+-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| `akaptano <https://github.com/akaptano>`_             | Constrained SR3 and plasma physics example notebook `#78 <https://github.com/dynamicslab/pysindy/pull/78>`_                                                |
 +-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | `andgoldschmidt <https://github.com/andgoldschmidt>`_ | `derivative <https://derivative.readthedocs.io/en/latest/>`_ package for numerical differentiation `#85 <https://github.com/dynamicslab/pysindy/pull/85>`_ |
 +-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+

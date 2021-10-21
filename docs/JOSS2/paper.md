@@ -38,6 +38,7 @@ affiliations:
  - name: Arts et Métiers Institute of Technology, CNAM, DynFluid, HESAM Université
    index: 4
 date: 21 October 2021
+output: bookdown::html_document2
 bibliography: paper.bib
 ---
 
@@ -72,7 +73,7 @@ q_1(t_m) & q_2(t_m) & \cdots & q_n(t_m)
 A matrix of derivatives in time, $\mathbf Q_t$, is defined similarly and can be numerically computed from $\mathbf{Q}$. 
 In this case, Eq. \eqref{eq:sindy_expansion} becomes $\mathbf Q_t \approx \mathbf{\Theta}(\mathbf{Q})\mathbf{\Xi}$ and the goal of the SINDy sparse regression problem is to choose a sparse set of coefficients $\mathbf{\Xi}$ that accurately fits the measured data in $\mathbf Q_t$. We can promote sparsity in the identified coefficients via a sparse regularizer $R(\mathbf{\Xi})$, such as the $l_0$ or $l_1$ norm, and use a sparse regression algorithm such as SR3 [@champion2020unified] to solve the resulting optimization problem,
 \begin{equation}\label{eq:sindy_regression}
-  argmin_{\boldsymbol\Xi}\|\mathbf Q_t - \boldsymbol\Theta(\mathbf{Q}) \boldsymbol\Xi\|^2 + R(\boldsymbol\Xi).
+  \text{argmin}_{\boldsymbol\Xi}\|\mathbf Q_t - \boldsymbol\Theta(\mathbf{Q}) \boldsymbol\Xi\|^2 + R(\boldsymbol\Xi).
 \end{equation}
 
 The original `PySINDy` package was developed to identify a particular class of systems described by Eq. \eqref{eq:sindy_eq}.
@@ -101,8 +102,17 @@ SLB, AAK, KK, and UF acknowledge support from the Army Research Office (ARO  W91
 
 # Figures
 
-![Summary of SINDy features organized by (a) `PySINDy` structure and (b) functionality. (a) Hierarchy from the sparse regression problem solved by SINDy, to the submodules of `PySINDy`, to the individual optimizers, libraries, and differentiation methods implemented in the code.
-(b) Flow chart for organizing the SINDy variants and functionality in the literature. Bright color boxes indicate the features that have been implemented through this work, roughly organized by functionality. Semi-transparent boxes indicate features that have not yet been implemented.\label{fig:package-structure}](Fig1.png)
-![`PySINDy` can now be used for PDE identification; we illustrate this new capability by accurately capturing a set of testing data from the Kuramoto-Sivashinsky system, described by $q_t = -qq_x - q_{xx} - q_{xxxx}$. The identified model is $q_t = -0.98qq_x -0.99q_{xx} - 1.0q_{xxxx}$.\label{fig:pde_id}](Fig2.png)
+<figure>
+<img src="Fig1.png"
+     style="float: left; margin-right: 10px;" />
+<figcaption>Summary of SINDy features organized by (a) `PySINDy` structure and (b) functionality. (a) Hierarchy from the sparse regression problem solved by SINDy, to the submodules of `PySINDy`, to the individual optimizers, libraries, and differentiation methods implemented in the code.
+(b) Flow chart for organizing the SINDy variants and functionality in the literature. Bright color boxes indicate the features that have been implemented through this work, roughly organized by functionality. Semi-transparent boxes indicate features that have not yet been implemented.\\label{fig:package-structure}</figcaption>
+</figure>
+
+<figure>
+<img src="Fig2.png"
+     style="float: left; margin-right: 10px;" />
+<figcaption>`PySINDy` can now be used for PDE identification; we illustrate this new capability by accurately capturing a set of testing data from the Kuramoto-Sivashinsky system, described by $q_t = -qq_x - q_{xx} - q_{xxxx}$. The identified model is $q_t = -0.98qq_x -0.99q_{xx} - 1.0q_{xxxx}$.\\label{fig:pde_id}</figcaption>
+</figure>
 
 # References

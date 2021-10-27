@@ -161,43 +161,6 @@ class SR3(BaseOptimizer):
             raise ValueError("tol must be positive")
         if (trimming_fraction < 0) or (trimming_fraction > 1):
             raise ValueError("trimming fraction must be between 0 and 1")
-        if (
-            thresholder.lower() != "l0"
-            and thresholder.lower() != "l1"
-            and thresholder.lower() != "l2"
-            and thresholder.lower() != "weighted_l0"
-            and thresholder.lower() != "weighted_l1"
-            and thresholder.lower() != "weighted_l2"
-            and thresholder.lower() != "cad"
-        ):
-            raise NotImplementedError(
-                "Regularizer must be l0, l1, l2, weighted_l0, weighted_l1, "
-                "weighted_l2 or cad"
-            )
-        if thresholder[:8].lower() == "weighted" and thresholds is None:
-            raise ValueError(
-                "weighted thresholder requires the thresholds parameter to be used"
-            )
-        if thresholder[:8].lower() != "weighted" and thresholds is not None:
-            raise ValueError(
-                "The thresholds argument cannot be used without a weighted thresholder,"
-                " e.g. thresholder='weighted_l0'"
-            )
-        if thresholds is not None and np.any(thresholds < 0):
-            raise ValueError("thresholds cannot contain negative entries")
-
-        if thresholder[:8].lower() == "weighted" and thresholds is None:
-            raise ValueError(
-                "weighted thresholder requires the thresholds parameter to be used"
-            )
-        if thresholder[:8].lower() != "weighted" and thresholds is not None:
-            raise ValueError(
-                "The thresholds argument cannot be used without a weighted thresholder,"
-                " e.g. thresholder='weighted_l0'"
-            )
-        if thresholds is not None and np.any(thresholds < 0):
-            raise ValueError("thresholds cannot contain negative entries")
-
         if thresholder.lower() not in (
             "l0",
             "l1",
@@ -207,7 +170,33 @@ class SR3(BaseOptimizer):
             "weighted_l2",
             "cad",
         ):
-            raise NotImplementedError("Please use a valid regularizer, l0, l1, l2, cad")
+            raise NotImplementedError(
+                "Please use a valid thresholder, l0, l1, l2, cad, "
+                "weighted_l0, weighted_l1, weighted_l2."
+                )
+        if thresholder[:8].lower() == "weighted" and thresholds is None:
+            raise ValueError(
+                "weighted thresholder requires the thresholds parameter to be used"
+            )
+        if thresholder[:8].lower() != "weighted" and thresholds is not None:
+            raise ValueError(
+                "The thresholds argument cannot be used without a weighted thresholder,"
+                " e.g. thresholder='weighted_l0'"
+            )
+        if thresholds is not None and np.any(thresholds < 0):
+            raise ValueError("thresholds cannot contain negative entries")
+
+        if thresholder[:8].lower() == "weighted" and thresholds is None:
+            raise ValueError(
+                "weighted thresholder requires the thresholds parameter to be used"
+            )
+        if thresholder[:8].lower() != "weighted" and thresholds is not None:
+            raise ValueError(
+                "The thresholds argument cannot be used without a weighted thresholder,"
+                " e.g. thresholder='weighted_l0'"
+            )
+        if thresholds is not None and np.any(thresholds < 0):
+            raise ValueError("thresholds cannot contain negative entries")
 
         self.threshold = threshold
         self.thresholds = thresholds

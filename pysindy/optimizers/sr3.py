@@ -27,9 +27,9 @@ class SR3(BaseOptimizer):
         Zheng, Peng, et al. "A unified framework for sparse relaxed
         regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
 
-        Champion, Kathleen, et al. "A unified sparse optimization framework
-        to learn parsimonious physics-informed models from data."
-        arXiv preprint arXiv:1906.10612 (2019).
+        Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N.
+        (2020). A unified sparse optimization framework to learn parsimonious
+        physics-informed models from data. IEEE Access, 8, 169259-169271.
 
     Parameters
     ----------
@@ -173,7 +173,7 @@ class SR3(BaseOptimizer):
             raise NotImplementedError(
                 "Please use a valid thresholder, l0, l1, l2, cad, "
                 "weighted_l0, weighted_l1, weighted_l2."
-                )
+            )
         if thresholder[:8].lower() == "weighted" and thresholds is None:
             raise ValueError(
                 "weighted thresholder requires the thresholds parameter to be used"

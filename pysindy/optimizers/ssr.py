@@ -41,6 +41,10 @@ class SSR(BaseOptimizer):
 
     criteria : string, optional (default "coefficient_value")
         The criteria to use for truncating a coefficient each iteration.
+        Must be "coefficient_value" or "model_residual".
+        "coefficient_value": zero out the smallest coefficient).
+        "model_residual": choose the N-1 term model with the smallest
+        residual error.
 
     alpha : float, optional (default 0.05)
         Optional L2 (ridge) regularization on the weight vector.

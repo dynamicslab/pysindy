@@ -5,6 +5,7 @@ from numpy import concatenate
 from numpy import copy
 from numpy import insert
 from numpy import isscalar
+from numpy import median
 from numpy import ndim
 from numpy import newaxis
 from numpy import sort
@@ -190,6 +191,7 @@ class SINDy(BaseEstimator):
         n_candidates_to_drop=1,
         n_subset=None,
         n_models=None,
+        ensemble_aggregator=None,
     ):
         """
         Fit a SINDy model.
@@ -270,6 +272,13 @@ class SINDy(BaseEstimator):
         n_models : int, optional (default 20)
             Number of models to generate via ensemble
 
+        ensemble_aggregator : callable, optional (default numpy.median)
+            Method to aggregate model coefficients across different samples.
+            This method argument is only used if ``ensemble`` or ``library_ensemble``
+            is True.
+            The method should take in a list of 2D arrays and return a 2D
+            array of the same shape as the arrays in the list.
+
         Returns
         -------
         self: a fitted :class:`SINDy` instance
@@ -324,7 +333,7 @@ class SINDy(BaseEstimator):
                 else:
                     x_dot = validate_input(x_dot, t)
 
-        # set ensemble variables
+        # Set ensemble variables
         self.ensemble = ensemble
         self.library_ensemble = library_ensemble
 
@@ -364,18 +373,22 @@ class SINDy(BaseEstimator):
                         replace,
                         tgrid,
                         self.feature_library,
-                        PDELibrary,
+                        isinstance(self.feature_library, PDELibrary),
                     )
                     self.model.fit(x_ensemble, x_dot_ensemble)
                     self.coef_list.append(self.model.steps[-1][1].coef_)
             elif library_ensemble and not ensemble:
                 self.feature_library.library_ensemble = True
                 (self.feature_library).fit(x)
-                N = self.feature_library.n_output_features_
+                n_output_features = self.feature_library.n_output_features_
                 self.coef_list = []
                 for i in range(n_models):
                     self.feature_library.ensemble_indices = sort(
-                        choice(range(N), n_candidates_to_drop, replace=False)
+                        choice(
+                            range(n_output_features),
+                            n_candidates_to_drop,
+                            replace=False,
+                        )
                     )
                     self.model.fit(x, x_dot)
                     coef_partial = self.model.steps[-1][1].coef_
@@ -390,7 +403,7 @@ class SINDy(BaseEstimator):
             elif ensemble and library_ensemble:
                 self.feature_library.library_ensemble = True
                 (self.feature_library).fit(x)
-                N = self.feature_library.n_output_features_
+                n_output_features = self.feature_library.n_output_features_
                 self.coef_list = []
                 for i in range(n_models):
                     x_ensemble, x_dot_ensemble = drop_random_rows(
@@ -400,11 +413,15 @@ class SINDy(BaseEstimator):
                         replace,
                         tgrid,
                         self.feature_library,
-                        PDELibrary,
+                        isinstance(self.feature_library, PDELibrary),
                     )
                     for j in range(n_models):
                         self.feature_library.ensemble_indices = sort(
-                            choice(range(N), n_candidates_to_drop, replace=False)
+                            choice(
+                                range(n_output_features),
+                                n_candidates_to_drop,
+                                replace=False,
+                            )
                         )
                         self.model.fit(x_ensemble, x_dot_ensemble)
                         coef_partial = self.model.steps[-1][1].coef_
@@ -419,7 +436,14 @@ class SINDy(BaseEstimator):
             else:
                 self.model.fit(x, x_dot)
 
-        # Annoying sklearn change that have to replace these everywhere
+        # Get average coefficients if ensembling was used
+        if ensemble or library_ensemble:
+            if ensemble_aggregator is None:
+                self.model.coef_ = median(self.coef_list, axis=0)
+            else:
+                self.model_coef_ = ensemble_aggregator(self.coef_list)
+
+        # New version of sklearn changes attribute name
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = self.model.steps[0][1].n_features_in_
             n_input_features = self.model.steps[0][1].n_features_in_
@@ -515,20 +539,11 @@ class SINDy(BaseEstimator):
             base_feature_names = [f + "[k]" for f in self.feature_names]
         else:
             base_feature_names = self.feature_names
-        # If using ensembling, return the average coefficients
-        if hasattr(self, "ensemble") and (self.ensemble or self.library_ensemble):
-            return equations(
-                self.model,
-                input_features=base_feature_names,
-                precision=precision,
-                coef_list=self.coef_list,
-            )
-        else:
-            return equations(
-                self.model,
-                input_features=base_feature_names,
-                precision=precision,
-            )
+        return equations(
+            self.model,
+            input_features=base_feature_names,
+            precision=precision,
+        )
 
     def print(self, lhs=None, precision=3):
         """Print the SINDy model equations.
@@ -900,7 +915,7 @@ class SINDy(BaseEstimator):
                 def check_stop_condition(xi):
                     pass
 
-            # Annoying sklearn change that have to replace these everywhere
+            # New version of sklearn changes attribute name
             if float(__version__[:3]) >= 1.0:
                 x = zeros((t, self.n_features_in_ - self.n_control_features_))
             else:

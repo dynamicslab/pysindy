@@ -7,6 +7,7 @@ from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
 
+
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default
 # value of t to be None, but it is possible for the user
@@ -101,10 +102,12 @@ def drop_nan_rows(x, x_dot):
     return x, x_dot
 
 
-def drop_random_rows(x, x_dot, n_subset, replace, tgrid, feature_library, PDELibrary):
+def drop_random_rows(
+    x, x_dot, n_subset, replace, tgrid, feature_library, is_pde_library
+):
     # Can't choose random n_subset points if data is spatially local
     # Need to unfold it and just choose n_subset from the temporal slices
-    if isinstance(feature_library, PDELibrary):
+    if is_pde_library:
         spatial_grid = feature_library.spatial_grid
         num_gridx = (spatial_grid).shape[0]
         if len(np.shape(spatial_grid)) == 1:
@@ -177,11 +180,10 @@ def drop_random_rows(x, x_dot, n_subset, replace, tgrid, feature_library, PDELib
             elif feature_library.weak_form:
                 x_dot_new = x_dot
                 feature_library.temporal_grid = tgrid[rand_inds]
-    else:
-        # choose random n_subset points to use
-        rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))
-        x_new = x[rand_inds, :]
-        x_dot_new = x_dot[rand_inds, :]
+    # Choose random n_subset points to use
+    rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))
+    x_new = x[rand_inds, :]
+    x_dot_new = x_dot[rand_inds, :]
     return x_new, x_dot_new
 
 
@@ -360,16 +362,11 @@ def print_model(
     return eq
 
 
-def equations(
-    pipeline, input_features=None, precision=3, input_fmt=None, coef_list=None
-):
+def equations(pipeline, input_features=None, precision=3, input_fmt=None):
     input_features = pipeline.steps[0][1].get_feature_names(input_features)
     if input_fmt:
         input_features = [input_fmt(i) for i in input_features]
-    if coef_list is not None:
-        coef = np.median(coef_list, axis=0)
-    else:
-        coef = pipeline.steps[-1][1].coef_
+    coef = pipeline.steps[-1][1].coef_
     intercept = pipeline.steps[-1][1].intercept_
     if np.isscalar(intercept):
         intercept = intercept * np.ones(coef.shape[0])

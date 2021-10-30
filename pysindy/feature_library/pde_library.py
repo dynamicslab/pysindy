@@ -13,6 +13,7 @@ from numpy import reshape
 from numpy import shape
 from numpy import transpose
 from numpy import zeros
+from numpy import zeros_like
 from numpy.random import uniform
 from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
@@ -175,15 +176,24 @@ class PDELibrary(BaseFeatureLibrary):
         super(PDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
         )
+        self.functions = library_functions
         self.derivative_order = derivative_order
         self.spatial_grid = spatial_grid
         self.temporal_grid = temporal_grid
-        self.functions = library_functions
         self.function_names = function_names
+        self.interaction_only = interaction_only
         self.include_bias = include_bias
         self.include_interaction = include_interaction
         self.is_uniform = is_uniform
+        self.weak_form = weak_form
+        self.K = K
         self.num_pts_per_domain = num_pts_per_domain
+        self.Hx = Hx
+        self.Hy = Hy
+        self.Hz = Hz
+        self.Ht = Ht
+        self.p = p
+
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
                 "library_functions and function_names must have the same"
@@ -198,288 +208,265 @@ class PDELibrary(BaseFeatureLibrary):
                 "Spatial grid and the derivative order must be "
                 "defined at the same time"
             )
-        if spatial_grid is not None and (
-            (len(spatial_grid.shape) != 1)
-            and (len(spatial_grid.shape) != 3)
-            and (len(spatial_grid.shape) != 4)
-        ):
+        if spatial_grid is not None and (len(spatial_grid.shape) not in (1, 3, 4)):
             raise ValueError("Spatial grid size is incorrect")
-        self.interaction_only = interaction_only
         if spatial_grid is not None:
-            self.s_len = len((self.spatial_grid).shape)
-            if self.s_len == 1:
+            self.space_ndim = len((self.spatial_grid).shape)
+            if self.space_ndim == 1:
                 self.num_derivatives = derivative_order
-            elif self.s_len == 3:
+            elif self.space_ndim == 3:
                 num_derivatives = 2
                 for i in range(2, derivative_order + 1):
                     num_derivatives += i + 1
                 self.num_derivatives = num_derivatives
-            elif self.s_len == 4:
+            elif self.space_ndim == 4:
                 k = 3
                 num_derivatives = 0
                 for i in range(1, derivative_order + 1):
                     num_derivatives += int(n_choose_k(i + k - 1, k - 1))
                 self.num_derivatives = num_derivatives
         else:
-            self.s_len = 0
+            self.space_ndim = 0
 
-        # weak form checks now
-        if weak_form and temporal_grid is not None:
-            if len(shape(temporal_grid)) != 1:
+        # Weak form checks and setup
+        if self.weak_form:
+            self._weak_form_setup()
+
+    def _weak_form_setup(self):
+        # Assumes self.weak_form = True
+        if self.temporal_grid is None:
+            raise ValueError("self.temporal_grid cannot be None if weak_form=True")
+        else:
+            if len(shape(self.temporal_grid)) != 1:
                 raise ValueError("Temporal grid must be 1D.")
-            self.M = len(temporal_grid)
-            t1 = temporal_grid[0]
-            t2 = temporal_grid[-1]
-            if Ht is not None:
-                if Ht <= 0:
+            self.M = len(self.temporal_grid)
+            t1 = self.temporal_grid[0]
+            t2 = self.temporal_grid[-1]
+            if self.Ht is not None:
+                if self.Ht <= 0:
                     raise ValueError("Ht must be a positive float")
-                if Ht >= (t2 - t1) / 2.0:
+                elif self.Ht >= (t2 - t1) / 2.0:
                     raise ValueError("2 * Ht is larger than the time domain")
-                self.Ht = Ht
             else:
                 Lt = t2 - t1
                 self.Ht = Lt / 20.0
-        if weak_form and (temporal_grid is None):
-            raise ValueError("Weak form requires user to pass a temporal grid.")
 
-        self.weak_form = weak_form
-        self.num_pts_per_domain = num_pts_per_domain
-        self.p = p
-        if weak_form and spatial_grid is not None:
-            if p < 0:
+        if self.spatial_grid is not None:
+            if self.p < 0:
                 raise ValueError("Poly degree of the spatial weights must be > 0")
-            if Hx is not None:
-                if Hx <= 0:
+            if self.Hx is not None:
+                if self.Hx <= 0:
                     raise ValueError("Hx must be a positive float")
-                if self.s_len == 1:
-                    x1 = spatial_grid[0]
-                    x2 = spatial_grid[-1]
-                if self.s_len == 3:
-                    x1 = spatial_grid[0, 0, 0]
-                    x2 = spatial_grid[-1, 0, 0]
-                if self.s_len == 4:
-                    x1 = spatial_grid[0, 0, 0, 0]
-                    x2 = spatial_grid[-1, 0, 0, 0]
-                if Hx >= (x2 - x1) / 2.0:
+                x1, x2 = self._get_spatial_endpoints(dim="x")
+                if self.Hx >= (x2 - x1) / 2.0:
                     raise ValueError("2 * Hx is bigger than the full domain length")
-                self.Hx = Hx
             else:
-                if self.s_len == 1:
-                    x1 = spatial_grid[0]
-                    x2 = spatial_grid[-1]
-                if self.s_len == 3:
-                    x1 = spatial_grid[0, 0, 0]
-                    x2 = spatial_grid[-1, 0, 0]
-                if self.s_len == 4:
-                    x1 = spatial_grid[0, 0, 0, 0]
-                    x2 = spatial_grid[-1, 0, 0, 0]
+                x1, x2 = self._get_spatial_endpoints(dim="x")
                 Lx = x2 - x1
                 self.Hx = Lx / 20.0
-            if Hy is not None and self.s_len >= 3:
-                if Hy <= 0:
+            if self.Hy is not None and self.space_ndim >= 3:
+                if self.Hy <= 0:
                     raise ValueError("Hy must be a positive float")
-                if self.s_len == 3:
-                    y1 = spatial_grid[0, 0, 1]
-                    y2 = spatial_grid[0, -1, 1]
-                if self.s_len == 4:
-                    y1 = spatial_grid[0, 0, 0, 1]
-                    y2 = spatial_grid[0, -1, 0, 1]
-                if Hy >= (y2 - y1) / 2.0:
+                y1, y2 = self._get_spatial_endpoints(dim="y")
+                if self.Hy >= (y2 - y1) / 2.0:
                     raise ValueError("2 * Hy is bigger than the full domain height")
-                self.Hy = Hy
-            elif Hy is None and self.s_len >= 3:
-                if self.s_len == 3:
-                    y1 = spatial_grid[0, 0, 1]
-                    y2 = spatial_grid[0, -1, 1]
-                if self.s_len == 4:
-                    y1 = spatial_grid[0, 0, 0, 1]
-                    y2 = spatial_grid[0, -1, 0, 1]
+            elif self.Hy is None and self.space_ndim >= 3:
+                y1, y2 = self._get_spatial_endpoints(dim="y")
                 Ly = y2 - y1
                 self.Hy = Ly / 20.0
-            if Hz is not None and self.s_len == 4:
-                if Hz <= 0:
+            if self.Hz is not None and self.space_ndim == 4:
+                if self.Hz <= 0:
                     raise ValueError("Hz must be a positive float")
-                z1 = spatial_grid[0, 0, 0, 2]
-                z2 = spatial_grid[0, 0, -1, 2]
-                if Hz >= (z2 - z1) / 2.0:
+                z1, z2 = self._get_spatial_endpoints(dim="z")
+                if self.Hz >= (z2 - z1) / 2.0:
                     raise ValueError("2 * Hz is bigger than the full domain height")
-                self.Hz = Hz
-            elif Hz is None and self.s_len == 4:
-                z1 = spatial_grid[0, 0, 0, 2]
-                z2 = spatial_grid[0, 0, -1, 2]
+            elif self.Hz is None and self.space_ndim == 4:
+                z1, z2 = self._get_spatial_endpoints(dim="z")
                 Lz = z2 - z1
                 self.Hz = Lz / 20.0
-        if weak_form:
-            if K <= 0:
-                raise ValueError("The number of subdomains must be > 0")
-            self.K = K
-            if self.s_len == 0:
-                self.domain_centers = uniform(t1 + self.Ht, t2 - self.Ht, size=self.K)
-                tgrid_k = zeros((self.K, num_pts_per_domain))
-                for k in range(self.K):
-                    t1_k = self.domain_centers[k] - self.Ht
-                    t2_k = self.domain_centers[k] + self.Ht
-                    tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                self.tgrid_k = tgrid_k
-            if self.s_len == 1:
-                x1 = spatial_grid[0]
-                x2 = spatial_grid[-1]
-                domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
-                domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
-                domain_centers = hstack((domain_centers_x, domain_centers_t))
-                self.domain_centers = domain_centers
-                xgrid_k = zeros((self.K, num_pts_per_domain))
-                tgrid_k = zeros((self.K, num_pts_per_domain))
-                X = zeros((self.K, num_pts_per_domain, num_pts_per_domain))
-                t = zeros((self.K, num_pts_per_domain, num_pts_per_domain))
-                for k in range(self.K):
-                    x1_k = self.domain_centers[k, 0] - self.Hx
-                    x2_k = self.domain_centers[k, 0] + self.Hx
-                    t1_k = self.domain_centers[k, -1] - self.Ht
-                    t2_k = self.domain_centers[k, -1] + self.Ht
-                    xgrid_k[k, :] = linspace(x1_k, x2_k, self.num_pts_per_domain)
-                    tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                    X[k, :, :], t[k, :, :] = meshgrid(
-                        xgrid_k[k, :], tgrid_k[k, :], indexing="ij"
-                    )
-                self.xgrid_k = xgrid_k
-                self.tgrid_k = tgrid_k
-                self.X = X
-                self.t = t
-            if self.s_len == 3:
-                x1 = spatial_grid[0, 0, 0]
-                x2 = spatial_grid[-1, 0, 0]
-                y1 = spatial_grid[0, 0, 1]
-                y2 = spatial_grid[0, -1, 1]
-                domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
-                domain_centers_y = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
-                domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
-                domain_centers = hstack((domain_centers_x, domain_centers_y))
-                domain_centers = hstack((domain_centers, domain_centers_t))
-                self.domain_centers = domain_centers
-                xgrid_k = zeros((self.K, num_pts_per_domain))
-                ygrid_k = zeros((self.K, num_pts_per_domain))
-                tgrid_k = zeros((self.K, num_pts_per_domain))
-                X = zeros(
-                    (self.K, num_pts_per_domain, num_pts_per_domain, num_pts_per_domain)
+        if self.K <= 0:
+            raise ValueError("The number of subdomains must be > 0")
+
+        self._set_up_grids()
+
+    def _get_spatial_endpoints(self, dim="x"):
+        if dim == "x":
+            if self.space_ndim == 1:
+                x1 = self.spatial_grid[0]
+                x2 = self.spatial_grid[-1]
+            elif self.space_ndim == 3:
+                x1 = self.spatial_grid[0, 0, 0]
+                x2 = self.spatial_grid[-1, 0, 0]
+            # Assume self.space_ndim == 4
+            else:
+                x1 = self.spatial_grid[0, 0, 0, 0]
+                x2 = self.spatial_grid[-1, 0, 0, 0]
+            return x1, x2
+
+        elif dim == "y":
+            if self.space_ndim == 3:
+                y1 = self.spatial_grid[0, 0, 1]
+                y2 = self.spatial_grid[0, -1, 1]
+            # Assume self.space_ndim == 4
+            else:
+                y1 = self.spatial_grid[0, 0, 0, 1]
+                y2 = self.spatial_grid[0, -1, 0, 1]
+            return y1, y2
+
+        elif dim == "z":
+            z1 = self.spatial_grid[0, 0, 0, 2]
+            z2 = self.spatial_grid[0, 0, -1, 2]
+            return z1, z2
+
+        else:
+            raise ValueError("dim must be one of 'x', 'y', 'z'")
+
+    def _set_up_grids(self):
+        t1 = self.temporal_grid[0]
+        t2 = self.temporal_grid[-1]
+        if self.space_ndim == 0:
+            self.domain_centers = uniform(t1 + self.Ht, t2 - self.Ht, size=self.K)
+            tgrid_k = zeros((self.K, self.num_pts_per_domain))
+            for k in range(self.K):
+                t1_k = self.domain_centers[k] - self.Ht
+                t2_k = self.domain_centers[k] + self.Ht
+                tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
+            self.tgrid_k = tgrid_k
+        if self.space_ndim == 1:
+            x1 = self.spatial_grid[0]
+            x2 = self.spatial_grid[-1]
+            domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
+            domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+            self.domain_centers = hstack((domain_centers_x, domain_centers_t))
+
+            xgrid_k = zeros((self.K, self.num_pts_per_domain))
+            tgrid_k = zeros((self.K, self.num_pts_per_domain))
+            X = zeros((self.K, self.num_pts_per_domain, self.num_pts_per_domain))
+            t = zeros((self.K, self.num_pts_per_domain, self.num_pts_per_domain))
+            for k in range(self.K):
+                x1_k = self.domain_centers[k, 0] - self.Hx
+                x2_k = self.domain_centers[k, 0] + self.Hx
+                t1_k = self.domain_centers[k, -1] - self.Ht
+                t2_k = self.domain_centers[k, -1] + self.Ht
+                xgrid_k[k, :] = linspace(x1_k, x2_k, self.num_pts_per_domain)
+                tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
+                X[k, :, :], t[k, :, :] = meshgrid(
+                    xgrid_k[k, :], tgrid_k[k, :], indexing="ij"
                 )
-                Y = zeros(
-                    (self.K, num_pts_per_domain, num_pts_per_domain, num_pts_per_domain)
+            self.xgrid_k = xgrid_k
+            self.tgrid_k = tgrid_k
+            self.X = X
+            self.t = t
+        if self.space_ndim == 3:
+            x1 = self.spatial_grid[0, 0, 0]
+            x2 = self.spatial_grid[-1, 0, 0]
+            y1 = self.spatial_grid[0, 0, 1]
+            y2 = self.spatial_grid[0, -1, 1]
+            domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
+            domain_centers_y = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
+            domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+            self.domain_centers = hstack(
+                (domain_centers_x, domain_centers_y, domain_centers_t)
+            )
+
+            xgrid_k = zeros((self.K, self.num_pts_per_domain))
+            ygrid_k = zeros_like(xgrid_k)
+            tgrid_k = zeros_like(xgrid_k)
+            X = zeros(
+                (
+                    self.K,
+                    self.num_pts_per_domain,
+                    self.num_pts_per_domain,
+                    self.num_pts_per_domain,
                 )
-                t = zeros(
-                    (self.K, num_pts_per_domain, num_pts_per_domain, num_pts_per_domain)
+            )
+            Y = zeros_like(X)
+            t = zeros_like(X)
+            for k in range(self.K):
+                x1_k = self.domain_centers[k, 0] - self.Hx
+                x2_k = self.domain_centers[k, 0] + self.Hx
+                y1_k = self.domain_centers[k, 1] - self.Hy
+                y2_k = self.domain_centers[k, 1] + self.Hy
+                t1_k = self.domain_centers[k, -1] - self.Ht
+                t2_k = self.domain_centers[k, -1] + self.Ht
+                xgrid_k[k, :] = linspace(x1_k, x2_k, self.num_pts_per_domain)
+                ygrid_k[k, :] = linspace(y1_k, y2_k, self.num_pts_per_domain)
+                tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
+                X[k, :, :, :], Y[k, :, :, :], t[k, :, :, :] = meshgrid(
+                    xgrid_k[k, :],
+                    ygrid_k[k, :],
+                    tgrid_k[k, :],
+                    indexing="ij",
                 )
-                for k in range(self.K):
-                    x1_k = self.domain_centers[k, 0] - self.Hx
-                    x2_k = self.domain_centers[k, 0] + self.Hx
-                    y1_k = self.domain_centers[k, 1] - self.Hy
-                    y2_k = self.domain_centers[k, 1] + self.Hy
-                    t1_k = self.domain_centers[k, -1] - self.Ht
-                    t2_k = self.domain_centers[k, -1] + self.Ht
-                    xgrid_k[k, :] = linspace(x1_k, x2_k, self.num_pts_per_domain)
-                    ygrid_k[k, :] = linspace(y1_k, y2_k, self.num_pts_per_domain)
-                    tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                    X[k, :, :, :], Y[k, :, :, :], t[k, :, :, :] = meshgrid(
-                        xgrid_k[k, :],
-                        ygrid_k[k, :],
-                        tgrid_k[k, :],
-                        indexing="ij",
-                    )
-                self.xgrid_k = xgrid_k
-                self.ygrid_k = ygrid_k
-                self.tgrid_k = tgrid_k
-                self.X = X
-                self.Y = Y
-                self.t = t
-            if self.s_len == 4:
-                x1 = spatial_grid[0, 0, 0, 0]
-                x2 = spatial_grid[-1, 0, 0, 0]
-                y1 = spatial_grid[0, 0, 0, 1]
-                y2 = spatial_grid[0, -1, 0, 1]
-                z1 = spatial_grid[0, 0, 0, 2]
-                z2 = spatial_grid[0, 0, -1, 2]
-                domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
-                domain_centers_y = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
-                domain_centers_z = uniform(z1 + self.Hz, z2 - self.Hz, size=(self.K, 1))
-                domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
-                domain_centers = hstack((domain_centers_x, domain_centers_y))
-                domain_centers = hstack((domain_centers, domain_centers_z))
-                domain_centers = hstack((domain_centers, domain_centers_t))
-                self.domain_centers = domain_centers
-                xgrid_k = zeros((self.K, num_pts_per_domain))
-                ygrid_k = zeros((self.K, num_pts_per_domain))
-                zgrid_k = zeros((self.K, num_pts_per_domain))
-                tgrid_k = zeros((self.K, num_pts_per_domain))
-                X = zeros(
-                    (
-                        self.K,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                    )
+            self.xgrid_k = xgrid_k
+            self.ygrid_k = ygrid_k
+            self.tgrid_k = tgrid_k
+            self.X = X
+            self.Y = Y
+            self.t = t
+        if self.space_ndim == 4:
+            x1 = self.spatial_grid[0, 0, 0, 0]
+            x2 = self.spatial_grid[-1, 0, 0, 0]
+            y1 = self.spatial_grid[0, 0, 0, 1]
+            y2 = self.spatial_grid[0, -1, 0, 1]
+            z1 = self.spatial_grid[0, 0, 0, 2]
+            z2 = self.spatial_grid[0, 0, -1, 2]
+            domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
+            domain_centers_y = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
+            domain_centers_z = uniform(z1 + self.Hz, z2 - self.Hz, size=(self.K, 1))
+            domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+            self.domain_centers = hstack(
+                (domain_centers_x, domain_centers_y, domain_centers_z, domain_centers_t)
+            )
+            xgrid_k = zeros((self.K, self.num_pts_per_domain))
+            ygrid_k = zeros_like(xgrid_k)
+            zgrid_k = zeros_like(xgrid_k)
+            tgrid_k = zeros_like(xgrid_k)
+            X = zeros(
+                (
+                    self.K,
+                    self.num_pts_per_domain,
+                    self.num_pts_per_domain,
+                    self.num_pts_per_domain,
+                    self.num_pts_per_domain,
                 )
-                Y = zeros(
-                    (
-                        self.K,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                    )
+            )
+            Y = zeros_like(X)
+            Z = zeros_like(X)
+            t = zeros_like(X)
+            for k in range(self.K):
+                x1_k = self.domain_centers[k, 0] - self.Hx
+                x2_k = self.domain_centers[k, 0] + self.Hx
+                y1_k = self.domain_centers[k, 1] - self.Hy
+                y2_k = self.domain_centers[k, 1] + self.Hy
+                z1_k = self.domain_centers[k, 2] - self.Hz
+                z2_k = self.domain_centers[k, 2] + self.Hz
+                t1_k = self.domain_centers[k, -1] - self.Ht
+                t2_k = self.domain_centers[k, -1] + self.Ht
+                xgrid_k[k, :] = linspace(x1_k, x2_k, self.num_pts_per_domain)
+                ygrid_k[k, :] = linspace(y1_k, y2_k, self.num_pts_per_domain)
+                zgrid_k[k, :] = linspace(z1_k, z2_k, self.num_pts_per_domain)
+                tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
+                (
+                    X[k, :, :, :, :],
+                    Y[k, :, :, :, :],
+                    Z[k, :, :, :, :],
+                    t[k, :, :, :, :],
+                ) = meshgrid(
+                    xgrid_k[k, :],
+                    ygrid_k[k, :],
+                    zgrid_k[k, :],
+                    tgrid_k[k, :],
+                    indexing="ij",
                 )
-                Z = zeros(
-                    (
-                        self.K,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                    )
-                )
-                t = zeros(
-                    (
-                        self.K,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                        num_pts_per_domain,
-                    )
-                )
-                for k in range(self.K):
-                    x1_k = self.domain_centers[k, 0] - self.Hx
-                    x2_k = self.domain_centers[k, 0] + self.Hx
-                    y1_k = self.domain_centers[k, 1] - self.Hy
-                    y2_k = self.domain_centers[k, 1] + self.Hy
-                    z1_k = self.domain_centers[k, 2] - self.Hz
-                    z2_k = self.domain_centers[k, 2] + self.Hz
-                    t1_k = self.domain_centers[k, -1] - self.Ht
-                    t2_k = self.domain_centers[k, -1] + self.Ht
-                    xgrid_k[k, :] = linspace(x1_k, x2_k, self.num_pts_per_domain)
-                    ygrid_k[k, :] = linspace(y1_k, y2_k, self.num_pts_per_domain)
-                    zgrid_k[k, :] = linspace(z1_k, z2_k, self.num_pts_per_domain)
-                    tgrid_k[k, :] = linspace(t1_k, t2_k, self.num_pts_per_domain)
-                    (
-                        X[k, :, :, :, :],
-                        Y[k, :, :, :, :],
-                        Z[k, :, :, :, :],
-                        t[k, :, :, :, :],
-                    ) = meshgrid(
-                        xgrid_k[k, :],
-                        ygrid_k[k, :],
-                        zgrid_k[k, :],
-                        tgrid_k[k, :],
-                        indexing="ij",
-                        # sparse=True,
-                    )
-                self.xgrid_k = xgrid_k
-                self.ygrid_k = ygrid_k
-                self.zgrid_k = zgrid_k
-                self.tgrid_k = tgrid_k
-                self.X = X
-                self.Y = Y
-                self.Z = Z
-                self.t = t
+            self.xgrid_k = xgrid_k
+            self.ygrid_k = ygrid_k
+            self.zgrid_k = zgrid_k
+            self.tgrid_k = tgrid_k
+            self.X = X
+            self.Y = Y
+            self.Z = Z
+            self.t = t
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
@@ -1091,7 +1078,7 @@ class PDELibrary(BaseFeatureLibrary):
                     self.function_names[i](*[input_features[j] for j in c])
                 )
 
-        if self.s_len != 0:
+        if self.space_ndim != 0:
             # Include derivative (integral) terms
             for k in range(self.num_derivatives):
                 for j in range(n_features):
@@ -1145,7 +1132,7 @@ class PDELibrary(BaseFeatureLibrary):
                 list(self._combinations(n_features, n_args, self.interaction_only))
             )
 
-        if self.s_len != 0:
+        if self.space_ndim != 0:
             # Add the mixed derivative library_terms
             if self.include_interaction:
                 n_output_features += (
@@ -1172,7 +1159,7 @@ class PDELibrary(BaseFeatureLibrary):
             )
         # Add pure derivative (integral) terms
         if self.spatial_grid is not None:
-            if self.s_len == 1:
+            if self.space_ndim == 1:
                 self.function_names = hstack(
                     (
                         self.function_names,
@@ -1184,7 +1171,7 @@ class PDELibrary(BaseFeatureLibrary):
                         ),
                     )
                 )
-            elif self.s_len == 3:
+            elif self.space_ndim == 3:
                 derivative_strings = [
                     "1",
                     "2",
@@ -1214,7 +1201,7 @@ class PDELibrary(BaseFeatureLibrary):
                         ),
                     )
                 )
-            elif self.s_len == 4:
+            elif self.space_ndim == 4:
                 derivative_strings = [
                     "1",
                     "2",
@@ -1294,14 +1281,14 @@ class PDELibrary(BaseFeatureLibrary):
                 raise ValueError("x shape does not match training shape")
 
         if self.spatial_grid is not None:
-            if self.s_len == 1:
+            if self.space_ndim == 1:
                 num_gridpts = (self.spatial_grid).shape[0]
                 num_time = n_samples // num_gridpts
-            if self.s_len == 3:
+            if self.space_ndim == 3:
                 num_gridx = (self.spatial_grid).shape[0]
                 num_gridy = (self.spatial_grid).shape[1]
                 num_time = n_samples // num_gridx // num_gridy
-            if self.s_len == 4:
+            if self.space_ndim == 4:
                 num_gridx = (self.spatial_grid).shape[0]
                 num_gridy = (self.spatial_grid).shape[1]
                 num_gridz = (self.spatial_grid).shape[2]
@@ -1316,7 +1303,7 @@ class PDELibrary(BaseFeatureLibrary):
         if self.include_bias:
             if self.weak_form:
                 func_final = zeros((self.K, 1))
-                if self.s_len == 0:
+                if self.space_ndim == 0:
                     for k in range(self.K):
                         w = self._smooth_ppoly(
                             [],
@@ -1332,7 +1319,7 @@ class PDELibrary(BaseFeatureLibrary):
                             x=self.tgrid_k[k, :],
                             axis=0,
                         )
-                if self.s_len == 1:
+                if self.space_ndim == 1:
                     for k in range(self.K):
                         w = self._smooth_ppoly(
                             reshape(self.xgrid_k[k, :], (self.num_pts_per_domain, 1)),
@@ -1348,7 +1335,7 @@ class PDELibrary(BaseFeatureLibrary):
                             x=self.tgrid_k[k, :],
                             axis=0,
                         )
-                if self.s_len == 3:
+                if self.space_ndim == 3:
                     for k in range(self.K):
                         w = self._smooth_ppoly(
                             transpose((self.xgrid_k[k, :], self.ygrid_k[k, :])),
@@ -1368,7 +1355,7 @@ class PDELibrary(BaseFeatureLibrary):
                             x=self.tgrid_k[k, :],
                             axis=0,
                         )
-                if self.s_len == 4:
+                if self.space_ndim == 4:
                     for k in range(self.K):
                         w = self._smooth_ppoly(
                             transpose(
@@ -1403,7 +1390,7 @@ class PDELibrary(BaseFeatureLibrary):
                 xp[:, library_idx] = ones(n_samples)
             library_idx += 1
         if self.weak_form:
-            if self.s_len == 0:
+            if self.space_ndim == 0:
                 for f in self.functions:
                     for c in self._combinations(
                         n_features,
@@ -1433,7 +1420,7 @@ class PDELibrary(BaseFeatureLibrary):
                             )
                         xp[:, library_idx] = ravel(func_final)
                         library_idx += 1
-            if self.s_len == 1:
+            if self.space_ndim == 1:
                 for f in self.functions:
                     for c in self._combinations(
                         n_features,
@@ -1472,7 +1459,7 @@ class PDELibrary(BaseFeatureLibrary):
                             )
                         xp[:, library_idx] = ravel(func_final)
                         library_idx += 1
-            if self.s_len == 3:
+            if self.space_ndim == 3:
                 for f in self.functions:
                     for c in self._combinations(
                         n_features,
@@ -1526,7 +1513,7 @@ class PDELibrary(BaseFeatureLibrary):
                             )
                         xp[:, library_idx] = ravel(func_final)
                         library_idx += 1
-            if self.s_len == 4:
+            if self.space_ndim == 4:
                 for f in self.functions:
                     for c in self._combinations(
                         n_features,
@@ -1614,7 +1601,7 @@ class PDELibrary(BaseFeatureLibrary):
         # and testing data may have different number of time points
         # Need to compute any derivatives now
         if self.spatial_grid is not None:
-            if self.s_len == 1:
+            if self.space_ndim == 1:
                 u = reshape(x, (num_gridpts, num_time, n_features))
                 u_derivatives = zeros(
                     (num_gridpts, num_time, n_features, self.num_derivatives)
@@ -1667,7 +1654,7 @@ class PDELibrary(BaseFeatureLibrary):
                                     * (-1) ** (j + 1)
                                 )
 
-            elif self.s_len == 3:
+            elif self.space_ndim == 3:
                 u = reshape(x, (num_gridx, num_gridy, num_time, n_features))
                 u_derivatives = self._make_2D_derivatives(u)
                 u_derivatives = asarray(
@@ -1752,7 +1739,7 @@ class PDELibrary(BaseFeatureLibrary):
                                     )
                                     * signs_list[j]
                                 )
-            elif self.s_len == 4:
+            elif self.space_ndim == 4:
                 u = reshape(x, (num_gridx, num_gridy, num_gridz, num_time, n_features))
                 u_derivatives = self._make_3D_derivatives(u)
                 self.u_derivatives = u_derivatives
@@ -1916,7 +1903,7 @@ class PDELibrary(BaseFeatureLibrary):
                 return y
 
             # Add all the pure derivative (integral) terms
-            if self.weak_form and self.s_len >= 1:
+            if self.weak_form and self.space_ndim >= 1:
                 for k in range(self.num_derivatives):
                     for kk in range(n_features):
                         xp[:, library_idx] = identity_function(u_integrals[:, kk, k])
@@ -1929,7 +1916,7 @@ class PDELibrary(BaseFeatureLibrary):
 
             # Add all the mixed derivative/non-derivative terms
             if self.include_interaction:
-                if self.s_len == 1:
+                if self.space_ndim == 1:
                     for d in range(self.num_derivatives):
                         for kk in range(n_features):
                             if self.weak_form:
@@ -2038,7 +2025,7 @@ class PDELibrary(BaseFeatureLibrary):
                                         ) * identity_function(u_derivatives[:, kk, d])
                                         library_idx += 1
 
-                if self.s_len == 3:
+                if self.space_ndim == 3:
                     # Note this is really annoying to integrate these mixed terms
                     # by parts in 2D so we don't do it for now.
                     for d in range(self.num_derivatives):
@@ -2144,7 +2131,7 @@ class PDELibrary(BaseFeatureLibrary):
                                             *[x[:, j] for j in c]
                                         ) * identity_function(u_derivatives[:, kk, d])
                                         library_idx += 1
-                if self.s_len == 4:
+                if self.space_ndim == 4:
                     # Note this is really annoying to integrate these mixed terms
                     # by parts in 3D so we don't do it for now.
                     for d in range(self.num_derivatives):

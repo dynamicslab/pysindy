@@ -291,6 +291,7 @@ class SINDy(BaseEstimator):
             is True.
             The method should take in a list of 2D arrays and return a 2D
             array of the same shape as the arrays in the list.
+            Example: :code:`lambda x: np.median(x, axis=0)`
 
         Returns
         -------

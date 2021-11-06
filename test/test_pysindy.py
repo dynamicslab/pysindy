@@ -642,7 +642,7 @@ def test_ensemble(data_lorenz):
 
 def test_library_ensemble(data_lorenz):
     x, t = data_lorenz
-    library = PolynomialLibrary().fit(x)
+    library = PolynomialLibrary()
     optimizer = SR3()
     model = SINDy(feature_library=library, optimizer=optimizer).fit(
         x, t, library_ensemble=True, n_models=10
@@ -652,7 +652,7 @@ def test_library_ensemble(data_lorenz):
 
 def test_both_ensemble(data_lorenz):
     x, t = data_lorenz
-    library = PolynomialLibrary().fit(x)
+    library = PolynomialLibrary()
     optimizer = SR3()
     model = SINDy(feature_library=library, optimizer=optimizer).fit(
         x, t, ensemble=True, library_ensemble=True, n_models=10

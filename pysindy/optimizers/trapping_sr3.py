@@ -16,6 +16,8 @@ from .sr3 import SR3
 class TrappingSR3(SR3):
     """
     Trapping variant of sparse relaxed regularized regression.
+    This optimizer can be used to identify systems with
+    stable (bounded) solutions.
 
     Attempts to minimize the objective function
 
@@ -37,7 +39,7 @@ class TrappingSR3(SR3):
 
         Champion, Kathleen, et al. "A unified sparse optimization framework
         to learn parsimonious physics-informed models from data."
-        arXiv preprint arXiv:1906.10612 (2019).
+        IEEE Access 8 (2020): 169259-169271.
 
     Parameters
     ----------

@@ -118,212 +118,109 @@ def test_bad_parameters():
         CustomLibrary(
             library_functions=library_functions, function_names=function_names
         )
+
+
+def test_spatiotemporal_library_incorrect_grid_size():
+    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
+    x = np.linspace(0, 10, 10)
+    y = np.linspace(0, 10, 20)
+    X, Y = np.meshgrid(x, y, indexing="ij")
+
     with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
-        x = np.linspace(0, 10, 10)
-        y = np.linspace(0, 10, 20)
-        X, Y = np.meshgrid(x, y, indexing="ij")
         SpatiotemporalLibrary(
             library_functions=library_functions,
             function_names=function_names,
             spatiotemporal_variables=[X, Y],
         )
+
     with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2]
         SpatiotemporalLibrary(
             library_functions=library_functions,
-            spatiotemporal_variables=np.linspace(0, 10, 10),
+            spatiotemporal_variables=x,
         )
+
     with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2]
-        X = np.linspace(0, 10, 10)
-        Y = np.linspace(0, 10, 10)
         SpatiotemporalLibrary(
-            library_functions=library_functions, spatiotemporal_variables=[X, Y]
+            library_functions=library_functions, spatiotemporal_variables=[x, y]
         )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
-        PDELibrary(library_functions=library_functions, function_names=function_names)
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(library_functions=library_functions, derivative_order=-1)
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(library_functions=library_functions, spatial_grid=range(10))
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(library_functions=library_functions, derivative_order=3)
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=range(10),
-            derivative_order=-1,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=np.zeros((10, 10)),
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=np.zeros((10, 10, 10, 10, 10)),
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=range(10),
-            temporal_grid=range(10),
-            weak_form=True,
-            p=-1,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            weak_form=True,
-            spatial_grid=range(10),
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=range(10),
-            temporal_grid=range(10),
-            weak_form=True,
-            Hx=-1,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=range(10),
-            temporal_grid=range(10),
-            weak_form=True,
-            Hx=11,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        x = range(0, 10)
-        y = range(0, 10)
-        X, Y = np.meshgrid(x, y)
-        spatial_grid = np.asarray([X, Y]).T
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=spatial_grid,
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(function_names=[lambda s: str(s), lambda s: "{}^2".format(s)]),
+        dict(derivative_order=1),
+        dict(derivative_order=3),
+        dict(spatial_grid=range(10)),
+        dict(spatial_grid=range(10), derivative_order=-1),
+        dict(spatial_grid=np.zeros((10, 10))),
+        dict(spatial_grid=np.zeros((10, 10, 10, 10, 10))),
+        dict(spatial_grid=np.zeros((10, 10, 10, 10, 10))),
+        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, p=-1),
+        dict(weak_form=True, spatial_grid=range(10)),
+        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hx=-1),
+        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hx=11),
+        dict(
+            spatial_grid=np.asarray(np.meshgrid(range(10), range(10))).T,
             temporal_grid=range(10),
             weak_form=True,
             Hy=-1,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        x = range(0, 10)
-        y = range(0, 10)
-        X, Y = np.meshgrid(x, y)
-        spatial_grid = np.asarray([X, Y]).T
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=range(10),
-            temporal_grid=range(10),
-            weak_form=True,
-            Hy=11,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        x = range(0, 10)
-        y = range(0, 10)
-        z = range(0, 10)
-        X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
-        spatial_grid = np.asarray([X, Y, Z])
-        spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=spatial_grid,
+        ),
+        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hy=11),
+        dict(
+            spatial_grid=np.transpose(
+                np.asarray(np.meshgrid(range(10), range(10), range(10), indexing="ij")),
+                axes=[1, 2, 3, 0],
+            ),
             temporal_grid=range(10),
             weak_form=True,
             Hz=-1,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        x = range(0, 10)
-        y = range(0, 10)
-        z = range(0, 10)
-        X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
-        spatial_grid = np.asarray([X, Y, Z])
-        spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=spatial_grid,
+        ),
+        dict(
+            spatial_grid=np.transpose(
+                np.asarray(np.meshgrid(range(10), range(10), range(10), indexing="ij")),
+                axes=[1, 2, 3, 0],
+            ),
             temporal_grid=range(10),
             weak_form=True,
             Hz=11,
-        )
+        ),
+        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, K=-1),
+        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Ht=11),
+        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Ht=-1),
+        dict(spatial_grid=range(10), temporal_grid=np.zeros((10, 3)), weak_form=True),
+    ],
+)
+def test_pde_library_bad_parameters(params):
+    params["library_functions"] = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
     with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=range(10),
-            temporal_grid=range(10),
-            weak_form=True,
-            K=-1,
-        )
+        PDELibrary(**params)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(
+            library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x],
+            function_names=[lambda s: str(s), lambda s: "{}^2".format(s)],
+        ),
+        dict(
+            x_dot_library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x],
+            function_names=[lambda s: str(s), lambda s: "{}^2".format(s)],
+        ),
+        dict(x_dot_library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x]),
+        dict(),
+        dict(
+            library_functions=[lambda x: x, lambda x: x ** 2],
+            x_dot_library_functions=[lambda x: x, lambda x: x ** 2],
+            function_names=[lambda s: s, lambda s: s + s],
+        ),
+    ],
+)
+def test_sindypi_library_bad_params(params):
     with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=range(10),
-            temporal_grid=range(10),
-            weak_form=True,
-            Ht=11,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=range(10),
-            temporal_grid=range(10),
-            weak_form=True,
-            Ht=-1,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        PDELibrary(
-            library_functions=library_functions,
-            spatial_grid=range(10),
-            temporal_grid=np.zeros((10, 3)),
-            weak_form=True,
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
-        SINDyPILibrary(
-            library_functions=library_functions, function_names=function_names
-        )
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
-        SINDyPILibrary(
-            x_dot_library_functions=library_functions, function_names=function_names
-        )
-    with pytest.raises(ValueError):
-        SINDyPILibrary()
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-        SINDyPILibrary(x_dot_library_functions=library_functions)
-    with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2]
-        function_names = [lambda s: s, lambda s: s + s]
-        SINDyPILibrary(
-            library_functions=library_functions,
-            x_dot_library_functions=library_functions,
-            function_names=function_names,
-        )
+        SINDyPILibrary(**params)
 
 
 @pytest.mark.parametrize(

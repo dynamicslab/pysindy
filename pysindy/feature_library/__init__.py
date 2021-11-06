@@ -5,6 +5,7 @@ from .identity_library import IdentityLibrary
 from .pde_library import PDELibrary
 from .polynomial_library import PolynomialLibrary
 from .sindy_pi_library import SINDyPILibrary
+from .spatiotemporal_library import SpatiotemporalLibrary
 
 __all__ = [
     "ConcatLibrary",
@@ -14,4 +15,5 @@ __all__ = [
     "PolynomialLibrary",
     "PDELibrary",
     "SINDyPILibrary",
+    "SpatiotemporalLibrary",
 ]

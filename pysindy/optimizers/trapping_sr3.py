@@ -180,7 +180,7 @@ class TrappingSR3(SR3):
     >>> import numpy as np
     >>> from scipy.integrate import odeint
     >>> from pysindy import SINDy
-    >>> from pysindy.optimizers import Trapping
+    >>> from pysindy.optimizers import TrappingSR3
     >>> lorenz = lambda z,t : [10*(z[1] - z[0]),
     >>>                        z[0]*(28 - z[2]) - z[1],
     >>>                        z[0]*z[1] - 8/3*z[2]]
@@ -658,7 +658,7 @@ class TrappingSR3(SR3):
                 break
         if k == self.max_iter - 1:
             warnings.warn(
-                "Trapping._reduce did not converge after {} iters.".format(
+                "TrappingSR3._reduce did not converge after {} iters.".format(
                     self.max_iter
                 ),
                 ConvergenceWarning,

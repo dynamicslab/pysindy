@@ -637,8 +637,7 @@ def test_ensemble(data_lorenz):
     model = SINDy(feature_library=library, optimizer=optimizer).fit(
         x, t, ensemble=True, n_models=10, n_subset=len(t) // 2
     )
-
-    np.testing.assert_allclose(np.shape(model.coef_list)[0], 10)
+    assert len(model.coef_list) == 10
 
 
 def test_library_ensemble(data_lorenz):
@@ -648,7 +647,7 @@ def test_library_ensemble(data_lorenz):
     model = SINDy(feature_library=library, optimizer=optimizer).fit(
         x, t, library_ensemble=True, n_models=10
     )
-    np.testing.assert_allclose(np.shape(model.coef_list)[0], 10)
+    assert len(model.coef_list) == 10
 
 
 def test_both_ensemble(data_lorenz):
@@ -658,7 +657,7 @@ def test_both_ensemble(data_lorenz):
     model = SINDy(feature_library=library, optimizer=optimizer).fit(
         x, t, ensemble=True, library_ensemble=True, n_models=10
     )
-    np.testing.assert_allclose(np.shape(model.coef_list)[0], 100)
+    assert len(model.coef_list) == 100
 
 
 @pytest.mark.parametrize(

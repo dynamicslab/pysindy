@@ -105,7 +105,8 @@ def drop_nan_rows(x, x_dot):
 def drop_random_rows(
     x, x_dot, n_subset, replace, tgrid, feature_library, is_pde_library
 ):
-    # Can't choose random n_subset points if data is spatially local
+    # Can't choose random n_subset points if data is from a PDE
+    # (and therefore is spatially local).
     # Need to unfold it and just choose n_subset from the temporal slices
     if is_pde_library:
         spatial_grid = feature_library.spatial_grid
@@ -180,10 +181,11 @@ def drop_random_rows(
             elif feature_library.weak_form:
                 x_dot_new = x_dot
                 feature_library.temporal_grid = tgrid[rand_inds]
-    # Choose random n_subset points to use
-    rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))
-    x_new = x[rand_inds, :]
-    x_dot_new = x_dot[rand_inds, :]
+    else:
+        # Choose random n_subset points to use
+        rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))
+        x_new = x[rand_inds, :]
+        x_dot_new = x_dot[rand_inds, :]
     return x_new, x_dot_new
 
 

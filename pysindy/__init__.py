@@ -24,6 +24,7 @@ from .feature_library import IdentityLibrary
 from .feature_library import PolynomialLibrary
 from .feature_library import PDELibrary
 from .feature_library import SINDyPILibrary
+from .feature_library import SpatiotemporalLibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import FROLS

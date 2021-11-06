@@ -1,6 +1,7 @@
 """
 Unit tests for optimizers.
 """
+import cvxpy as cp
 import numpy as np
 import pytest
 from numpy.linalg import norm
@@ -29,6 +30,9 @@ from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
 from pysindy.utils.odes import lorenz
+
+# ignore cvxpy warnings
+cp.error.disable_warnings()
 
 # For reproducibility
 np.random.seed(100)
@@ -345,9 +349,7 @@ def test_trapping_bad_tensors(params):
         dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
     ],
 )
-def test_sr3_variants_quadratic_library(params):
-    PL = np.ones((3, 3, 3, 9))
-    PQ = np.ones((3, 3, 3, 3, 9))
+def test_sr3_quadratic_library(params):
     x = np.random.standard_normal((100, 3))
     library_functions = [
         lambda x: x,
@@ -369,11 +371,88 @@ def test_sr3_variants_quadratic_library(params):
     model.fit(x)
     check_is_fitted(model)
 
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(thresholder="l1", threshold=0),
+        dict(thresholder="l1", threshold=1e-5),
+        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
+        dict(thresholder="l2", threshold=0),
+        dict(thresholder="l2", threshold=1e-5),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
+    ],
+)
+def test_constrained_sr3_quadratic_library(params):
+    x = np.random.standard_normal((100, 3))
+    library_functions = [
+        lambda x: x,
+        lambda x, y: x * y,
+        lambda x: x ** 2,
+    ]
+    library_function_names = [
+        lambda x: str(x),
+        lambda x, y: "{} * {}".format(x, y),
+        lambda x: "{}^2".format(x),
+    ]
+    sindy_library = CustomLibrary(
+        library_functions=library_functions, function_names=library_function_names
+    )
+
     # Test constrained SR3 without constraints
     opt = ConstrainedSR3(**params)
     model = SINDy(optimizer=opt, feature_library=sindy_library)
     model.fit(x)
     check_is_fitted(model)
+
+    # rerun with identity constraints
+    r = 3
+    N = 9
+    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
+    constraint_rhs = np.zeros(p)
+    constraint_matrix = np.eye(p, r * N)
+
+    # Test constrained SR3 with constraints
+    opt = ConstrainedSR3(
+        constraint_lhs=constraint_matrix, constraint_rhs=constraint_rhs, **params
+    )
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    check_is_fitted(model)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(thresholder="l1", threshold=0),
+        dict(thresholder="l1", threshold=1e-5),
+        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
+        dict(thresholder="l2", threshold=0),
+        dict(thresholder="l2", threshold=1e-5),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
+    ],
+)
+def test_trapping_sr3_quadratic_library(params):
+    PL = np.ones((3, 3, 3, 9))
+    PQ = np.ones((3, 3, 3, 3, 9))
+    x = np.random.standard_normal((100, 3))
+    library_functions = [
+        lambda x: x,
+        lambda x, y: x * y,
+        lambda x: x ** 2,
+    ]
+    library_function_names = [
+        lambda x: str(x),
+        lambda x, y: "{} * {}".format(x, y),
+        lambda x: "{}^2".format(x),
+    ]
+    sindy_library = CustomLibrary(
+        library_functions=library_functions, function_names=library_function_names
+    )
 
     # Test trapping SR3 without constraints
     opt = TrappingSR3(PL=PL, PQ=PQ, **params)
@@ -405,14 +484,6 @@ def test_sr3_variants_quadratic_library(params):
     p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
     constraint_rhs = np.zeros(p)
     constraint_matrix = np.eye(p, r * N)
-
-    # Test constrained SR3 with constraints
-    opt = ConstrainedSR3(
-        constraint_lhs=constraint_matrix, constraint_rhs=constraint_rhs, **params
-    )
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    check_is_fitted(model)
 
     # Test trapping SR3 with constraints
     opt = TrappingSR3(
@@ -779,7 +850,45 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
         dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 10))),
     ],
 )
-def test_inequality_constraints(params):
+def test_constrained_inequality_constraints(params):
+    t = np.arange(0, 40, 0.01)
+    x = odeint(lorenz, [-8, 8, 27], t)
+    constraint_rhs = np.array([-10.0, 28.0])
+    constraint_matrix = np.zeros((2, 30))
+    constraint_matrix[0, 1] = 1.0
+    constraint_matrix[1, 11] = 1.0
+    feature_names = ["x", "y", "z"]
+
+    poly_lib = PolynomialLibrary(degree=2)
+    # Run constrained SR3
+    opt = ConstrainedSR3(
+        constraint_lhs=constraint_matrix,
+        constraint_rhs=constraint_rhs,
+        constraint_order="feature",
+        inequality_constraints=True,
+        **params,
+    )
+    model = SINDy(
+        optimizer=opt,
+        feature_library=poly_lib,
+        differentiation_method=FiniteDifference(drop_endpoints=True),
+        feature_names=feature_names,
+    )
+    model.fit(x, t=t[1] - t[0])
+    # This sometimes fails with L2 norm so just check the model is fitted
+    check_is_fitted(model)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(thresholder="l1", threshold=0.0005),
+        dict(thresholder="weighted_l1", thresholds=0.0005 * np.ones((3, 10))),
+        dict(thresholder="l2", threshold=0.0005),
+        dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 10))),
+    ],
+)
+def test_trapping_inequality_constraints(params):
     t = np.arange(0, 40, 0.01)
     x = odeint(lorenz, [-8, 8, 27], t)
     constraint_rhs = np.array([-10.0, 28.0])
@@ -831,24 +940,6 @@ def test_inequality_constraints(params):
         constraint_rhs,
         atol=1e-3,
     )
-
-    # Run constrained SR3
-    opt = ConstrainedSR3(
-        constraint_lhs=constraint_matrix,
-        constraint_rhs=constraint_rhs,
-        constraint_order="feature",
-        inequality_constraints=True,
-        **params,
-    )
-    model = SINDy(
-        optimizer=opt,
-        feature_library=poly_lib,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
-        feature_names=feature_names,
-    )
-    model.fit(x, t=t[1] - t[0])
-    # This sometimes fails with L2 norm so just check the model is fitted
-    check_is_fitted(model)
 
 
 def test_inequality_constraints_reqs():

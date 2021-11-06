@@ -9,6 +9,7 @@ from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import SINDyPILibrary
+from pysindy.feature_library import SpatiotemporalLibrary
 from pysindy.utils.odes import lorenz
 from pysindy.utils.odes import lorenz_control
 
@@ -151,6 +152,30 @@ def data_custom_library():
 
     return CustomLibrary(
         library_functions=library_functions, function_names=function_names
+    )
+
+
+@pytest.fixture
+def data_spatiotemporal_library():
+    library_functions = [
+        lambda x: x,
+        lambda x: x ** 2,
+        lambda x: 0 * x,
+        lambda x, y: x * y,
+    ]
+    function_names = [
+        lambda s: str(s),
+        lambda s: str(s) + "^2",
+        lambda s: "0",
+        lambda s, t: str(s) + " " + str(t),
+    ]
+    x = np.linspace(0, 10, 10)
+    y = np.linspace(0, 10, 50)
+    X, Y = np.meshgrid(x, y, indexing="ij")
+    return SpatiotemporalLibrary(
+        library_functions=library_functions,
+        function_names=function_names,
+        spatiotemporal_variables=[X, Y],
     )
 
 

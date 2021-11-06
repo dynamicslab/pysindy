@@ -45,6 +45,10 @@ class PDELibrary(BaseFeatureLibrary):
     spatial_grid : np.ndarray, optional (default None)
         The spatial grid for computing derivatives
 
+    temporal_grid : 1D np.ndarray, optional (default None)
+        The temporal grid for integrating the LHS of the SINDy equation
+        when doing a weak-form version of SINDy.
+
     function_names : list of functions, optional (default None)
         List of functions used to generate feature names for each library
         function. Each name function must take a string input (representing

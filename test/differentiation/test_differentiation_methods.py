@@ -86,6 +86,9 @@ def test_centered_difference_2d_uniform_time(data_derivative_2d):
     np.testing.assert_allclose(centered_difference(x, t), x_dot)
 
 
+# Todo: Update with a real test of the differentiation. Right now it
+# really just checks that is was able to do a calculation.
+# Same goes for atol=4 in example below this.
 def test_centered_difference_2d_nonuniform_time(data_derivative_2d):
     x, x_dot = data_derivative_2d
     t = np.linspace(0, x.shape[0] - 1, x.shape[0])

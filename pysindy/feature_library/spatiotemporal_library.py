@@ -126,11 +126,13 @@ class SpatiotemporalLibrary(BaseFeatureLibrary):
                 "spatiotemporal_variables must be a Python list of the "
                 "spatial and (optionally) temporal coordinates. "
             )
-        if len(spatiotemporal_variables) != len(shape(spatiotemporal_variables[0])):
+        if not all(
+            len(spatiotemporal_variables) == sv.ndim for sv in spatiotemporal_variables
+        ):
             raise ValueError(
                 "spatiotemporal_variables must be a Python list "
-                "[x, y, z, ... , t] where x has dimensions "
-                "(nx, ny, nz, ..., nt) and same for the other variables."
+                "[x, y, z, ... , t] where x, y, z, ..., t all have dimensions "
+                "(nx, ny, nz, ..., nt)."
             )
         self.variables = spatiotemporal_variables
         self.n_features = len(spatiotemporal_variables)
@@ -204,10 +206,9 @@ class SpatiotemporalLibrary(BaseFeatureLibrary):
         n_samples, _ = x.shape
         n_features = self.n_features
         x = zeros((n_samples, n_features))
-        var_shape = shape(self.variables[0])
-        flattened_shape = var_shape[0]
-        for i in range(1, len(var_shape)):
-            flattened_shape *= var_shape[i]
+        flattened_shape = 1
+        for n in shape(self.variables[0]):
+            flattened_shape *= n
         if flattened_shape != n_samples:
             remainder = n_samples // flattened_shape
         for i in range(len(self.variables)):
@@ -265,10 +266,9 @@ class SpatiotemporalLibrary(BaseFeatureLibrary):
         n_samples, _ = x.shape
         n_features = self.n_features
         x = zeros((n_samples, n_features))
-        var_shape = shape(self.variables[0])
-        flattened_shape = var_shape[0]
-        for i in range(1, len(var_shape)):
-            flattened_shape *= var_shape[i]
+        flattened_shape = 1
+        for n in shape(self.variables[0]):
+            flattened_shape *= n
         if flattened_shape != n_samples:
             remainder = n_samples // flattened_shape
         for i in range(len(self.variables)):

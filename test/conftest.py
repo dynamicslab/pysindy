@@ -106,6 +106,73 @@ def data_discrete_time_multiple_trajectories():
 
 
 @pytest.fixture
+def data_1d_random_pde():
+    nx = 8
+    t = np.linspace(0, 10, nx)
+    dt = t[1] - t[0]
+    x = np.linspace(0, 10, nx)
+    u = np.random.randn(nx, nx, 1)
+    u_dot = np.zeros_like(u)
+    for i in range(len(x)):
+        u_dot[i, :, :] = FiniteDifference()._differentiate(u[i, :, :], t=dt)
+    u_flattened = np.reshape(u, (nx * nx, 1))
+    u_dot_flattened = np.reshape(u_dot, (nx * nx, 1))
+
+    return x, u_flattened, u_dot_flattened
+
+
+@pytest.fixture
+def data_2d_random_pde():
+    nx = 8
+    ny = 8
+    t = np.linspace(0, 10, nx)
+    dt = t[1] - t[0]
+    x = np.linspace(0, 10, nx)
+    y = np.linspace(0, 10, ny)
+    X, Y = np.meshgrid(x, y)
+    spatial_grid = np.asarray([X, Y]).T
+    u = np.random.randn(nx, ny, nx, 2)
+    u_dot = np.zeros(u.shape)
+    for i in range(nx):
+        for j in range(ny):
+            u_dot[i, j, :, :] = FiniteDifference()._differentiate(u[i, j, :, :], t=dt)
+    u_flattened = np.reshape(u, (nx * ny * nx, 2))
+    u_dot_flattened = np.reshape(u_dot, (nx * ny * nx, 2))
+
+    return spatial_grid, u_flattened, u_dot_flattened
+
+
+@pytest.fixture
+def data_3d_random_pde():
+    nx = 8
+    t = np.linspace(0, 10, nx)
+    dt = t[1] - t[0]
+    x = np.linspace(0, 10, nx)
+    y = np.linspace(0, 10, nx)
+    z = np.linspace(0, 10, nx)
+    (
+        X,
+        Y,
+        Z,
+    ) = np.meshgrid(x, y, z, indexing="ij")
+    spatial_grid = np.asarray([X, Y, Z])
+    spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
+    n = len(x)
+    u = np.random.randn(n, n, n, n, 2)
+    u_dot = np.zeros(u.shape)
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                u_dot[i, j, k, :, :] = FiniteDifference()._differentiate(
+                    u[i, j, k, :, :], t=dt
+                )
+    u_flattened = np.reshape(u, (n ** 4, 2))
+    u_dot_flattened = np.reshape(u_dot, (n ** 4, 2))
+
+    return spatial_grid, u_flattened, u_dot_flattened
+
+
+@pytest.fixture
 def data_derivative_1d():
     x = 2 * np.linspace(1, 100, 100)
     x_dot = 2 * np.ones(100).reshape(-1, 1)

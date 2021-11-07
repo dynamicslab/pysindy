@@ -400,18 +400,23 @@ def test_not_fitted(data_lorenz, library):
         PolynomialLibrary(),
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),
+        pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_spatiotemporal_library"),
+        pytest.lazy_fixture("data_ode_library"),
+        pytest.lazy_fixture("data_pde_library"),
+        pytest.lazy_fixture("data_sindypi_library"),
     ],
 )
 def test_library_ensemble(data_lorenz, library):
     x, t = data_lorenz
     library.fit(x)
-    N = library.n_output_features_
+    n_output_features = library.n_output_features_
     library.library_ensemble = True
     xp = library.transform(x)
-    assert N == xp.shape[1] + 1
+    assert n_output_features == xp.shape[1] + 1
     library.ensemble_indices = [0, 1]
     xp = library.transform(x)
-    assert N == xp.shape[1] + 2
+    assert n_output_features == xp.shape[1] + 2
 
 
 @pytest.mark.parametrize(
@@ -422,56 +427,64 @@ def test_library_ensemble(data_lorenz, library):
         FourierLibrary,
     ],
 )
-def test_bad_library_ensemble(data_lorenz, library):
-    x, t = data_lorenz
+def test_bad_library_ensemble(library):
     with pytest.raises(ValueError):
         library = library(ensemble_indices=-1)
 
 
 # Try various size spatiotemporal inputs for spatiotemporal library
-def test_spatiotemporal_shapes(data_lorenz):
-    data, t = data_lorenz
-    x = np.linspace(0, 10, 10)
-    y = np.linspace(0, 10, 50)
-    X, Y = np.meshgrid(x, y, indexing="ij")
-    library_functions = [lambda x: x, lambda x: x ** 2]
-    library = SpatiotemporalLibrary(
-        library_functions=library_functions, spatiotemporal_variables=[X, Y]
-    )
-    library.fit_transform(data)
-    check_is_fitted(library)
-    x = np.linspace(0, 10, 5)
-    y = np.linspace(0, 10, 10)
-    z = np.linspace(0, 10, 10)
-    X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
-    library = SpatiotemporalLibrary(
-        library_functions=library_functions, spatiotemporal_variables=[X, Y, Z]
-    )
-    library.fit_transform(data)
-    check_is_fitted(library)
-    x = np.linspace(0, 10, 5)
-    y = np.linspace(0, 10, 5)
-    z = np.linspace(0, 10, 5)
-    t = np.linspace(0, 10, 4)
-    X, Y, Z, T = np.meshgrid(x, y, z, t, indexing="ij")
-    library = SpatiotemporalLibrary(
-        library_functions=library_functions, spatiotemporal_variables=[X, Y, Z, T]
-    )
-    library.fit_transform(data)
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(
+            spatiotemporal_variables=np.meshgrid(
+                np.linspace(0, 10, 10), np.linspace(0, 10, 50), indexing="ij"
+            )
+        ),
+        dict(
+            spatiotemporal_variables=np.meshgrid(
+                np.linspace(0, 10, 5),
+                np.linspace(0, 10, 10),
+                np.linspace(0, 10, 10),
+                indexing="ij",
+            )
+        ),
+        dict(
+            spatiotemporal_variables=np.meshgrid(
+                np.linspace(0, 10, 5),
+                np.linspace(0, 10, 5),
+                np.linspace(0, 10, 5),
+                np.linspace(0, 10, 4),
+                indexing="ij",
+            )
+        ),
+    ],
+)
+def test_spatiotemporal_shapes(data_lorenz, params):
+    data, _ = data_lorenz
+    params["library_functions"] = [lambda x: x, lambda x: x ** 2]
+    library = SpatiotemporalLibrary(**params)
+    library.fit(data)
     check_is_fitted(library)
 
 
-def test_1D_pdes():
-    t = np.linspace(0, 10, 8)
-    dt = t[1] - t[0]
-    x = np.linspace(0, 10, 8)
-    nx = len(x)
-    u = np.random.randn(nx, len(t), 1)
-    u_dot = np.zeros(u.shape)
-    for i in range(len(x)):
-        u_dot[i, :, :] = FiniteDifference()._differentiate(u[i, :, :], t=dt)
-    u_flattened = np.reshape(u, (nx * len(t), 1))
-    u_dot_flattened = np.reshape(u_dot, (nx * len(t), 1))
+# Helper function for testing PDE libraries
+def pde_library_helper(library, u_flattened, u_dot_flattened, coef_first_dim):
+    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
+    model = SINDy(optimizer=opt, feature_library=library)
+    model.fit(u_flattened, x_dot=u_dot_flattened)
+    assert np.any(opt.coef_ != 0.0)
+
+    n_features = len(model.get_feature_names())
+    model.fit(u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10)
+    assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
+
+    model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
+    assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
+
+
+def test_1D_pdes(data_1d_random_pde):
+    spatial_grid, u_flattened, u_dot_flattened = data_1d_random_pde
 
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
@@ -479,32 +492,15 @@ def test_1D_pdes():
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=4,
-        spatial_grid=x,
+        spatial_grid=spatial_grid,
         include_bias=True,
         is_uniform=True,
     )
-    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
-    model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u_flattened, x_dot=u_dot_flattened)
-    assert np.any(opt.coef_ != 0.0)
-    n_features = len(model.get_feature_names())
-    model.fit(u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 1, n_features)
-    model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 1, n_features)
+    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 1)
 
 
-def test_1D_pdelibrary_plus_spatiotemporal_library():
-    t = np.linspace(0, 10, 8)
-    dt = t[1] - t[0]
-    x = np.linspace(0, 10, 8)
-    nx = len(x)
-    u = np.random.randn(nx, len(t), 1)
-    u_dot = np.zeros(u.shape)
-    for i in range(len(x)):
-        u_dot[i, :, :] = FiniteDifference()._differentiate(u[i, :, :], t=dt)
-    u_flattened = np.reshape(u, (nx * len(t), 1))
-    u_dot_flattened = np.reshape(u_dot, (nx * len(t), 1))
+def test_1D_pdelibrary_plus_spatiotemporal_library(data_1d_random_pde):
+    x, u_flattened, u_dot_flattened = data_1d_random_pde
 
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
@@ -523,33 +519,11 @@ def test_1D_pdelibrary_plus_spatiotemporal_library():
         include_bias=False,
     )
     sindy_lib = pde_lib + spatiotemporal_lib
-    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
-    model = SINDy(optimizer=opt, feature_library=sindy_lib)
-    model.fit(u_flattened, x_dot=u_dot_flattened)
-    assert np.any(opt.coef_ != 0.0)
-    n_features = len(model.get_feature_names())
-    model.fit(u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 1, n_features)
-    model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 1, n_features)
+    pde_library_helper(sindy_lib, u_flattened, u_dot_flattened, 1)
 
 
-def test_2D_pdes():
-    t = np.linspace(0, 10, 8)
-    dt = t[1] - t[0]
-    x = np.linspace(0, 10, 8)
-    y = np.linspace(0, 10, 8)
-    X, Y = np.meshgrid(x, y)
-    spatial_grid = np.asarray([X, Y]).T
-    nx = len(x)
-    ny = len(y)
-    u = np.random.randn(nx, ny, len(t), 2)
-    u_dot = np.zeros(u.shape)
-    for i in range(nx):
-        for j in range(ny):
-            u_dot[i, j, :, :] = FiniteDifference()._differentiate(u[i, j, :, :], t=dt)
-    u_flattened = np.reshape(u, (nx * ny * len(t), 2))
-    u_dot_flattened = np.reshape(u_dot, (nx * ny * len(t), 2))
+def test_2D_pdes(data_2d_random_pde):
+    spatial_grid, u_flattened, u_dot_flattened = data_2d_random_pde
 
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
@@ -561,43 +535,11 @@ def test_2D_pdes():
         include_bias=True,
         is_uniform=True,
     )
-    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
-    model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u_flattened, x_dot=u_dot_flattened)
-    assert np.any(opt.coef_ != 0.0)
-    n_features = len(model.get_feature_names())
-    model.fit(
-        u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10, n_subset=20
-    )
-    assert np.shape(model.coef_list) == (10, 2, n_features)
-    model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 2, n_features)
+    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 2)
 
 
-def test_3D_pdes():
-    t = np.linspace(0, 10, 8)
-    dt = t[1] - t[0]
-    x = np.linspace(0, 10, 8)
-    y = np.linspace(0, 10, 8)
-    z = np.linspace(0, 10, 8)
-    (
-        X,
-        Y,
-        Z,
-    ) = np.meshgrid(x, y, z, indexing="ij")
-    spatial_grid = np.asarray([X, Y, Z])
-    spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
-    n = len(x)
-    u = np.random.randn(n, n, n, n, 2)
-    u_dot = np.zeros(u.shape)
-    for i in range(n):
-        for j in range(n):
-            for k in range(n):
-                u_dot[i, j, k, :, :] = FiniteDifference()._differentiate(
-                    u[i, j, k, :, :], t=dt
-                )
-    u_flattened = np.reshape(u, (n ** 4, 2))
-    u_dot_flattened = np.reshape(u_dot, (n ** 4, 2))
+def test_3D_pdes(data_3d_random_pde):
+    spatial_grid, u_flattened, u_dot_flattened = data_3d_random_pde
 
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
@@ -609,17 +551,7 @@ def test_3D_pdes():
         include_bias=True,
         is_uniform=True,
     )
-    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
-    model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u_flattened, x_dot=u_dot_flattened)
-    assert np.any(opt.coef_ != 0.0)
-    n_features = len(model.get_feature_names())
-    model.fit(
-        u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10, n_subset=20
-    )
-    assert np.shape(model.coef_list) == (10, 2, n_features)
-    model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 2, n_features)
+    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 2)
 
 
 def test_1D_weak_pdes():
@@ -672,15 +604,7 @@ def test_1D_weak_pdes():
             )
         )
 
-    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
-    model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u_flattened, x_dot=u_dot_integral)
-    assert np.any(opt.coef_ != 0.0)
-    n_features = len(model.get_feature_names())
-    model.fit(u_flattened, x_dot=u_dot_integral, ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 1, n_features)
-    model.fit(u_flattened, x_dot=u_dot_integral, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 1, n_features)
+    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 1)
 
 
 def test_2D_weak_pdes():
@@ -746,15 +670,7 @@ def test_2D_weak_pdes():
             )
         )
 
-    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
-    model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u_flattened, x_dot=u_dot_integral)
-    assert np.any(opt.coef_ != 0.0)
-    n_features = len(model.get_feature_names())
-    model.fit(u_flattened, x_dot=u_dot_integral, ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 1, n_features)
-    model.fit(u_flattened, x_dot=u_dot_integral, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 1, n_features)
+    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 1)
 
 
 def test_3D_weak_pdes():
@@ -851,15 +767,7 @@ def test_3D_weak_pdes():
                 )
             )
 
-    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
-    model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u_flattened, x_dot=u_dot_integral)
-    assert np.any(opt.coef_ != 0.0)
-    n_features = len(model.get_feature_names())
-    model.fit(u_flattened, x_dot=u_dot_integral, ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 2, n_features)
-    model.fit(u_flattened, x_dot=u_dot_integral, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, 2, n_features)
+    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 2)
 
 
 def test_sindypi_library(data_lorenz):
@@ -892,6 +800,7 @@ def test_sindypi_library(data_lorenz):
     )
     model.fit(x, t=t)
     assert np.shape(sindy_opt.coef_) == (40, 40)
+
     sindy_opt = SINDyPI(threshold=0.1, thresholder="l1", model_subset=[3])
     model = SINDy(
         optimizer=sindy_opt,

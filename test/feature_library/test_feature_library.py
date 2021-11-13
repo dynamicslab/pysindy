@@ -22,6 +22,7 @@ from pysindy.feature_library import IdentityLibrary
 from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
+from pysindy.feature_library import TensoredLibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import STLSQ
@@ -338,6 +339,13 @@ def test_concat():
     poly_lib = PolynomialLibrary()
     concat_lib = ident_lib + poly_lib
     assert isinstance(concat_lib, ConcatLibrary)
+
+
+def test_tensored():
+    ident_lib = IdentityLibrary()
+    poly_lib = PolynomialLibrary()
+    tensored_lib = ident_lib * poly_lib
+    assert isinstance(tensored_lib, TensoredLibrary)
 
 
 @pytest.mark.parametrize(

@@ -7,9 +7,11 @@ from scipy.integrate import odeint
 
 from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import CustomLibrary
+from pysindy.feature_library import FourierLibrary
+from pysindy.feature_library import GeneralizedLibrary
 from pysindy.feature_library import PDELibrary
+from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
-from pysindy.feature_library import SpatiotemporalLibrary
 from pysindy.utils.odes import lorenz
 from pysindy.utils.odes import lorenz_control
 
@@ -223,26 +225,14 @@ def data_custom_library():
 
 
 @pytest.fixture
-def data_spatiotemporal_library():
-    library_functions = [
-        lambda x: x,
-        lambda x: x ** 2,
-        lambda x: 0 * x,
-        lambda x, y: x * y,
-    ]
-    function_names = [
-        lambda s: str(s),
-        lambda s: str(s) + "^2",
-        lambda s: "0",
-        lambda s, t: str(s) + " " + str(t),
-    ]
-    x = np.linspace(0, 10, 10)
-    y = np.linspace(0, 10, 50)
-    X, Y = np.meshgrid(x, y, indexing="ij")
-    return SpatiotemporalLibrary(
-        library_functions=library_functions,
-        function_names=function_names,
-        spatiotemporal_variables=[X, Y],
+def data_generalized_library():
+    tensor_array = [[1, 1]]
+    inputs_temp = np.tile([0, 1, 2], 2)
+    inputs_per_library = np.reshape(inputs_temp, (2, 3))
+    return GeneralizedLibrary(
+        [PolynomialLibrary(), FourierLibrary()],
+        tensor_array=tensor_array,
+        inputs_per_library=inputs_per_library,
     )
 
 

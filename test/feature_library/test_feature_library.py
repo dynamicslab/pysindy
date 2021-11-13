@@ -17,11 +17,11 @@ from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import ConcatLibrary
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
+from pysindy.feature_library import GeneralizedLibrary
 from pysindy.feature_library import IdentityLibrary
 from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
-from pysindy.feature_library import SpatiotemporalLibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import STLSQ
@@ -55,32 +55,6 @@ def test_form_pde_library():
 
     # Test without user-supplied function names
     PDELibrary(library_functions=library_functions, function_names=None)
-
-
-def test_form_spatiotemporal_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-    function_names = [
-        lambda s: str(s),
-        lambda s: "{}^2".format(s),
-        lambda s: "0",
-    ]
-    x = np.linspace(0, 10, 10)
-    y = np.linspace(0, 10, 20)
-    X, Y = np.meshgrid(x, y, indexing="ij")
-
-    # Test with user-supplied function names
-    SpatiotemporalLibrary(
-        library_functions=library_functions,
-        function_names=function_names,
-        spatiotemporal_variables=[X, Y],
-    )
-
-    # Test without user-supplied function names
-    SpatiotemporalLibrary(
-        library_functions=library_functions,
-        function_names=None,
-        spatiotemporal_variables=[X, Y],
-    )
 
 
 def test_form_sindy_pi_library():
@@ -117,32 +91,6 @@ def test_bad_parameters():
         function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
         CustomLibrary(
             library_functions=library_functions, function_names=function_names
-        )
-
-
-def test_spatiotemporal_library_incorrect_grid_size():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
-    function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
-    x = np.linspace(0, 10, 10)
-    y = np.linspace(0, 10, 20)
-    X, Y = np.meshgrid(x, y, indexing="ij")
-
-    with pytest.raises(ValueError):
-        SpatiotemporalLibrary(
-            library_functions=library_functions,
-            function_names=function_names,
-            spatiotemporal_variables=[X, Y],
-        )
-
-    with pytest.raises(ValueError):
-        SpatiotemporalLibrary(
-            library_functions=library_functions,
-            spatiotemporal_variables=x,
-        )
-
-    with pytest.raises(ValueError):
-        SpatiotemporalLibrary(
-            library_functions=library_functions, spatiotemporal_variables=[x, y]
         )
 
 
@@ -201,6 +149,25 @@ def test_pde_library_bad_parameters(params):
 @pytest.mark.parametrize(
     "params",
     [
+        dict(tensor_array=[[0, 0]]),
+        dict(tensor_array=[[0, 1]]),
+        dict(tensor_array=[[1, -1]]),
+        dict(tensor_array=[[2, 1]]),
+        dict(tensor_array=[1, 1]),
+        dict(tensor_array=[[1, 1, 1]]),
+        dict(inputs_per_library=np.array([[0, 1]])),
+        dict(inputs_per_library=np.array([[0, 1, 2], [0, 1, 2], [0, 1, 2]])),
+        dict(inputs_per_library=np.array([[0, 1, 2], [0, 1, -1]])),
+    ],
+)
+def test_generalized_library_bad_parameters(params):
+    with pytest.raises(ValueError):
+        GeneralizedLibrary([PolynomialLibrary, PolynomialLibrary], **params)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
         dict(
             library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x],
             function_names=[lambda s: str(s), lambda s: "{}^2".format(s)],
@@ -231,7 +198,7 @@ def test_sindypi_library_bad_params(params):
         FourierLibrary(),
         IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_spatiotemporal_library"),
+        pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
         pytest.lazy_fixture("data_pde_library"),
         pytest.lazy_fixture("data_sindypi_library"),
@@ -251,6 +218,7 @@ def test_fit_transform(data_lorenz, library):
         FourierLibrary(),
         IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
         pytest.lazy_fixture("data_pde_library"),
         pytest.lazy_fixture("data_sindypi_library"),
@@ -271,7 +239,7 @@ def test_change_in_data_shape(data_lorenz, library):
         (IdentityLibrary() + PolynomialLibrary(), 13),
         (FourierLibrary(), 6),
         (pytest.lazy_fixture("data_custom_library"), 12),
-        (pytest.lazy_fixture("data_spatiotemporal_library"), 7),
+        (pytest.lazy_fixture("data_generalized_library"), 76),
         (pytest.lazy_fixture("data_ode_library"), 9),
         (pytest.lazy_fixture("data_pde_library"), 129),
         (pytest.lazy_fixture("data_sindypi_library"), 39),
@@ -293,7 +261,7 @@ def test_output_shape(data_lorenz, library, shape):
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_spatiotemporal_library"),
+        pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
         pytest.lazy_fixture("data_pde_library"),
         pytest.lazy_fixture("data_sindypi_library"),
@@ -380,7 +348,7 @@ def test_concat():
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_spatiotemporal_library"),
+        pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
         pytest.lazy_fixture("data_pde_library"),
         pytest.lazy_fixture("data_sindypi_library"),
@@ -401,7 +369,7 @@ def test_not_fitted(data_lorenz, library):
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_spatiotemporal_library"),
+        pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
         pytest.lazy_fixture("data_pde_library"),
         pytest.lazy_fixture("data_sindypi_library"),
@@ -432,40 +400,71 @@ def test_bad_library_ensemble(library):
         library = library(ensemble_indices=-1)
 
 
-# Try various size spatiotemporal inputs for spatiotemporal library
-@pytest.mark.parametrize(
-    "params",
-    [
-        dict(
-            spatiotemporal_variables=np.meshgrid(
-                np.linspace(0, 10, 10), np.linspace(0, 10, 50), indexing="ij"
-            )
-        ),
-        dict(
-            spatiotemporal_variables=np.meshgrid(
-                np.linspace(0, 10, 5),
-                np.linspace(0, 10, 10),
-                np.linspace(0, 10, 10),
-                indexing="ij",
-            )
-        ),
-        dict(
-            spatiotemporal_variables=np.meshgrid(
-                np.linspace(0, 10, 5),
-                np.linspace(0, 10, 5),
-                np.linspace(0, 10, 5),
-                np.linspace(0, 10, 4),
-                indexing="ij",
-            )
-        ),
-    ],
-)
-def test_spatiotemporal_shapes(data_lorenz, params):
-    data, _ = data_lorenz
-    params["library_functions"] = [lambda x: x, lambda x: x ** 2]
-    library = SpatiotemporalLibrary(**params)
-    library.fit(data)
-    check_is_fitted(library)
+def test_generalized_library(data_lorenz):
+    x, t = data_lorenz
+    poly_library = PolynomialLibrary(include_bias=False)
+    fourier_library = FourierLibrary()
+    library_functions = [
+        lambda x: np.exp(x),
+        lambda x: 1.0 / x,
+        lambda x, y: np.sin(x + y),
+    ]
+    library_function_names = [
+        lambda x: "exp(" + x + ")",
+        lambda x: "1 / " + x,
+        lambda x, y: "sin(" + x + "," + y + ")",
+    ]
+    custom_library = CustomLibrary(
+        library_functions=library_functions, function_names=library_function_names
+    )
+
+    tensor_array = [[0, 1, 1], [1, 0, 1]]
+
+    inputs_per_library = np.tile([0, 1, 2], 3)
+    inputs_per_library = np.reshape(inputs_per_library, (3, 3))
+    inputs_per_library[0, 0] = 1
+    inputs_per_library[1, 1] = 0
+    inputs_per_library[2, 1] = 0
+    inputs_per_library[2, 2] = 0
+
+    # First try without tensor libraries and subset of the input variables
+    sindy_library = GeneralizedLibrary(
+        [poly_library, fourier_library, custom_library],
+    )
+    sindy_opt = STLSQ(threshold=0.25)
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+    )
+    model.fit(x, t=t)
+    model.print()
+    model.get_feature_names()
+    assert len(model.get_feature_names()) == 24
+
+    # Next try with tensor libraries but still all the input variables
+    sindy_library = GeneralizedLibrary(
+        [poly_library, fourier_library, custom_library], tensor_array=tensor_array
+    )
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+    )
+    model.fit(x, t=t)
+    model.print()
+    # 24 + (9 * 6) = 54 + (9 * 9) = 81
+    assert len(model.get_feature_names()) == 159
+
+    sindy_library = GeneralizedLibrary(
+        [poly_library, fourier_library, custom_library],
+        tensor_array=tensor_array,
+        inputs_per_library=inputs_per_library,
+    )
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+    )
+    model.fit(x, t=t)
+    assert len(model.get_feature_names()) == 29
 
 
 # Helper function for testing PDE libraries
@@ -497,29 +496,6 @@ def test_1D_pdes(data_1d_random_pde):
         is_uniform=True,
     )
     pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 1)
-
-
-def test_1D_pdelibrary_plus_spatiotemporal_library(data_1d_random_pde):
-    x, u_flattened, u_dot_flattened = data_1d_random_pde
-
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatial_grid=x,
-        include_bias=True,
-        is_uniform=True,
-    )
-    spatiotemporal_lib = SpatiotemporalLibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        spatiotemporal_variables=[x],
-        include_bias=False,
-    )
-    sindy_lib = pde_lib + spatiotemporal_lib
-    pde_library_helper(sindy_lib, u_flattened, u_dot_flattened, 1)
 
 
 def test_2D_pdes(data_2d_random_pde):

@@ -18,13 +18,14 @@ from .differentiation import FiniteDifference
 from .differentiation import SINDyDerivative
 from .differentiation import SmoothedFiniteDifference
 from .feature_library import ConcatLibrary
+from .feature_library import TensoredLibrary
+from .feature_library import GeneralizedLibrary
 from .feature_library import CustomLibrary
 from .feature_library import FourierLibrary
 from .feature_library import IdentityLibrary
 from .feature_library import PolynomialLibrary
 from .feature_library import PDELibrary
 from .feature_library import SINDyPILibrary
-from .feature_library import SpatiotemporalLibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import FROLS

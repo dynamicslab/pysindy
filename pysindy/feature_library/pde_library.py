@@ -35,7 +35,7 @@ class PDELibrary(BaseFeatureLibrary):
 
     Parameters
     ----------
-    library_functions : list of mathematical functions
+    library_functions : list of mathematical functions, optional (default None)
         Functions to include in the library. Each function will be
         applied to each input variable (but not their derivatives)
 
@@ -157,7 +157,7 @@ class PDELibrary(BaseFeatureLibrary):
 
     def __init__(
         self,
-        library_functions,
+        library_functions=[],
         derivative_order=0,
         spatial_grid=None,
         temporal_grid=None,
@@ -204,7 +204,12 @@ class PDELibrary(BaseFeatureLibrary):
                 " number of elements"
             )
         if derivative_order < 0 or derivative_order > 4:
-            raise ValueError("The derivative order must be 1, 2, 3, or 4")
+            raise ValueError("The derivative order must be an integer 0-4")
+        if library_functions is None and derivative_order == 0:
+            raise ValueError(
+                "No library functions were specified, and no "
+                "derivatives were asked for. The library is empty."
+            )
         if (spatial_grid is not None and derivative_order == 0) or (
             spatial_grid is None and derivative_order != 0
         ):
@@ -1073,7 +1078,10 @@ class PDELibrary(BaseFeatureLibrary):
         if self.include_bias:
             feature_names.append("1")
 
-        # Include non-derivative terms
+        # Include any non-derivative terms
+        function_lib_len = 0
+        if self.functions is not None:
+            function_lib_len = len(self.functions)
         for i, f in enumerate(self.functions):
             for c in self._combinations(
                 n_features, f.__code__.co_argcount, self.interaction_only
@@ -1087,7 +1095,7 @@ class PDELibrary(BaseFeatureLibrary):
             for k in range(self.num_derivatives):
                 for j in range(n_features):
                     feature_names.append(
-                        self.function_names[len(self.functions) + k](input_features[j])
+                        self.function_names[function_lib_len + k](input_features[j])
                     )
             # Include mixed non-derivative + derivative (integral) terms
             if self.include_interaction:
@@ -1103,7 +1111,7 @@ class PDELibrary(BaseFeatureLibrary):
                                     self.function_names[i](
                                         *[input_features[j] for j in c]
                                     )
-                                    + self.function_names[len(self.functions) + k](
+                                    + self.function_names[function_lib_len + k](
                                         input_features[jj]
                                     )
                                 )

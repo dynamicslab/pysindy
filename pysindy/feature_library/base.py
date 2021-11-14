@@ -288,7 +288,8 @@ class TensoredLibrary(BaseFeatureLibrary):
 
     inputs_per_library_ : numpy nd.array (default None)
         Array that specifies which inputs should be used for each of the
-        libraries you are going to tensor together
+        libraries you are going to tensor together. Used for building
+        GeneralizedLibrary objects.
 
     n_input_features_ : int
         The total number of input features.
@@ -309,9 +310,9 @@ class TensoredLibrary(BaseFeatureLibrary):
     >>> functions = [lambda x : np.exp(x), lambda x,y : np.sin(x+y)]
     >>> lib_custom = CustomLibrary(library_functions=functions)
     >>> lib_fourier = FourierLibrary()
-    >>> lib_tensored = TensoredLibrary([lib_custom, lib_fourier])
-    >>> lib_tensored.fit()
-    >>> lib.transform(x)
+    >>> lib_tensored = lib_custom * lib_fourier
+    >>> lib_tensored.fit(x)
+    >>> lib_tensored.transform(x)
     """
 
     def __init__(
@@ -359,7 +360,7 @@ class TensoredLibrary(BaseFeatureLibrary):
 
     def _set_inputs_per_library(self, inputs_per_library):
         """
-        Extra function to make GeneralizedLibrary work easier
+        Extra function to make building a GeneralizedLibrary object easier
         """
         self.inputs_per_library_ = inputs_per_library
 
@@ -494,7 +495,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
     """Put multiple libraries into one library. All settings
     provided to individual libraries will be applied. Note that this class
     allows one to specifically choose which input variables are used for
-    each library, and take tensor products of any pair of libraries.
+    each library, and take tensor products of any pair of libraries. Tensored
+    libraries inherit the same input variables specified for the individual
+    libraries.
 
     Parameters
     ----------
@@ -533,6 +536,25 @@ class GeneralizedLibrary(BaseFeatureLibrary):
     libraries_ : list of libraries
         Library instances to be applied to the input matrix.
 
+    tensor_array_ : 2D list of booleans, optional,
+            (default is to not tensor any of the libraries together) shape
+            equal to (# of tensor libraries to make, # feature libraries)
+        Indicates which pairs of libraries to tensor product together and
+        add to the overall library. For instance if you have 5 libraries,
+        and want to do two tensor products, you could use the list
+        [[1, 0, 0, 1, 0], [0, 1, 0, 1, 1]] to indicate that you want two
+        tensored libraries from tensoring libraries 0 and 3 and libraries
+        1, 3, and 4.
+
+    inputs_per_library_ : np.ndarray, optional
+            (default all inputs used for every library) shape equal to
+            (# feature libraries, # variable inputs)
+        Can be used to specify a subset of the variables to use to generate
+        a feature library. If number of feature libraries > 1, then can be
+        use to generate a large number of libraries, each using their own
+        subsets of the input variables. Note that this must be specified for
+        all the individual feature libraries.
+
     n_input_features_ : int
         The total number of input features.
         WARNING: This is deprecated in scikit-learn version 1.0 and higher so
@@ -553,8 +575,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
     >>> lib_custom = CustomLibrary(library_functions=functions)
     >>> lib_fourier = FourierLibrary()
     >>> lib_generalized = GeneralizedLibrary([lib_custom, lib_fourier])
-    >>> lib_generalized.fit()
-    >>> lib.transform(x)
+    >>> lib_generalized.fit(x)
+    >>> lib_generalized.transform(x)
     """
 
     def __init__(
@@ -607,9 +629,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             for i in range(len(tensor_array)):
                 if np.sum(tensor_array[i]) < 2:
                     raise ValueError(
-                        "If specifying libraries to tensor together, must specify "
-                        "at least two libraries (there should be at least two "
-                        "entries with value 1 in the tensor_array)."
+                        "If specifying libraries to tensor together, must "
+                        "specify at least two libraries (there should be at "
+                        "least two entries with value 1 in the tensor_array)."
                     )
         self.tensor_array_ = tensor_array
         self.inputs_per_library_ = inputs_per_library
@@ -641,6 +663,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 temp_inputs, (len(self.libraries_), n_features)
             )
         else:
+            # Check that the numbers in inputs_per_library are sensible
             if np.any(self.inputs_per_library_ >= n_features) or np.any(
                 self.inputs_per_library_ < 0
             ):
@@ -655,6 +678,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             for i, lib in enumerate(self.libraries_)
         ]
 
+        # Next, tensor some libraries and append them to the list
         if self.tensor_array_ is not None:
             num_tensor_prods = np.shape(self.tensor_array_)[0]
             for i in range(num_tensor_prods):
@@ -667,7 +691,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                     n_output_features = (
                         n_output_features * library_subset[j].n_output_features_
                     )
-                # library_full._set_n_output_features(n_output_features)
                 library_full._set_inputs_per_library(
                     self.inputs_per_library_[lib_inds, :]
                 )
@@ -715,7 +738,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         current_feat = 0
         for i, lib in enumerate(self.libraries_):
 
-            # retrieve num features from lib
+            # retrieve num output features from lib
             lib_n_output_features = lib.n_output_features_
 
             start_feature_index = current_feat
@@ -753,9 +776,10 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                     "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
                 ]
             else:
+                # Tensor libraries need all the inputs and then internally
+                # handle the subsampling of the input variables
                 input_features = [
                     "x%d" % k for k in range(self.inputs_per_library_.shape[0])
                 ]
-            lib_feat_names = lib.get_feature_names(input_features)
-            feature_names += lib_feat_names
+            feature_names += lib.get_feature_names(input_features)
         return feature_names

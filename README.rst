@@ -3,7 +3,7 @@ PySINDy
 
 |BuildCI| |RTD| |PyPI| |Codecov| |JOSS| |DOI|
 
-**PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016a), including the unified optimization approach of Champion et al. (2019) and SINDy with control from Brunton et al. (2016b). A comprehensive literature review is given in de Silva et al. (2020).
+**PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016a), including the unified optimization approach of Champion et al. (2019), SINDy with control from Brunton et al. (2016b), Trapping SINDy from Kaptanoglu et al. (2021), SINDy-PI from Kaheman et al. (2020), PDE-FIND from Rudy et al. (2017), and so on. A comprehensive literature review is given in de Silva et al. (2020).
 
 .. contents:: Table of contents
 
@@ -191,9 +191,11 @@ Citing PySINDy
 --------------
 PySINDy has been published in the Journal of Open Source Software (JOSS). The paper can be found `here <https://joss.theoj.org/papers/10.21105/joss.02104>`__.
 
-If you use PySINDy in your work, please cite it using:
+If you use PySINDy in your work, please cite it using the following two references:
 
 ``de Silva et al., (2020). PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data. Journal of Open Source Software, 5(49), 2104, https://doi.org/10.21105/joss.02104``
+
+``Alan A. Kaptanoglu, Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Jared L.Callaham,   Charles  B.  Delahunt,   Kathleen  Champion,   Jean-Christophe  Loiseau,J. Nathan Kutz, and Steven L. Brunton. PySINDy:  A comprehensive Python packagefor robust sparse system identification. arXiv preprint arXiv:2111.08481, 2021.``
 
 Bibtex:
 
@@ -211,7 +213,17 @@ Bibtex:
     title = {PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data},
     journal = {Journal of Open Source Software}
     }
+    
+Bibtex:
 
+.. code-block:: text
+    
+      @article{kaptanoglu2021pysindy,
+      title={PySINDy: A comprehensive Python package for robust sparse system identification}, 
+      author={Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Jared L. Callaham and Charles B. Delahunt and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
+      year={2021},
+	  Journal = {arXiv preprint arXiv:2111.08481},
+      }
 
 References
 ----------------------

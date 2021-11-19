@@ -450,6 +450,7 @@ def test_constrained_sr3_quadratic_library(params):
 def test_trapping_sr3_quadratic_library(
     params, trapping_sr3_params, data_quadratic_library
 ):
+    np.random.seed(100)
     PL_shape = (3, 3, 3, 9)
     PQ_shape = (3, 3, 3, 3, 9)
     PL = np.ones(PL_shape)

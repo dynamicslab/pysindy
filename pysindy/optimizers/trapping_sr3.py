@@ -10,8 +10,6 @@ from sklearn.exceptions import ConvergenceWarning
 from ..utils import reorder_constraints
 from .sr3 import SR3
 
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-
 
 class TrappingSR3(SR3):
     """

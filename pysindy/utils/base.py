@@ -231,7 +231,7 @@ def prox_l1(x, threshold):
 
 def prox_weighted_l1(x, thresholds):
     """Proximal operator for weighted l1 regularization."""
-    return np.sign(x) * np.maximum(np.abs(x) - thresholds, np.ones(x.shape))
+    return np.sign(x) * np.maximum(np.abs(x) - thresholds, np.zeros(x.shape))
 
 
 def prox_l2(x, threshold):

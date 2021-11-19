@@ -1,7 +1,6 @@
 """
 Unit tests for optimizers.
 """
-import cvxpy as cp
 import numpy as np
 import pytest
 from numpy.linalg import norm
@@ -30,9 +29,6 @@ from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
 from pysindy.utils.odes import lorenz
-
-# ignore cvxpy warnings
-cp.error.disable_warnings()
 
 # For reproducibility
 np.random.seed(100)
@@ -153,12 +149,12 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
 @pytest.mark.parametrize(
     "optimizer",
     [
-        STLSQ(),
-        SSR(),
-        FROLS(),
-        SR3(),
-        ConstrainedSR3(),
-        TrappingSR3(),
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
     ],
 )
 def test_sample_weight_optimizers(data_lorenz, optimizer):
@@ -168,7 +164,7 @@ def test_sample_weight_optimizers(data_lorenz, optimizer):
 
     sample_weight = np.ones(x[:, 0].shape)
     sample_weight[::2] = 0
-    model = optimizer
+    model = optimizer()
     model.fit(x, x_dot)
     model.fit(x, x_dot, sample_weight=sample_weight)
     model.fit(x, x_dot, sample_weight=sample_weight)
@@ -421,6 +417,7 @@ def test_constrained_sr3_quadratic_library(params):
     model = SINDy(optimizer=opt, feature_library=sindy_library)
     model.fit(x)
     check_is_fitted(model)
+    assert np.allclose((model.coefficients().flatten())[:p], 0.0)
 
 
 @pytest.mark.parametrize(
@@ -436,7 +433,13 @@ def test_constrained_sr3_quadratic_library(params):
     [
         dict(thresholder="l1", threshold=0),
         dict(thresholder="l1", threshold=1e-5),
-        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 9))),
+        dict(
+            thresholder="weighted_l1",
+            thresholds=np.zeros((3, 9)),
+            eta=1e5,
+            alpha_m=1e4,
+            alpha_A=1e5,
+        ),
         dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
         dict(thresholder="l2", threshold=0),
         dict(thresholder="l2", threshold=1e-5),
@@ -480,6 +483,10 @@ def test_trapping_sr3_quadratic_library(
     assert opt.PL.shape == (3, 3, 3, 9)
     assert opt.PQ.shape == (3, 3, 3, 3, 9)
     check_is_fitted(model)
+    # check is solve was infeasible first
+    if not np.allclose(opt.m_history_[-1], opt.m_history_[0]):
+        zero_inds = [0, 1, 3, 6, 9, 12, 15, 18, 21, 24]
+        assert np.allclose((model.coefficients().flatten())[zero_inds], 0.0, atol=1e-5)
 
 
 @pytest.mark.parametrize(

@@ -99,15 +99,15 @@ class TrappingSR3(SR3):
         threshold to be used for the (j + 1)st library function in the equation
         for the (i + 1)st measurement variable.
 
-    eps_solver : float, optional
-        If threshold != 0.0, this specifies the error tolerance in the
+    eps_solver : float, optional (default 1.0e-7)
+        If threshold != 0, this specifies the error tolerance in the
         CVXPY (OSQP) solve. Default is 1.0e-3 in OSQP.
 
-    relax_optim : bool, optional
+    relax_optim : bool, optional (default True)
         If relax_optim = True, use the relax-and-split method. If False,
         try a direct minimization on the largest eigenvalue.
 
-    inequality_constraints : bool, optional
+    inequality_constraints : bool, optional (default False)
         If True, relax_optim must be false or relax_optim = True
         AND threshold != 0, so that the CVXPY methods are used.
 
@@ -201,7 +201,7 @@ class TrappingSR3(SR3):
         self,
         evolve_w=True,
         threshold=0.1,
-        eps_solver=1.0e-7,
+        eps_solver=1e-7,
         relax_optim=True,
         inequality_constraints=False,
         eta=1.0e20,

@@ -153,12 +153,12 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
 @pytest.mark.parametrize(
     "optimizer",
     [
-        STLSQ,
-        SSR,
-        FROLS,
-        SR3,
-        ConstrainedSR3,
-        TrappingSR3,
+        STLSQ(),
+        SSR(),
+        FROLS(),
+        SR3(),
+        ConstrainedSR3(),
+        TrappingSR3(),
     ],
 )
 def test_sample_weight_optimizers(data_lorenz, optimizer):
@@ -168,7 +168,7 @@ def test_sample_weight_optimizers(data_lorenz, optimizer):
 
     sample_weight = np.ones(x[:, 0].shape)
     sample_weight[::2] = 0
-    model = optimizer()
+    model = optimizer
     model.fit(x, x_dot)
     model.fit(x, x_dot, sample_weight=sample_weight)
     model.fit(x, x_dot, sample_weight=sample_weight)
@@ -424,6 +424,14 @@ def test_constrained_sr3_quadratic_library(params):
 
 
 @pytest.mark.parametrize(
+    "trapping_sr3_params",
+    [
+        dict(),
+        dict(accel=True),
+        dict(relax_optim=False),
+    ],
+)
+@pytest.mark.parametrize(
     "params",
     [
         dict(thresholder="l1", threshold=0),
@@ -436,91 +444,35 @@ def test_constrained_sr3_quadratic_library(params):
         dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
     ],
 )
-def test_trapping_sr3_quadratic_library(params):
-    PL = np.ones((3, 3, 3, 9))
-    PQ = np.ones((3, 3, 3, 3, 9))
+def test_trapping_sr3_quadratic_library(
+    params, trapping_sr3_params, data_quadratic_library
+):
+    PL_shape = (3, 3, 3, 9)
+    PQ_shape = (3, 3, 3, 3, 9)
+    PL = np.ones(PL_shape)
+    PQ = np.ones(PQ_shape)
     x = np.random.standard_normal((100, 3))
-    library_functions = [
-        lambda x: x,
-        lambda x, y: x * y,
-        lambda x: x ** 2,
-    ]
-    library_function_names = [
-        lambda x: str(x),
-        lambda x, y: "{} * {}".format(x, y),
-        lambda x: "{}^2".format(x),
-    ]
-    sindy_library = CustomLibrary(
-        library_functions=library_functions, function_names=library_function_names
-    )
 
-    # Test trapping SR3 without constraints
+    sindy_library = data_quadratic_library
+    params.update(trapping_sr3_params)
+
     opt = TrappingSR3(PL=PL, PQ=PQ, **params)
     model = SINDy(optimizer=opt, feature_library=sindy_library)
     model.fit(x)
-    assert opt.PL.shape == (3, 3, 3, 9)
-    assert opt.PQ.shape == (3, 3, 3, 3, 9)
+    assert opt.PL.shape == PL_shape
+    assert opt.PQ.shape == PQ_shape
     check_is_fitted(model)
 
-    # Test trapping SR3 without constraints, acce;erating m solve
-    opt = TrappingSR3(PL=PL, PQ=PQ, accel=True, **params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    assert opt.PL.shape == (3, 3, 3, 9)
-    assert opt.PQ.shape == (3, 3, 3, 3, 9)
-    check_is_fitted(model)
-
-    # Test trapping SR3 without constraints, using CVXPY
-    opt = TrappingSR3(PL=PL, PQ=PQ, relax_optim=False, **params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    assert opt.PL.shape == (3, 3, 3, 9)
-    assert opt.PQ.shape == (3, 3, 3, 3, 9)
-    check_is_fitted(model)
-
-    # rerun with identity constraints
+    # Rerun with identity constraints
     r = 3
     N = 9
     p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
-    constraint_rhs = np.zeros(p)
-    constraint_matrix = np.eye(p, r * N)
+    params["constraint_rhs"] = np.zeros(p)
+    params["constraint_lhs"] = np.eye(p, r * N)
 
-    # Test trapping SR3 with constraints
     opt = TrappingSR3(
         PL=PL,
         PQ=PQ,
-        constraint_lhs=constraint_matrix,
-        constraint_rhs=constraint_rhs,
-        **params,
-    )
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    assert opt.PL.shape == (3, 3, 3, 9)
-    assert opt.PQ.shape == (3, 3, 3, 3, 9)
-    check_is_fitted(model)
-
-    # Test trapping SR3 with constraints, using m acceleration
-    opt = TrappingSR3(
-        PL=PL,
-        PQ=PQ,
-        constraint_lhs=constraint_matrix,
-        constraint_rhs=constraint_rhs,
-        accel=True,
-        **params,
-    )
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    assert opt.PL.shape == (3, 3, 3, 9)
-    assert opt.PQ.shape == (3, 3, 3, 3, 9)
-    check_is_fitted(model)
-
-    # Test trapping SR3 with constraints, using CVXPY
-    opt = TrappingSR3(
-        PL=PL,
-        PQ=PQ,
-        relax_optim=False,
-        constraint_lhs=constraint_matrix,
-        constraint_rhs=constraint_rhs,
         **params,
     )
     model = SINDy(optimizer=opt, feature_library=sindy_library)

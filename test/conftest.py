@@ -225,6 +225,23 @@ def data_custom_library():
 
 
 @pytest.fixture
+def data_quadratic_library():
+    library_functions = [
+        lambda x: x,
+        lambda x, y: x * y,
+        lambda x: x ** 2,
+    ]
+    function_names = [
+        lambda x: str(x),
+        lambda x, y: "{} * {}".format(x, y),
+        lambda x: "{}^2".format(x),
+    ]
+    return CustomLibrary(
+        library_functions=library_functions, function_names=function_names
+    )
+
+
+@pytest.fixture
 def data_generalized_library():
     tensor_array = [[1, 1]]
     inputs_temp = np.tile([0, 1, 2], 2)

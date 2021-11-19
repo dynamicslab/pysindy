@@ -52,20 +52,7 @@ class SINDy(BaseEstimator):
         Feature library object used to specify candidate right-hand side features.
         This must be a class extending
         :class:`pysindy.feature_library.base.BaseFeatureLibrary`.
-        The default option is :class:`PolynomialLibrary`. If
-        inputs_per_library parameter is also passed, the library will use only
-        the subset of the inputs specified in this parameter. If
-        inputs_per_library is more than 1D, then feature_library must be a list
-        of feature library objects with the same dimension as
-        inputs_per_library.
-
-    inputs_per_library : np.ndarray, shape equal to
-            (number of feature libraries, number of variable inputs)
-        Can be used to specify a subset of the variables to use to generate
-        a feature library. If number of feature libraries > 1, then can be
-        use to generate a large number of libraries, each using their own
-        subsets of the input variables. This requires a feature_library to be
-        a GeneralizedLibrary object.
+        The default option is :class:`PolynomialLibrary`.
 
     differentiation_method : differentiation object, optional
         Method for differentiating the data. This must be a class extending
@@ -170,15 +157,12 @@ class SINDy(BaseEstimator):
         feature_names=None,
         t_default=1,
         discrete_time=False,
-        inputs_per_library=None,
     ):
         if optimizer is None:
             optimizer = STLSQ()
         self.optimizer = optimizer
         if feature_library is None:
             feature_library = PolynomialLibrary()
-        if inputs_per_library is None:
-            self.inputs_per_library = inputs_per_library
         self.feature_library = feature_library
         if differentiation_method is None:
             differentiation_method = FiniteDifference()

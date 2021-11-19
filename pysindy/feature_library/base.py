@@ -286,7 +286,7 @@ class TensoredLibrary(BaseFeatureLibrary):
     libraries_ : list of libraries
         Library instances to be applied to the input matrix.
 
-    inputs_per_library_ : numpy nd.array (default None)
+    inputs_per_library_ : numpy nd.array
         Array that specifies which inputs should be used for each of the
         libraries you are going to tensor together. Used for building
         GeneralizedLibrary objects.
@@ -519,7 +519,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             (# feature libraries, # variable inputs)
         Can be used to specify a subset of the variables to use to generate
         a feature library. If number of feature libraries > 1, then can be
-        use to generate a large number of libraries, each using their own
+        used to generate a large number of libraries, each using their own
         subsets of the input variables. Note that this must be specified for
         all the individual feature libraries.
 
@@ -536,24 +536,22 @@ class GeneralizedLibrary(BaseFeatureLibrary):
     libraries_ : list of libraries
         Library instances to be applied to the input matrix.
 
-    tensor_array_ : 2D list of booleans, optional,
-            (default is to not tensor any of the libraries together) shape
-            equal to (# of tensor libraries to make, # feature libraries)
+    tensor_array_ : 2D list of booleans
         Indicates which pairs of libraries to tensor product together and
         add to the overall library. For instance if you have 5 libraries,
         and want to do two tensor products, you could use the list
         [[1, 0, 0, 1, 0], [0, 1, 0, 1, 1]] to indicate that you want two
         tensored libraries from tensoring libraries 0 and 3 and libraries
-        1, 3, and 4.
+        1, 3, and 4. Shape equal to
+        (# of tensor libraries to make, # feature libraries)
 
-    inputs_per_library_ : np.ndarray, optional
-            (default all inputs used for every library) shape equal to
-            (# feature libraries, # variable inputs)
+    inputs_per_library_ : np.ndarray
         Can be used to specify a subset of the variables to use to generate
         a feature library. If number of feature libraries > 1, then can be
         use to generate a large number of libraries, each using their own
         subsets of the input variables. Note that this must be specified for
-        all the individual feature libraries.
+        all the individual feature libraries. Shape equal to
+            (# feature libraries, # variable inputs)
 
     n_input_features_ : int
         The total number of input features.
@@ -597,7 +595,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 "Empty or nonsensical library list passed to this library."
             )
         if inputs_per_library is not None:
-            if len(inputs_per_library.shape) != 2:
+            if inputs_per_library.ndim != 2:
                 raise ValueError("Input libraries array should form a 2D numpy array.")
             if inputs_per_library.shape[0] != len(libraries):
                 raise ValueError(
@@ -613,7 +611,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 )
 
         if tensor_array is not None:
-            if len(np.asarray(tensor_array).shape) != 2:
+            if np.asarray(tensor_array).ndim != 2:
                 raise ValueError("Tensor product array should be 2D list.")
             if np.asarray(tensor_array).shape[-1] != len(libraries):
                 raise ValueError(

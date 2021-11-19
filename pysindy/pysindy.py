@@ -55,7 +55,7 @@ class SINDy(BaseEstimator):
         The default option is :class:`PolynomialLibrary`. If
         inputs_per_library parameter is also passed, the library will use only
         the subset of the inputs specified in this parameter. If
-        inputs_per_library is more than 1D, than feature_library must be a list
+        inputs_per_library is more than 1D, then feature_library must be a list
         of feature library objects with the same dimension as
         inputs_per_library.
 

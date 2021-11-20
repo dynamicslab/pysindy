@@ -91,7 +91,7 @@ In addition, we have extended `PySINDy` to handle more complex modeling scenario
 
 `PySINDy` includes extensive Jupyter notebook tutorials that demonstrate the usage of various features of the package and reproduce nearly the entirety of the examples from the original SINDy paper [@brunton2016pnas], trapping SINDy paper [@kaptanoglu2021promoting], and the PDE-FIND paper [@Rudy2017sciadv]. 
 We include an extended example for the quasiperiodic shear-driven cavity flow [@callaham2021role].
-As a simple illustration of the new functionality, we demonstrate how SINDy can be used to identify the Kuramoto-Sivashinsky (KS) PDE from data. We train the model on the first 60\% of the data from Rudy et al. [@Rudy2017sciadv], which in total contains 1024 spatial grid points and 251 time steps. The KS model is identified correctly and the prediction for $\dot{\mathbf{q}}$ on the remaining testing data indicates strong performance in \autoref{fig:pde_id}. 
+As a simple illustration of the new functionality, we demonstrate how SINDy can be used to identify the Kuramoto-Sivashinsky (KS) PDE from data. We train the model on the first 60\% of the data from Rudy et al. [@Rudy2017sciadv], which in total contains 1024 spatial grid points and 251 time steps. The KS model is identified correctly and the prediction for $\dot{\mathbf{q}}$ on the remaining testing data indicates strong performance in \autoref{fig:pde_id}. Lastly, we provide a useful flow chart in \autoref{fig:flow_chart} so that users can make informed choices about which advanced methods are suitable for their datasets. 
 
 # Conclusion
 The goal of the `PySINDy` package is to enable anyone with access to measurement data to engage in scientific model discovery. The package is designed to be accessible to inexperienced users, adhere to `scikit-learn` standards, include most of the existing SINDy variations in the literature, and provide a large variety of functionality for more advanced users. We hope that researchers will use and contribute to the code in the future, pushing the boundaries of what is possible in system identification.
@@ -104,5 +104,7 @@ SLB, AAK, KK, and UF acknowledge support from the Army Research Office (ARO  W91
 (b) Flow chart for organizing the SINDy variants and functionality in the literature. Bright color boxes indicate the features that have been implemented through this work, roughly organized by functionality. Semi-transparent boxes indicate features that have not yet been implemented.\label{fig:package-structure}](Fig1.png)
 
 ![`PySINDy` can now be used for PDE identification; we illustrate this new capability by accurately capturing a set of testing data from the Kuramoto-Sivashinsky system, described by $q_t = -qq_x - q_{xx} - q_{xxxx}$. The identified model is $q_t = -0.98qq_x -0.99q_{xx} - 1.0q_{xxxx}$.\label{fig:pde_id}](Fig2.png)
+
+![This flow chart summarizes how `PySINDy` users can start with a dataset and systematically choose the proper candidate library and sparse regression optimizer that are tailored for a specific scientific task. The `GeneralizedLibrary` class allows for tensoring, concatenating, and otherwise combining many different candidate libraries.\label{fig:flow_chart}](Fig3.png)
 
 # References

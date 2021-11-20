@@ -222,11 +222,11 @@ class ConstrainedSR3(SR3):
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
         elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) * xi)
+            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
         elif self.thresholder.lower() == "l2":
             cost = cost + self.threshold * cp.norm2(xi)
         elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) * xi)
+            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
         if self.use_constraints:
             if self.inequality_constraints:
                 prob = cp.Problem(

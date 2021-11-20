@@ -7,8 +7,6 @@ from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
-from ..utils import get_prox
-from ..utils import get_regularization
 from ..utils import reorder_constraints
 from .sr3 import SR3
 
@@ -273,8 +271,6 @@ class TrappingSR3(SR3):
         self.tol = tol
         self.tol_m = tol_m
         self.accel = accel
-        self.reg = get_regularization(thresholder)
-        self.prox = get_prox(thresholder)
         self.A_history_ = []
         self.m_history_ = []
         self.PW_history_ = []
@@ -396,11 +392,11 @@ class TrappingSR3(SR3):
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
         elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) * xi)
+            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
         elif self.thresholder.lower() == "l2":
             cost = cost + self.threshold * cp.norm2(xi) ** 2
         elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) * xi) ** 2
+            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -483,12 +479,12 @@ class TrappingSR3(SR3):
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) * xi)
+        elif self.thresholder.lower() == "weighted_l1" and np.any(self.thresholds != 0):
+            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
         elif self.thresholder.lower() == "l2":
             cost = cost + self.threshold * cp.norm2(xi) ** 2
         elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) * xi) ** 2
+            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
         cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:

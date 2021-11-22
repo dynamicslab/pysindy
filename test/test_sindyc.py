@@ -20,7 +20,7 @@ def test_get_feature_names_len(data_lorenz_c_1d):
     model.fit(x, u=u, t=t)
 
     # Assumes default library is polynomial features of degree 2
-    assert len(model.get_feature_names()) == 15
+    assert len(model.get_feature_names()) == 21
 
 
 def test_not_fitted(data_lorenz_c_1d):

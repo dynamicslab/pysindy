@@ -27,6 +27,9 @@ from .odes import hopf
 from .odes import kinematic_commonroad
 from .odes import linear_3D
 from .odes import linear_damped_SHO
+from .odes import logistic_map
+from .odes import logistic_map_control
+from .odes import logistic_map_multicontrol
 from .odes import lorenz
 from .odes import lorenz_control
 from .odes import lorenz_u

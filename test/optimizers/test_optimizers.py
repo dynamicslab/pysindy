@@ -4,7 +4,7 @@ Unit tests for optimizers.
 import numpy as np
 import pytest
 from numpy.linalg import norm
-from scipy.integrate import odeint
+from scipy.integrate import solve_ivp
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
@@ -28,7 +28,6 @@ from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
-from pysindy.utils.odes import lorenz
 
 # For reproducibility
 np.random.seed(100)
@@ -89,6 +88,7 @@ def data(request):
     [
         STLSQ(),
         SSR(),
+        SSR(criteria="model_residual"),
         FROLS(),
         SR3(),
         ConstrainedSR3(),
@@ -98,8 +98,8 @@ def data(request):
         DummyLinearModel(),
     ],
 )
-def test_fit(data, optimizer):
-    x, x_dot = data
+def test_fit(data_derivative_1d, optimizer):
+    x, x_dot = data_derivative_1d
     if len(x.shape) == 1:
         x = x.reshape(-1, 1)
     opt = SINDyOptimizer(optimizer, unbias=False)
@@ -242,9 +242,8 @@ def test_trapping_bad_parameters(params):
         dict(model_subset=[0, 0.5, 1]),
     ],
 )
-def test_sindypi_bad_parameters(params):
-    t = np.arange(0, 40, 0.05)
-    x = odeint(lorenz, [-8, 8, 27], t)
+def test_sindypi_bad_parameters(data_lorenz, params):
+    x, t = data_lorenz
     with pytest.raises(ValueError):
         opt = SINDyPI(**params)
         model = SINDy(optimizer=opt)
@@ -267,7 +266,7 @@ def test_sindypi_fit(params):
     T = 5
     t = np.arange(0, T + dt, dt)
     x0_train = [0.55]
-    x_train = odeint(enzyme, x0_train, t)
+    x_train = solve_ivp(enzyme, (t[0], t[-1]), x0_train, t_eval=t).y.T
 
     # initialize a quartic polynomial library for x
     x_library_functions = [
@@ -563,9 +562,8 @@ def test_trapping_cubic_library(params):
         ),
     ],
 )
-def test_specific_bad_parameters(error, optimizer, params):
-    t = np.arange(0, 40, 0.05)
-    x = odeint(lorenz, [-8, 8, 27], t)
+def test_specific_bad_parameters(error, optimizer, params, data_lorenz):
+    x, t = data_lorenz
     with pytest.raises(error):
         opt = optimizer(**params)
         model = SINDy(optimizer=opt)
@@ -810,9 +808,8 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
         dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 10))),
     ],
 )
-def test_constrained_inequality_constraints(params):
-    t = np.arange(0, 40, 0.01)
-    x = odeint(lorenz, [-8, 8, 27], t)
+def test_constrained_inequality_constraints(data_lorenz, params):
+    x, t = data_lorenz
     constraint_rhs = np.array([-10.0, 28.0])
     constraint_matrix = np.zeros((2, 30))
     constraint_matrix[0, 1] = 1.0
@@ -848,9 +845,8 @@ def test_constrained_inequality_constraints(params):
         dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 10))),
     ],
 )
-def test_trapping_inequality_constraints(params):
-    t = np.arange(0, 40, 0.01)
-    x = odeint(lorenz, [-8, 8, 27], t)
+def test_trapping_inequality_constraints(data_lorenz, params):
+    x, t = data_lorenz
     constraint_rhs = np.array([-10.0, 28.0])
     constraint_matrix = np.zeros((2, 30))
     constraint_matrix[0, 1] = 1.0
@@ -929,8 +925,8 @@ def test_inequality_constraints_reqs():
         TrappingSR3,
     ],
 )
-def test_normalize_columns(data, optimizer):
-    x, x_dot = data
+def test_normalize_columns(data_derivative_1d, optimizer):
+    x, x_dot = data_derivative_1d
     if len(x.shape) == 1:
         x = x.reshape(-1, 1)
     opt = optimizer(normalize_columns=True)
@@ -954,9 +950,8 @@ def test_normalize_columns(data, optimizer):
         TrappingSR3,
     ],
 )
-def test_ensemble_odes(data, optimizer):
-    t = np.arange(0, 40, 0.05)
-    x = odeint(lorenz, [-8, 8, 27], t)
+def test_ensemble_odes(data_lorenz, optimizer):
+    x, t = data_lorenz
     opt = optimizer(normalize_columns=True)
     model = SINDy(optimizer=opt)
     model.fit(x, ensemble=True, n_models=10, n_subset=20)
@@ -1004,9 +999,8 @@ def test_ensemble_pdes(optimizer):
     assert np.shape(model.coef_list) == (10, 2, n_features)
 
 
-def test_ssr_criteria(data):
-    t = np.arange(0, 40, 0.05)
-    x = odeint(lorenz, [-8, 8, 27], t)
+def test_ssr_criteria(data_lorenz):
+    x, t = data_lorenz
     opt = SSR(normalize_columns=True, criteria="model_residual", kappa=1e-3)
     model = SINDy(optimizer=opt)
     model.fit(x)

@@ -3,7 +3,7 @@ Shared pytest fixtures for unit tests.
 """
 import numpy as np
 import pytest
-from scipy.integrate import odeint
+from scipy.integrate import solve_ivp
 
 from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import CustomLibrary
@@ -12,6 +12,9 @@ from pysindy.feature_library import GeneralizedLibrary
 from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
+from pysindy.utils.odes import logistic_map
+from pysindy.utils.odes import logistic_map_control
+from pysindy.utils.odes import logistic_map_multicontrol
 from pysindy.utils.odes import lorenz
 from pysindy.utils.odes import lorenz_control
 
@@ -35,29 +38,13 @@ def data_lorenz():
 
     t = np.linspace(0, 5, 500)
     x0 = [8, 27, -7]
-    x = odeint(lorenz, x0, t)
-
-    return x, t
-
-
-@pytest.fixture
-def data_lorenz_control():
-
-    t = np.linspace(0, 5, 500)
-    x0 = [8, 27, -7]
-    x = odeint(lorenz_control, x0, t)
+    x = solve_ivp(lorenz, (t[0], t[-1]), x0, t_eval=t).y.T
 
     return x, t
 
 
 @pytest.fixture
 def data_multiple_trajctories():
-    def lorenz(z, t):
-        return [
-            10 * (z[1] - z[0]),
-            z[0] * (28 - z[2]) - z[1],
-            z[0] * z[1] - 8 / 3 * z[2],
-        ]
 
     n_points = [100, 200, 500]
     initial_conditions = [
@@ -71,15 +58,13 @@ def data_multiple_trajctories():
     for n, x0 in zip(n_points, initial_conditions):
         t = np.linspace(0, 5, n)
         t_list.append(t)
-        x_list.append(odeint(lorenz, x0, t))
+        x_list.append(solve_ivp(lorenz, (t[0], t[-1]), x0, t_eval=t).y.T)
 
     return x_list, t_list
 
 
 @pytest.fixture
 def data_discrete_time():
-    def logistic_map(x, mu):
-        return mu * x * (1 - x)
 
     n_steps = 100
     mu = 3.6
@@ -93,8 +78,6 @@ def data_discrete_time():
 
 @pytest.fixture
 def data_discrete_time_multiple_trajectories():
-    def logistic_map(x, mu):
-        return mu * x * (1 - x)
 
     n_steps = 100
     mus = [1, 2.3, 3.6]
@@ -352,18 +335,14 @@ def data_linear_combination():
 @pytest.fixture
 def data_lorenz_c_1d():
     def u_fun(t):
-        return np.sin(2 * t)
-
-    def lorenz(z, t):
-        return [
-            10 * (z[1] - z[0]) + u_fun(t) ** 2,
-            z[0] * (28 - z[2]) - z[1],
-            z[0] * z[1] - 8 / 3 * z[2],
-        ]
+        if len(np.shape(t)) == 0:
+            return np.column_stack([np.sin(2 * t), 0])
+        else:
+            return np.column_stack([np.sin(2 * t), np.zeros(len(t))])
 
     t = np.linspace(0, 5, 500)
     x0 = [8, 27, -7]
-    x = odeint(lorenz, x0, t)
+    x = solve_ivp(lorenz_control, (t[0], t[-1]), x0, t_eval=t, args=(u_fun,)).y.T
     u = u_fun(t)
 
     return x, t, u, u_fun
@@ -374,17 +353,9 @@ def data_lorenz_c_2d():
     def u_fun(t):
         return np.column_stack([np.sin(2 * t), t ** 2])
 
-    def lorenz(z, t):
-        u = u_fun(t)
-        return [
-            10 * (z[1] - z[0]) + u[0, 0] ** 2,
-            z[0] * (28 - z[2]) - z[1],
-            z[0] * z[1] - 8 / 3 * z[2] - u[0, 1],
-        ]
-
     t = np.linspace(0, 5, 500)
     x0 = [8, 27, -7]
-    x = odeint(lorenz, x0, t)
+    x = solve_ivp(lorenz_control, (t[0], t[-1]), x0, t_eval=t, args=(u_fun,)).y.T
     u = u_fun(t)
 
     return x, t, u, u_fun
@@ -392,8 +363,6 @@ def data_lorenz_c_2d():
 
 @pytest.fixture
 def data_discrete_time_c():
-    def logistic_map(x, mu, ui):
-        return mu * x * (1 - x) + ui
 
     n_steps = 100
     mu = 3.6
@@ -401,16 +370,15 @@ def data_discrete_time_c():
     u = 0.01 * np.random.randn(n_steps)
     x = np.zeros((n_steps))
     x[0] = 0.5
+
     for i in range(1, n_steps):
-        x[i] = logistic_map(x[i - 1], mu, u[i - 1])
+        x[i] = logistic_map_control(x[i - 1], mu, u[i - 1])
 
     return x, u
 
 
 @pytest.fixture
 def data_discrete_time_c_multivariable():
-    def logistic_map(x, mu, u):
-        return mu * x * (1 - x) + u[0] * u[1]
 
     n_steps = 100
     mu = 3.6
@@ -421,15 +389,13 @@ def data_discrete_time_c_multivariable():
     x = np.zeros((n_steps))
     x[0] = 0.5
     for i in range(1, n_steps):
-        x[i] = logistic_map(x[i - 1], mu, u[i - 1])
+        x[i] = logistic_map_multicontrol(x[i - 1], mu, u[i - 1])
 
     return x, u
 
 
 @pytest.fixture
 def data_discrete_time_multiple_trajectories_c():
-    def logistic_map(x, mu, ui):
-        return mu * x * (1 - x) + ui
 
     n_steps = 100
     mus = [1, 2.3, 3.6]
@@ -438,6 +404,6 @@ def data_discrete_time_multiple_trajectories_c():
     for i, mu in enumerate(mus):
         x[i][0] = 0.5
         for k in range(1, n_steps):
-            x[i][k] = logistic_map(x[i][k - 1], mu, u[i][k - 1])
+            x[i][k] = logistic_map_control(x[i][k - 1], mu, u[i][k - 1])
 
     return x, u

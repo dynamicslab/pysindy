@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from scipy.integrate import odeint
+from scipy.integrate import solve_ivp
 
 from pysindy.utils.odes import bacterial
 from pysindy.utils.odes import burgers_galerkin
@@ -51,13 +51,15 @@ from pysindy.utils.odes import yeast
     ],
 )
 def test_odes(ode_params):
+    def u_fun(t):
+        return np.column_stack([np.sin(2 * t), t ** 2])
+
     t = np.linspace(0, 10, 100)
     x0 = np.random.rand(ode_params[1])
     if np.shape(ode_params)[0] == 3:
-        u = np.column_stack([np.sin(2 * t), t ** 2])
-        x_sim = odeint(ode_params[0], x0, t, args=(u,))
+        x_sim = solve_ivp(ode_params[0], (t[0], t[-1]), x0, t_eval=t, args=(u_fun,)).y.T
     else:
-        x_sim = odeint(ode_params[0], x0, t)
+        x_sim = solve_ivp(ode_params[0], (t[0], t[-1]), x0, t_eval=t).y.T
     assert np.max(abs(x_sim)) <= 1e5  # avoided unbounded growth
 
 
@@ -71,7 +73,7 @@ def test_galerkin_models():
     # get analytic L and Q operators and galerkin model
     L, Q = burgers_galerkin()
 
-    def rhs(a, t):
+    def rhs(t, a):
         return galerkin_model(a, L, Q)
 
     # Generate initial condition from unstable eigenvectors
@@ -83,5 +85,5 @@ def test_galerkin_models():
     # define parameters
     dt = 1e-3
     t_sim = np.arange(0, 300, dt)
-    x_sim = odeint(rhs, a0, t_sim, h0=1e-5, rtol=1e-20).T
+    x_sim = solve_ivp(rhs, (t_sim[0], t_sim[-1]), a0, t_eval=t_sim).y.T
     assert np.max(abs(x_sim)) <= 1e5  # avoided unbounded growth

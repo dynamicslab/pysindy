@@ -175,18 +175,18 @@ class SSR(BaseOptimizer):
         self.err_history_ = []
         for k in range(self.max_iter):
             for i in range(n_targets):
-                if not np.allclose(coef[i, :], 0.0):
-                    if self.criteria == "coefficient_value":
-                        coef[i, :], ind = self._coefficient_value(coef[i, :])
-                    else:
+                if self.criteria == "coefficient_value":
+                    coef[i, :], ind = self._coefficient_value(coef[i, :])
+                    inds[i, ind] = False
+                    if np.any(inds[i, :]):
+                        coef[i, inds[i, :]] = self._regress(x[:, inds[i, :]], y[:, i])
+                else:
+                    if np.sum(inds[i, :]) >= 2:
                         coef[i, :], ind = self._model_residual(
                             x[:, inds[i, :]], y[:, i], coef[i, :], inds[i, :]
                         )
-                    inds[i, ind] = False
-                    if np.sum(np.asarray(inds[i, :], dtype=int)) <= n_targets:
-                        # No terms left to sparsify
-                        break
-                    coef[i, inds[i, :]] = self._regress(x[:, inds[i, :]], y[:, i])
+                        inds[i, ind] = False
+                        coef[i, inds[i, :]] = self._regress(x[:, inds[i, :]], y[:, i])
 
             self.history_.append(np.copy(coef))
             if self.kappa is not None:
@@ -196,7 +196,7 @@ class SSR(BaseOptimizer):
                 )
             else:
                 self.err_history_.append(np.sum((y - x @ coef.T) ** 2))
-            if np.any(np.sum(np.asarray(inds, dtype=int), axis=1) <= n_targets):
+            if np.all(np.sum(np.asarray(inds, dtype=int), axis=1) <= 1):
                 # each equation has one last term
                 break
         err_min = np.argmin(self.err_history_)

@@ -3,7 +3,7 @@ PySINDy
 
 |BuildCI| |RTD| |PyPI| |Codecov| |JOSS| |DOI|
 
-**PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016a), including the unified optimization approach of Champion et al. (2019), SINDy with control from Brunton et al. (2016b), Trapping SINDy from Kaptanoglu et al. (2021), SINDy-PI from Kaheman et al. (2020), PDE-FIND from Rudy et al. (2017), and so on. A comprehensive literature review is given in de Silva et al. (2020).
+**PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016a), including the unified optimization approach of Champion et al. (2019), SINDy with control from Brunton et al. (2016b), Trapping SINDy from Kaptanoglu et al. (2021), SINDy-PI from Kaheman et al. (2020), PDE-FIND from Rudy et al. (2017), and so on. A comprehensive literature review is given in de Silva et al. (2020) and Kaptanoglu, de Silva et al. (2021).
 
 .. contents:: Table of contents
 
@@ -144,6 +144,12 @@ Documentation
 -------------
 The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`__. There are numerous `examples <https://pysindy.readthedocs.io/en/latest/examples/index.html>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`__. A video overview of PySINDy can be found on `Youtube <https://www.youtube.com/watch?v=DvbbXX8Bd90>`__.
 
+PySINDy implements a lot of advanced functionality that may be overwhelming for new users or folks who are unfamiliar with these methods. Below, we provide a helpful flowchart for figuring out which methods to use, given the characteristics of your dataset:
+
+.. image:: https://github.com/dynamicslab/pysindy/blob/PDEFIND_and_IntegralSINDy/docs/JOSS2/Fig3.png
+
+This flow chart summarizes how `PySINDy` users can start with a dataset and systematically choose the proper candidate library and sparse regression optimizer that are tailored for a specific scientific task. The `GeneralizedLibrary` class allows for tensoring, concatenating, and otherwise combining many different candidate libraries.
+
 Community guidelines
 --------------------
 
@@ -232,6 +238,13 @@ References
    *PySINDy: a Python package for the sparse identification of
    nonlinear dynamics from data.* arXiv preprint arXiv:2004.08424 (2020)
    `[arXiv] <https://arxiv.org/abs/2004.08424>`_
+   
+-  Kaptanoglu, Alan A., Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, 
+   Jared L. Callaham, Charles B. Delahunt, Kathleen Champion, Jean-Christophe Loiseau, 
+   J. Nathan Kutz, and Steven L. Brunton. 
+   *PySINDy: A comprehensive Python package for robust sparse system identification.* 
+   arXiv preprint arXiv:2111.08481 (2021).
+   `[arXiv] <https://arxiv.org/abs/2111.08481>`_
 
 -  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
    *Discovering governing equations from data by sparse identification

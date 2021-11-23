@@ -177,9 +177,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             )
         else:
             # Check that the numbers in inputs_per_library are sensible
-            if np.any(self.inputs_per_library_ >= n_features) or np.any(
-                self.inputs_per_library_ < 0
-            ):
+            if np.any(self.inputs_per_library_ >= n_features):
                 raise ValueError(
                     "Each row in inputs_per_library must consist of integers "
                     "between 0 and the number of total input features - 1. "

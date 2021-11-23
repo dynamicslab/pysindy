@@ -150,20 +150,42 @@ def test_pde_library_bad_parameters(params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(tensor_array=[[0, 0]]),
-        dict(tensor_array=[[0, 1]]),
-        dict(tensor_array=[[1, -1]]),
-        dict(tensor_array=[[2, 1]]),
-        dict(tensor_array=[1, 1]),
-        dict(tensor_array=[[1, 1, 1]]),
-        dict(inputs_per_library=np.array([[0, 1]])),
-        dict(inputs_per_library=np.array([[0, 1, 2], [0, 1, 2], [0, 1, 2]])),
-        dict(inputs_per_library=np.array([[0, 1, 2], [0, 1, -1]])),
+        dict(libraries=[]),
+        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 0]]),
+        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 1]]),
+        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[1, -1]]),
+        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[2, 1]]),
+        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[1, 1]),
+        dict(
+            libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[1, 1, 1]]
+        ),
+        dict(
+            libraries=[PolynomialLibrary, PolynomialLibrary],
+            inputs_per_library=np.array([[0, 1], [0, 100]]),
+        ),
+        dict(
+            libraries=[PolynomialLibrary, PolynomialLibrary],
+            inputs_per_library=np.array([0, 0]),
+        ),
+        dict(
+            libraries=[PolynomialLibrary, PolynomialLibrary],
+            inputs_per_library=np.array([[0, 1]]),
+        ),
+        dict(
+            libraries=[PolynomialLibrary, PolynomialLibrary],
+            inputs_per_library=np.array([[0, 1, 2], [0, 1, 2], [0, 1, 2]]),
+        ),
+        dict(
+            libraries=[PolynomialLibrary, PolynomialLibrary],
+            inputs_per_library=np.array([[0, 1, 2], [0, 1, -1]]),
+        ),
     ],
 )
-def test_generalized_library_bad_parameters(params):
+def test_generalized_library_bad_parameters(data_lorenz, params):
     with pytest.raises(ValueError):
-        GeneralizedLibrary([PolynomialLibrary, PolynomialLibrary], **params)
+        lib = GeneralizedLibrary(**params)
+        x, t = data_lorenz
+        lib.fit(x)
 
 
 @pytest.mark.parametrize(
@@ -196,9 +218,11 @@ def test_sindypi_library_bad_params(params):
     [
         IdentityLibrary(),
         PolynomialLibrary(),
+        PolynomialLibrary(include_bias=False),
         FourierLibrary(),
         IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_custom_library_bias"),
         pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
         pytest.lazy_fixture("data_pde_library"),
@@ -216,9 +240,11 @@ def test_fit_transform(data_lorenz, library):
     [
         IdentityLibrary(),
         PolynomialLibrary(),
+        PolynomialLibrary(include_bias=False),
         FourierLibrary(),
         IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_custom_library_bias"),
         pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
         pytest.lazy_fixture("data_pde_library"),
@@ -236,9 +262,11 @@ def test_change_in_data_shape(data_lorenz, library):
     "library, shape",
     [
         (IdentityLibrary(), 3),
+        (PolynomialLibrary(include_bias=False), 9),
         (PolynomialLibrary(), 10),
         (IdentityLibrary() + PolynomialLibrary(), 13),
         (FourierLibrary(), 6),
+        (pytest.lazy_fixture("data_custom_library_bias"), 13),
         (pytest.lazy_fixture("data_custom_library"), 12),
         (pytest.lazy_fixture("data_generalized_library"), 76),
         (pytest.lazy_fixture("data_ode_library"), 9),
@@ -259,9 +287,11 @@ def test_output_shape(data_lorenz, library, shape):
     [
         IdentityLibrary(),
         PolynomialLibrary(),
+        PolynomialLibrary(include_bias=False),
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),
         pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_custom_library_bias"),
         pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
         pytest.lazy_fixture("data_pde_library"),
@@ -299,6 +329,7 @@ def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
     [
         ({"degree": 4}, csr_matrix),
         ({"include_bias": True}, csr_matrix),
+        ({"include_bias": False}, csr_matrix),
         ({"include_interaction": False}, lambda x: x),
         ({"include_interaction": False, "include_bias": True}, lambda x: x),
     ],
@@ -334,18 +365,28 @@ def test_not_implemented(data_lorenz):
         library.get_feature_names(x)
 
 
-def test_concat():
+def test_concat(data_lorenz):
+    x, t = data_lorenz
     ident_lib = IdentityLibrary()
     poly_lib = PolynomialLibrary()
     concat_lib = ident_lib + poly_lib
     assert isinstance(concat_lib, ConcatLibrary)
+    concat_lib.fit(x)
+    check_is_fitted(concat_lib)
+    concat_lib.fit_transform(x)
+    check_is_fitted(concat_lib)
 
 
-def test_tensored():
+def test_tensored(data_lorenz):
+    x, t = data_lorenz
     ident_lib = IdentityLibrary()
     poly_lib = PolynomialLibrary()
     tensored_lib = ident_lib * poly_lib
     assert isinstance(tensored_lib, TensoredLibrary)
+    tensored_lib.fit(x)
+    check_is_fitted(tensored_lib)
+    tensored_lib.fit_transform(x)
+    check_is_fitted(tensored_lib)
 
 
 @pytest.mark.parametrize(
@@ -393,6 +434,9 @@ def test_library_ensemble(data_lorenz, library):
     library.ensemble_indices = [0, 1]
     xp = library.transform(x)
     assert n_output_features == xp.shape[1] + 2
+    library.ensemble_indices = np.zeros(1000, dtype=int).tolist()
+    with pytest.raises(ValueError):
+        xp = library.transform(x)
 
 
 @pytest.mark.parametrize(
@@ -417,13 +461,8 @@ def test_generalized_library(data_lorenz):
         lambda x: 1.0 / x,
         lambda x, y: np.sin(x + y),
     ]
-    library_function_names = [
-        lambda x: "exp(" + x + ")",
-        lambda x: "1 / " + x,
-        lambda x, y: "sin(" + x + "," + y + ")",
-    ]
     custom_library = CustomLibrary(
-        library_functions=library_functions, function_names=library_function_names
+        library_functions=library_functions,
     )
 
     tensor_array = [[0, 1, 1], [1, 0, 1]]

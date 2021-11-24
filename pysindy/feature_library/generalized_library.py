@@ -19,9 +19,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
     libraries : list of libraries
         Library instances to be applied to the input matrix.
 
-    tensor_array : 2D list of booleans, optional,
-            (default is to not tensor any of the libraries together) shape
-            equal to (# of tensor libraries to make, # feature libraries)
+    tensor_array : 2D list of booleans, optional, (default None)
+        Default is to not tensor any of the libraries together. Shape
+        equal to the # of tensor libraries and the # feature libraries.
         Indicates which pairs of libraries to tensor product together and
         add to the overall library. For instance if you have 5 libraries,
         and want to do two tensor products, you could use the list
@@ -29,9 +29,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         tensored libraries from tensoring libraries 0 and 3 and libraries
         1, 3, and 4.
 
-    inputs_per_library : np.ndarray, optional
-            (default all inputs used for every library) shape equal to
-            (# feature libraries, # variable inputs)
+    inputs_per_library : 2D np.ndarray, optional (default None)
+        Shape should be equal to # feature libraries by # variable input.
         Can be used to specify a subset of the variables to use to generate
         a feature library. If number of feature libraries > 1, then can be
         used to generate a large number of libraries, each using their own
@@ -51,22 +50,23 @@ class GeneralizedLibrary(BaseFeatureLibrary):
     libraries_ : list of libraries
         Library instances to be applied to the input matrix.
 
-    tensor_array_ : 2D list of booleans
+    tensor_array_ : 2D list of booleans (default None)
         Indicates which pairs of libraries to tensor product together and
         add to the overall library. For instance if you have 5 libraries,
         and want to do two tensor products, you could use the list
         [[1, 0, 0, 1, 0], [0, 1, 0, 1, 1]] to indicate that you want two
         tensored libraries from tensoring libraries 0 and 3 and libraries
-        1, 3, and 4. Shape equal to
-        (# of tensor libraries to make, # feature libraries)
+        1, 3, and 4. Shape equal to # of tensor libraries to make
+        by the # feature libraries.
 
-    inputs_per_library_ : np.ndarray
+    inputs_per_library_ : 2D np.ndarray, (default None)
+        Default is that all inputs are used for every library.
         Can be used to specify a subset of the variables to use to generate
         a feature library. If number of feature libraries > 1, then can be
         use to generate a large number of libraries, each using their own
         subsets of the input variables. Note that this must be specified for
-        all the individual feature libraries. Shape equal to
-            (# feature libraries, # variable inputs)
+        all the individual feature libraries. The shape is equal to
+        # feature libraries, # variable inputs.
 
     n_input_features_ : int
         The total number of input features.

@@ -1,6 +1,7 @@
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
+import numpy.random
 from numpy import array
 from numpy import asarray
 from numpy import empty
@@ -14,7 +15,6 @@ from numpy import shape
 from numpy import transpose
 from numpy import zeros
 from numpy import zeros_like
-from numpy.random import uniform
 from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
 from scipy.interpolate import RectBivariateSpline
@@ -334,7 +334,9 @@ class PDELibrary(BaseFeatureLibrary):
         t1 = self.temporal_grid[0]
         t2 = self.temporal_grid[-1]
         if self.space_ndim == 0:
-            self.domain_centers = uniform(t1 + self.Ht, t2 - self.Ht, size=self.K)
+            self.domain_centers = numpy.random.uniform(
+                t1 + self.Ht, t2 - self.Ht, size=self.K
+            )
             tgrid_k = zeros((self.K, self.num_pts_per_domain))
             for k in range(self.K):
                 t1_k = self.domain_centers[k] - self.Ht
@@ -344,8 +346,12 @@ class PDELibrary(BaseFeatureLibrary):
         if self.space_ndim == 1:
             x1 = self.spatial_grid[0]
             x2 = self.spatial_grid[-1]
-            domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
-            domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+            domain_centers_x = numpy.random.uniform(
+                x1 + self.Hx, x2 - self.Hx, size=(self.K, 1)
+            )
+            domain_centers_t = numpy.random.uniform(
+                t1 + self.Ht, t2 - self.Ht, size=(self.K, 1)
+            )
             self.domain_centers = hstack((domain_centers_x, domain_centers_t))
 
             xgrid_k = zeros((self.K, self.num_pts_per_domain))
@@ -371,9 +377,15 @@ class PDELibrary(BaseFeatureLibrary):
             x2 = self.spatial_grid[-1, 0, 0]
             y1 = self.spatial_grid[0, 0, 1]
             y2 = self.spatial_grid[0, -1, 1]
-            domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
-            domain_centers_y = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
-            domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+            domain_centers_x = numpy.random.uniform(
+                x1 + self.Hx, x2 - self.Hx, size=(self.K, 1)
+            )
+            domain_centers_y = numpy.random.uniform(
+                y1 + self.Hy, y2 - self.Hy, size=(self.K, 1)
+            )
+            domain_centers_t = numpy.random.uniform(
+                t1 + self.Ht, t2 - self.Ht, size=(self.K, 1)
+            )
             self.domain_centers = hstack(
                 (domain_centers_x, domain_centers_y, domain_centers_t)
             )
@@ -420,10 +432,18 @@ class PDELibrary(BaseFeatureLibrary):
             y2 = self.spatial_grid[0, -1, 0, 1]
             z1 = self.spatial_grid[0, 0, 0, 2]
             z2 = self.spatial_grid[0, 0, -1, 2]
-            domain_centers_x = uniform(x1 + self.Hx, x2 - self.Hx, size=(self.K, 1))
-            domain_centers_y = uniform(y1 + self.Hy, y2 - self.Hy, size=(self.K, 1))
-            domain_centers_z = uniform(z1 + self.Hz, z2 - self.Hz, size=(self.K, 1))
-            domain_centers_t = uniform(t1 + self.Ht, t2 - self.Ht, size=(self.K, 1))
+            domain_centers_x = numpy.random.uniform(
+                x1 + self.Hx, x2 - self.Hx, size=(self.K, 1)
+            )
+            domain_centers_y = numpy.random.uniform(
+                y1 + self.Hy, y2 - self.Hy, size=(self.K, 1)
+            )
+            domain_centers_z = numpy.random.uniform(
+                z1 + self.Hz, z2 - self.Hz, size=(self.K, 1)
+            )
+            domain_centers_t = numpy.random.uniform(
+                t1 + self.Ht, t2 - self.Ht, size=(self.K, 1)
+            )
             self.domain_centers = hstack(
                 (domain_centers_x, domain_centers_y, domain_centers_z, domain_centers_t)
             )

@@ -66,14 +66,12 @@ class ConstrainedSR3(SR3):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    constraint_lhs : numpy ndarray,
-            shape (n_constraints, n_features * n_targets),
-            optional (default None)
+    constraint_lhs : numpy ndarray, optional (default None)
+        Shape should be (n_constraints, n_features * n_targets),
         The left hand side matrix C of Cw <= d.
         There should be one row per constraint.
 
-    constraint_rhs : numpy ndarray, shape (n_constraints,),
-            optional (default None)
+    constraint_rhs : numpy ndarray, shape (n_constraints,), optional (default None)
         The right hand side vector d of Cw <= d.
 
     constraint_order : string, optional (default "target")
@@ -98,13 +96,12 @@ class ConstrainedSR3(SR3):
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
-                optional (default None)
+    initial_guess : np.ndarray, optional (default None)
+        Shape should be (n_features) or (n_targets, n_features).
         Initial guess for coefficients ``coef_``, (v in the mathematical equations)
         If None, least-squares is used to obtain an initial guess.
 
-    thresholds : np.ndarray, shape (n_targets, n_features), optional \
-            (default None)
+    thresholds : np.ndarray, shape (n_targets, n_features), optional (default None)
         Array of thresholds for each library function coefficient.
         Each row corresponds to a measurement variable and each column
         to a function from the feature library.
@@ -115,7 +112,7 @@ class ConstrainedSR3(SR3):
         threshold to be used for the (j + 1)st library function in the equation
         for the (i + 1)st measurement variable.
 
-    inequality_constraints : bool, optional
+    inequality_constraints : bool, optional (default False)
         If True, CVXPY methods are used to solve the problem.
 
     Attributes

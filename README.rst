@@ -131,7 +131,7 @@ If you do not have root access, you should add the ``--user`` option to the abov
 
 Caveats
 ^^^^^^^
-If you would like to use the ``SINDy-PI'' optimizer, the ``Trapping SINDy`` optimizer (TrappingSR3), or the other SR3 optimizations with inequality constraints, you will also need to install the cvxpy package, e.g. with ``pip install cvxpy``.
+If you would like to use the ``SINDy-PI`` optimizer, the ``Trapping SINDy`` optimizer (TrappingSR3), or the other SR3 optimizations with inequality constraints, you will also need to install the cvxpy package, e.g. with ``pip install cvxpy``.
 
 To run the unit tests, example notebooks, or build a local copy of the documentation, you should install the additional dependencies in ``requirements-dev.txt``
 
@@ -219,13 +219,13 @@ Bibtex:
     title = {PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data},
     journal = {Journal of Open Source Software}
     }
-    
+
 Bibtex:
 
 .. code-block:: text
-    
+
       @article{kaptanoglu2021pysindy,
-      title={PySINDy: A comprehensive Python package for robust sparse system identification}, 
+      title={PySINDy: A comprehensive Python package for robust sparse system identification},
       author={Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Jared L. Callaham and Charles B. Delahunt and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
       year={2021},
 	  Journal = {arXiv preprint arXiv:2111.08481},
@@ -238,11 +238,11 @@ References
    *PySINDy: a Python package for the sparse identification of
    nonlinear dynamics from data.* arXiv preprint arXiv:2004.08424 (2020)
    `[arXiv] <https://arxiv.org/abs/2004.08424>`_
-   
--  Kaptanoglu, Alan A., Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, 
-   Jared L. Callaham, Charles B. Delahunt, Kathleen Champion, Jean-Christophe Loiseau, 
-   J. Nathan Kutz, and Steven L. Brunton. 
-   *PySINDy: A comprehensive Python package for robust sparse system identification.* 
+
+-  Kaptanoglu, Alan A., Brian M. de Silva, Urban Fasel, Kadierdan Kaheman,
+   Jared L. Callaham, Charles B. Delahunt, Kathleen Champion, Jean-Christophe Loiseau,
+   J. Nathan Kutz, and Steven L. Brunton.
+   *PySINDy: A comprehensive Python package for robust sparse system identification.*
    arXiv preprint arXiv:2111.08481 (2021).
    `[arXiv] <https://arxiv.org/abs/2111.08481>`_
 
@@ -252,22 +252,22 @@ References
    Academy of Sciences 113.15 (2016): 3932-3937.
    `[DOI] <http://dx.doi.org/10.1073/pnas.1517384113>`__
 
--  Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N. (2020). 
-   *A unified sparse optimization framework to learn parsimonious physics-informed 
+-  Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N. (2020).
+   *A unified sparse optimization framework to learn parsimonious physics-informed
    models from data.* IEEE Access, 8, 169259-169271.
    `[DOI] <https://doi.org/10.1109/ACCESS.2020.3023625>`__
-   
+
 -  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
    *Sparse identification of nonlinear dynamics with control (SINDYc).*
    IFAC-PapersOnLine 49.18 (2016): 710-715.
    `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
-   
-- Kaheman, K., Kutz, J. N., & Brunton, S. L. (2020). 
-  *SINDy-PI: a robust algorithm for parallel implicit sparse identification 
+
+- Kaheman, K., Kutz, J. N., & Brunton, S. L. (2020).
+  *SINDy-PI: a robust algorithm for parallel implicit sparse identification
   of nonlinear dynamics.* Proceedings of the Royal Society A, 476(2242), 20200279.
   `[DOI] <https://doi.org/10.1098/rspa.2020.0279>`_
 
--  Kaptanoglu, A. A., Callaham, J. L., Aravkin, A., Hansen, C. J., & Brunton, S. L. (2021). 
+-  Kaptanoglu, A. A., Callaham, J. L., Aravkin, A., Hansen, C. J., & Brunton, S. L. (2021).
    *Promoting global stability in data-driven models of quadratic nonlinear dynamics.*
    Physical Review Fluids, 6(9), 094401.
    `[DOI] <https://doi.org/10.1103/PhysRevFluids.6.094401>`__

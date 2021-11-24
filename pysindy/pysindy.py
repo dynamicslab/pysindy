@@ -1,6 +1,7 @@
 import warnings
 from typing import Sequence
 
+import numpy.random
 from numpy import concatenate
 from numpy import copy
 from numpy import insert
@@ -11,7 +12,6 @@ from numpy import newaxis
 from numpy import sort
 from numpy import vstack
 from numpy import zeros
-from numpy.random import choice
 from scipy.integrate import odeint
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
@@ -398,7 +398,7 @@ class SINDy(BaseEstimator):
                 self.coef_list = []
                 for i in range(n_models):
                     self.feature_library.ensemble_indices = sort(
-                        choice(
+                        numpy.random.choice(
                             range(n_output_features),
                             n_candidates_to_drop,
                             replace=False,
@@ -431,7 +431,7 @@ class SINDy(BaseEstimator):
                     )
                     for j in range(n_models):
                         self.feature_library.ensemble_indices = sort(
-                            choice(
+                            numpy.random.choice(
                                 range(n_output_features),
                                 n_candidates_to_drop,
                                 replace=False,

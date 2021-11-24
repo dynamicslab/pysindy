@@ -855,7 +855,7 @@ class SINDy(BaseEstimator):
         integrator="solve_ivp",
         stop_condition=None,
         interpolator=None,
-        integrator_kws={"method": "LSODA"},
+        integrator_kws={"method": "LSODA", "rtol": 1e-12, "atol": 1e-12},
         interpolator_kws={},
     ):
         """
@@ -1004,7 +1004,7 @@ class SINDy(BaseEstimator):
                     (solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)).y
                 ).T
             elif integrator == "odeint":
-                if integrator_kws == {"method": "LSODA"}:
+                if integrator_kws["method"] == "LSODA":
                     integrator_kws = {}
                 return odeint(rhs, x0, t, tfirst=True, **integrator_kws)
             else:

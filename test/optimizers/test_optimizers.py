@@ -206,8 +206,8 @@ def test_sr3_bad_parameters(optimizer, params):
         dict(tol=0),
         dict(tol_m=0),
         dict(eps_solver=0),
-        dict(alpha_m=-1),
-        dict(alpha_A=-1),
+        dict(eta=1, alpha_m=-1),
+        dict(eta=1, alpha_A=-1),
         dict(gamma=1),
         dict(evolve_w=False, relax_optim=False),
         dict(thresholder="l0"),
@@ -317,18 +317,6 @@ def test_sindypi_fit(params):
     )
     model.fit(x_train, t=t)
     assert np.shape(opt.coef_) == (10, 10)
-
-
-@pytest.mark.parametrize(
-    "params",
-    [dict(PL=np.random.rand(3, 3, 3, 9)), dict(PQ=np.random.rand(3, 3, 3, 3, 9))],
-)
-def test_trapping_bad_tensors(params):
-    x = np.random.standard_normal((10, 9))
-    x_dot = np.random.standard_normal((10, 3))
-    with pytest.raises(ValueError):
-        model = TrappingSR3(**params)
-        model.fit(x, x_dot)
 
 
 @pytest.mark.parametrize(
@@ -450,20 +438,17 @@ def test_trapping_sr3_quadratic_library(
     params, trapping_sr3_params, data_quadratic_library
 ):
     np.random.seed(100)
-    PL_shape = (3, 3, 3, 9)
-    PQ_shape = (3, 3, 3, 3, 9)
-    PL = np.ones(PL_shape)
-    PQ = np.ones(PQ_shape)
     x = np.random.standard_normal((100, 3))
 
     sindy_library = data_quadratic_library
     params.update(trapping_sr3_params)
 
-    opt = TrappingSR3(PL=PL, PQ=PQ, **params)
+    opt = TrappingSR3(**params)
     model = SINDy(optimizer=opt, feature_library=sindy_library)
     model.fit(x)
-    assert opt.PL.shape == PL_shape
-    assert opt.PQ.shape == PQ_shape
+    assert opt.PL_unsym_.shape == (3, 3, 3, 9)
+    assert opt.PL_.shape == (3, 3, 3, 9)
+    assert opt.PQ_.shape == (3, 3, 3, 3, 9)
     check_is_fitted(model)
 
     # Rerun with identity constraints
@@ -473,15 +458,12 @@ def test_trapping_sr3_quadratic_library(
     params["constraint_rhs"] = np.zeros(p)
     params["constraint_lhs"] = np.eye(p, r * N)
 
-    opt = TrappingSR3(
-        PL=PL,
-        PQ=PQ,
-        **params,
-    )
+    opt = TrappingSR3(**params)
     model = SINDy(optimizer=opt, feature_library=sindy_library)
     model.fit(x)
-    assert opt.PL.shape == (3, 3, 3, 9)
-    assert opt.PQ.shape == (3, 3, 3, 3, 9)
+    assert opt.PL_unsym_.shape == (3, 3, 3, 9)
+    assert opt.PL_.shape == (3, 3, 3, 9)
+    assert opt.PQ_.shape == (3, 3, 3, 3, 9)
     check_is_fitted(model)
     # check is solve was infeasible first
     if not np.allclose(opt.m_history_[-1], opt.m_history_[0]):
@@ -489,11 +471,7 @@ def test_trapping_sr3_quadratic_library(
         assert np.allclose((model.coefficients().flatten())[zero_inds], 0.0, atol=1e-5)
 
 
-@pytest.mark.parametrize(
-    "params",
-    [dict(PL=np.ones((3, 3, 3, 9)), PQ=np.ones((3, 3, 3, 3, 9)))],
-)
-def test_trapping_cubic_library(params):
+def test_trapping_cubic_library():
     x = np.random.standard_normal((10, 3))
     library_functions = [
         lambda x: x,
@@ -514,10 +492,10 @@ def test_trapping_cubic_library(params):
     sindy_library = CustomLibrary(
         library_functions=library_functions, function_names=library_function_names
     )
-    with pytest.raises(ValueError):
-        opt = TrappingSR3(**params)
-        model = SINDy(optimizer=opt, feature_library=sindy_library)
-        model.fit(x)
+    opt = TrappingSR3()
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    check_is_fitted(model)
 
 
 @pytest.mark.parametrize(
@@ -866,7 +844,6 @@ def test_trapping_inequality_constraints(data_lorenz, params):
     model = SINDy(
         optimizer=opt,
         feature_library=poly_lib,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
         feature_names=feature_names,
     )
     model.fit(x, t=t[1] - t[0])

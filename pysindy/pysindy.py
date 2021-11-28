@@ -376,7 +376,10 @@ class SINDy(BaseEstimator):
             warnings.filterwarnings(action, category=ConvergenceWarning)
             warnings.filterwarnings(action, category=LinAlgWarning)
             warnings.filterwarnings(action, category=UserWarning)
-
+            pde_lib_flag = False
+            if isinstance(self.feature_library, PDELibrary):
+                if self.feature_library.spatial_grid is not None:
+                    pde_lib_flag = True
             if ensemble and not library_ensemble:
                 self.coef_list = []
                 for i in range(n_models):
@@ -387,7 +390,7 @@ class SINDy(BaseEstimator):
                         replace,
                         tgrid,
                         self.feature_library,
-                        isinstance(self.feature_library, PDELibrary),
+                        pde_lib_flag,
                     )
                     self.model.fit(x_ensemble, x_dot_ensemble)
                     self.coef_list.append(self.model.steps[-1][1].coef_)

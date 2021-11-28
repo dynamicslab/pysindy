@@ -185,7 +185,14 @@ def drop_random_rows(
         # Choose random n_subset points to use
         rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))
         x_new = x[rand_inds, :]
-        x_dot_new = x_dot[rand_inds, :]
+        if hasattr(feature_library, "weak_form"):
+            if feature_library.weak_form:
+                x_dot_new = x_dot
+                feature_library.temporal_grid = tgrid[rand_inds]
+            else:
+                x_dot_new = x_dot[rand_inds, :]
+        else:
+            x_dot_new = x_dot[rand_inds, :]
     return x_new, x_dot_new
 
 

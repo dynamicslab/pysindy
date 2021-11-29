@@ -474,16 +474,25 @@ class TensoredLibrary(BaseFeatureLibrary):
         feature_names = list()
         for i in range(len(self.libraries_)):
             lib_i = self.libraries_[i]
-            input_features_i = [
-                "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
-            ]
+            if input_features is None:
+                input_features_i = [
+                    "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
+                ]
+            else:
+                input_features_i = np.asarray(input_features)[
+                    np.unique(self.inputs_per_library_[i, :])
+                ].tolist()
             lib_i_feat_names = lib_i.get_feature_names(input_features_i)
             for j in range(i + 1, len(self.libraries_)):
                 lib_j = self.libraries_[j]
-                # Need to overwrite input feature names
-                input_features_j = [
-                    "x%d" % k for k in np.unique(self.inputs_per_library_[j, :])
-                ]
+                if input_features is None:
+                    input_features_j = [
+                        "x%d" % k for k in np.unique(self.inputs_per_library_[j, :])
+                    ]
+                else:
+                    input_features_j = np.asarray(input_features)[
+                        np.unique(self.inputs_per_library_[j, :])
+                    ].tolist()
                 lib_j_feat_names = lib_j.get_feature_names(input_features_j)
                 feature_names += self._name_combinations(
                     lib_i_feat_names, lib_j_feat_names

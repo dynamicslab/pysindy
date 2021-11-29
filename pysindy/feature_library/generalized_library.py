@@ -283,14 +283,22 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         feature_names = list()
         for i, lib in enumerate(self.libraries_):
             if i < self.inputs_per_library_.shape[0]:
-                input_features = [
-                    "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
-                ]
+                if input_features is None:
+                    input_features_i = [
+                        "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
+                    ]
+                else:
+                    input_features_i = np.asarray(input_features)[
+                        np.unique(self.inputs_per_library_[i, :])
+                    ].tolist()
             else:
                 # Tensor libraries need all the inputs and then internally
                 # handle the subsampling of the input variables
-                input_features = [
-                    "x%d" % k for k in range(self.inputs_per_library_.shape[0])
-                ]
-            feature_names += lib.get_feature_names(input_features)
+                if input_features is None:
+                    input_features_i = [
+                        "x%d" % k for k in range(self.inputs_per_library_.shape[1])
+                    ]
+                else:
+                    input_features_i = input_features
+            feature_names += lib.get_feature_names(input_features_i)
         return feature_names

@@ -488,6 +488,16 @@ def test_generalized_library(data_lorenz):
     model.get_feature_names()
     assert len(model.get_feature_names()) == 24
 
+    # Repeat with feature names
+    feature_names = ["x", "y", "z"]
+    model = SINDy(
+        optimizer=sindy_opt, feature_library=sindy_library, feature_names=feature_names
+    )
+    model.fit(x, t=t)
+    model.print()
+    model.get_feature_names()
+    assert len(model.get_feature_names()) == 24
+
     # Next try with tensor libraries but still all the input variables
     sindy_library = GeneralizedLibrary(
         [poly_library, fourier_library, custom_library], tensor_array=tensor_array
@@ -495,6 +505,18 @@ def test_generalized_library(data_lorenz):
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
+    )
+    model.fit(x, t=t)
+    model.print()
+    # 24 + (9 * 6) = 54 + (9 * 9) = 81
+    assert len(model.get_feature_names()) == 159
+
+    # Repeat with feature_names
+    sindy_library = GeneralizedLibrary(
+        [poly_library, fourier_library, custom_library], tensor_array=tensor_array
+    )
+    model = SINDy(
+        optimizer=sindy_opt, feature_library=sindy_library, feature_names=feature_names
     )
     model.fit(x, t=t)
     model.print()
@@ -509,6 +531,18 @@ def test_generalized_library(data_lorenz):
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
+    )
+    model.fit(x, t=t)
+    assert len(model.get_feature_names()) == 29
+
+    # Repeat with feature names
+    sindy_library = GeneralizedLibrary(
+        [poly_library, fourier_library, custom_library],
+        tensor_array=tensor_array,
+        inputs_per_library=inputs_per_library,
+    )
+    model = SINDy(
+        optimizer=sindy_opt, feature_library=sindy_library, feature_names=feature_names
     )
     model.fit(x, t=t)
     assert len(model.get_feature_names()) == 29

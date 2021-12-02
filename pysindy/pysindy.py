@@ -376,10 +376,10 @@ class SINDy(BaseEstimator):
             warnings.filterwarnings(action, category=ConvergenceWarning)
             warnings.filterwarnings(action, category=LinAlgWarning)
             warnings.filterwarnings(action, category=UserWarning)
-            pde_lib_flag = False
+            pde_library_flag = False
             if isinstance(self.feature_library, PDELibrary):
                 if self.feature_library.spatial_grid is not None:
-                    pde_lib_flag = True
+                    pde_library_flag = True
             if ensemble and not library_ensemble:
                 self.coef_list = []
                 for i in range(n_models):
@@ -390,7 +390,7 @@ class SINDy(BaseEstimator):
                         replace,
                         tgrid,
                         self.feature_library,
-                        pde_lib_flag,
+                        pde_library_flag,
                     )
                     self.model.fit(x_ensemble, x_dot_ensemble)
                     self.coef_list.append(self.model.steps[-1][1].coef_)
@@ -1007,7 +1007,7 @@ class SINDy(BaseEstimator):
                     (solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)).y
                 ).T
             elif integrator == "odeint":
-                if integrator_kws["method"] == "LSODA":
+                if integrator_kws.get("method") == "LSODA":
                     integrator_kws = {}
                 return odeint(rhs, x0, t, tfirst=True, **integrator_kws)
             else:

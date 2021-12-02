@@ -4,7 +4,6 @@ from pkg_resources import get_distribution
 try:
     __version__ = get_distribution(__name__).version
 except DistributionNotFound:
-    __version__ = "v1.4.3"  # required for sphinx-build to compile locally
     pass
 
 from . import differentiation

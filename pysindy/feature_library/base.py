@@ -355,7 +355,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         lib_full = []
         for i in range(len(lib_i)):
             for j in range(len(lib_j)):
-                lib_full.append(lib_i[i] + lib_j[j])
+                lib_full.append(lib_i[i] + " " + lib_j[j])
         return lib_full
 
     def _set_inputs_per_library(self, inputs_per_library):

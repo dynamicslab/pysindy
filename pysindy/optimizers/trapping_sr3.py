@@ -338,7 +338,7 @@ class TrappingSR3(SR3):
                             if (j == k) and (n == N - r + j) and (i == kk):
                                 PQ_tensor[i, j, k, kk, n] = 1.0
                             if (j != k) and (n == r + j + k - 1) and (i == kk):
-                                PQ_tensor[i, j, k, kk, n] = 1.0 / 2.0
+                                PQ_tensor[i, j, k, kk, n] = 1 / 2
 
         return PL_tensor_unsym, PL_tensor, PQ_tensor
 
@@ -357,6 +357,10 @@ class TrappingSR3(SR3):
         # If these tensors are not passed, or incorrect shape, assume zeros
         if self.PQ_ is None:
             self.PQ_ = np.zeros((r, r, r, r, n_features))
+            warnings.warn(
+                "The PQ tensor (a requirement for the stability promotion) was"
+                " not set, so setting this tensor to all zeros. "
+            )
         elif (self.PQ_).shape != (r, r, r, r, n_features) and (self.PQ_).shape != (
             r,
             r,
@@ -365,8 +369,18 @@ class TrappingSR3(SR3):
             N,
         ):
             self.PQ_ = np.zeros((r, r, r, r, n_features))
+            warnings.warn(
+                "The PQ tensor (a requirement for the stability promotion) was"
+                " initialized with incorrect dimensions, "
+                "so setting this tensor to all zeros "
+                "(with the correct dimensions). "
+            )
         if self.PL_ is None:
             self.PL_ = np.zeros((r, r, r, n_features))
+            warnings.warn(
+                "The PL tensor (a requirement for the stability promotion) was"
+                " not set, so setting this tensor to all zeros. "
+            )
         elif (self.PL_).shape != (r, r, r, n_features) and (self.PL_).shape != (
             r,
             r,
@@ -374,6 +388,12 @@ class TrappingSR3(SR3):
             N,
         ):
             self.PL_ = np.zeros((r, r, r, n_features))
+            warnings.warn(
+                "The PL tensor (a requirement for the stability promotion) was"
+                " initialized with incorrect dimensions, "
+                "so setting this tensor to all zeros "
+                "(with the correct dimensions). "
+            )
 
         # Check if the tensor symmetries are properly defined
         if self._bad_PL(self.PL_):
@@ -552,7 +572,7 @@ class TrappingSR3(SR3):
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1" and np.any(self.thresholds != 0):
+        elif self.thresholder.lower() == "weighted_l1":
             cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
         elif self.thresholder.lower() == "l2":
             cost = cost + self.threshold * cp.norm2(xi) ** 2
@@ -590,7 +610,7 @@ class TrappingSR3(SR3):
             return None, None
         coef_sparse = (xi.value).reshape(coef_prev.shape)
 
-        if np.all(self.PL_ == 0.0) and np.all(self.PQ_ == 0.0):
+        if np.all(self.PL_) and np.all(self.PQ_):
             return np.zeros(r), coef_sparse  # no optimization over m
         else:
             m_cp = cp.Variable(r)

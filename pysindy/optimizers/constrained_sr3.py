@@ -182,6 +182,9 @@ class ConstrainedSR3(SR3):
             self.unbias = False
             self.constraint_order = constraint_order
 
+        if inequality_constraints:
+            self.max_iter = max(10000, max_iter)  # max iterations for CVXPY
+
         if inequality_constraints and not self.use_constraints:
             raise ValueError(
                 "Use of inequality constraints requires constraint_lhs and "
@@ -240,7 +243,7 @@ class ConstrainedSR3(SR3):
 
         # default solver is OSQP here but switches to ECOS for L2
         try:
-            prob.solve(max_iter=50000, eps_abs=self.tol, eps_rel=self.tol)
+            prob.solve(max_iter=self.max_iter, eps_abs=self.tol, eps_rel=self.tol)
         # Annoying error coming from L2 norm switching to use the ECOS
         # solver, which uses "max_iters" instead of "max_iter", and
         # similar semantic changes for the other variables.

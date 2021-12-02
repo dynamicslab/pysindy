@@ -1,4 +1,3 @@
-# import time
 import warnings
 
 import cvxpy as cp
@@ -237,7 +236,7 @@ class TrappingSR3(SR3):
         if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
             raise ValueError("Regularizer must be (weighted) L1 or L2")
         if eta is None:
-            print(
+            warnings.warn(
                 "eta was not set, so defaulting to eta = 1e20 "
                 "with alpha_m = 1e-2 * eta, alpha_A = eta. Here eta is so "
                 "large that the stability term in the optimization "

@@ -185,6 +185,20 @@ you can run the following to automatically reformat your staged code
 
 Note that you will then need to re-stage any changes ``pre-commit`` made to your code.
 
+There are a number of SINDy variants and advanced functionality that would be great to implement in future releases:
+
+1. Bayesian SINDy, for instance that from Hirsh, Seth M., David A. Barajas-Solano, and J. Nathan Kutz. "Sparsifying Priors for Bayesian Uncertainty Quantification in Model Discovery." arXiv preprint arXiv:2107.02107 (2021).
+
+2. Tensor SINDy, using the methods in Gelß, Patrick, et al. "Multidimensional approximation of nonlinear dynamical systems." Journal of Computational and Nonlinear Dynamics 14.6 (2019).
+
+3. Stochastic SINDy, using the methods in Brückner, David B., Pierre Ronceray, and Chase P. Broedersz. "Inferring the dynamics of underdamped stochastic systems." Physical review letters 125.5 (2020): 058103.
+
+4. Integration of PySINDy with a Python model-predictive control (MPC) code.
+
+5. The PySINDy weak formulation is based on the work in Reinbold, Patrick AK, Daniel R. Gurevich, and Roman O. Grigoriev. "Using noisy or incomplete data to discover models of spatiotemporal dynamics." Physical Review E 101.1 (2020): 010203. It might be useful to additionally implement the weak formulation from Messenger, Daniel A., and David M. Bortz. "Weak SINDy for partial differential equations." Journal of Computational Physics (2021): 110525. The weak formulation in PySINDy is also fairly slow and computationally intensive, so finding ways to speed up the code would be great. 
+
+6. The blended conditional gradients (BCG) algorithm for solving the constrained LASSO problem, Carderera, Alejandro, et al. "CINDy: Conditional gradient-based Identification of Non-linear Dynamics--Noise-robust recovery." arXiv preprint arXiv:2101.02630 (2021).
+
 Reporting issues or bugs
 ^^^^^^^^^^^^^^^^^^^^^^^^
 If you find a bug in the code or want to request a new feature, please open an issue.

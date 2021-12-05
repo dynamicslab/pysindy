@@ -3,7 +3,7 @@ PySINDy
 
 |BuildCI| |RTD| |PyPI| |Codecov| |JOSS| |DOI|
 
-**PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016a), including the unified optimization approach of Champion et al. (2019) and SINDy with control from Brunton et al. (2016b). A comprehensive literature review is given in de Silva et al. (2020).
+**PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016a), including the unified optimization approach of Champion et al. (2019), SINDy with control from Brunton et al. (2016b), Trapping SINDy from Kaptanoglu et al. (2021), SINDy-PI from Kaheman et al. (2020), PDE-FIND from Rudy et al. (2017), and so on. A comprehensive literature review is given in de Silva et al. (2020) and Kaptanoglu, de Silva et al. (2021).
 
 .. contents:: Table of contents
 
@@ -131,7 +131,7 @@ If you do not have root access, you should add the ``--user`` option to the abov
 
 Caveats
 ^^^^^^^
-If you would like to use the ``TrappingSINDy`` optimizer you will also need to install the cvxpy package, e.g. with ``pip install cvxpy``.
+If you would like to use the ``SINDy-PI`` optimizer, the ``Trapping SINDy`` optimizer (TrappingSR3), or the other SR3 optimizations with inequality constraints, you will also need to install the cvxpy package, e.g. with ``pip install cvxpy``.
 
 To run the unit tests, example notebooks, or build a local copy of the documentation, you should install the additional dependencies in ``requirements-dev.txt``
 
@@ -143,6 +143,12 @@ To run the unit tests, example notebooks, or build a local copy of the documenta
 Documentation
 -------------
 The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`__. There are numerous `examples <https://pysindy.readthedocs.io/en/latest/examples/index.html>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`__. A video overview of PySINDy can be found on `Youtube <https://www.youtube.com/watch?v=DvbbXX8Bd90>`__.
+
+PySINDy implements a lot of advanced functionality that may be overwhelming for new users or folks who are unfamiliar with these methods. Below, we provide a helpful flowchart for figuring out which methods to use, given the characteristics of your dataset:
+
+.. image:: https://github.com/dynamicslab/pysindy/blob/PDEFIND_and_IntegralSINDy/docs/JOSS2/Fig3.png
+
+This flow chart summarizes how `PySINDy` users can start with a dataset and systematically choose the proper candidate library and sparse regression optimizer that are tailored for a specific scientific task. The `GeneralizedLibrary` class allows for tensoring, concatenating, and otherwise combining many different candidate libraries.
 
 Community guidelines
 --------------------
@@ -179,6 +185,20 @@ you can run the following to automatically reformat your staged code
 
 Note that you will then need to re-stage any changes ``pre-commit`` made to your code.
 
+There are a number of SINDy variants and advanced functionality that would be great to implement in future releases:
+
+1. Bayesian SINDy, for instance that from Hirsh, Seth M., David A. Barajas-Solano, and J. Nathan Kutz. "Sparsifying Priors for Bayesian Uncertainty Quantification in Model Discovery." arXiv preprint arXiv:2107.02107 (2021).
+
+2. Tensor SINDy, using the methods in Gelß, Patrick, et al. "Multidimensional approximation of nonlinear dynamical systems." Journal of Computational and Nonlinear Dynamics 14.6 (2019).
+
+3. Stochastic SINDy, using the methods in Brückner, David B., Pierre Ronceray, and Chase P. Broedersz. "Inferring the dynamics of underdamped stochastic systems." Physical review letters 125.5 (2020): 058103.
+
+4. Integration of PySINDy with a Python model-predictive control (MPC) code.
+
+5. The PySINDy weak formulation is based on the work in Reinbold, Patrick AK, Daniel R. Gurevich, and Roman O. Grigoriev. "Using noisy or incomplete data to discover models of spatiotemporal dynamics." Physical Review E 101.1 (2020): 010203. It might be useful to additionally implement the weak formulation from Messenger, Daniel A., and David M. Bortz. "Weak SINDy for partial differential equations." Journal of Computational Physics (2021): 110525. The weak formulation in PySINDy is also fairly slow and computationally intensive, so finding ways to speed up the code would be great. 
+
+6. The blended conditional gradients (BCG) algorithm for solving the constrained LASSO problem, Carderera, Alejandro, et al. "CINDy: Conditional gradient-based Identification of Non-linear Dynamics--Noise-robust recovery." arXiv preprint arXiv:2101.02630 (2021).
+
 Reporting issues or bugs
 ^^^^^^^^^^^^^^^^^^^^^^^^
 If you find a bug in the code or want to request a new feature, please open an issue.
@@ -191,9 +211,11 @@ Citing PySINDy
 --------------
 PySINDy has been published in the Journal of Open Source Software (JOSS). The paper can be found `here <https://joss.theoj.org/papers/10.21105/joss.02104>`__.
 
-If you use PySINDy in your work, please cite it using:
+If you use PySINDy in your work, please cite it using the following two references:
 
 ``de Silva et al., (2020). PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data. Journal of Open Source Software, 5(49), 2104, https://doi.org/10.21105/joss.02104``
+
+``Alan A. Kaptanoglu, Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Jared L.Callaham,   Charles  B.  Delahunt,   Kathleen  Champion,   Jean-Christophe  Loiseau,J. Nathan Kutz, and Steven L. Brunton. PySINDy:  A comprehensive Python packagefor robust sparse system identification. arXiv preprint arXiv:2111.08481, 2021.``
 
 Bibtex:
 
@@ -212,6 +234,16 @@ Bibtex:
     journal = {Journal of Open Source Software}
     }
 
+Bibtex:
+
+.. code-block:: text
+
+      @article{kaptanoglu2021pysindy,
+      title={PySINDy: A comprehensive Python package for robust sparse system identification},
+      author={Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Jared L. Callaham and Charles B. Delahunt and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
+      year={2021},
+	  Journal = {arXiv preprint arXiv:2111.08481},
+      }
 
 References
 ----------------------
@@ -221,27 +253,38 @@ References
    nonlinear dynamics from data.* arXiv preprint arXiv:2004.08424 (2020)
    `[arXiv] <https://arxiv.org/abs/2004.08424>`_
 
+-  Kaptanoglu, Alan A., Brian M. de Silva, Urban Fasel, Kadierdan Kaheman,
+   Jared L. Callaham, Charles B. Delahunt, Kathleen Champion, Jean-Christophe Loiseau,
+   J. Nathan Kutz, and Steven L. Brunton.
+   *PySINDy: A comprehensive Python package for robust sparse system identification.*
+   arXiv preprint arXiv:2111.08481 (2021).
+   `[arXiv] <https://arxiv.org/abs/2111.08481>`_
+
 -  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
    *Discovering governing equations from data by sparse identification
    of nonlinear dynamical systems.* Proceedings of the National
    Academy of Sciences 113.15 (2016): 3932-3937.
    `[DOI] <http://dx.doi.org/10.1073/pnas.1517384113>`__
 
--  Champion, Kathleen, Peng Zheng, Aleksandr Y. Aravkin, Steven L.
-   Brunton, and J. Nathan Kutz. *A unified sparse optimization
-   framework to learn parsimonious physics-informed models from
-   data.* arXiv preprint arXiv:1906.10612 (2019).
-   `[arXiv] <https://arxiv.org/abs/1906.10612>`__
-   
+-  Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N. (2020).
+   *A unified sparse optimization framework to learn parsimonious physics-informed
+   models from data.* IEEE Access, 8, 169259-169271.
+   `[DOI] <https://doi.org/10.1109/ACCESS.2020.3023625>`__
+
 -  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
    *Sparse identification of nonlinear dynamics with control (SINDYc).*
    IFAC-PapersOnLine 49.18 (2016): 710-715.
    `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
 
--  Kaptanoglu, Alan A., Jared L. Callaham, Christopher J. Hansen, Aleksandr Aravkin, and Steven L. Brunton.
+- Kaheman, K., Kutz, J. N., & Brunton, S. L. (2020).
+  *SINDy-PI: a robust algorithm for parallel implicit sparse identification
+  of nonlinear dynamics.* Proceedings of the Royal Society A, 476(2242), 20200279.
+  `[DOI] <https://doi.org/10.1098/rspa.2020.0279>`_
+
+-  Kaptanoglu, A. A., Callaham, J. L., Aravkin, A., Hansen, C. J., & Brunton, S. L. (2021).
    *Promoting global stability in data-driven models of quadratic nonlinear dynamics.*
-   arXiv preprint arXiv:2105.01843 (2021).
-   `[arXiv] <https://arxiv.org/abs/2105.01843>`__
+   Physical Review Fluids, 6(9), 094401.
+   `[DOI] <https://doi.org/10.1103/PhysRevFluids.6.094401>`__
 
 
 Related packages
@@ -259,8 +302,6 @@ Thanks to the members of the community who have contributed to PySINDy!
 | `billtubbs <https://github.com/kopytjuk>`_            | Bug fix `#68 <https://github.com/dynamicslab/pysindy/issues/68>`_                                                                                          |
 +-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | `kopytjuk <https://github.com/kopytjuk>`_             | Concatenation feature for libraries `#72 <https://github.com/dynamicslab/pysindy/pull/72>`_                                                                |
-+-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| `akaptano <https://github.com/akaptano>`_             | Constrained SR3 and plasma physics example notebook `#78 <https://github.com/dynamicslab/pysindy/pull/78>`_                                                |
 +-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | `andgoldschmidt <https://github.com/andgoldschmidt>`_ | `derivative <https://derivative.readthedocs.io/en/latest/>`_ package for numerical differentiation `#85 <https://github.com/dynamicslab/pysindy/pull/85>`_ |
 +-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+

@@ -44,15 +44,15 @@ class STLSQ(BaseOptimizer):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the l2-norm.
+    normalize_columns : boolean, optional (default False)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
+    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features),
             optional (default None)
         Initial guess for coefficients ``coef_``.
         If None, least-squares is used to obtain an initial guess.
@@ -97,16 +97,16 @@ class STLSQ(BaseOptimizer):
         alpha=0.05,
         max_iter=20,
         ridge_kw=None,
-        normalize=False,
+        normalize_columns=False,
         fit_intercept=False,
         copy_X=True,
         initial_guess=None,
     ):
         super(STLSQ, self).__init__(
             max_iter=max_iter,
-            normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            normalize_columns=normalize_columns,
         )
 
         if threshold < 0:
@@ -152,6 +152,7 @@ class STLSQ(BaseOptimizer):
         """
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess
+        self.Theta = x
 
         ind = self.ind_
         n_samples, n_features = x.shape

@@ -73,6 +73,92 @@ def test_centered_difference_2d(data_derivative_2d):
     np.testing.assert_allclose(centered_difference(x), x_dot)
 
 
+def test_centered_difference_2d_uniform(data_derivative_2d):
+    x, x_dot = data_derivative_2d
+    centered_difference = FiniteDifference(order=2)
+    np.testing.assert_allclose(centered_difference(x), x_dot)
+
+
+def test_centered_difference_2d_uniform_time(data_derivative_2d):
+    x, x_dot = data_derivative_2d
+    t = np.linspace(0, x.shape[0] - 1, x.shape[0])
+    centered_difference = FiniteDifference(order=2)
+    np.testing.assert_allclose(centered_difference(x, t), x_dot)
+
+
+# Todo: Update with a real test of the differentiation. Right now it
+# really just checks that is was able to do a calculation.
+# Same goes for atol=4 in example below this.
+def test_centered_difference_2d_nonuniform_time(data_derivative_2d):
+    x, x_dot = data_derivative_2d
+    t = np.linspace(0, x.shape[0] - 1, x.shape[0])
+    t[: len(t) // 2] = t[: len(t) // 2] + 0.5
+    centered_difference = FiniteDifference(order=2)
+    np.testing.assert_allclose(centered_difference(x, t), x_dot, atol=4)
+
+
+def test_centered_difference_xy_yx(data_2dspatial):
+    u = data_2dspatial
+    x_grid = np.linspace(1, 100, 100)
+    y_grid = np.linspace(1, 50, 50)
+    u_x = np.zeros(u.shape)
+    u_y = np.zeros(u.shape)
+    u_xy = np.zeros(u.shape)
+    u_yx = np.zeros(u.shape)
+    for i in range(100):
+        u_y[i, :, :] = FiniteDifference(order=2, d=1)._centered_difference(
+            u[i, :, :], y_grid
+        )
+    for i in range(50):
+        u_x[:, i, :] = FiniteDifference(order=2, d=1)._centered_difference(
+            u[:, i, :], x_grid
+        )
+    for i in range(100):
+        u_xy[i, :, :] = FiniteDifference(order=2, d=1)._centered_difference(
+            u_x[i, :, :], y_grid
+        )
+    for i in range(50):
+        u_yx[:, i, :] = FiniteDifference(order=2, d=1)._centered_difference(
+            u_y[:, i, :], x_grid
+        )
+    np.testing.assert_allclose(u_xy, u_yx)
+
+
+def test_centered_difference_hot(data_derivative_2d):
+    x, x_dot = data_derivative_2d
+    t1 = np.linspace(0, x.shape[0], x.shape[0])
+    t2 = np.copy(t1)
+    t2[: len(t1) // 2] = t1[: len(t1) // 2] + 0.5
+    centered_difference_uniform = FiniteDifference(order=2)
+    centered_difference_nonuniform = FiniteDifference(order=2)
+    np.testing.assert_allclose(
+        centered_difference_uniform(x, t=t1),
+        centered_difference_nonuniform(x, t=t2),
+        atol=4,
+    )
+    centered_difference_uniform = FiniteDifference(order=2, d=2)
+    centered_difference_nonuniform = FiniteDifference(order=2, d=2)
+    np.testing.assert_allclose(
+        centered_difference_uniform(x, t=t1),
+        centered_difference_nonuniform(x, t=t2),
+        atol=4,
+    )
+    centered_difference_uniform = FiniteDifference(order=2, d=3)
+    centered_difference_nonuniform = FiniteDifference(order=2, d=3)
+    np.testing.assert_allclose(
+        centered_difference_uniform(x, t=t1),
+        centered_difference_nonuniform(x, t=t2),
+        atol=4,
+    )
+    centered_difference_uniform = FiniteDifference(order=2, d=4)
+    centered_difference_nonuniform = FiniteDifference(order=2, d=4)
+    np.testing.assert_allclose(
+        centered_difference_uniform(x, t=t1),
+        centered_difference_nonuniform(x, t=t2),
+        atol=4,
+    )
+
+
 # Alternative implementation of the four tests above using parametrization
 @pytest.mark.parametrize(
     "data, order",
@@ -109,6 +195,10 @@ def test_order_error():
         FiniteDifference(order=3)
     with pytest.raises(ValueError):
         FiniteDifference(order=-1)
+    with pytest.raises(ValueError):
+        FiniteDifference(d=-1)
+    with pytest.raises(ValueError):
+        FiniteDifference(d=2, order=1)
 
 
 def test_base_class(data_derivative_1d):

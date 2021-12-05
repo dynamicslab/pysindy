@@ -1,0 +1,86 @@
+{
+  "@context": "https://raw.githubusercontent.com/codemeta/codemeta/master/codemeta.jsonld",
+  "@type": "Code",
+  "author": [
+    {
+      "@id": "https://orcid.org/0000-0002-6337-2907",
+      "@type": "Person",
+      "email": "akaptano@uw.edu",
+      "name": "Alan A. Kaptanoglu",
+      "affiliation": "Department of Physics, University of Washington"
+    }, 
+    {
+      "@id": "https://orcid.org/0000-0003-0944-900X",
+      "@type": "Person",
+      "email": "briandesilva1@gmail.com",
+      "name": "Brian M. de Silva",
+      "affiliation": "Department of Mechanical Engineering, University of Washington"
+    },
+    {
+      "@id": "https://orcid.org/0000-0002-6337-2907",
+      "@type": "Person",
+      "email": "ufasel@uw.edu",
+      "name": "Urban Fasel",
+      "affiliation": "Department of Mechanical Engineering, University of Washington"
+    }, 
+    {
+      "@id": "https://orcid.org/0000-0003-2279-2793",
+      "@type": "Person",
+      "email": "kadierk@uw.edu",
+      "name": "Kadierdan Kaheman",
+      "affiliation": "Department of Mechanical Engineering, University of Washington"
+    }, 
+    {
+      "@id": "https://orcid.org/0000-0002-1972-1233",
+      "@type": "Person",
+      "email": "jc244@uw.edu",
+      "name": "Jared L. Callaham",
+      "affiliation": "Department of Mechanical Engineering, University of Washington"
+    },
+    {
+      "@id": "https://orcid.org/0000-0003-4860-8069",
+      "@type": "Person",
+      "email": "delahunt@uw.edu",
+      "name": "Charles B. Delahunt",
+      "affiliation": "Department of Applied Mathematics, University of Washington"
+    },
+    {
+      "@id": "",
+      "@type": "Person",
+      "email": "kathleen.p.champion@gmail.com",
+      "name": "Kathleen P. Champion",
+      "affiliation": "Department of Applied Mathematics, University of Washington"
+    },
+    {
+      "@id": "",
+      "@type": "Person",
+      "email": "loiseau.jc@gmail.com",
+      "name": "Jean-Christophe Loiseau",
+      "affiliation": "Arts et Métiers Institute of Technology, CNAM, DynFluid, HESAM Université"
+    },
+    {
+      "@id": "https://orcid.org/0000-0002-6004-2275",
+      "@type": "Person",
+      "email": "kutz@uw.edu",
+      "name": "J. Nathan Kutz",
+      "affiliation": "Department of Applied Mathematics, University of Washington"
+    },
+    {
+      "@id": "https://orcid.org/0000-0002-6565-5118",
+      "@type": "Person",
+      "email": "sbrunton@uw.edu",
+      "name": "Steven L. Brunton",
+      "affiliation": "Department of Mechanical Engineering, University of Washington"
+    }
+  ],
+  "identifier": "https://doi.org/10.5281/zenodo.3832319",
+  "codeRepository": "https://github.com/dynamicslab/pysindy",
+  "datePublished": "2021-10-21",
+  "dateModified": "2021-10-21",
+  "dateCreated": "2021-10-21",
+  "description": "A comprehensive Python package for robust sparse system identification",
+  "keywords": "python, model discovery, dynamical systems, sparse regression, machine learning",
+  "license": "MIT",
+  "title": "PySINDy",
+  "version": "v1.2.3"
+}

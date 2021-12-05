@@ -27,6 +27,7 @@ from pysindy.differentiation import FiniteDifference
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
+from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
@@ -207,9 +208,12 @@ def test_simulate(data):
     x, t = data
     model = SINDy()
     model.fit(x, t)
-    x1 = model.simulate(x[0], t)
-
+    x1 = model.simulate(np.ravel(x[0]), t)
     assert len(x1) == len(t)
+    x1 = model.simulate(np.ravel(x[0]), t, integrator="odeint")
+    assert len(x1) == len(t)
+    with pytest.raises(ValueError):
+        x1 = model.simulate(np.ravel(x[0]), t, integrator="None")
 
 
 @pytest.mark.parametrize(
@@ -218,6 +222,7 @@ def test_simulate(data):
         PolynomialLibrary(degree=3),
         FourierLibrary(n_frequencies=3),
         pytest.lazy_fixture("data_custom_library"),
+        pytest.lazy_fixture("data_sindypi_library"),
         PolynomialLibrary() + FourierLibrary(),
     ],
 )
@@ -363,7 +368,12 @@ def test_simulate_discrete_time(data_discrete_time):
 
     assert len(x1) == n_steps
 
-    # TODO: implement test using the stop_condition option
+    def stop_func(xi):
+        # check if we are at the 2nd to last element
+        return np.isclose(xi[0], 0.874363)
+
+    x2 = model.simulate(x[0], n_steps, stop_condition=stop_func)
+    assert len(x2) == n_steps - 2
 
 
 def test_predict_discrete_time(data_discrete_time):
@@ -537,6 +547,14 @@ def test_simulate_errors(data_lorenz):
     with pytest.raises(ValueError):
         model.simulate(x[0], t=[1, 2])
 
+    model = SINDy(discrete_time=True)
+    with pytest.raises(ValueError):
+        model.simulate(x[0], t=-1)
+
+    model = SINDy(discrete_time=True)
+    with pytest.raises(ValueError):
+        model.simulate(x[0], t=0.5)
+
 
 @pytest.mark.parametrize(
     "params, warning",
@@ -601,3 +619,97 @@ def test_linear_constraints(data_lorenz):
     np.testing.assert_allclose(
         np.array([coeffs[0, 3], coeffs[1, 0]]), np.array([1 / target_1, 1 / target_2])
     )
+
+
+def test_ensemble(data_lorenz):
+    x, t = data_lorenz
+    library = PolynomialLibrary().fit(x)
+
+    constraint_rhs = np.ones(2)
+    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
+
+    target_1, target_2 = 1, 3
+    constraint_lhs[0, 3] = target_1
+    constraint_lhs[1, library.n_output_features_] = target_2
+
+    optimizer = ConstrainedSR3(
+        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
+    )
+    model = SINDy(feature_library=library, optimizer=optimizer).fit(
+        x, t, ensemble=True, n_models=10, n_subset=len(t) // 2
+    )
+    assert len(model.coef_list) == 10
+
+
+def test_library_ensemble(data_lorenz):
+    x, t = data_lorenz
+    library = PolynomialLibrary()
+    optimizer = SR3()
+    model = SINDy(feature_library=library, optimizer=optimizer).fit(
+        x, t, library_ensemble=True, n_models=10
+    )
+    assert len(model.coef_list) == 10
+
+
+def test_both_ensemble(data_lorenz):
+    x, t = data_lorenz
+    library = PolynomialLibrary()
+    optimizer = SR3()
+    model = SINDy(feature_library=library, optimizer=optimizer).fit(
+        x, t, ensemble=True, library_ensemble=True, n_models=10
+    )
+    assert len(model.coef_list) == 100
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(ensemble=False, n_models=-1, n_subset=1),
+        dict(ensemble=False, n_models=0, n_subset=1),
+        dict(ensemble=False, n_models=1, n_subset=0),
+        dict(ensemble=False, n_models=1, n_subset=-1),
+        dict(ensemble=True, n_models=-1, n_subset=1),
+        dict(ensemble=True, n_models=0, n_subset=1),
+        dict(ensemble=True, n_models=1, n_subset=0),
+        dict(ensemble=True, n_models=1, n_subset=-1),
+        dict(ensemble=True, n_models=1, n_subset=0),
+    ],
+)
+def test_bad_ensemble_params(data_lorenz, params):
+    x, t = data_lorenz
+    library = PolynomialLibrary().fit(x)
+
+    constraint_rhs = np.ones(2)
+    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
+
+    target_1, target_2 = 1, 3
+    constraint_lhs[0, 3] = target_1
+    constraint_lhs[1, library.n_output_features_] = target_2
+
+    optimizer = ConstrainedSR3(
+        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
+    )
+    with pytest.raises(ValueError):
+        SINDy(feature_library=library, optimizer=optimizer).fit(x, t, **params)
+
+
+def test_bad_ensemble_weakform():
+    x = np.linspace(0, 100, 100)
+    x_dot = np.zeros(100)
+    X = np.linspace(0, 10)
+    t = np.linspace(0, 10)
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatial_grid=X,
+        temporal_grid=t,
+        is_uniform=True,
+        weak_form=True,
+    )
+
+    model = SINDy(feature_library=pde_lib)
+    with pytest.raises(ValueError):
+        model.fit(x=x, x_dot=x_dot, ensemble=True)

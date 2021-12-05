@@ -10,27 +10,33 @@ COEF_THRESHOLD = 1e-14
 
 class SINDyOptimizer(BaseEstimator):
     """
-    Wrapper class for optimizers/sparse regression methods passed into the SINDy object.
+    Wrapper class for optimizers/sparse regression methods passed
+    into the SINDy object.
 
-    Enables single target regressors (i.e. those whose predictions are 1-dimensional)
+    Enables single target regressors
+    (i.e. those whose predictions are 1-dimensional)
     to perform multi target regression (i.e. predictions are 2-dimensional).
-    Also enhances an ``_unbias`` function to reduce bias when regularization is used.
+    Also enhances an ``_unbias`` function to reduce bias when
+    regularization is used.
 
     Parameters
     ----------
     optimizer: estimator object
         The optimizer/sparse regressor to be wrapped, implementing ``fit`` and
         ``predict``. ``optimizer`` should also have the attributes ``coef_``,
-        ``fit_intercept``, ``normalize``, and ``intercept_``.
+        ``fit_intercept``, and ``intercept_``. Note that attribute
+        ``normalize`` is deprecated as of sklearn versions >= 1.0 and will be
+        removed in future versions.
 
     unbias : boolean, optional (default True)
-        Whether to perform an extra step of unregularized linear regression to unbias
-        the coefficients for the identified support.
+        Whether to perform an extra step of unregularized linear regression
+        to unbias the coefficients for the identified support.
         For example, if ``optimizer=STLSQ(alpha=0.1)`` is used then the learned
         coefficients will be biased toward 0 due to the L2 regularization.
-        Setting ``unbias=True`` will trigger an additional step wherein the nonzero
-        coefficients learned by the optimizer object will be updated using an
-        unregularized least-squares fit.
+        Setting ``unbias=True`` will trigger an additional step wherein
+        the nonzero coefficients learned by the optimizer object will be
+        updated using an unregularized least-squares fit.
+
     """
 
     def __init__(self, optimizer, unbias=True):
@@ -65,14 +71,10 @@ class SINDyOptimizer(BaseEstimator):
             fit_intercept = self.optimizer.fit_intercept
         else:
             fit_intercept = False
-        if hasattr(self.optimizer, "normalize"):
-            normalize = self.optimizer.normalize
-        else:
-            normalize = False
         for i in range(self.ind_.shape[0]):
             if np.any(self.ind_[i]):
                 coef[i, self.ind_[i]] = (
-                    LinearRegression(fit_intercept=fit_intercept, normalize=normalize)
+                    LinearRegression(fit_intercept=fit_intercept)
                     .fit(x[:, self.ind_[i]], y[:, i])
                     .coef_
                 )

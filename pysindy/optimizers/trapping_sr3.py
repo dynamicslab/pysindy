@@ -1,4 +1,3 @@
-# import time
 import warnings
 
 import cvxpy as cp
@@ -7,8 +6,6 @@ from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
-from ..utils import get_prox
-from ..utils import get_regularization
 from ..utils import reorder_constraints
 from .sr3 import SR3
 
@@ -16,6 +13,8 @@ from .sr3 import SR3
 class TrappingSR3(SR3):
     """
     Trapping variant of sparse relaxed regularized regression.
+    This optimizer can be used to identify systems with
+    stable (bounded) solutions.
 
     Attempts to minimize the objective function
 
@@ -37,7 +36,7 @@ class TrappingSR3(SR3):
 
         Champion, Kathleen, et al. "A unified sparse optimization framework
         to learn parsimonious physics-informed models from data."
-        arXiv preprint arXiv:1906.10612 (2019).
+        IEEE Access 8 (2020): 169259-169271.
 
     Parameters
     ----------
@@ -57,12 +56,12 @@ class TrappingSR3(SR3):
         algorithm default is to ignore the stability term. In this limit,
         this should be approximately equivalent to the ConstrainedSR3 method.
 
-    alpha_m : float, optional (default 5e19)
+    alpha_m : float, optional (default eta * 0.1)
         Determines the step size in the prox-gradient descent over m.
         For convergence, need alpha_m <= eta / ||w^T * PQ^T * PQ * w||.
         Typically 0.01 * eta <= alpha_m <= 0.1 * eta.
 
-    alpha_A : float, optional (default 1.0e20)
+    alpha_A : float, optional (default eta)
         Determines the step size in the prox-gradient descent over A.
         For convergence, need alpha_A <= eta, so typically
         alpha_A = eta is used.
@@ -81,21 +80,33 @@ class TrappingSR3(SR3):
 
     thresholder : string, optional (default 'L1')
         Regularization function to use. For current trapping SINDy,
-        only the L1 norm is implemented. Note that other convex norms
+        only the L1 and L2 norms are implemented. Note that other convex norms
         could be straightforwardly implemented, but L0 requires
         reformulation because of nonconvexity.
 
-    eps_solver : float, optional
-        If threshold != 0.0, this specifies the error tolerance in the
+    thresholds : np.ndarray, shape (n_targets, n_features), optional \
+            (default None)
+        Array of thresholds for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``thresholds[i, j]`` should specify the threshold to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        threshold to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
+
+    eps_solver : float, optional (default 1.0e-7)
+        If threshold != 0, this specifies the error tolerance in the
         CVXPY (OSQP) solve. Default is 1.0e-3 in OSQP.
 
-    relax_optim : bool, optional
+    relax_optim : bool, optional (default True)
         If relax_optim = True, use the relax-and-split method. If False,
         try a direct minimization on the largest eigenvalue.
 
-    inequality_constraints : bool, optional
-        If True, relax_optim must be false or relax_optim = True AND threshold != 0,
-        so that the CVXPY methods are used.
+    inequality_constraints : bool, optional (default False)
+        If True, relax_optim must be false or relax_optim = True
+        AND threshold != 0, so that the CVXPY methods are used.
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -111,24 +122,17 @@ class TrappingSR3(SR3):
         Initial guess for vector A in the optimization. Otherwise
         A is initialized as A = diag(gamma).
 
-    PL : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
-        Linear coefficient part of the P matrix in ||Pw - A||^2
-
-    PQ : np.ndarray, shape (n_targets, n_targets,
-                            n_targets, n_targets, n_features)
-        Quadratic coefficient part of the P matrix in ||Pw - A||^2
-
     fit_intercept : boolean, optional (default False)
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the L2-norm.
-
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
+
+    normalize_columns : boolean, optional (default False)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed.
 
     Attributes
     ----------
@@ -163,6 +167,16 @@ class TrappingSR3(SR3):
         A^S is indeed being pulled towards the space of negative
         definite matrices.
 
+    PL_unsym_ : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
+        Unsymmetrized linear coefficient part of the P matrix in ||Pw - A||^2
+
+    PL_ : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
+        Linear coefficient part of the P matrix in ||Pw - A||^2
+
+    PQ_ : np.ndarray, shape (n_targets, n_targets,
+                            n_targets, n_targets, n_features)
+        Quadratic coefficient part of the P matrix in ||Pw - A||^2
+
     Examples
     --------
     >>> import numpy as np
@@ -187,41 +201,55 @@ class TrappingSR3(SR3):
         self,
         evolve_w=True,
         threshold=0.1,
-        eps_solver=1.0e-7,
+        eps_solver=1e-7,
         relax_optim=True,
         inequality_constraints=False,
-        eta=1.0e20,
-        alpha_A=1.0e20,
-        alpha_m=5e19,
+        eta=None,
+        alpha_A=None,
+        alpha_m=None,
         gamma=-0.1,
         tol=1e-5,
         tol_m=1e-5,
         thresholder="l1",
+        thresholds=None,
         max_iter=30,
         accel=False,
-        normalize=False,
+        normalize_columns=False,
         fit_intercept=False,
         copy_X=True,
         m0=None,
         A0=None,
-        PL=None,
-        PQ=None,
         objective_history=None,
         constraint_lhs=None,
         constraint_rhs=None,
         constraint_order="target",
     ):
         super(TrappingSR3, self).__init__(
+            threshold=threshold,
             max_iter=max_iter,
-            normalize=normalize,
+            normalize_columns=normalize_columns,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            thresholder=thresholder,
+            thresholds=thresholds,
         )
-
-        if threshold < 0:
-            raise ValueError("threshold cannot be negative")
-        if thresholder != "l1":
-            raise ValueError("Regularizer must be L1 for now")
+        if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
+            raise ValueError("Regularizer must be (weighted) L1 or L2")
+        if eta is None:
+            warnings.warn(
+                "eta was not set, so defaulting to eta = 1e20 "
+                "with alpha_m = 1e-2 * eta, alpha_A = eta. Here eta is so "
+                "large that the stability term in the optimization "
+                "will be ignored."
+            )
+            eta = 1e20
+            alpha_m = 1e18
+            alpha_A = 1e20
+        else:
+            if alpha_m is None:
+                alpha_m = eta * 1e-2
+            if alpha_A is None:
+                alpha_A = eta
         if eta <= 0:
             raise ValueError("eta must be positive")
         if alpha_m < 0 or alpha_m > eta:
@@ -244,7 +272,6 @@ class TrappingSR3(SR3):
             )
 
         self.evolve_w = evolve_w
-        self.threshold = threshold
         self.eps_solver = eps_solver
         self.relax_optim = relax_optim
         self.inequality_constraints = inequality_constraints
@@ -254,14 +281,9 @@ class TrappingSR3(SR3):
         self.alpha_m = alpha_m
         self.eta = eta
         self.gamma = gamma
-        self.PL = PL
-        self.PQ = PQ
         self.tol = tol
         self.tol_m = tol_m
         self.accel = accel
-        self.thresholder = thresholder
-        self.reg = get_regularization(thresholder)
-        self.prox = get_prox(thresholder)
         self.A_history_ = []
         self.m_history_ = []
         self.PW_history_ = []
@@ -284,48 +306,115 @@ class TrappingSR3(SR3):
             self.unbias = False
             self.constraint_order = constraint_order
 
+    def _set_Ptensors(self, r):
+        """Make the projection tensors used for the algorithm."""
+        N = int((r ** 2 + 3 * r) / 2.0)
+
+        # delta_{il}delta_{jk}
+        PL_tensor = np.zeros((r, r, r, N))
+        PL_tensor_unsym = np.zeros((r, r, r, N))
+        for i in range(r):
+            for j in range(r):
+                for k in range(r):
+                    for kk in range(N):
+                        if i == kk and j == k:
+                            PL_tensor_unsym[i, j, k, kk] = 1.0
+
+        # Now symmetrize PL
+        for i in range(r):
+            for j in range(N):
+                PL_tensor[:, :, i, j] = 0.5 * (
+                    PL_tensor_unsym[:, :, i, j] + PL_tensor_unsym[:, :, i, j].T
+                )
+
+        # if j == k, delta_{il}delta_{N-r+j,n}
+        # if j != k, delta_{il}delta_{r+j+k-1,n}
+        PQ_tensor = np.zeros((r, r, r, r, N))
+        for i in range(r):
+            for j in range(r):
+                for k in range(r):
+                    for kk in range(r):
+                        for n in range(N):
+                            if (j == k) and (n == N - r + j) and (i == kk):
+                                PQ_tensor[i, j, k, kk, n] = 1.0
+                            if (j != k) and (n == r + j + k - 1) and (i == kk):
+                                PQ_tensor[i, j, k, kk, n] = 1 / 2
+
+        return PL_tensor_unsym, PL_tensor, PQ_tensor
+
     def _bad_PL(self, PL):
+        """Check if PL tensor is properly defined"""
         tol = 1e-10
         return np.any((np.transpose(PL, [1, 0, 2, 3]) - PL) > tol)
 
     def _bad_PQ(self, PQ):
+        """Check if PQ tensor is properly defined"""
         tol = 1e-10
         return np.any((np.transpose(PQ, [0, 2, 1, 3, 4]) - PQ) > tol)
 
     def _check_P_matrix(self, r, n_features, N):
+        """Check if P tensor is properly defined"""
         # If these tensors are not passed, or incorrect shape, assume zeros
-        if self.PQ is None:
-            self.PQ = np.zeros((r, r, r, r, n_features))
-        elif (self.PQ).shape != (r, r, r, r, n_features) and (self.PQ).shape != (
+        if self.PQ_ is None:
+            self.PQ_ = np.zeros((r, r, r, r, n_features))
+            warnings.warn(
+                "The PQ tensor (a requirement for the stability promotion) was"
+                " not set, so setting this tensor to all zeros. "
+            )
+        elif (self.PQ_).shape != (r, r, r, r, n_features) and (self.PQ_).shape != (
             r,
             r,
             r,
             r,
             N,
         ):
-            self.PQ = np.zeros((r, r, r, r, n_features))
-        if self.PL is None:
-            self.PL = np.zeros((r, r, r, n_features))
-        elif (self.PL).shape != (r, r, r, n_features) and (self.PL).shape != (
+            self.PQ_ = np.zeros((r, r, r, r, n_features))
+            warnings.warn(
+                "The PQ tensor (a requirement for the stability promotion) was"
+                " initialized with incorrect dimensions, "
+                "so setting this tensor to all zeros "
+                "(with the correct dimensions). "
+            )
+        if self.PL_ is None:
+            self.PL_ = np.zeros((r, r, r, n_features))
+            warnings.warn(
+                "The PL tensor (a requirement for the stability promotion) was"
+                " not set, so setting this tensor to all zeros. "
+            )
+        elif (self.PL_).shape != (r, r, r, n_features) and (self.PL_).shape != (
             r,
             r,
             r,
             N,
         ):
-            self.PL = np.zeros((r, r, r, n_features))
+            self.PL_ = np.zeros((r, r, r, n_features))
+            warnings.warn(
+                "The PL tensor (a requirement for the stability promotion) was"
+                " initialized with incorrect dimensions, "
+                "so setting this tensor to all zeros "
+                "(with the correct dimensions). "
+            )
 
         # Check if the tensor symmetries are properly defined
-        if self._bad_PL(self.PL):
+        if self._bad_PL(self.PL_):
             raise ValueError("PL tensor was passed but the symmetries are not correct")
-        if self._bad_PQ(self.PQ):
+        if self._bad_PQ(self.PQ_):
             raise ValueError("PQ tensor was passed but the symmetries are not correct")
 
         # If PL/PQ finite and correct, so trapping theorem is being used,
         # then make sure library is quadratic and correct shape
-        if (np.any(self.PL != 0.0) or np.any(self.PQ != 0.0)) and n_features != N:
-            raise ValueError("Feature library is wrong shape or not quadratic")
+        if (np.any(self.PL_ != 0.0) or np.any(self.PQ_ != 0.0)) and n_features != N:
+            print(
+                "The feature library is the wrong shape or not quadratic, "
+                "so please correct this if you are attempting to use the "
+                "trapping algorithm with the stability term included. Setting "
+                "PL and PQ tensors to zeros for now."
+            )
+            self.PL_ = np.zeros((r, r, r, n_features))
+            self.PQ_ = np.zeros((r, r, r, r, n_features))
 
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
+        """Solves the coefficient update analytically if threshold = 0"""
         g = x_transpose_y + P_transpose_A / self.eta
         inv1 = np.linalg.pinv(H, rcond=1e-15)
         inv2 = np.linalg.pinv(
@@ -378,10 +467,17 @@ class TrappingSR3(SR3):
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
     def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
+        """Solve coefficient update with CVXPY if threshold != 0"""
         xi = cp.Variable(N * r)
-        cost = cp.sum_squares(
-            x_expanded @ xi - y.flatten()
-        ) + self.threshold * cp.norm1(xi)
+        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
+        if self.thresholder.lower() == "l1":
+            cost = cost + self.threshold * cp.norm1(xi)
+        elif self.thresholder.lower() == "weighted_l1":
+            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
+        elif self.thresholder.lower() == "l2":
+            cost = cost + self.threshold * cp.norm2(xi) ** 2
+        elif self.thresholder.lower() == "weighted_l2":
+            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -397,8 +493,21 @@ class TrappingSR3(SR3):
         else:
             prob = cp.Problem(cp.Minimize(cost))
 
-        # default solver is OSQP here
-        prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
+        # default solver is OSQP here but switches to ECOS for L2
+        try:
+            prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
+        # Annoying error coming from L2 norm switching to use the ECOS
+        # solver, which uses "max_iters" instead of "max_iter", and
+        # similar semantic changes for the other variables.
+        except TypeError:
+            try:
+                prob.solve(abstol=self.eps_solver, reltol=self.eps_solver)
+            except cp.error.SolverError:
+                print("Solver failed, setting coefs to zeros")
+                xi.value = np.zeros(N * r)
+        except cp.error.SolverError:
+            print("Solver failed, setting coefs to zeros")
+            xi.value = np.zeros(N * r)
 
         if xi.value is None:
             warnings.warn(
@@ -410,18 +519,22 @@ class TrappingSR3(SR3):
         return coef_sparse
 
     def _solve_m_relax_and_split(self, r, N, m_prev, m, A, coef_sparse, tk_previous):
+        """
+        If using the relaxation formulation of trapping SINDy, solves the
+        (m, A) algorithm update.
+        """
         # prox-grad for (A, m)
         # Accelerated prox gradient descent
         if self.accel:
             tk = (1 + np.sqrt(1 + 4 * tk_previous ** 2)) / 2.0
             m_partial = m + (tk_previous - 1.0) / tk * (m - m_prev)
             tk_previous = tk
-            mPQ = np.tensordot(m_partial, self.PQ, axes=([0], [0]))
+            mPQ = np.tensordot(m_partial, self.PQ_, axes=([0], [0]))
         else:
-            mPQ = np.tensordot(m, self.PQ, axes=([0], [0]))
-        p = self.PL - mPQ
+            mPQ = np.tensordot(m, self.PQ_, axes=([0], [0]))
+        p = self.PL_ - mPQ
         PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
-        PQW = np.tensordot(self.PQ, coef_sparse, axes=([4, 3], [0, 1]))
+        PQW = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
         A_b = (A - PW) / self.eta
         PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
         if self.accel:
@@ -435,6 +548,7 @@ class TrappingSR3(SR3):
         return m_current, m_new, A_new, tk_previous
 
     def _solve_nonsparse_relax_and_split(self, H, xTy, P_transpose_A, coef_prev):
+        """Update for the coefficients if threshold = 0."""
         if self.use_constraints:
             coef_sparse = self._update_coef_constraints(
                 H, xTy, P_transpose_A, coef_prev
@@ -447,10 +561,23 @@ class TrappingSR3(SR3):
         return coef_sparse
 
     def _solve_direct_cvxpy(self, r, N, x_expanded, y, Pmatrix, coef_prev):
+        """
+        If using the direct formulation of trapping SINDy, solves the
+        entire problem in CVXPY regardless of the threshold value.
+        Note that this is a convex-composite (i.e. technically nonconvex)
+        problem, solved in CVXPY, so convergence/quality guarantees are
+        not available here!
+        """
         xi = cp.Variable(N * r)
-        cost = cp.sum_squares(
-            x_expanded @ xi - y.flatten()
-        ) + self.threshold * cp.norm1(xi)
+        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
+        if self.thresholder.lower() == "l1":
+            cost = cost + self.threshold * cp.norm1(xi)
+        elif self.thresholder.lower() == "weighted_l1":
+            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
+        elif self.thresholder.lower() == "l2":
+            cost = cost + self.threshold * cp.norm2(xi) ** 2
+        elif self.thresholder.lower() == "weighted_l2":
+            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
         cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -466,21 +593,30 @@ class TrappingSR3(SR3):
         else:
             prob = cp.Problem(cp.Minimize(cost))
 
-        # default solver is SCS here I think
-        prob.solve(eps=self.eps_solver)
+        # default solver is SCS here
+        try:
+            prob.solve(eps=self.eps_solver)
+        # Annoying error coming from L2 norm switching to use the ECOS
+        # solver, which uses "max_iters" instead of "max_iter", and
+        # similar semantic changes for the other variables.
+        except TypeError:
+            prob.solve(abstol=self.eps_solver, reltol=self.eps_solver)
+        except cp.error.SolverError:
+            print("Solver failed, setting coefs to zeros")
+            xi.value = np.zeros(N * r)
 
         if xi.value is None:
             print("Infeasible solve, increase/decrease eta")
             return None, None
         coef_sparse = (xi.value).reshape(coef_prev.shape)
 
-        if np.all(self.PL == 0.0) and np.all(self.PQ == 0.0):
+        if np.all(self.PL_ == 0) and np.all(self.PQ_ == 0):
             return np.zeros(r), coef_sparse  # no optimization over m
         else:
             m_cp = cp.Variable(r)
-            L = np.tensordot(self.PL, coef_sparse, axes=([3, 2], [0, 1]))
+            L = np.tensordot(self.PL_, coef_sparse, axes=([3, 2], [0, 1]))
             Q = np.reshape(
-                np.tensordot(self.PQ, coef_sparse, axes=([4, 3], [0, 1])), (r, r * r)
+                np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])), (r, r * r)
             )
             Ls = 0.5 * (L + L.T).flatten()
             cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (r, r)))
@@ -506,7 +642,10 @@ class TrappingSR3(SR3):
         r = y.shape[1]
         N = int((r ** 2 + 3 * r) / 2.0)
 
-        # If PL and PQ are passed, make sure dimensions/symmetries are correct
+        # Define PL and PQ tensors, only relevant if the stability term in
+        # trapping SINDy is turned on.
+        self.PL_unsym_, self.PL_, self.PQ_ = self._set_Ptensors(r)
+        # make sure dimensions/symmetries are correct
         self._check_P_matrix(r, n_features, N)
 
         # Set initial coefficients
@@ -514,7 +653,6 @@ class TrappingSR3(SR3):
             self.constraint_lhs = reorder_constraints(
                 self.constraint_lhs, n_features, output_order="target"
             )
-        print(self.coef_)
         coef_sparse = self.coef_.T
 
         # Print initial values for each term in the optimization
@@ -524,7 +662,7 @@ class TrappingSR3(SR3):
         # initial A
         if self.A0 is not None:
             A = self.A0
-        elif np.any(self.PQ != 0.0):
+        elif np.any(self.PQ_ != 0.0):
             A = np.diag(self.gamma * np.ones(r))
         else:
             A = np.diag(np.zeros(r))
@@ -555,8 +693,8 @@ class TrappingSR3(SR3):
         for k in range(self.max_iter):
 
             # update P tensor from the newest m
-            mPQ = np.tensordot(m, self.PQ, axes=([0], [0]))
-            p = self.PL - mPQ
+            mPQ = np.tensordot(m, self.PQ_, axes=([0], [0]))
+            p = self.PL_ - mPQ
             Pmatrix = p.reshape(r * r, r * n_features)
 
             # update w
@@ -567,7 +705,6 @@ class TrappingSR3(SR3):
                         coef_sparse = self._solve_sparse_relax_and_split(
                             r, n_features, x_expanded, y, Pmatrix, A, coef_prev
                         )
-                        print(coef_sparse)
                     else:
                         pTp = np.dot(Pmatrix.T, Pmatrix)
                         H = xTx + pTp / self.eta

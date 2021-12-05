@@ -1,5 +1,6 @@
 import warnings
 
+import cvxpy as cp
 import numpy as np
 from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
@@ -54,9 +55,9 @@ class ConstrainedSR3(SR3):
 
     thresholder : string, optional (default 'l0')
         Regularization function to use. Currently implemented options
-        are 'l0' (l0 norm), 'l1' (l1 norm), 'cad' (clipped
-        absolute deviation), 'weighted_l0' (weighted l0 norm), and
-        'weighted_l1' (weighted l1 norm).
+        are 'l0' (l0 norm), 'l1' (l1 norm), 'l2' (l2 norm), 'cad' (clipped
+        absolute deviation), 'weighted_l0' (weighted l0 norm),
+        'weighted_l1' (weighted l1 norm), and 'weighted_l2' (weighted l2 norm).
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -65,8 +66,8 @@ class ConstrainedSR3(SR3):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    constraint_lhs : numpy ndarray, shape (n_constraints, n_features * n_targets), \
-            optional (default None)
+    constraint_lhs : numpy ndarray, optional (default None)
+        Shape should be (n_constraints, n_features * n_targets),
         The left hand side matrix C of Cw <= d.
         There should be one row per constraint.
 
@@ -78,28 +79,29 @@ class ConstrainedSR3(SR3):
         Must be one of "target" or "feature".
         "target" indicates that the constraints are grouped by target:
         i.e. the first ``n_features`` columns
-        correspond to constraint coefficients on the library features for the first
-        target (variable), the next ``n_features`` columns to the library features
-        for the second target (variable), and so on.
-        "feature" indicates that the constraints are grouped by library feature:
-        the first ``n_targets`` columns correspond to the first library feature,
-        the next ``n_targets`` columns to the second library feature, and so on.
+        correspond to constraint coefficients on the library features
+        for the first target (variable), the next ``n_features`` columns to
+        the library features for the second target (variable), and so on.
+        "feature" indicates that the constraints are grouped by library
+        feature: the first ``n_targets`` columns correspond to the first
+        library feature, the next ``n_targets`` columns to the second library
+        feature, and so on.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the l2-norm.
+    normalize_columns : boolean, optional (default False)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed. Note that
+        this parameter is incompatible with the constraints!
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
-    initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
-                optional (default None)
+    initial_guess : np.ndarray, optional (default None)
+        Shape should be (n_features) or (n_targets, n_features).
         Initial guess for coefficients ``coef_``, (v in the mathematical equations)
         If None, least-squares is used to obtain an initial guess.
 
-    thresholds : np.ndarray, shape (n_targets, n_features), optional \
-            (default None)
+    thresholds : np.ndarray, shape (n_targets, n_features), optional (default None)
         Array of thresholds for each library function coefficient.
         Each row corresponds to a measurement variable and each column
         to a function from the feature library.
@@ -109,6 +111,9 @@ class ConstrainedSR3(SR3):
         (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
         threshold to be used for the (j + 1)st library function in the equation
         for the (i + 1)st measurement variable.
+
+    inequality_constraints : bool, optional (default False)
+        If True, CVXPY methods are used to solve the problem.
 
     Attributes
     ----------
@@ -139,39 +144,28 @@ class ConstrainedSR3(SR3):
         constraint_lhs=None,
         constraint_rhs=None,
         constraint_order="target",
-        normalize=False,
+        normalize_columns=False,
         fit_intercept=False,
         copy_X=True,
         initial_guess=None,
         thresholds=None,
+        inequality_constraints=False,
     ):
         super(ConstrainedSR3, self).__init__(
             threshold=threshold,
             nu=nu,
             tol=tol,
             thresholder=thresholder,
+            thresholds=thresholds,
             trimming_fraction=trimming_fraction,
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
             initial_guess=initial_guess,
-            normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            normalize_columns=normalize_columns,
         )
 
-        if thresholder[:8].lower() == "weighted" and thresholds is None:
-            raise ValueError(
-                "weighted thresholder requires the thresholds parameter to be used"
-            )
-        if thresholder[:8].lower() != "weighted" and thresholds is not None:
-            raise ValueError(
-                "The thresholds argument cannot be used without a weighted thresholder,"
-                " e.g. thresholder='weighted_l0'"
-            )
-        if thresholds is not None and np.any(thresholds < 0):
-            raise ValueError("thresholds cannot contain negative entries")
-
-        self.thresholds = thresholds
         self.reg = get_regularization(thresholder)
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
@@ -188,8 +182,25 @@ class ConstrainedSR3(SR3):
             self.unbias = False
             self.constraint_order = constraint_order
 
-    def _set_threshold(self, threshold):
-        self.threshold = threshold
+        if inequality_constraints:
+            self.max_iter = max(10000, max_iter)  # max iterations for CVXPY
+
+        if inequality_constraints and not self.use_constraints:
+            raise ValueError(
+                "Use of inequality constraints requires constraint_lhs and "
+                "constraint_rhs."
+            )
+
+        if inequality_constraints and thresholder.lower() not in (
+            "l1",
+            "l2",
+            "weighted_l1",
+            "weighted_l2",
+        ):
+            raise ValueError(
+                "Use of inequality constraints requires a convex regularizer."
+            )
+        self.inequality_constraints = inequality_constraints
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
         g = x_transpose_y + coef_sparse / self.nu
@@ -204,6 +215,57 @@ class ConstrainedSR3(SR3):
         )
         rhs = rhs.reshape(g.shape)
         return inv1.dot(rhs)
+
+    def _update_coef_cvxpy(self, x, y, coef_sparse):
+        xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
+        cost = cp.sum_squares(x @ xi - y.flatten())
+        if self.thresholder.lower() == "l1":
+            cost = cost + self.threshold * cp.norm1(xi)
+        elif self.thresholder.lower() == "weighted_l1":
+            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
+        elif self.thresholder.lower() == "l2":
+            cost = cost + self.threshold * cp.norm2(xi)
+        elif self.thresholder.lower() == "weighted_l2":
+            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
+        if self.use_constraints:
+            if self.inequality_constraints:
+                prob = cp.Problem(
+                    cp.Minimize(cost),
+                    [self.constraint_lhs @ xi <= self.constraint_rhs],
+                )
+            else:
+                prob = cp.Problem(
+                    cp.Minimize(cost),
+                    [self.constraint_lhs @ xi == self.constraint_rhs],
+                )
+        else:
+            prob = cp.Problem(cp.Minimize(cost))
+
+        # default solver is OSQP here but switches to ECOS for L2
+        try:
+            prob.solve(max_iter=self.max_iter, eps_abs=self.tol, eps_rel=self.tol)
+        # Annoying error coming from L2 norm switching to use the ECOS
+        # solver, which uses "max_iters" instead of "max_iter", and
+        # similar semantic changes for the other variables.
+        except TypeError:
+            try:
+                prob.solve(abstol=self.tol, reltol=self.tol)
+            except cp.error.SolverError:
+                print("Solver failed, setting coefs to zeros")
+                xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
+        except cp.error.SolverError:
+            print("Solver failed, setting coefs to zeros")
+            xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
+
+        if xi.value is None:
+            warnings.warn(
+                "Infeasible solve, probably an issue with the regularizer "
+                " or the constraint that was used.",
+                ConvergenceWarning,
+            )
+            return None
+        coef_new = (xi.value).reshape(coef_sparse.shape)
+        return coef_new
 
     def _update_sparse_coef(self, coef_full):
         """Update the regularized weight vector"""
@@ -230,7 +292,7 @@ class ConstrainedSR3(SR3):
         else:
             return (
                 0.5 * np.sum(R2)
-                + self.reg(coef_full, 0.5 * self.thresholds.T ** 2 / self.nu)
+                + self.reg(coef_full, 0.5 * self.thresholds ** 2 / self.nu)
                 + 0.5 * np.sum(D2) / self.nu
             )
 
@@ -241,11 +303,15 @@ class ConstrainedSR3(SR3):
 
         Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
+        if self.initial_guess is not None:
+            self.coef_ = self.initial_guess
+
         coef_sparse = self.coef_.T
+        coef_full = coef_sparse.copy()
         n_samples, n_features = x.shape
+        n_targets = y.shape[1]
 
         if self.use_trimming:
-            coef_full = coef_sparse.copy()
             trimming_array = np.repeat(1.0 - self.trimming_fraction, n_samples)
             self.history_trimming_ = [trimming_array]
 
@@ -258,53 +324,66 @@ class ConstrainedSR3(SR3):
         x_transpose_y = np.dot(x.T, y)
         if not self.use_constraints:
             cho = cho_factor(H)
+        if self.inequality_constraints:
+            # Precompute some objects for optimization
+            x_expanded = np.zeros((n_samples, n_targets, n_features, n_targets))
+            for i in range(n_targets):
+                x_expanded[:, i, :, i] = x
+            x_expanded = np.reshape(
+                x_expanded, (n_samples * n_targets, n_targets * n_features)
+            )
 
         objective_history = []
-        for _ in range(self.max_iter):
-            if self.use_trimming:
-                x_weighted = x * trimming_array.reshape(n_samples, 1)
-                H = np.dot(x_weighted.T, x) + np.diag(
-                    np.full(x.shape[1], 1.0 / self.nu)
-                )
-                x_transpose_y = np.dot(x_weighted.T, y)
-                if not self.use_constraints:
-                    cho = cho_factor(H)
-                trimming_grad = 0.5 * np.sum((y - x.dot(coef_full)) ** 2, axis=1)
-            if self.use_constraints:
-                coef_full = self._update_full_coef_constraints(
-                    H, x_transpose_y, coef_sparse
-                )
-            else:
-                coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
-
-            coef_sparse = self._update_sparse_coef(coef_full)
-
-            if self.use_trimming:
-                trimming_array = self._update_trimming_array(
-                    coef_full, trimming_array, trimming_grad
-                )
-
-                objective_history.append(
-                    self._objective(x, y, coef_full, coef_sparse, trimming_array)
-                )
-            else:
-                objective_history.append(self._objective(x, y, coef_full, coef_sparse))
-            if self._convergence_criterion() < self.tol:
-                # TODO: Update this for trimming/constraints
-                break
+        if self.inequality_constraints:
+            coef_sparse = self._update_coef_cvxpy(x_expanded, y, coef_sparse)
+            objective_history.append(self._objective(x, y, coef_full, coef_sparse))
         else:
-            warnings.warn(
-                "SR3._reduce did not converge after {} iterations.".format(
-                    self.max_iter
-                ),
-                ConvergenceWarning,
-            )
+            for _ in range(self.max_iter):
+                if self.use_trimming:
+                    x_weighted = x * trimming_array.reshape(n_samples, 1)
+                    H = np.dot(x_weighted.T, x) + np.diag(
+                        np.full(x.shape[1], 1.0 / self.nu)
+                    )
+                    x_transpose_y = np.dot(x_weighted.T, y)
+                    if not self.use_constraints:
+                        cho = cho_factor(H)
+                    trimming_grad = 0.5 * np.sum((y - x.dot(coef_full)) ** 2, axis=1)
+                if self.use_constraints:
+                    coef_full = self._update_full_coef_constraints(
+                        H, x_transpose_y, coef_sparse
+                    )
+                else:
+                    coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
+                coef_sparse = self._update_sparse_coef(coef_full)
+                self.history_.append(np.copy(coef_sparse).T)
+
+                if self.use_trimming:
+                    trimming_array = self._update_trimming_array(
+                        coef_full, trimming_array, trimming_grad
+                    )
+
+                    objective_history.append(
+                        self._objective(x, y, coef_full, coef_sparse, trimming_array)
+                    )
+                else:
+                    objective_history.append(
+                        self._objective(x, y, coef_full, coef_sparse)
+                    )
+                if self._convergence_criterion() < self.tol:
+                    # TODO: Update this for trimming/constraints
+                    break
+            else:
+                warnings.warn(
+                    "SR3._reduce did not converge after {} iterations.".format(
+                        self.max_iter
+                    ),
+                    ConvergenceWarning,
+                )
 
         if self.use_constraints and self.constraint_order.lower() == "target":
             self.constraint_lhs = reorder_constraints(
                 self.constraint_lhs, n_features, output_order="target"
             )
-
         self.coef_ = coef_sparse.T
         self.coef_full_ = coef_full.T
         if self.use_trimming:

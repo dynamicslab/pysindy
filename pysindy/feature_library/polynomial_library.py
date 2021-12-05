@@ -4,6 +4,7 @@ from itertools import combinations_with_replacement as combinations_w_r
 
 import numpy as np
 from scipy import sparse
+from sklearn import __version__
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.preprocessing._csr_polynomial_expansion import _csr_polynomial_expansion
 from sklearn.utils import check_array
@@ -23,20 +24,31 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     ----------
     degree : integer, optional (default 2)
         The degree of the polynomial features.
+
     include_interaction : boolean, optional (default True)
         Determines whether interaction features are produced.
         If false, features are all of the form ``x[i] ** k``.
+
     interaction_only : boolean, optional (default False)
         If true, only interaction features are produced: features that are
         products of at most ``degree`` *distinct* input features (so not
         ``x[1] ** 2``, ``x[0] * x[2] ** 3``, etc.).
+
     include_bias : boolean, optional (default True)
         If True (default), then include a bias column, the feature in which
         all polynomial powers are zero (i.e. a column of ones - acts as an
         intercept term in a linear model).
+
     order : str in {'C', 'F'}, optional (default 'C')
         Order of output array in the dense case. 'F' order is faster to
         compute, but may slow down subsequent estimators.
+
+    library_ensemble : boolean, optional (default False)
+        Whether or not to use library bagging (regress on subset of the
+        candidate terms in the library)
+
+    ensemble_indices : integer array, optional (default [0])
+        The indices to use for ensembling the library.
 
     Attributes
     ----------
@@ -45,6 +57,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
     n_input_features_ : int
         The total number of input features.
+        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
+        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. This number is computed by
@@ -58,12 +72,17 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         interaction_only=False,
         include_bias=True,
         order="C",
+        library_ensemble=False,
+        ensemble_indices=[0],
     ):
         super(PolynomialLibrary, self).__init__(
             degree=degree,
             interaction_only=interaction_only,
             include_bias=include_bias,
             order=order,
+        )
+        BaseFeatureLibrary.__init__(
+            self, library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
         )
         if degree < 0 or not isinstance(degree, int):
             raise ValueError("degree must be a nonnegative integer")
@@ -103,17 +122,18 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     @property
     def powers_(self):
         check_is_fitted(self)
-
+        if float(__version__[:3]) >= 1.0:
+            n_features = self.n_features_in_
+        else:
+            n_features = self.n_input_features_
         combinations = self._combinations(
-            self.n_input_features_,
+            n_features,
             self.degree,
             self.include_interaction,
             self.interaction_only,
             self.include_bias,
         )
-        return np.vstack(
-            [np.bincount(c, minlength=self.n_input_features_) for c in combinations]
-        )
+        return np.vstack([np.bincount(c, minlength=n_features) for c in combinations])
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.
@@ -167,7 +187,10 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             self.interaction_only,
             self.include_bias,
         )
-        self.n_input_features_ = n_features
+        if float(__version__[:3]) >= 1.0:
+            self.n_features_in_ = n_features
+        else:
+            self.n_input_features_ = n_features
         self.n_output_features_ = sum(1 for _ in combinations)
         return self
 
@@ -192,18 +215,22 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
         Returns
         -------
-        xp : np.ndarray or CSR/CSC sparse matrix, shape (n_samples, n_output_features)
-            The matrix of features, where n_output_features is the number of polynomial
-            features generated from the combination of inputs.
+        xp : np.ndarray or CSR/CSC sparse matrix,
+                shape (n_samples, n_output_features)
+            The matrix of features, where n_output_features is the number
+            of polynomial features generated from the combination of inputs.
         """
         check_is_fitted(self)
 
         x = check_array(x, order="F", dtype=FLOAT_DTYPES, accept_sparse=("csr", "csc"))
 
         n_samples, n_features = x.shape
-
-        if n_features != self.n_input_features_:
-            raise ValueError("x shape does not match training shape")
+        if float(__version__[:3]) >= 1.0:
+            if n_features != self.n_features_in_:
+                raise ValueError("x shape does not match training shape")
+        else:
+            if n_features != self.n_input_features_:
+                raise ValueError("x shape does not match training shape")
 
         if sparse.isspmatrix_csr(x):
             if self.degree > 3:
@@ -256,4 +283,5 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                 for i, comb in enumerate(combinations):
                     xp[:, i] = x[:, comb].prod(1)
 
-        return xp
+        # If library bagging, return xp missing the terms at ensemble_indices
+        return self._ensemble(xp)

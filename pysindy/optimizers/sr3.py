@@ -21,15 +21,15 @@ class SR3(BaseOptimizer):
         0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
         + (0.5 / \\nu)\\|w-v\\|^2_2
 
-    where :math:`R(v)` is a regularization function. See the following references
-    for more details:
+    where :math:`R(v)` is a regularization function.
+    See the following references for more details:
 
         Zheng, Peng, et al. "A unified framework for sparse relaxed
         regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
 
-        Champion, Kathleen, et al. "A unified sparse optimization framework
-        to learn parsimonious physics-informed models from data."
-        arXiv preprint arXiv:1906.10612 (2019).
+        Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N.
+        (2020). A unified sparse optimization framework to learn parsimonious
+        physics-informed models from data. IEEE Access, 8, 169259-169271.
 
     Parameters
     ----------
@@ -51,8 +51,9 @@ class SR3(BaseOptimizer):
 
     thresholder : string, optional (default 'L0')
         Regularization function to use. Currently implemented options
-        are 'L0' (L0 norm), 'L1' (L1 norm), and 'CAD' (clipped
-        absolute deviation).
+        are 'L0' (L0 norm), 'L1' (L1 norm), 'L2' (L2 norm) and 'CAD' (clipped
+        absolute deviation). Note by 'L2 norm' we really mean
+        the squared L2 norm, i.e. ridge regression
 
     trimming_fraction : float, optional (default 0.0)
         Fraction of the data samples to trim during fitting. Should
@@ -74,13 +75,25 @@ class SR3(BaseOptimizer):
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
 
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the L2-norm.
+    normalize_columns : boolean, optional (default False)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
+
+    thresholds : np.ndarray, shape (n_targets, n_features), optional \
+            (default None)
+        Array of thresholds for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``thresholds[i, j]`` should specify the threshold to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        threshold to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
 
     Attributes
     ----------
@@ -120,23 +133,24 @@ class SR3(BaseOptimizer):
     def __init__(
         self,
         threshold=0.1,
+        thresholds=None,
         nu=1.0,
         tol=1e-5,
         thresholder="L0",
         trimming_fraction=0.0,
         trimming_step_size=1.0,
         max_iter=30,
-        normalize=False,
         fit_intercept=False,
         copy_X=True,
         initial_guess=None,
+        normalize_columns=False,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
             initial_guess=initial_guess,
-            normalize=normalize,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            normalize_columns=normalize_columns,
         )
 
         if threshold < 0:
@@ -147,8 +161,45 @@ class SR3(BaseOptimizer):
             raise ValueError("tol must be positive")
         if (trimming_fraction < 0) or (trimming_fraction > 1):
             raise ValueError("trimming fraction must be between 0 and 1")
+        if thresholder.lower() not in (
+            "l0",
+            "l1",
+            "l2",
+            "weighted_l0",
+            "weighted_l1",
+            "weighted_l2",
+            "cad",
+        ):
+            raise NotImplementedError(
+                "Please use a valid thresholder, l0, l1, l2, cad, "
+                "weighted_l0, weighted_l1, weighted_l2."
+            )
+        if thresholder[:8].lower() == "weighted" and thresholds is None:
+            raise ValueError(
+                "weighted thresholder requires the thresholds parameter to be used"
+            )
+        if thresholder[:8].lower() != "weighted" and thresholds is not None:
+            raise ValueError(
+                "The thresholds argument cannot be used without a weighted thresholder,"
+                " e.g. thresholder='weighted_l0'"
+            )
+        if thresholds is not None and np.any(thresholds < 0):
+            raise ValueError("thresholds cannot contain negative entries")
+
+        if thresholder[:8].lower() == "weighted" and thresholds is None:
+            raise ValueError(
+                "weighted thresholder requires the thresholds parameter to be used"
+            )
+        if thresholder[:8].lower() != "weighted" and thresholds is not None:
+            raise ValueError(
+                "The thresholds argument cannot be used without a weighted thresholder,"
+                " e.g. thresholder='weighted_l0'"
+            )
+        if thresholds is not None and np.any(thresholds < 0):
+            raise ValueError("thresholds cannot contain negative entries")
 
         self.threshold = threshold
+        self.thresholds = thresholds
         self.nu = nu
         self.tol = tol
         self.thresholder = thresholder
@@ -187,8 +238,10 @@ class SR3(BaseOptimizer):
 
     def _update_sparse_coef(self, coef_full):
         """Update the regularized weight vector"""
-        coef_sparse = self.prox(coef_full, self.threshold)
-        self.history_.append(coef_sparse.T)
+        if self.thresholds is None:
+            coef_sparse = self.prox(coef_full, self.threshold)
+        else:
+            coef_sparse = self.prox(coef_full, self.thresholds.T)
         return coef_sparse
 
     def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):
@@ -253,6 +306,8 @@ class SR3(BaseOptimizer):
                 trimming_grad = 0.5 * np.sum((y - x.dot(coef_full)) ** 2, axis=1)
             coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
             coef_sparse = self._update_sparse_coef(coef_full)
+            self.history_.append(coef_sparse.T)
+
             if self.use_trimming:
                 trimming_array = self._update_trimming_array(
                     coef_full, trimming_array, trimming_grad
@@ -268,7 +323,6 @@ class SR3(BaseOptimizer):
                 ),
                 ConvergenceWarning,
             )
-
         self.coef_ = coef_sparse.T
         self.coef_full_ = coef_full.T
         if self.use_trimming:

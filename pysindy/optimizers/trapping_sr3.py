@@ -610,7 +610,7 @@ class TrappingSR3(SR3):
             return None, None
         coef_sparse = (xi.value).reshape(coef_prev.shape)
 
-        if np.all(self.PL_) and np.all(self.PQ_):
+        if np.all(self.PL_ == 0) and np.all(self.PQ_ == 0):
             return np.zeros(r), coef_sparse  # no optimization over m
         else:
             m_cp = cp.Variable(r)

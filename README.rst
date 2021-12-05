@@ -251,14 +251,14 @@ References
    Jean-Christophe Loiseau, J. Nathan Kutz, and Steven L. Brunton.
    *PySINDy: a Python package for the sparse identification of
    nonlinear dynamics from data.* arXiv preprint arXiv:2004.08424 (2020)
-   `[arXiv] <https://arxiv.org/abs/2004.08424>`_
+   `[arXiv] <https://arxiv.org/abs/2004.08424>`__
 
 -  Kaptanoglu, Alan A., Brian M. de Silva, Urban Fasel, Kadierdan Kaheman,
    Jared L. Callaham, Charles B. Delahunt, Kathleen Champion, Jean-Christophe Loiseau,
    J. Nathan Kutz, and Steven L. Brunton.
    *PySINDy: A comprehensive Python package for robust sparse system identification.*
    arXiv preprint arXiv:2111.08481 (2021).
-   `[arXiv] <https://arxiv.org/abs/2111.08481>`_
+   `[arXiv] <https://arxiv.org/abs/2111.08481>`__
 
 -  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
    *Discovering governing equations from data by sparse identification
@@ -274,12 +274,12 @@ References
 -  Brunton, Steven L., Joshua L. Proctor, and J. Nathan Kutz.
    *Sparse identification of nonlinear dynamics with control (SINDYc).*
    IFAC-PapersOnLine 49.18 (2016): 710-715.
-   `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`_
+   `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`__
 
 - Kaheman, K., Kutz, J. N., & Brunton, S. L. (2020).
   *SINDy-PI: a robust algorithm for parallel implicit sparse identification
   of nonlinear dynamics.* Proceedings of the Royal Society A, 476(2242), 20200279.
-  `[DOI] <https://doi.org/10.1098/rspa.2020.0279>`_
+  `[DOI] <https://doi.org/10.1098/rspa.2020.0279>`__
 
 -  Kaptanoglu, A. A., Callaham, J. L., Aravkin, A., Hansen, C. J., & Brunton, S. L. (2021).
    *Promoting global stability in data-driven models of quadratic nonlinear dynamics.*

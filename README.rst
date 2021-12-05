@@ -142,11 +142,11 @@ To run the unit tests, example notebooks, or build a local copy of the documenta
 
 Documentation
 -------------
-The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`__. There are numerous `examples <https://pysindy.readthedocs.io/en/latest/examples/index.html>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`__. A video overview of PySINDy can be found on `Youtube <https://www.youtube.com/watch?v=DvbbXX8Bd90>`__.
+The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`__. There are numerous `examples <https://pysindy.readthedocs.io/en/latest/examples/index.html>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`__. A video overview of PySINDy can be found on `Youtube <https://www.youtube.com/watch?v=DvbbXX8Bd90>`__. We have also created a `video playlist <https://www.youtube.com/playlist?list=PLN90bHJU-JLoOfEk0KyBs2qLTV7OkMZ25>`__ with practical PySINDy tips.
 
 PySINDy implements a lot of advanced functionality that may be overwhelming for new users or folks who are unfamiliar with these methods. Below, we provide a helpful flowchart for figuring out which methods to use, given the characteristics of your dataset:
 
-.. image:: https://github.com/dynamicslab/pysindy/blob/PDEFIND_and_IntegralSINDy/docs/JOSS2/Fig3.png
+.. image:: https://github.com/dynamicslab/pysindy/blob/master/docs/JOSS2/Fig3.png
 
 This flow chart summarizes how `PySINDy` users can start with a dataset and systematically choose the proper candidate library and sparse regression optimizer that are tailored for a specific scientific task. The `GeneralizedLibrary` class allows for tensoring, concatenating, and otherwise combining many different candidate libraries.
 
@@ -213,9 +213,9 @@ PySINDy has been published in the Journal of Open Source Software (JOSS). The pa
 
 If you use PySINDy in your work, please cite it using the following two references:
 
-``de Silva et al., (2020). PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data. Journal of Open Source Software, 5(49), 2104, https://doi.org/10.21105/joss.02104``
+Brian M. de Silva, Kathleen Champion, Markus Quade, Jean-Christophe Loiseau, J. Nathan Kutz, and Steven L. Brunton., (2020). *PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data.* Journal of Open Source Software, 5(49), 2104, https://doi.org/10.21105/joss.02104
 
-``Alan A. Kaptanoglu, Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Jared L.Callaham,   Charles  B.  Delahunt,   Kathleen  Champion,   Jean-Christophe  Loiseau,J. Nathan Kutz, and Steven L. Brunton. PySINDy:  A comprehensive Python packagefor robust sparse system identification. arXiv preprint arXiv:2111.08481, 2021.``
+Alan A. Kaptanoglu, Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Jared L. Callaham,   Charles  B.  Delahunt,   Kathleen  Champion,   Jean-Christophe  Loiseau,J. Nathan Kutz, and Steven L. Brunton. *PySINDy:  A comprehensive Python packagefor robust sparse system identification.* arXiv preprint arXiv:2111.08481, 2021.
 
 Bibtex:
 

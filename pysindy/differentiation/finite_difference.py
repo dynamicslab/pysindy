@@ -23,6 +23,9 @@ class FiniteDifference(BaseDifferentiation):
 
     d : int, 1, 2, 3, 4 optional (default 1)
         The order of derivative to take (d > 3 inaccurate).
+        
+    axis: int, optional (default 0)
+        The axis to differentiate along
 
     is_uniform : boolean, optional (default False)
         Parameter to tell the differentiation that, although a 1D or 2D

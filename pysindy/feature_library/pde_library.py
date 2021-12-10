@@ -291,6 +291,7 @@ class PDELibrary(BaseFeatureLibrary):
             
         return self
 
+    #We should accept x with a shape (n_time, n_x1, n_x2, ... , n_xd, n_features), and return the reshaped matrix
     def transform(self, x):
         """Transform data to pde features
 

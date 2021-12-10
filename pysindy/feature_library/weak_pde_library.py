@@ -30,7 +30,7 @@ from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
 
 
-class PDELibrary(BaseFeatureLibrary):
+class WeakPDELibrary(BaseFeatureLibrary):
     """Generate a PDE library with custom functions.
 
     Parameters
@@ -84,7 +84,7 @@ class PDELibrary(BaseFeatureLibrary):
         If True, assume the grid is uniform in all spatial directions, so
         can use uniform grid spacing for the derivative calculations.
 
-    weak_form : boolean, optional (default False)
+    weak_form : boolean, optional (default True)
         If True, uses the weak/integral form of SINDy. Note that the default
         is that the user does not need to specify any extra parameters beyond
         the normal PDE use (i.e. they still need to specify a spatial_grid),
@@ -166,7 +166,7 @@ class PDELibrary(BaseFeatureLibrary):
         include_bias=False,
         include_interaction=True,
         is_uniform=False,
-        weak_form=False,
+        weak_form=True,
         K=100,
         num_pts_per_domain=100,
         Hx=None,

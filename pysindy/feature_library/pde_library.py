@@ -146,6 +146,7 @@ class PDELibrary(BaseFeatureLibrary):
         self.include_bias = include_bias
         self.include_interaction = include_interaction
         self.is_uniform = is_uniform
+        self.weak_form = False
 
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
@@ -205,9 +206,17 @@ class PDELibrary(BaseFeatureLibrary):
             n_features = self.n_features_in_
         else:
             n_features = self.n_input_features
+      
+    
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
-           
+        if self.function_names is None:
+            self.function_names = list(
+                map(
+                    lambda i: (lambda *x: "f" + str(i) + "(" + ",".join(x) + ")"),
+                    range(n_features),
+                )
+            )
         feature_names = []
 
         # Include constant term
@@ -364,7 +373,7 @@ class PDELibrary(BaseFeatureLibrary):
                 library_idx += 1
 
         library_idx=0
-        
+                
         #constant term
         if self.include_bias:
             xp[:,library_idx] = ones(n_samples, dtype=x.dtype)
@@ -372,16 +381,18 @@ class PDELibrary(BaseFeatureLibrary):
             
         #library function terms
         xp[:,library_idx:library_idx+n_library_terms]=library_functions
-        library_idx += len(self.functions)
+        library_idx += n_library_terms
         
         #pure derivative terms
-        xp[:,library_idx:library_idx+self.num_derivatives]=library_derivatives
-        library_idx += self.num_derivatives
+        xp[:,library_idx:library_idx+self.num_derivatives*n_features]=library_derivatives
+        library_idx += self.num_derivatives*n_features
         
         #mixed function derivative terms
-        xp[:,library_idx:library_idx+n_library_terms*self.num_derivatives]=reshape(
-            library_functions[:,:,newaxis]*library_derivatives[:,newaxis,:],
-            (n_samples,n_library_terms*self.num_derivatives))
-        library_idx += n_library_terms*self.num_derivatives
+        #Should include a self.interactions_only case as well? 
+        if self.include_interaction:
+            xp[:,library_idx:library_idx+n_library_terms*self.num_derivatives*n_features]=reshape(
+                library_functions[:,:,newaxis]*library_derivatives[:,newaxis,:],
+                (n_samples,n_library_terms*self.num_derivatives*n_features))
+            library_idx += n_library_terms*self.num_derivatives*n_features
         
         return self._ensemble(xp)

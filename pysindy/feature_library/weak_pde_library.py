@@ -143,10 +143,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
     Examples
     --------
     >>> import numpy as np
-    >>> from pysindy.feature_library import PDELibrary
+    >>> from pysindy.feature_library import WeakPDELibrary
     >>> x = np.array([[0.,-1],[1.,0.],[2.,-1.]])
     >>> functions = [lambda x : np.exp(x), lambda x,y : np.sin(x+y)]
-    >>> lib = PDELibrary(library_functions=functions).fit(x)
+    >>> lib = WeakPDELibrary(library_functions=functions).fit(x)
     >>> lib.transform(x)
     array([[ 1.        ,  0.36787944, -0.84147098],
            [ 2.71828183,  1.        ,  0.84147098],
@@ -177,7 +177,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         library_ensemble=False,
         ensemble_indices=[0],
     ):
-        super(PDELibrary, self).__init__(
+        super(WeakPDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
         )
         self.functions = library_functions

@@ -163,6 +163,10 @@ class FiniteDifference(BaseDifferentiation):
         sp2[self.axis]=slice(2,3,None)
         sp3 = [slice(dim) for dim in x.shape]
         sp3[self.axis]=slice(3,4,None)
+        sp4 = [slice(dim) for dim in x.shape]
+        sp4[self.axis]=slice(4,5,None)
+        sp5 = [slice(dim) for dim in x.shape]
+        sp5[self.axis]=slice(5,6,None)
 
         sm1 = [slice(dim) for dim in x.shape]
         sm1[self.axis]=slice(-1,None,None)
@@ -172,6 +176,10 @@ class FiniteDifference(BaseDifferentiation):
         sm3[self.axis]=slice(-3,-2,None)
         sm4 = [slice(dim) for dim in x.shape]
         sm4[self.axis]=slice(-4,-3,None)
+        sm5 = [slice(dim) for dim in x.shape]
+        sm5[self.axis]=slice(-5,-4,None)
+        sm6 = [slice(dim) for dim in x.shape]
+        sm6[self.axis]=slice(-6,-5,None)
 
         if d == 1:
             # Uniform timestep (assume t contains dt)
@@ -299,14 +307,14 @@ class FiniteDifference(BaseDifferentiation):
                         + 12 * x[tuple(sm3)]
                         - 7 * x[tuple(sm4)]
                         + 1.5 * x[tuple(sm5)]
-                    ) / ((tuple(sm1) / 2.0) ** 3)
+                    ) / ((t_diff[tuple(sm1)] / 2.0) ** 3)
                     x_dot[tuple(sm2)] = (
                         2.5 * x[tuple(sm2)]
                         - 9 * x[tuple(sm3)]
                         + 12 * x[tuple(sm4)]
                         - 7 * x[tuple(sm5)]
                         + 1.5 * x[tuple(sm6)]
-                    ) / ((tuple(sm2) / 2.0) ** 3)
+                    ) / ((t_diff[tuple(sm2)] / 2.0) ** 3)
 
         if d > 3:
             return self._centered_difference(

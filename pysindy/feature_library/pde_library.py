@@ -35,7 +35,6 @@ from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
 
 
-#nearing completion, but we need to debug, test, and validate....
 class PDELibrary(BaseFeatureLibrary):
     """Generate a PDE library with custom functions.
 
@@ -128,8 +127,8 @@ class PDELibrary(BaseFeatureLibrary):
         derivative_order=0,
         spatial_grid=None,
         temporal_grid=None,
-        function_names=None,
         interaction_only=True,
+        function_names=None,
         include_bias=False,
         include_interaction=True,
         is_uniform=False,
@@ -141,10 +140,9 @@ class PDELibrary(BaseFeatureLibrary):
         )
         self.functions = library_functions
         self.derivative_order = derivative_order
-        self.spatial_grid = spatial_grid
         self.temporal_grid = temporal_grid
         self.function_names = function_names
-        self.interaction_only = interaction_only
+        self.interactions_only = interaction_only
         self.include_bias = include_bias
         self.include_interaction = include_interaction
         self.is_uniform = is_uniform
@@ -162,7 +160,10 @@ class PDELibrary(BaseFeatureLibrary):
             
         #list of derivatives
         indices=()
+        if len(spatial_grid.shape)==1:
+            spatial_grid=reshape(spatial_grid,(len(spatial_grid),1))        
         dims = spatial_grid.shape[:-1]
+
         for i in range(0,len(dims)):
             indices=indices+(range(derivative_order+1),)
 
@@ -176,6 +177,8 @@ class PDELibrary(BaseFeatureLibrary):
         
         self.num_derivatives = num_derivatives
         self.multiindices = multiindices
+        self.spatial_grid = spatial_grid
+
         
 
     @staticmethod
@@ -204,6 +207,7 @@ class PDELibrary(BaseFeatureLibrary):
             n_features = self.n_input_features
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
+           
         feature_names = []
 
         # Include constant term
@@ -214,19 +218,27 @@ class PDELibrary(BaseFeatureLibrary):
         function_lib_len = 0
         if self.functions is not None:
             function_lib_len = len(self.functions)
+            
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interaction_only
+                n_features, f.__code__.co_argcount, self.interactions_only
             ):
                 feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
                 )
+                
+        def derivative_string(multiindex):
+            ret=''
+            for axis in range(len(self.spatial_grid.shape[:-1])):
+                for i in range(multiindex[axis]):
+                    ret=ret+str(axis+1)
+            return ret
 
         # Include derivative (integral) terms
         for k in range(self.num_derivatives):
             for j in range(n_features):
                 feature_names.append(
-                    input_features[j] + '_' + str(self.multiindices[k])
+                    input_features[j] + '_' + derivative_string(self.multiindices[k])
                 )
         # Include mixed non-derivative + derivative (integral) terms
         if self.include_interaction:
@@ -235,16 +247,14 @@ class PDELibrary(BaseFeatureLibrary):
                     for c in self._combinations(
                         n_features,
                         f.__code__.co_argcount,
-                        self.interaction_only,
+                        self.interactions_only,
                     ):
                         for jj in range(n_features):
                             feature_names.append(
                                 self.function_names[i](
                                     *[input_features[j] for j in c]
                                 )
-                                + self.function_names[function_lib_len + k](
-                                    input_features[jj]
-                                )
+                                + input_features[jj] + '_' + derivative_string(self.multiindices[k])
                             )
         return feature_names
 
@@ -272,7 +282,7 @@ class PDELibrary(BaseFeatureLibrary):
         for f in self.functions:
             n_args = f.__code__.co_argcount
             n_output_features += len(
-                list(self._combinations(n_features, n_args, self.interaction_only))
+                list(self._combinations(n_features, n_args, self.interactions_only))
             )
 
         # Add the mixed derivative library_terms

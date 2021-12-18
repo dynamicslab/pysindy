@@ -318,8 +318,7 @@ class SINDy(BaseEstimator):
             n_subset = x.shape[0]
         if (
             ensemble
-            and hasattr(self.feature_library, "weak_form")
-            and self.feature_library.weak_form
+            and isinstance(self.feature_library, WeakPDELibrary)
             and self.feature_library.is_uniform
         ):
             raise ValueError(
@@ -357,7 +356,7 @@ class SINDy(BaseEstimator):
             x = concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known unless using weak PDE form
-        if not hasattr(self.feature_library, "weak_form"):
+        if not isinstance(self.feature_library, WeakPDELibrary):
             x, x_dot = drop_nan_rows(x, x_dot)
 
         if hasattr(self.optimizer, "unbias"):
@@ -377,12 +376,13 @@ class SINDy(BaseEstimator):
             warnings.filterwarnings(action, category=ConvergenceWarning)
             warnings.filterwarnings(action, category=LinAlgWarning)
             warnings.filterwarnings(action, category=UserWarning)
-            pde_library_flag = False
-            if isinstance(self.feature_library, PDELibrary) or isinstance(
-                self.feature_library, WeakPDELibrary
-            ):
+            pde_library_flag = None
+            if isinstance(self.feature_library, PDELibrary):
                 if self.feature_library.spatial_grid is not None:
-                    pde_library_flag = True
+                    pde_library_flag = "PDE"
+            if isinstance(self.feature_library, WeakPDELibrary):
+                if self.feature_library.spatial_grid is not None:
+                    pde_library_flag = "WeakPDE"
             if ensemble and not library_ensemble:
                 self.coef_list = []
                 for i in range(n_models):
@@ -433,7 +433,7 @@ class SINDy(BaseEstimator):
                         replace,
                         tgrid,
                         self.feature_library,
-                        isinstance(self.feature_library, PDELibrary),
+                        pde_library_flag,
                     )
                     for j in range(n_models):
                         self.feature_library.ensemble_indices = sort(
@@ -679,7 +679,7 @@ class SINDy(BaseEstimator):
                 x, t, x_dot, return_array=True
             )
         else:
-            if not hasattr(self.feature_library, "weak_form"):
+            if not isinstance(self.feature_library, WeakPDELibrary):
                 x = validate_input(x, t)
             if x_dot is None:
                 if self.discrete_time:
@@ -696,7 +696,7 @@ class SINDy(BaseEstimator):
             x = concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known (usually endpoints)
-        if not hasattr(self.feature_library, "weak_form"):
+        if not isinstance(self.feature_library, WeakPDELibrary):
             x, x_dot = drop_nan_rows(x, x_dot)
         else:
             self.feature_library.temporal_grid = t

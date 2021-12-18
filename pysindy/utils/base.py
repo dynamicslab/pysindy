@@ -103,69 +103,43 @@ def drop_nan_rows(x, x_dot):
 
 
 def drop_random_rows(
-    x, x_dot, n_subset, replace, tgrid, feature_library, is_pde_library
+    x, x_dot, n_subset, replace, tgrid, feature_library, pde_library_flag
 ):
     # Can't choose random n_subset points if data is from a PDE
     # (and therefore is spatially local).
     # Need to unfold it and just choose n_subset from the temporal slices
-    if is_pde_library:
-        if feature_library.weak_form:
+    print(pde_library_flag)
+    if pde_library_flag is not None:
+        if pde_library_flag == "WeakPDE":
+            # Weak form needs uniform, ascending grid, so cannot replace
+            replace = False
             spatial_grid = feature_library.spatial_grid
             num_gridx = (spatial_grid).shape[0]
             if len(np.shape(spatial_grid)) == 1:
                 num_time = np.shape(x)[0] // num_gridx
                 if n_subset > num_time:
                     n_subset = num_time
-                # Weak form needs uniform, ascending grid, so cannot replace
-                if feature_library.weak_form:
-                    replace = False
                 rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
                 x_shaped = np.reshape(x, (num_gridx, num_time, x.shape[1]))
                 x_shaped = x_shaped[:, rand_inds, :]
                 x_new = np.reshape(x_shaped, (num_gridx * n_subset, x.shape[1]))
-                if not feature_library.weak_form:
-                    x_dot_shaped = np.reshape(x_dot, (num_gridx, num_time, x.shape[1]))
-                    x_dot_shaped = x_dot_shaped[:, rand_inds, :]
-                    x_dot_new = np.reshape(
-                        x_dot_shaped, (num_gridx * n_subset, x.shape[1])
-                    )
-                elif feature_library.weak_form:
-                    x_dot_new = x_dot
-                    feature_library.temporal_grid = tgrid[rand_inds]
             if len(np.shape(spatial_grid)) == 3:
                 num_gridy = (spatial_grid).shape[1]
                 num_time = np.shape(x)[0] // num_gridx // num_gridy
                 if n_subset > num_time:
                     n_subset = num_time
-                # Weak form needs uniform, ascending grid, so cannot replace
-                if feature_library.weak_form:
-                    replace = False
                 rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
                 x_shaped = np.reshape(x, (num_gridx, num_gridy, num_time, x.shape[1]))
                 x_shaped = x_shaped[:, :, rand_inds, :]
                 x_new = np.reshape(
                     x_shaped, (num_gridx * num_gridy * n_subset, x.shape[1])
                 )
-                if not feature_library.weak_form:
-                    x_dot_shaped = np.reshape(
-                        x_dot, (num_gridx, num_gridy, num_time, x.shape[1])
-                    )
-                    x_dot_shaped = x_dot_shaped[:, :, rand_inds, :]
-                    x_dot_new = np.reshape(
-                        x_dot_shaped, (num_gridx * num_gridy * n_subset, x.shape[1])
-                    )
-                elif feature_library.weak_form:
-                    x_dot_new = x_dot
-                    feature_library.temporal_grid = tgrid[rand_inds]
             if len(np.shape(spatial_grid)) == 4:
                 num_gridy = (spatial_grid).shape[1]
                 num_gridz = (spatial_grid).shape[2]
                 num_time = np.shape(x)[0] // num_gridx // num_gridy // num_gridz
                 if n_subset > num_time:
                     n_subset = num_time
-                # Weak form needs uniform, ascending grid, so cannot replace
-                if feature_library.weak_form:
-                    replace = False
                 rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
                 x_shaped = np.reshape(
                     x, (num_gridx, num_gridy, num_gridz, num_time, x.shape[1])
@@ -174,18 +148,8 @@ def drop_random_rows(
                 x_new = np.reshape(
                     x_shaped, (num_gridx * num_gridy * num_gridz * n_subset, x.shape[1])
                 )
-                if not feature_library.weak_form:
-                    x_dot_shaped = np.reshape(
-                        x_dot, (num_gridx, num_gridy, num_gridz, num_time, x.shape[1])
-                    )
-                    x_dot_shaped = x_dot_shaped[:, :, :, rand_inds, :]
-                    x_dot_new = np.reshape(
-                        x_dot_shaped,
-                        (num_gridx * num_gridy * num_gridz * n_subset, x.shape[1]),
-                    )
-                elif feature_library.weak_form:
-                    x_dot_new = x_dot
-                    feature_library.temporal_grid = tgrid[rand_inds]
+            x_dot_new = x_dot
+            feature_library.temporal_grid = tgrid[rand_inds]
         else:
             # new bagging for arbitrary samples
             n_samples = x.shape[0]
@@ -217,12 +181,9 @@ def drop_random_rows(
         # Choose random n_subset points to use
         rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))
         x_new = x[rand_inds, :]
-        if hasattr(feature_library, "weak_form"):
-            if feature_library.weak_form:
-                x_dot_new = x_dot
-                feature_library.temporal_grid = tgrid[rand_inds]
-            else:
-                x_dot_new = x_dot[rand_inds, :]
+        if pde_library_flag == "WeakPDE":
+            x_dot_new = x_dot
+            feature_library.temporal_grid = tgrid[rand_inds]
         else:
             x_dot_new = x_dot[rand_inds, :]
 

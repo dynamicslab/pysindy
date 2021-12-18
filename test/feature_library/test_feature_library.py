@@ -118,24 +118,22 @@ def test_pde_library_bad_parameters(params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, p=-1),
-        dict(weak_form=True, spatial_grid=range(10)),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hx=-1),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hx=11),
+        dict(spatial_grid=range(10), temporal_grid=range(10), p=-1),
+        dict(spatial_grid=range(10)),
+        dict(spatial_grid=range(10), temporal_grid=range(10), Hx=-1),
+        dict(spatial_grid=range(10), temporal_grid=range(10), Hx=11),
         dict(
             spatial_grid=np.asarray(np.meshgrid(range(10), range(10))).T,
             temporal_grid=range(10),
-            weak_form=True,
             Hy=-1,
         ),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hy=11),
+        dict(spatial_grid=range(10), temporal_grid=range(10), Hy=11),
         dict(
             spatial_grid=np.transpose(
                 np.asarray(np.meshgrid(range(10), range(10), range(10), indexing="ij")),
                 axes=[1, 2, 3, 0],
             ),
             temporal_grid=range(10),
-            weak_form=True,
             Hz=-1,
         ),
         dict(
@@ -144,13 +142,12 @@ def test_pde_library_bad_parameters(params):
                 axes=[1, 2, 3, 0],
             ),
             temporal_grid=range(10),
-            weak_form=True,
             Hz=11,
         ),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, K=-1),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Ht=11),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Ht=-1),
-        dict(spatial_grid=range(10), temporal_grid=np.zeros((10, 3)), weak_form=True),
+        dict(spatial_grid=range(10), temporal_grid=range(10), K=-1),
+        dict(spatial_grid=range(10), temporal_grid=range(10), Ht=11),
+        dict(spatial_grid=range(10), temporal_grid=range(10), Ht=-1),
+        dict(spatial_grid=range(10), temporal_grid=np.zeros((10, 3))),
     ],
 )
 def test_weak_pde_library_bad_parameters(params):
@@ -644,7 +641,6 @@ def test_1D_weak_pdes():
         include_bias=True,
         K=5,
         is_uniform=False,
-        weak_form=True,
         num_pts_per_domain=20,
     )
 
@@ -702,7 +698,6 @@ def test_2D_weak_pdes():
         temporal_grid=t,
         include_bias=True,
         is_uniform=False,
-        weak_form=True,
         num_pts_per_domain=10,
     )
 
@@ -770,7 +765,6 @@ def test_3D_weak_pdes():
         temporal_grid=t,
         include_bias=True,
         is_uniform=False,
-        weak_form=True,
         num_pts_per_domain=4,
     )
 

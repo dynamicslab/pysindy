@@ -2,12 +2,6 @@ import numpy as np
 
 from .base import BaseDifferentiation
 
-# Z.N. implemented differentiation over arbitrary shapes to significantly
-# improve runtime for PDEs.
-# The PDE_Library already handles reshaping the feature library to be
-# 2-dimensional for compatibility with sklearn instead.
-# Adding different stencils and higher order derivatives would be easy!
-
 
 class FiniteDifference(BaseDifferentiation):
     """Finite difference derivatives.
@@ -97,7 +91,7 @@ class FiniteDifference(BaseDifferentiation):
 
         x_dot = np.full_like(x, fill_value=np.nan)
         s0 = [slice(dim) for dim in x.shape]
-        s0[self.axis] = slice(None, -1, None)
+        s0[self.axis] = slice(0, -1, None)
         sm1 = [slice(dim) for dim in x.shape]
         sm1[self.axis] = slice(-1, None, None)
         sm2 = [slice(dim) for dim in x.shape]
@@ -115,10 +109,11 @@ class FiniteDifference(BaseDifferentiation):
 
         # Variable timestep
         else:
-            t_diff = np.diff(t)
-            x_dot[tuple(s0)] = (np.roll(x, -1, axis=self.axis) - x)[tuple(s0)] / t_diff[
-                :, None
-            ]
+            dims = np.ones(x.ndim, dtype=int)
+            dims[self.axis] = x.shape[self.axis] - 1
+            t_diff = np.reshape(t[1:] - t[:-1], dims)
+
+            x_dot[tuple(s0)] = (np.roll(x, -1, axis=self.axis) - x)[tuple(s0)] / t_diff
             if not self.drop_endpoints:
                 x_dot[tuple(sm1)] = (
                     3 * x[tuple(sm1)] / 2 - 2 * x[tuple(sm2)] + x[tuple(sm3)] / 2

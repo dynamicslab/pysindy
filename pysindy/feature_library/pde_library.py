@@ -129,11 +129,19 @@ class PDELibrary(BaseFeatureLibrary):
                 "library_functions and function_names must have the same"
                 " number of elements"
             )
-        if derivative_order <= 0:
+        if derivative_order < 0:
             raise ValueError("The derivative order must be >0")
 
+        if (spatial_grid is not None and derivative_order == 0) or (
+            spatial_grid is None and derivative_order != 0
+        ):
+            raise ValueError(
+                "Spatial grid and the derivative order must be "
+                "defined at the same time"
+            )
+
         if spatial_grid is None:
-            raise ValueError("Spatial grid required")
+            spatial_grid = array([])
 
         # list of derivatives
         indices = ()
@@ -197,6 +205,7 @@ class PDELibrary(BaseFeatureLibrary):
             feature_names.append("1")
 
         # Include any non-derivative terms
+
         for i, f in enumerate(self.functions):
             for c in self._combinations(
                 n_features, f.__code__.co_argcount, self.interactions_only
@@ -277,8 +286,6 @@ class PDELibrary(BaseFeatureLibrary):
 
         return self
 
-    # We should accept x with a shape (n_time, n_x1, n_x2, ... , n_xd, n_features),
-    # and return the reshaped matrix
     def transform(self, x):
         """Transform data to pde features
 
@@ -307,7 +314,10 @@ class PDELibrary(BaseFeatureLibrary):
                 raise ValueError("x shape does not match training shape")
 
         dims = self.spatial_grid.shape[:-1]
-        num_time = n_samples // product(dims)
+        if product(dims) > 0:
+            num_time = n_samples // product(dims)
+        else:
+            num_time = n_samples
 
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
         library_idx = 0

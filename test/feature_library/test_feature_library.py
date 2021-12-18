@@ -23,6 +23,7 @@ from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library import TensoredLibrary
+from pysindy.feature_library import WeakPDELibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import STLSQ
@@ -106,6 +107,17 @@ def test_bad_parameters():
         dict(spatial_grid=np.zeros((10, 10))),
         dict(spatial_grid=np.zeros((10, 10, 10, 10, 10))),
         dict(spatial_grid=np.zeros((10, 10, 10, 10, 10))),
+    ],
+)
+def test_pde_library_bad_parameters(params):
+    params["library_functions"] = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    with pytest.raises(ValueError):
+        PDELibrary(**params)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
         dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, p=-1),
         dict(weak_form=True, spatial_grid=range(10)),
         dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hx=-1),
@@ -141,10 +153,10 @@ def test_bad_parameters():
         dict(spatial_grid=range(10), temporal_grid=np.zeros((10, 3)), weak_form=True),
     ],
 )
-def test_pde_library_bad_parameters(params):
+def test_weak_pde_library_bad_parameters(params):
     params["library_functions"] = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
     with pytest.raises(ValueError):
-        PDELibrary(**params)
+        WeakPDELibrary(**params)
 
 
 @pytest.mark.parametrize(
@@ -556,7 +568,9 @@ def pde_library_helper(library, u_flattened, u_dot_flattened, coef_first_dim):
     assert np.any(opt.coef_ != 0.0)
 
     n_features = len(model.get_feature_names())
-    model.fit(u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10)
+    model.fit(
+        u_flattened, x_dot=u_dot_flattened, ensemble=True, n_subset=50, n_models=10
+    )
     assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
 
     model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
@@ -619,7 +633,7 @@ def test_1D_weak_pdes():
     u_flattened = np.reshape(u, (nx * len(t), 1))
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
+    pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=4,
@@ -676,7 +690,7 @@ def test_2D_weak_pdes():
     u_flattened = np.reshape(u, (nx * ny * len(t), 1))
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
+    pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=4,
@@ -743,7 +757,7 @@ def test_3D_weak_pdes():
     u_flattened = np.reshape(u, (n ** 4, 2))
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
+    pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=4,

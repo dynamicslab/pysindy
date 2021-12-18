@@ -27,8 +27,8 @@ from pysindy.differentiation import FiniteDifference
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
-from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
+from pysindy.feature_library import WeakPDELibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
@@ -700,7 +700,7 @@ def test_bad_ensemble_weakform():
     t = np.linspace(0, 10)
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
+    pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=2,

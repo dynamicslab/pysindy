@@ -27,6 +27,7 @@ from .differentiation import FiniteDifference
 from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
 from .feature_library import SINDyPILibrary
+from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
 from .utils import drop_nan_rows
@@ -377,7 +378,9 @@ class SINDy(BaseEstimator):
             warnings.filterwarnings(action, category=LinAlgWarning)
             warnings.filterwarnings(action, category=UserWarning)
             pde_library_flag = False
-            if isinstance(self.feature_library, PDELibrary):
+            if isinstance(self.feature_library, PDELibrary) or isinstance(
+                self.feature_library, WeakPDELibrary
+            ):
                 if self.feature_library.spatial_grid is not None:
                     pde_library_flag = True
             if ensemble and not library_ensemble:

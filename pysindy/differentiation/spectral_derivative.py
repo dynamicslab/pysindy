@@ -3,7 +3,8 @@ import numpy as np
 from .base import BaseDifferentiation
 
 class SpectralDerivative(BaseDifferentiation):
-    """Spectral derivatives. Assumes uniform grid, and utilizes FFT to approximate a derivative.
+    """Spectral derivatives. 
+    Assumes uniform grid, and utilizes FFT to approximate a derivative.
     Works well for derivatives in periodic dimensions. 
     Equivalent to a maximal-order finite difference, but runs in O(NlogN).
 

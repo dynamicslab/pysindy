@@ -4,10 +4,10 @@ from .base import BaseDifferentiation
 
 
 class SpectralDerivative(BaseDifferentiation):
-    """Spectral derivatives. Assumes uniform grid, and utilizes FFT
-    to approximate a derivative. Works well for derivatives in periodic
-    dimensions. Equivalent to a maximal-order finite difference,
-    but runs in O(NlogN).
+    """Spectral derivatives.
+    Assumes uniform grid, and utilizes FFT to approximate a derivative.
+    Works well for derivatives in periodic dimensions.
+    Equivalent to a maximal-order finite difference, but runs in O(NlogN).
 
     Parameters
     ----------
@@ -57,7 +57,7 @@ class SpectralDerivative(BaseDifferentiation):
         positives = np.arange(int(n / 2 + 1))
         negatives = np.setdiff1d(np.arange(n), positives)
         freqs[: int(n / 2 + 1)] = (positives) * 2 * np.pi / (n * t)
-        freqs[int(n / 2 + 1) :] = (negatives - n) * 2 * np.pi / (n * t)
+        freqs[int(n / 2 + 1):] = (negatives - n) * 2 * np.pi / (n * t)
 
         if x.dtype is complex:
             return np.fft.ifft(

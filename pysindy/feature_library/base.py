@@ -336,8 +336,11 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         lib_full : All combinations of the numerical library terms.
         """
-        lib_full = np.reshape(lib_i[:,:,np.newaxis]*lib_j[:,np.newaxis,:],(lib_i.shape[0], lib_i.shape[-1] * lib_j.shape[-1]))
-        
+        lib_full = np.reshape(
+            lib_i[:, :, np.newaxis] * lib_j[:, np.newaxis, :],
+            (lib_i.shape[0], lib_i.shape[-1] * lib_j.shape[-1]),
+        )
+
         return lib_full
 
     def _name_combinations(self, lib_i, lib_j):

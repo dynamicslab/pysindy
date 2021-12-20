@@ -9,7 +9,7 @@ from sklearn.base import TransformerMixin
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-#I vectorized the tensor product combinations to speed up runtime a bit
+
 class BaseFeatureLibrary(TransformerMixin):
     """
     Base class for feature libraries.

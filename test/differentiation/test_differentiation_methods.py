@@ -331,8 +331,8 @@ def test_centered_difference_hot_axis(data_2d_random_pde):
     t1 = np.linspace(0, x.shape[0], x.shape[0])
     t2 = np.copy(t1)
     t2[: len(t1) // 2] = t1[: len(t1) // 2] + 0.5
-    centered_difference_uniform = FiniteDifference(order=2, axis=-1)
-    centered_difference_nonuniform = FiniteDifference(order=2, axis=-1)
+    centered_difference_uniform = FiniteDifference(order=2, axis=-1)._differentiate
+    centered_difference_nonuniform = FiniteDifference(order=2, axis=-1)._differentiate
     uniform_flattened = centered_difference_uniform(x, t=t1)
     uniform_flattened = np.reshape(uniform_flattened, (8 * 8 * 8, 2))
     nonuniform_flattened = centered_difference_nonuniform(x, t=t1)

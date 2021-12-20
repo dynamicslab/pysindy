@@ -381,7 +381,7 @@ class SINDy(BaseEstimator):
                 if self.feature_library.spatial_grid is not None:
                     pde_library_flag = "PDE"
             if isinstance(self.feature_library, WeakPDELibrary):
-                if self.feature_library.spatial_grid is not None:
+                if self.feature_library.spatiotemporal_grid is not None:
                     pde_library_flag = "WeakPDE"
             if ensemble and not library_ensemble:
                 self.coef_list = []

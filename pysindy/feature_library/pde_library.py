@@ -119,7 +119,7 @@ class PDELibrary(BaseFeatureLibrary):
         self.functions = library_functions
         self.derivative_order = derivative_order
         self.function_names = function_names
-        self.interactions_only = interaction_only
+        self.interaction_only = interaction_only
         self.include_bias = include_bias
         self.include_interaction = include_interaction
         self.is_uniform = is_uniform
@@ -149,7 +149,7 @@ class PDELibrary(BaseFeatureLibrary):
             spatial_grid = reshape(spatial_grid, (len(spatial_grid), 1))
         dims = spatial_grid.shape[:-1]
 
-        for i in range(0, len(dims)):
+        for i in range(len(dims)):
             indices = indices + (range(derivative_order + 1),)
 
         multiindices = []
@@ -205,10 +205,9 @@ class PDELibrary(BaseFeatureLibrary):
             feature_names.append("1")
 
         # Include any non-derivative terms
-
         for i, f in enumerate(self.functions):
             for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interactions_only
+                n_features, f.__code__.co_argcount, self.interaction_only
             ):
                 feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
@@ -221,20 +220,20 @@ class PDELibrary(BaseFeatureLibrary):
                     ret = ret + str(axis + 1)
             return ret
 
-        # Include derivative (integral) terms
+        # Include derivative terms
         for k in range(self.num_derivatives):
             for j in range(n_features):
                 feature_names.append(
                     input_features[j] + "_" + derivative_string(self.multiindices[k])
                 )
-        # Include mixed non-derivative + derivative (integral) terms
+        # Include mixed non-derivative + derivative terms
         if self.include_interaction:
             for k in range(self.num_derivatives):
                 for i, f in enumerate(self.functions):
                     for c in self._combinations(
                         n_features,
                         f.__code__.co_argcount,
-                        self.interactions_only,
+                        self.interaction_only,
                     ):
                         for jj in range(n_features):
                             feature_names.append(
@@ -269,7 +268,7 @@ class PDELibrary(BaseFeatureLibrary):
         for f in self.functions:
             n_args = f.__code__.co_argcount
             n_output_features += len(
-                list(self._combinations(n_features, n_args, self.interactions_only))
+                list(self._combinations(n_features, n_args, self.interaction_only))
             )
 
         # Add the mixed derivative library_terms
@@ -283,6 +282,9 @@ class PDELibrary(BaseFeatureLibrary):
             n_output_features += 1
 
         self.n_output_features_ = n_output_features
+
+        # required to generate the function names
+        self.get_feature_names()
 
         return self
 
@@ -320,7 +322,6 @@ class PDELibrary(BaseFeatureLibrary):
             num_time = n_samples
 
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
-        library_idx = 0
 
         # derivative terms
         library_derivatives = empty(
@@ -347,7 +348,7 @@ class PDELibrary(BaseFeatureLibrary):
         n_library_terms = 0
         for f in self.functions:
             for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interactions_only
+                n_features, f.__code__.co_argcount, self.interaction_only
             ):
                 n_library_terms += 1
 
@@ -355,7 +356,7 @@ class PDELibrary(BaseFeatureLibrary):
         library_idx = 0
         for f in self.functions:
             for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interactions_only
+                n_features, f.__code__.co_argcount, self.interaction_only
             ):
                 library_functions[:, library_idx] = reshape(
                     f(*[x[:, j] for j in c]), (n_samples)
@@ -380,7 +381,7 @@ class PDELibrary(BaseFeatureLibrary):
         library_idx += self.num_derivatives * n_features
 
         # mixed function derivative terms
-        # Should include a self.interactions_only case as well?
+        # Should include a self.interaction_only case as well?
         if self.include_interaction:
             xp[
                 :,

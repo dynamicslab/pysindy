@@ -108,7 +108,6 @@ def drop_random_rows(
     # Can't choose random n_subset points if data is from a PDE
     # (and therefore is spatially local).
     # Need to unfold it and just choose n_subset from the temporal slices
-    print(pde_library_flag)
     if pde_library_flag is not None:
         if pde_library_flag == "WeakPDE":
             # Weak form needs uniform, ascending grid, so cannot replace

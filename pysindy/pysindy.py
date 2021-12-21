@@ -3,7 +3,6 @@ from typing import Sequence
 
 import numpy.random
 from numpy import concatenate
-from numpy import copy
 from numpy import insert
 from numpy import isscalar
 from numpy import median
@@ -366,11 +365,6 @@ class SINDy(BaseEstimator):
         steps = [("features", self.feature_library), ("model", optimizer)]
         self.model = Pipeline(steps)
 
-        if hasattr(self.feature_library, "temporal_grid"):
-            tgrid = copy(self.feature_library.temporal_grid)
-        else:
-            tgrid = None
-
         action = "ignore" if quiet else "default"
         with warnings.catch_warnings():
             warnings.filterwarnings(action, category=ConvergenceWarning)
@@ -391,7 +385,6 @@ class SINDy(BaseEstimator):
                         x_dot,
                         n_subset,
                         replace,
-                        tgrid,
                         self.feature_library,
                         pde_library_flag,
                     )
@@ -431,7 +424,6 @@ class SINDy(BaseEstimator):
                         x_dot,
                         n_subset,
                         replace,
-                        tgrid,
                         self.feature_library,
                         pde_library_flag,
                     )

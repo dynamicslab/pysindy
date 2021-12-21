@@ -86,15 +86,11 @@ def test_centered_difference_2d_uniform_time(data_derivative_2d):
     np.testing.assert_allclose(centered_difference(x, t), x_dot)
 
 
-# Todo: Update with a real test of the differentiation. Right now it
-# really just checks that is was able to do a calculation.
-# Same goes for atol=4 in example below this.
 def test_centered_difference_2d_nonuniform_time(data_derivative_2d):
     x, x_dot = data_derivative_2d
     t = np.linspace(0, x.shape[0] - 1, x.shape[0])
-    t[: len(t) // 2] = t[: len(t) // 2] + 0.5
     centered_difference = FiniteDifference(order=2)
-    np.testing.assert_allclose(centered_difference(x, t), x_dot, atol=4)
+    np.testing.assert_allclose(centered_difference(x, t), x_dot, atol=1e-8)
 
 
 def test_centered_difference_xy_yx(data_2dspatial):
@@ -125,37 +121,33 @@ def test_centered_difference_xy_yx(data_2dspatial):
 
 
 def test_centered_difference_hot(data_derivative_2d):
-    x, x_dot = data_derivative_2d
-    t1 = np.linspace(0, x.shape[0], x.shape[0])
-    t2 = np.copy(t1)
-    t2[: len(t1) // 2] = t1[: len(t1) // 2] + 0.5
-    centered_difference_uniform = FiniteDifference(order=2)
-    centered_difference_nonuniform = FiniteDifference(order=2)
+    x, _ = data_derivative_2d
+    t = np.linspace(0, x.shape[0], x.shape[0])
+    dt = t[1] - t[0]
+    centered_difference = FiniteDifference(order=2)._differentiate
+    atol = 1e-8
     np.testing.assert_allclose(
-        centered_difference_uniform(x, t=t1),
-        centered_difference_nonuniform(x, t=t2),
-        atol=4,
+        centered_difference(x, t=dt),
+        centered_difference(x, t=t),
+        atol=atol,
     )
-    centered_difference_uniform = FiniteDifference(order=2, d=2)
-    centered_difference_nonuniform = FiniteDifference(order=2, d=2)
+    centered_difference = FiniteDifference(order=2, d=2)._differentiate
     np.testing.assert_allclose(
-        centered_difference_uniform(x, t=t1),
-        centered_difference_nonuniform(x, t=t2),
-        atol=4,
+        centered_difference(x, t=dt),
+        centered_difference(x, t=t),
+        atol=atol,
     )
-    centered_difference_uniform = FiniteDifference(order=2, d=3)
-    centered_difference_nonuniform = FiniteDifference(order=2, d=3)
+    centered_difference = FiniteDifference(order=2, d=3)._differentiate
     np.testing.assert_allclose(
-        centered_difference_uniform(x, t=t1),
-        centered_difference_nonuniform(x, t=t2),
-        atol=4,
+        centered_difference(x, t=dt),
+        centered_difference(x, t=t),
+        atol=atol,
     )
-    centered_difference_uniform = FiniteDifference(order=2, d=4)
-    centered_difference_nonuniform = FiniteDifference(order=2, d=4)
+    centered_difference = FiniteDifference(order=2, d=4)._differentiate
     np.testing.assert_allclose(
-        centered_difference_uniform(x, t=t1),
-        centered_difference_nonuniform(x, t=t2),
-        atol=4,
+        centered_difference(x, t=dt),
+        centered_difference(x, t=t),
+        atol=atol,
     )
 
 
@@ -325,41 +317,33 @@ def test_bad_t_values(data_derivative_1d):
         method._differentiate(x, t=-1)
 
 
-def test_centered_difference_hot_axis(data_2d_random_pde):
-    spatial_grid, u_flat, u_dot_flat = data_2d_random_pde
-    x = np.reshape(u_flat, (8, 8, 8, 2))
-    t1 = np.linspace(0, x.shape[0], x.shape[0])
-    t2 = np.copy(t1)
-    t2[: len(t1) // 2] = t1[: len(t1) // 2] + 0.5
-    centered_difference_uniform = FiniteDifference(order=2, axis=-1)._differentiate
-    centered_difference_nonuniform = FiniteDifference(order=2, axis=-1)._differentiate
-    uniform_flattened = centered_difference_uniform(x, t=t1)
-    uniform_flattened = np.reshape(uniform_flattened, (8 * 8 * 8, 2))
-    nonuniform_flattened = centered_difference_nonuniform(x, t=t1)
-    nonuniform_flattened = np.reshape(nonuniform_flattened, (8 * 8 * 8, 2))
+def test_centered_difference_hot_axis(data_2d_resolved_pde):
+    _, u_flat, u_dot_flat = data_2d_resolved_pde
+    x = np.reshape(u_flat, (8, 8, 1000, 2))
+    t = np.linspace(0, 10, 1000)
+    dt = t[1] - t[0]
+    centered_difference = FiniteDifference(order=2, axis=-2)._differentiate
+    atol = 1e-8
     np.testing.assert_allclose(
-        uniform_flattened,
-        nonuniform_flattened,
-        atol=4,
+        centered_difference(x, t=dt),
+        centered_difference(x, t=t),
+        atol=atol,
     )
-    centered_difference_uniform = FiniteDifference(order=2, d=2, axis=-1)
-    centered_difference_nonuniform = FiniteDifference(order=2, d=2, axis=-1)
+    centered_difference = FiniteDifference(order=2, d=2, axis=-2)._differentiate
     np.testing.assert_allclose(
-        centered_difference_uniform(x, t=t1),
-        centered_difference_nonuniform(x, t=t2),
-        atol=4,
+        centered_difference(x, t=dt),
+        centered_difference(x, t=t),
+        atol=atol,
     )
-    centered_difference_uniform = FiniteDifference(order=2, d=3, axis=-1)
-    centered_difference_nonuniform = FiniteDifference(order=2, d=3, axis=-1)
+    centered_difference = FiniteDifference(order=2, d=3, axis=-2)._differentiate
     np.testing.assert_allclose(
-        centered_difference_uniform(x, t=t1),
-        centered_difference_nonuniform(x, t=t2),
-        atol=4,
+        centered_difference(x, t=dt),
+        centered_difference(x, t=t),
+        atol=atol,
     )
-    centered_difference_uniform = FiniteDifference(order=2, d=4, axis=-1)
-    centered_difference_nonuniform = FiniteDifference(order=2, d=4, axis=-1)
+    centered_difference = FiniteDifference(order=2, d=4, axis=-2)._differentiate
     np.testing.assert_allclose(
-        centered_difference_uniform(x, t=t1),
-        centered_difference_nonuniform(x, t=t2),
-        atol=4,
+        centered_difference(x, t=dt),
+        centered_difference(x, t=t),
+        atol=atol,
     )

@@ -6,13 +6,16 @@ import numpy.random
 from numpy import array
 from numpy import concatenate
 from numpy import empty
+from numpy import floor
+from numpy import isscalar
 from numpy import linspace
 from numpy import meshgrid
-from numpy import newaxis
 from numpy import prod
 from numpy import reshape
+from numpy import shape
 from numpy import sum as np_sum
 from numpy import take
+from numpy import transpose
 from numpy import zeros
 from scipy.integrate import trapezoid
 from scipy.interpolate import RegularGridInterpolator
@@ -23,6 +26,7 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 from .base import BaseFeatureLibrary
+from pysindy.differentiation import FiniteDifference
 
 
 class WeakPDELibrary(BaseFeatureLibrary):
@@ -83,11 +87,12 @@ class WeakPDELibrary(BaseFeatureLibrary):
         Hx and height Hy. If K is not
         specified, defaults to 100.
 
-    H_xt : float, optional (default None)
+    H_xt : array of floats, optional (default None)
         Half of the length of the square subdomains in each spatiotemporal
         direction. If H_xt is not specified, defaults to H_xt = L_xt / 20,
         where L_xt is the length of the full domain in each spatiotemporal
-        direction.
+        direction. If H_xt is specified as a scalar, this value will be applied
+        to all dimensions of the subdomains.
 
     p : int, optional (default 4)
         Positive integer to define the polynomial degree of the spatial weights
@@ -176,11 +181,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 "No library functions were specified, and no "
                 "derivatives were asked for. The library is empty."
             )
-        if spatiotemporal_grid is None and derivative_order != 0:
-            raise ValueError(
-                "Spatiotemporal grid was not passed but derivative terms "
-                "were asked for by the user."
-            )
         if spatiotemporal_grid is None:
             raise ValueError(
                 "Spatiotemporal grid was not passed, and at least a 1D"
@@ -189,7 +189,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         # list of integrals
         indices = ()
-        if len(spatiotemporal_grid.shape) == 1:
+        if len(shape(spatiotemporal_grid)) == 1:
             spatiotemporal_grid = reshape(
                 spatiotemporal_grid, (len(spatiotemporal_grid), 1)
             )
@@ -197,7 +197,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.grid_dims = dims
         self.grid_ndim = len(dims)
 
-        for i in range(len(dims)):
+        # if want to include temporal terms -> range(len(dims))
+        for i in range(len(dims) - 1):
             indices = indices + (range(derivative_order + 1),)
 
         multiindices = []
@@ -206,9 +207,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
             if sum(ind) > 0 and sum(ind) <= derivative_order:
                 multiindices.append(current)
         multiindices = array(multiindices)
-        num_integrals = len(multiindices)
+        num_derivatives = len(multiindices)
 
-        self.num_derivatives = num_integrals
+        self.num_derivatives = num_derivatives
         self.multiindices = multiindices
         self.spatiotemporal_grid = spatiotemporal_grid
 
@@ -219,7 +220,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
         xt1, xt2 = self._get_spatial_endpoints()
         L_xt = xt2 - xt1
         if self.H_xt is not None:
-            if len(self.grid_ndim) != len(self.H_xt):
+            if isscalar(self.H_xt):
+                self.H_xt = array(self.grid_ndim * [self.H_xt])
+            if self.grid_ndim != len(self.H_xt):
                 raise ValueError(
                     "The user-defined grid (spatiotemporal_grid) and "
                     "the user-defined sizes of the subdomains for the "
@@ -227,7 +230,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     "dimensions. For instance, if spatiotemporal_grid is 4D, "
                     "then H_xt should be a 4D list of the subdomain lengths."
                 )
-            if any(self.H_xt <= 0):
+            if any(self.H_xt <= zeros(len(self.H_xt))):
                 raise ValueError("Values in H_xt must be a positive float")
             elif any(self.H_xt >= L_xt / 2.0):
                 raise ValueError(
@@ -240,7 +243,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         if self.spatiotemporal_grid is not None:
             if self.p < 0:
                 raise ValueError("Poly degree of the spatial weights must be > 0")
-
+            if self.p < self.derivative_order:
+                self.p = self.derivative_order
         if self.K <= 0:
             raise ValueError("The number of subdomains must be > 0")
 
@@ -282,7 +286,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
         for k in range(self.K):
             inds_XT[0] = k
             grid_k = array([xtgrid_k[k, :, i] for i in range(self.grid_ndim)])
-            XT[inds_XT] = array(meshgrid(*grid_k, indexing="ij")).T
+            XT[inds_XT] = transpose(
+                array(meshgrid(*grid_k, indexing="ij")),
+                [*range(1, self.grid_ndim + 1), 0],
+            )
         self.xtgrid_k = xtgrid_k
         self.XT = XT
 
@@ -295,7 +302,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         inds[j] = 0
             inds[-1] = i
             grid_pts.append(self.spatiotemporal_grid[inds])
-        self.grid_pts = tuple(grid_pts)
+        self.grid_pts = grid_pts
 
         self.domain_centers_expanded = zeros(
             (self.K, *(self.grid_ndim * [self.num_pts_per_domain]), self.grid_ndim)
@@ -377,7 +384,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
             def derivative_string(multiindex):
                 ret = ""
-                for axis in range(len(self.spatiotemporal_grid.shape[:-1])):
+                for axis in range(self.grid_ndim - 1):
                     for i in range(multiindex[axis]):
                         ret = ret + str(axis + 1)
                 return ret
@@ -476,7 +483,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         x = check_array(x)
 
-        n_samples, n_features = x.shape
+        n_samples_original, n_features = x.shape
         if float(__version__[:3]) >= 1.0:
             if n_features != self.n_features_in_:
                 raise ValueError("x shape does not match training shape")
@@ -489,45 +496,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
 
-        # pure integral terms, need to differentiate the weight functions
-        library_idx = 0
-        library_integrals = empty(
-            (n_samples, n_features * self.num_derivatives), dtype=x.dtype
-        )
-
-        funcs = reshape(x, concatenate([self.grid_dims, [n_features]]))
-        func_final = zeros((self.K, n_features))
-        # Note excluding temporal derivatives in the feature library
-        for multiindex in self.multiindices:
-            derivs = zeros(self.grid_ndim)
-            for axis in range(self.grid_ndim - 1):
-                if multiindex[axis] > 0:
-                    s = [0 for dim in self.grid_dims[:-1]]
-                    s[axis] = slice(self.grid_dims[axis])
-                    s[-1] = axis
-                    derivs[axis] = multiindex[axis]
-            integral_weight_derivs = self._smooth_ppoly(derivs) * (-1) ** (
-                np_sum(derivs) % 2
-            )
-            for j in range(n_features):
-                func_interp = RegularGridInterpolator(
-                    self.grid_pts, take(funcs, j, axis=-1)
-                )
-                for k in range(self.K):
-                    func_new = func_interp(take(self.XT, k, axis=0))
-                    func_temp = trapezoid(
-                        take(integral_weight_derivs, k, axis=0) * func_new,
-                        x=self.xtgrid_k[k, :, 0],
-                        axis=0,
-                    )
-                    for i in range(1, self.grid_ndim):
-                        func_temp = trapezoid(
-                            func_temp, x=self.xtgrid_k[k, :, i], axis=0
-                        )
-                    func_final[k, j] = func_temp
-            library_integrals[:, library_idx : library_idx + n_features] = func_final
-            library_idx += n_features
-
         # library function terms
         n_library_terms = 0
         for f in self.functions:
@@ -538,6 +506,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         library_functions = empty((n_samples, n_library_terms), dtype=x.dtype)
         library_idx = 0
+
         integral_weights = self._smooth_ppoly(zeros(self.grid_ndim))
         func_final = zeros(self.K)
         for f in self.functions:
@@ -546,7 +515,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
             ):
                 func = f(*[x[:, j] for j in c])
                 func = reshape(func, self.grid_dims)
-                func_interp = RegularGridInterpolator(self.grid_pts, func)
+                func_interp = RegularGridInterpolator(tuple(self.grid_pts), func)
                 for k in range(self.K):
                     func_new = func_interp(take(self.XT, k, axis=0))
                     func_temp = trapezoid(
@@ -562,243 +531,335 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 library_functions[:, library_idx] = func_final
                 library_idx += 1
 
-        library_idx = 0
+        if self.derivative_order != 0:
+            # pure integral terms, need to differentiate the weight functions
+            library_integrals = empty(
+                (n_samples, n_features * self.num_derivatives), dtype=x.dtype
+            )
+            funcs = reshape(x, concatenate([self.grid_dims, [n_features]]))
+            func_interp = []
+            for j in range(n_features):
+                func_interp.append(
+                    RegularGridInterpolator(
+                        tuple(self.grid_pts), take(funcs, j, axis=-1)
+                    )
+                )
+            func_new = empty(
+                (self.K, *(self.grid_ndim * [self.num_pts_per_domain]), n_features)
+            )
+            func_inds = [slice(None)] * func_new.ndim
+            for k in range(self.K):
+                func_inds[0] = k
+                func_new[func_inds] = transpose(
+                    array(
+                        [
+                            func_interp[j](take(self.XT, k, axis=0))
+                            for j in range(n_features)
+                        ]
+                    ),
+                    [*range(1, self.grid_ndim + 1), 0],
+                )
+            # self.func_new = func_new
+            integral_weight_derivs = empty(
+                (
+                    self.K,
+                    *(self.grid_ndim * [self.num_pts_per_domain]),
+                    self.num_derivatives,
+                )
+            )
+            deriv_slices = [slice(None)] * integral_weight_derivs.ndim
+            # Note excluding temporal derivatives in the feature library
+            for deriv_ind, multiindex in enumerate(self.multiindices):
+                derivs = zeros(self.grid_ndim)
+                for axis in range(self.grid_ndim - 1):
+                    if multiindex[axis] > 0:
+                        s = [0 for dim in self.grid_dims[:-1]]
+                        s[axis] = slice(self.grid_dims[axis])
+                        s[-1] = axis
+                        derivs[axis] = multiindex[axis]
+                deriv_slices[-1] = deriv_ind
+                # print(derivs, deriv_ind, deriv_slices)
+                integral_weight_derivs[deriv_slices] = self._smooth_ppoly(derivs) * (
+                    -1
+                ) ** (np_sum(derivs) % 2)
+            # self.integral_weight_derivs = integral_weight_derivs
+            complete_funcs = empty(
+                (
+                    self.K,
+                    *(self.grid_ndim * [self.num_pts_per_domain]),
+                    self.num_derivatives * n_features,
+                )
+            )
+            func_slices = [slice(None)] * func_new.ndim
+            complete_slices = [slice(None)] * complete_funcs.ndim
+            # combine the functions together
+            for j in range(self.num_derivatives):
+                deriv_slices[-1] = j
+                for i in range(n_features):
+                    func_slices[-1] = i
+                    complete_slices[-1] = j * n_features + i
+                    complete_funcs[complete_slices] = (
+                        integral_weight_derivs[deriv_slices] * func_new[func_slices]
+                    )
 
+            for k in range(self.K):
+                func_temp = trapezoid(
+                    take(complete_funcs, k, axis=0),
+                    x=self.xtgrid_k[k, :, 0],
+                    axis=0,
+                )
+                for i in range(1, self.grid_ndim):
+                    func_temp = trapezoid(func_temp, x=self.xtgrid_k[k, :, i], axis=0)
+                library_integrals[k, :] = func_temp
+
+            # Mixed derivative/non-derivative terms
+            if self.include_interaction:
+                # mixed integral terms
+                library_mixed_integrals = empty(
+                    (n_samples, n_library_terms * n_features * self.num_derivatives),
+                    dtype=x.dtype,
+                )
+
+                # get original-size library functions before integrating
+                nonweak_functions = empty(
+                    (n_samples_original, n_library_terms), dtype=x.dtype
+                )
+                library_idx = 0
+                for f in self.functions:
+                    for c in self._combinations(
+                        n_features, f.__code__.co_argcount, self.interaction_only
+                    ):
+                        nonweak_functions[:, library_idx] = reshape(
+                            f(*[x[:, j] for j in c]), (n_samples_original)
+                        )
+                        library_idx += 1
+
+                nonweak_terms = reshape(
+                    nonweak_functions, concatenate([self.grid_dims, [n_library_terms]])
+                )
+                integral_weight_derivs_mixed = empty(
+                    (
+                        self.K,
+                        *(self.grid_ndim * [self.num_pts_per_domain]),
+                        self.num_derivatives,
+                    )
+                )
+                deriv_slices = [slice(None)] * integral_weight_derivs_mixed.ndim
+                derivs_mixed_total = empty(
+                    (
+                        concatenate(
+                            [self.grid_dims, [n_library_terms], [self.num_derivatives]]
+                        )
+                    )
+                )
+                derivs_pure_total = empty(
+                    (
+                        concatenate(
+                            [self.grid_dims, [n_features], [self.num_derivatives]]
+                        )
+                    )
+                )
+                # Note excluding temporal derivatives in the feature library
+                for deriv_ind, multiindex in enumerate(self.multiindices):
+                    derivs_mixed = reshape(
+                        nonweak_functions,
+                        concatenate([self.grid_dims, [n_library_terms]]),
+                    )
+                    derivs_pure = reshape(
+                        x, concatenate([self.grid_dims, [n_features]])
+                    )
+                    for axis in range(self.grid_ndim - 1):
+                        s = [0 for dim in self.spatiotemporal_grid.shape]
+                        s[axis] = slice(self.grid_dims[axis])
+                        s[-1] = axis
+                        d_mixed = floor(multiindex[axis] / 2.0)
+                        if d_mixed > 0:
+                            derivs_mixed = FiniteDifference(
+                                d=d_mixed, axis=axis, is_uniform=self.is_uniform
+                            )._differentiate(
+                                derivs_mixed, self.spatiotemporal_grid[tuple(s)]
+                            )
+                        d_pure = multiindex[axis] - floor(multiindex[axis] / 2.0)
+                        if d_pure > 0:
+                            derivs_pure = FiniteDifference(
+                                d=d_pure, axis=axis, is_uniform=self.is_uniform
+                            )._differentiate(
+                                derivs_pure, self.spatiotemporal_grid[tuple(s)]
+                            )
+                    deriv_slices[-1] = deriv_ind
+                    integral_weight_derivs_mixed[deriv_slices] = self._smooth_ppoly(
+                        d_mixed
+                    ) * (-1) ** (np_sum(d_mixed) % 2)
+                    derivs_mixed_total[deriv_slices] = derivs_mixed
+                    derivs_pure_total[deriv_slices] = derivs_pure
+
+                lib_func_interp = []
+                func_mixed_interp = []
+                func_pure_interp = []
+                for j in range(n_library_terms):
+                    lib_func_interp.append(
+                        RegularGridInterpolator(
+                            tuple(self.grid_pts), take(nonweak_terms, j, axis=-1)
+                        )
+                    )
+                    for k in range(self.num_derivatives):
+                        func_mixed_interp.append(
+                            RegularGridInterpolator(
+                                tuple(self.grid_pts),
+                                take(take(derivs_mixed_total, k, axis=-1), j, axis=-1),
+                            )
+                        )
+                        if j < n_features:
+                            func_pure_interp.append(
+                                RegularGridInterpolator(
+                                    tuple(self.grid_pts),
+                                    take(
+                                        take(derivs_pure_total, k, axis=-1), j, axis=-1
+                                    ),
+                                )
+                            )
+                lib_func_new = empty(
+                    (
+                        self.K,
+                        *(self.grid_ndim * [self.num_pts_per_domain]),
+                        n_library_terms,
+                    )
+                )
+                func_mixed_new = empty(
+                    (
+                        self.K,
+                        *(self.grid_ndim * [self.num_pts_per_domain]),
+                        n_library_terms * self.num_derivatives,
+                    )
+                )
+                func_pure_new = empty(
+                    (
+                        self.K,
+                        *(self.grid_ndim * [self.num_pts_per_domain]),
+                        n_features * self.num_derivatives,
+                    )
+                )
+                lib_func_inds = [slice(None)] * lib_func_new.ndim
+                func_pure_inds = [slice(None)] * func_pure_new.ndim
+                func_mixed_inds = [slice(None)] * func_mixed_new.ndim
+
+                for k in range(self.K):
+                    lib_func_inds[0] = k
+                    func_pure_inds[0] = k
+                    func_mixed_inds[0] = k
+                    lib_func_new[lib_func_inds] = transpose(
+                        array(
+                            [
+                                lib_func_interp[j](take(self.XT, k, axis=0))
+                                for j in range(n_library_terms)
+                            ]
+                        ),
+                        [*range(1, self.grid_ndim + 1), 0],
+                    )
+                    func_mixed_new[func_mixed_inds] = transpose(
+                        array(
+                            [
+                                func_mixed_interp[j](take(self.XT, k, axis=0))
+                                for j in range(n_library_terms * self.num_derivatives)
+                            ]
+                        ),
+                        [*range(1, self.grid_ndim + 1), 0],
+                    )
+                    func_pure_new[func_pure_inds] = transpose(
+                        array(
+                            [
+                                func_pure_interp[j](take(self.XT, k, axis=0))
+                                for j in range(n_features * self.num_derivatives)
+                            ]
+                        ),
+                        [*range(1, self.grid_ndim + 1), 0],
+                    )
+
+                complete_funcs = empty(
+                    (
+                        self.K,
+                        *(self.grid_ndim * [self.num_pts_per_domain]),
+                        self.num_derivatives * n_features * n_library_terms,
+                    )
+                )
+                lib_func_slices = [slice(None)] * lib_func_new.ndim
+                func_pure_slices = [slice(None)] * func_pure_new.ndim
+                func_mixed_slices = [slice(None)] * func_mixed_new.ndim
+                complete_slices = [slice(None)] * complete_funcs.ndim
+
+                # combine the functions together
+                for j in range(self.num_derivatives):
+                    deriv_slices[-1] = j
+                    ind_sum_j = np_sum(self.multiindices[j, :])
+                    for i in range(n_features):
+                        func_pure_slices[-1] = i * self.num_derivatives + j
+                        for k in range(n_library_terms):
+                            lib_func_slices[-1] = k
+                            func_mixed_slices[-1] = k * self.num_derivatives + j
+                            complete_slices[-1] = (
+                                j * n_features + i
+                            ) * n_library_terms + k
+                            # w * u^2 * u_xx => (w_x * u^2 + w * (2uu_x)) * u_x
+                            if ind_sum_j > 1:  # integrate by parts
+                                complete_funcs[complete_slices] = (
+                                    integral_weight_derivs_mixed[deriv_slices]
+                                    * lib_func_new[lib_func_slices]
+                                    + integral_weights
+                                    * func_mixed_new[func_mixed_slices]
+                                ) * func_pure_new[func_pure_slices]
+                            else:  # don't integrate by parts
+                                complete_funcs[complete_slices] = (
+                                    integral_weights
+                                    * lib_func_new[lib_func_slices]
+                                    * func_pure_new[func_pure_slices]
+                                )
+
+                for k in range(self.K):
+                    mixed_temp = trapezoid(
+                        take(complete_funcs, k, axis=0),
+                        x=self.xtgrid_k[k, :, 0],
+                        axis=0,
+                    )
+                    for i in range(1, self.grid_ndim):
+                        mixed_temp = trapezoid(
+                            mixed_temp, x=self.xtgrid_k[k, :, i], axis=0
+                        )
+                    library_mixed_integrals[k, :] = mixed_temp
+
+        library_idx = 0
+        constants_final = zeros(self.K)
         # Constant term
         if self.include_bias:
             for k in range(self.K):
-                func_final[k] = trapezoid(
+                func_temp = trapezoid(
                     take(integral_weights, k, axis=0), x=self.xtgrid_k[k, :, 0], axis=0
                 )
-                for i in range(1, self.grid_ndim - 1):
-                    func_final[k] = trapezoid(
-                        func_final[k], x=self.xtgrid_k[k, :, i], axis=0
-                    )
-            xp[:, library_idx] = func_final
+                for i in range(1, self.grid_ndim):
+                    func_temp = trapezoid(func_temp, x=self.xtgrid_k[k, :, i], axis=0)
+                constants_final[k] = func_temp
+            xp[:, library_idx] = constants_final
             library_idx += 1
 
         # library function terms
         xp[:, library_idx : library_idx + n_library_terms] = library_functions
         library_idx += n_library_terms
 
-        # pure integral terms
-        xp[
-            :, library_idx : library_idx + self.num_derivatives * n_features
-        ] = library_integrals
-        library_idx += self.num_derivatives * n_features
-
-        # mixed function integral terms
-        # Should include a self.interaction_only case as well?
-        if self.include_interaction:
+        if self.derivative_order != 0:
+            # pure integral terms
             xp[
-                :,
-                library_idx : library_idx
-                + n_library_terms * self.num_derivatives * n_features,
-            ] = reshape(
-                library_functions[:, :, newaxis] * library_integrals[:, newaxis, :],
-                (n_samples, n_library_terms * self.num_derivatives * n_features),
-            )
-            library_idx += n_library_terms * self.num_derivatives * n_features
+                :, library_idx : library_idx + self.num_derivatives * n_features
+            ] = library_integrals
+            library_idx += self.num_derivatives * n_features
 
-        # Need to recompute derivatives because the training
-        # and testing data may have different number of time points
-        # Need to compute any derivatives now
-        # if self.spatiotemporal_grid is not None:
-        #     u = reshape(x, (num_gridx, num_gridy, num_gridz, num_time, n_features))
-        #     u_derivatives = self._make_3D_derivatives(u)
-        #     self.u_derivatives = u_derivatives
-        #     u_derivatives = asarray(
-        #         reshape(
-        #             u_derivatives,
-        #             (
-        #                 product(self.grid_dims),
-        #                 n_features,
-        #                 self.num_derivatives,
-        #             ),
-        #         )
-        #     )
-        #
-        #     u_integrals = zeros((self.K, n_features, self.num_derivatives))
-        #     for kk in range(n_features):
-        #         u_interp = RegularGridInterpolator(
-        #             (
-        #                 self.spatiotemporal_grid[:, 0, 0, 0],
-        #                 self.spatiotemporal_grid[0, :, 0, 1],
-        #                 self.spatiotemporal_grid[0, 0, :, 2],
-        #                 self.temporal_grid,
-        #             ),
-        #             u[:, :, :, :, kk],
-        #         )
-        #         for k in range(self.K):
-        #             u_new = u_interp(
-        #                 array(
-        #                     (
-        #                         self.X[k, :, :, :, :],
-        #                         self.Y[k, :, :, :, :],
-        #                         self.Z[k, :, :, :, :],
-        #                         self.t[k, :, :, :, :],
-        #                     )
-        #                 ).T
-        #             )
-        #             u_new = reshape(
-        #                 u_new,
-        #                 (
-        #                     self.num_pts_per_domain,
-        #                     self.num_pts_per_domain,
-        #                     self.num_pts_per_domain,
-        #                     self.num_pts_per_domain,
-        #                     1,
-        #                 ),
-        #             )
-        #             for j in range(self.num_derivatives):
-        #                 w_diff = self._smooth_ppoly(
-        #                     transpose(
-        #                         (
-        #                             self.xgrid_k[k, :],
-        #                             self.ygrid_k[k, :],
-        #                             self.zgrid_k[k, :],
-        #                         )
-        #                     ),
-        #                     self.tgrid_k[k, :],
-        #                     k,
-        #                     derivative_list[j, 0],
-        #                     derivative_list[j, 1],
-        #                     derivative_list[j, 2],
-        #                     0,
-        #                 )
-        #                 u_integrals[k, kk, j] = (
-        #                     trapezoid(
-        #                         trapezoid(
-        #                             trapezoid(
-        #                                 trapezoid(
-        #                                     u_new * w_diff,
-        #                                     x=self.xgrid_k[k, :],
-        #                                     axis=0,
-        #                                 ),
-        #                                 x=self.ygrid_k[k, :],
-        #                                 axis=0,
-        #                             ),
-        #                             x=self.zgrid_k[k, :],
-        #                             axis=0,
-        #                         ),
-        #                         x=self.tgrid_k[k, :],
-        #                         axis=0,
-        #                     )
-        #                     * signs_list[j]
-        #                 )
-        #
-        #     # pure integral terms
-        #     if self.grid_ndim >= 2:
-        #         xp[:, library_idx:library_idx + self.num_derivatives * n_features
-        #            ] = library_integrals
-        #         library_idx += self.num_derivatives * n_features
-        #
-        #     # Add all the mixed derivative/non-derivative terms
-        #     if self.include_interaction:
-        #         for d in range(self.num_derivatives):
-        #             for kk in range(n_features):
-        #                 for f in self.functions:
-        #                     for c in self._combinations(
-        #                         n_features,
-        #                         f.__code__.co_argcount,
-        #                         self.interaction_only,
-        #                     ):
-        #                         func = f(*[x[:, j] for j in c])
-        #                         derivative_term = identity_function(
-        #                             u_derivatives[:, kk, d]
-        #                         )
-        #
-        #                         func = reshape(
-        #                             func,
-        #                             (num_gridx, num_gridy, num_gridz, num_time),
-        #                         )
-        #                         derivative_term = reshape(
-        #                             derivative_term,
-        #                             (num_gridx, num_gridy, num_gridz, num_time),
-        #                         )
-        #                         func_final = zeros((self.K, 1))
-        #                         func_interp = RegularGridInterpolator(
-        #                             (
-        #                                 self.spatiotemporal_grid[:, 0, 0, 0],
-        #                                 self.spatiotemporal_grid[0, :, 0, 1],
-        #                                 self.spatiotemporal_grid[0, 0, :, 2],
-        #                                 self.temporal_grid,
-        #                             ),
-        #                             func,
-        #                         )
-        #                         derivative_interp = RegularGridInterpolator(
-        #                             (
-        #                                 self.spatiotemporal_grid[:, 0, 0, 0],
-        #                                 self.spatiotemporal_grid[0, :, 0, 1],
-        #                                 self.spatiotemporal_grid[0, 0, :, 2],
-        #                                 self.temporal_grid,
-        #                             ),
-        #                             derivative_term,
-        #                         )
-        #                         for k in range(self.K):
-        #                             XYt = array(
-        #                                 (
-        #                                     self.X[k, :, :, :, :],
-        #                                     self.Y[k, :, :, :, :],
-        #                                     self.Z[k, :, :, :, :],
-        #                                     self.t[k, :, :, :, :],
-        #                                 )
-        #                             ).T
-        #                             func_new = func_interp(XYt)
-        #                             derivative_new = derivative_interp(XYt)
-        #                             func_new = reshape(
-        #                                 func_new,
-        #                                 (
-        #                                     self.num_pts_per_domain,
-        #                                     self.num_pts_per_domain,
-        #                                     self.num_pts_per_domain,
-        #                                     self.num_pts_per_domain,
-        #                                     1,
-        #                                 ),
-        #                             )
-        #                             derivative_new = reshape(
-        #                                 derivative_new,
-        #                                 (
-        #                                     self.num_pts_per_domain,
-        #                                     self.num_pts_per_domain,
-        #                                     self.num_pts_per_domain,
-        #                                     self.num_pts_per_domain,
-        #                                     1,
-        #                                 ),
-        #                             )
-        #                             w = self._smooth_ppoly(
-        #                                 transpose(
-        #                                     (
-        #                                         self.xgrid_k[k, :],
-        #                                         self.ygrid_k[k, :],
-        #                                         self.zgrid_k[k, :],
-        #                                     )
-        #                                 ),
-        #                                 self.tgrid_k[k, :],
-        #                                 k,
-        #                                 0,
-        #                                 0,
-        #                                 0,
-        #                                 0,
-        #                             )
-        #                             func_final[k] = trapezoid(
-        #                                 trapezoid(
-        #                                     trapezoid(
-        #                                         trapezoid(
-        #                                             w * func_new * derivative_new,
-        #                                             x=self.xgrid_k[k, :],
-        #                                             axis=0,
-        #                                         ),
-        #                                         x=self.ygrid_k[k, :],
-        #                                         axis=0,
-        #                                     ),
-        #                                     x=self.zgrid_k[k, :],
-        #                                     axis=0,
-        #                                 ),
-        #                                 x=self.tgrid_k[k, :],
-        #                                 axis=0,
-        #                             )
-        #                         xp[:, library_idx] = ravel(func_final)
-        #                         library_idx += 1
+            # mixed function integral terms
+            # Should include a self.interaction_only case as well?
+            if self.include_interaction:
+                xp[
+                    :,
+                    library_idx : library_idx
+                    + n_library_terms * self.num_derivatives * n_features,
+                ] = library_mixed_integrals
+                library_idx += n_library_terms * self.num_derivatives * n_features
+
         # If library bagging, return xp missing the terms at ensemble_indices
         return self._ensemble(xp)

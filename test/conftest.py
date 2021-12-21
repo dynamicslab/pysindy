@@ -97,9 +97,7 @@ def data_1d_random_pde():
     dt = t[1] - t[0]
     x = np.linspace(0, 10, nx)
     u = np.random.randn(nx, nx, 1)
-    u_dot = np.zeros_like(u)
-    for i in range(len(x)):
-        u_dot[i, :, :] = FiniteDifference()._differentiate(u[i, :, :], t=dt)
+    u_dot = FiniteDifference(axis=1)._differentiate(u, t=dt)
     u_flattened = np.reshape(u, (nx * nx, 1))
     u_dot_flattened = np.reshape(u_dot, (nx * nx, 1))
 
@@ -117,10 +115,7 @@ def data_2d_random_pde():
     X, Y = np.meshgrid(x, y)
     spatial_grid = np.asarray([X, Y]).T
     u = np.random.randn(nx, ny, nx, 2)
-    u_dot = np.zeros(u.shape)
-    for i in range(nx):
-        for j in range(ny):
-            u_dot[i, j, :, :] = FiniteDifference()._differentiate(u[i, j, :, :], t=dt)
+    u_dot = FiniteDifference(axis=2)._differentiate(u, t=dt)
     u_flattened = np.reshape(u, (nx * ny * nx, 2))
     u_dot_flattened = np.reshape(u_dot, (nx * ny * nx, 2))
 
@@ -144,16 +139,28 @@ def data_3d_random_pde():
     spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
     n = len(x)
     u = np.random.randn(n, n, n, n, 2)
-    u_dot = np.zeros(u.shape)
-    for i in range(n):
-        for j in range(n):
-            for k in range(n):
-                u_dot[i, j, k, :, :] = FiniteDifference()._differentiate(
-                    u[i, j, k, :, :], t=dt
-                )
+    u_dot = FiniteDifference(axis=3)._differentiate(u, t=dt)
     u_flattened = np.reshape(u, (n ** 4, 2))
     u_dot_flattened = np.reshape(u_dot, (n ** 4, 2))
 
+    return spatial_grid, u_flattened, u_dot_flattened
+
+
+@pytest.fixture
+def data_2d_resolved_pde():
+    nx = 8
+    ny = 8
+    nt = 1000
+    t = np.linspace(0, 10, nt)
+    dt = t[1] - t[0]
+    x = np.linspace(0, 10, nx)
+    y = np.linspace(0, 10, ny)
+    X, Y = np.meshgrid(x, y)
+    spatial_grid = np.asarray([X, Y]).T
+    u = np.random.randn(nx, ny, nt, 2)
+    u_dot = FiniteDifference(axis=-2)._differentiate(u, t=dt)
+    u_flattened = np.reshape(u, (nx * ny * nt, 2))
+    u_dot_flattened = np.reshape(u_dot, (nx * ny * nt, 2))
     return spatial_grid, u_flattened, u_dot_flattened
 
 

@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from .base import BaseDifferentiation
@@ -23,7 +25,7 @@ class FiniteDifference(BaseDifferentiation):
         The axis to differentiate along
 
     is_uniform : boolean, optional (default False)
-        Parameter to tell the differentiation that, although a 1D or 2D
+        Parameter to tell the differentiation that, although a N-dim
         grid is passed, it is uniform so can use dx instead of the full
         grid array.
 
@@ -51,11 +53,17 @@ class FiniteDifference(BaseDifferentiation):
     def __init__(self, order=2, d=1, axis=0, is_uniform=False, drop_endpoints=False):
         if order <= 0 or not isinstance(order, int):
             raise ValueError("order must be a positive int")
+        if d < 1:
+            raise ValueError("differentiation order must be a positive int")
         elif order > 2:
             raise NotImplementedError
 
-        if d <= 0 or d > 4:
-            raise ValueError("Derivative order must be " " 1, 2, 3, or 4")
+        if d >= 4:
+            warnings.warn(
+                "Finite differences of arbitrary order are permitted"
+                " but please note that d >= 4 finite differences"
+                " will dramatically amplify any numerical noise."
+            )
 
         if d > 1 and order != 2:
             raise ValueError(

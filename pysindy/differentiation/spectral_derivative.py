@@ -57,7 +57,7 @@ class SpectralDerivative(BaseDifferentiation):
         positives = np.arange(int(n / 2 + 1))
         negatives = np.setdiff1d(np.arange(n), positives)
         freqs[: int(n / 2 + 1)] = (positives) * 2 * np.pi / (n * t)
-        freqs[int(n / 2 + 1):] = (negatives - n) * 2 * np.pi / (n * t)
+        freqs[int(n / 2 + 1) :] = (negatives - n) * 2 * np.pi / (n * t)
 
         if x.dtype is complex:
             return np.fft.ifft(

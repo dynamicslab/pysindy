@@ -9,6 +9,7 @@ from numpy import newaxis
 from numpy import ones
 from numpy import product
 from numpy import reshape
+from numpy import shape
 from numpy import sum
 from sklearn import __version__
 from sklearn.utils import check_array
@@ -46,9 +47,9 @@ class PDELibrary(BaseFeatureLibrary):
 
     interaction_only : boolean, optional (default True)
         Whether to omit self-interaction terms.
-        If True, function evaulations of the form :math:`f(x,x)` and :math:`f(x,y,x)`
-        will be omitted, but those of the form :math:`f(x,y)` and :math:`f(x,y,z)`
-        will be included.
+        If True, function evaulations of the form :math:`f(x,x)` and
+        :math:`f(x,y,x)` will be omitted, but those of the form :math:`f(x,y)`
+        and :math:`f(x,y,z)` will be included.
         If False, all combinations will be included.
 
     include_bias : boolean, optional (default False)
@@ -145,9 +146,11 @@ class PDELibrary(BaseFeatureLibrary):
 
         # list of derivatives
         indices = ()
-        if len(spatial_grid.shape) == 1:
+        if len(shape(spatial_grid)) == 1:
             spatial_grid = reshape(spatial_grid, (len(spatial_grid), 1))
         dims = spatial_grid.shape[:-1]
+        self.grid_dims = dims
+        self.grid_ndim = len(dims)
 
         for i in range(len(dims)):
             indices = indices + (range(derivative_order + 1),)
@@ -315,9 +318,8 @@ class PDELibrary(BaseFeatureLibrary):
             if n_features != self.n_input_features_:
                 raise ValueError("x shape does not match training shape")
 
-        dims = self.spatial_grid.shape[:-1]
-        if product(dims) > 0:
-            num_time = n_samples // product(dims)
+        if product(self.grid_dims) > 0:
+            num_time = n_samples // product(self.grid_dims)
         else:
             num_time = n_samples
 
@@ -330,14 +332,14 @@ class PDELibrary(BaseFeatureLibrary):
         library_idx = 0
 
         for multiindex in self.multiindices:
-            derivs = reshape(x, concatenate([dims, [num_time], [n_features]]))
-            for axis in range(len(dims)):
+            derivs = reshape(x, concatenate([self.grid_dims, [num_time], [n_features]]))
+            for axis in range(self.grid_ndim):
                 if multiindex[axis] > 0:
                     s = [0 for dim in self.spatial_grid.shape]
-                    s[axis] = slice(dims[axis])
+                    s[axis] = slice(self.grid_dims[axis])
                     s[-1] = axis
                     derivs = FiniteDifference(
-                        d=multiindex[axis], axis=axis
+                        d=multiindex[axis], axis=axis, is_uniform=self.is_uniform
                     )._differentiate(derivs, self.spatial_grid[tuple(s)])
             library_derivatives[:, library_idx : library_idx + n_features] = reshape(
                 derivs, (n_samples, n_features)

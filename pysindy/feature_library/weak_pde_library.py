@@ -506,13 +506,15 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         # get original-size library functions before integrating
         nonweak_functions = empty((n_samples_original, n_library_terms), dtype=x.dtype)
+        library_idx = 0
         for f in self.functions:
             for c in self._combinations(
                 n_features, f.__code__.co_argcount, self.interaction_only
             ):
-                nonweak_functions[:, n_library_terms] = reshape(
+                nonweak_functions[:, library_idx] = reshape(
                     f(*[x[:, j] for j in c]), (n_samples_original)
                 )
+                library_idx += 1
 
         library_functions = empty((n_samples, n_library_terms), dtype=x.dtype)
         library_idx = 0

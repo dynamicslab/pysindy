@@ -124,31 +124,14 @@ def test_centered_difference_hot(data_derivative_2d):
     x, _ = data_derivative_2d
     t = np.linspace(0, x.shape[0], x.shape[0])
     dt = t[1] - t[0]
-    centered_difference = FiniteDifference(order=2)._differentiate
     atol = 1e-8
-    np.testing.assert_allclose(
-        centered_difference(x, t=dt),
-        centered_difference(x, t=t),
-        atol=atol,
-    )
-    centered_difference = FiniteDifference(order=2, d=2)._differentiate
-    np.testing.assert_allclose(
-        centered_difference(x, t=dt),
-        centered_difference(x, t=t),
-        atol=atol,
-    )
-    centered_difference = FiniteDifference(order=2, d=3)._differentiate
-    np.testing.assert_allclose(
-        centered_difference(x, t=dt),
-        centered_difference(x, t=t),
-        atol=atol,
-    )
-    centered_difference = FiniteDifference(order=2, d=4)._differentiate
-    np.testing.assert_allclose(
-        centered_difference(x, t=dt),
-        centered_difference(x, t=t),
-        atol=atol,
-    )
+    for d in range(1, 6):
+        centered_difference = FiniteDifference(order=2, d=d)._differentiate
+        np.testing.assert_allclose(
+            centered_difference(x, t=dt),
+            centered_difference(x, t=t),
+            atol=atol,
+        )
 
 
 # Alternative implementation of the four tests above using parametrization
@@ -322,28 +305,42 @@ def test_centered_difference_hot_axis(data_2d_resolved_pde):
     x = np.reshape(u_flat, (8, 8, 1000, 2))
     t = np.linspace(0, 10, 1000)
     dt = t[1] - t[0]
-    centered_difference = FiniteDifference(order=2, axis=-2)._differentiate
     atol = 1e-8
-    np.testing.assert_allclose(
-        centered_difference(x, t=dt),
-        centered_difference(x, t=t),
-        atol=atol,
-    )
-    centered_difference = FiniteDifference(order=2, d=2, axis=-2)._differentiate
-    np.testing.assert_allclose(
-        centered_difference(x, t=dt),
-        centered_difference(x, t=t),
-        atol=atol,
-    )
-    centered_difference = FiniteDifference(order=2, d=3, axis=-2)._differentiate
-    np.testing.assert_allclose(
-        centered_difference(x, t=dt),
-        centered_difference(x, t=t),
-        atol=atol,
-    )
-    centered_difference = FiniteDifference(order=2, d=4, axis=-2)._differentiate
-    np.testing.assert_allclose(
-        centered_difference(x, t=dt),
-        centered_difference(x, t=t),
-        atol=atol,
-    )
+    for d in range(1, 6):
+        centered_difference = FiniteDifference(order=2, d=d, axis=-2)._differentiate
+        np.testing.assert_allclose(
+            centered_difference(x, t=dt),
+            centered_difference(x, t=t),
+            atol=atol,
+        )
+
+
+def test_centered_difference_noaxis_vs_axis(data_2d_resolved_pde):
+    _, u_flat, u_dot_flat = data_2d_resolved_pde
+    n = 8
+    x = np.reshape(u_flat, (n, n, 1000, 2))
+    t = np.linspace(0, 10, 1000)
+    dt = t[1] - t[0]
+    atol = 1e-10
+    for d in range(1, 6):
+        centered_difference = FiniteDifference(order=2, d=d, axis=-2)._differentiate
+        slow_differences = np.zeros(x.shape)
+        slow_differences_t = np.zeros(x.shape)
+        for i in range(n):
+            for j in range(n):
+                slow_differences[i, j, :, :] = FiniteDifference(
+                    order=2, d=d
+                )._differentiate(x[i, j, :, :], t=dt)
+                slow_differences_t[i, j, :, :] = FiniteDifference(
+                    order=2, d=d
+                )._differentiate(x[i, j, :, :], t=t)
+        np.testing.assert_allclose(
+            centered_difference(x, t=dt),
+            slow_differences,
+            atol=atol,
+        )
+        np.testing.assert_allclose(
+            centered_difference(x, t=t),
+            slow_differences_t,
+            atol=atol,
+        )

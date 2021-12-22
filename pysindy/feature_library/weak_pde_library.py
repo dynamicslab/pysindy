@@ -60,9 +60,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     interaction_only : boolean, optional (default True)
         Whether to omit self-interaction terms.
-        If True, function evaulations of the form :math:`f(x,x)` and :math:`f(x,y,x)`
-        will be omitted, but those of the form :math:`f(x,y)` and :math:`f(x,y,z)`
-        will be included.
+        If True, function evaulations of the form :math:`f(x,x)`
+        and :math:`f(x,y,x)` will be omitted, but those of the form
+        :math:`f(x,y)` and :math:`f(x,y,z)` will be included.
         If False, all combinations will be included.
 
     include_bias : boolean, optional (default False)
@@ -504,6 +504,16 @@ class WeakPDELibrary(BaseFeatureLibrary):
             ):
                 n_library_terms += 1
 
+        # get original-size library functions before integrating
+        nonweak_functions = empty((n_samples_original, n_library_terms), dtype=x.dtype)
+        for f in self.functions:
+            for c in self._combinations(
+                n_features, f.__code__.co_argcount, self.interaction_only
+            ):
+                nonweak_functions[:, n_library_terms] = reshape(
+                    f(*[x[:, j] for j in c]), (n_samples_original)
+                )
+
         library_functions = empty((n_samples, n_library_terms), dtype=x.dtype)
         library_idx = 0
 
@@ -537,6 +547,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 (n_samples, n_features * self.num_derivatives), dtype=x.dtype
             )
             funcs = reshape(x, concatenate([self.grid_dims, [n_features]]))
+
+            # Build interpolating function for each feature
             func_interp = []
             for j in range(n_features):
                 func_interp.append(
@@ -544,6 +556,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         tuple(self.grid_pts), take(funcs, j, axis=-1)
                     )
                 )
+
+            # interpolate all the functions onto each of the subdomains
             func_new = empty(
                 (self.K, *(self.grid_ndim * [self.num_pts_per_domain]), n_features)
             )
@@ -559,7 +573,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     ),
                     [*range(1, self.grid_ndim + 1), 0],
                 )
-            # self.func_new = func_new
+
+            # Compute derivatives of the subdomain weight functions
             integral_weight_derivs = empty(
                 (
                     self.K,
@@ -578,11 +593,12 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         s[-1] = axis
                         derivs[axis] = multiindex[axis]
                 deriv_slices[-1] = deriv_ind
-                # print(derivs, deriv_ind, deriv_slices)
                 integral_weight_derivs[deriv_slices] = self._smooth_ppoly(derivs) * (
                     -1
                 ) ** (np_sum(derivs) % 2)
-            # self.integral_weight_derivs = integral_weight_derivs
+
+            # Arrange all the terms to be integrated...
+            # subdomain weight functions * the interpolated functions
             complete_funcs = empty(
                 (
                     self.K,
@@ -612,8 +628,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     func_temp = trapezoid(func_temp, x=self.xtgrid_k[k, :, i], axis=0)
                 library_integrals[k, :] = func_temp
 
-            # for term like w * u^2 * u_xx -> (w * u^2)_x * u_x
-            # Need to first interpolate everything onto the subdomains
             # Mixed derivative/non-derivative terms
             if self.include_interaction:
                 # mixed integral terms
@@ -622,20 +636,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     dtype=x.dtype,
                 )
 
-                # get original-size library functions before integrating
-                nonweak_functions = empty(
-                    (n_samples_original, n_library_terms), dtype=x.dtype
-                )
-                library_idx = 0
-                for f in self.functions:
-                    for c in self._combinations(
-                        n_features, f.__code__.co_argcount, self.interaction_only
-                    ):
-                        nonweak_functions[:, library_idx] = reshape(
-                            f(*[x[:, j] for j in c]), (n_samples_original)
-                        )
-                        library_idx += 1
-
+                # Build interpolating functions for all
+                # the library functions and features.
                 nonweak_terms = reshape(
                     nonweak_functions, concatenate([self.grid_dims, [n_library_terms]])
                 )
@@ -656,6 +658,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                 take(nonweak_id, j, axis=-1),
                             )
                         )
+
+                # Interpolate library functions and features onto subdomains
                 func_library_new = empty(
                     (
                         self.K,
@@ -692,8 +696,13 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         ),
                         [*range(1, self.grid_ndim + 1), 0],
                     )
-                # functions now interpolated onto the subdomains, now need
-                # to take derivatives of these terms
+
+                # functions now interpolated onto the subdomains, and need
+                # to take derivatives of these terms on each of the subdomains,
+                # where correct number of integration by parts is used. Note
+                # that this is different than the full derivatives, which are
+                # differentiated on the global grid, and then interpolated
+                # onto the subdomains.
                 derivs_mixed_total = empty(
                     (
                         self.K,
@@ -702,7 +711,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         self.num_derivatives,
                     )
                 )
-                deriv_slices = [slice(None)] * derivs_mixed_total.ndim
                 derivs_pure_total = empty(
                     (
                         self.K,
@@ -716,6 +724,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     axes=[*range(1, self.grid_ndim + 2), 0],
                 )
                 derivs_ind = [slice(None)] * integral_weights_expanded.ndim
+                deriv_slices = [slice(None)] * derivs_mixed_total.ndim
                 # Note excluding temporal derivatives in the feature library
                 # and the derivatives are computed within the subdomains
                 for deriv_ind, multiindex in enumerate(self.multiindices):
@@ -748,6 +757,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     derivs_mixed_total[deriv_slices] = derivs_mixed
                     derivs_pure_total[deriv_slices] = derivs_pure
 
+                # Okay, now assemble all the terms to integrate
                 complete_funcs = empty(
                     (
                         self.K,
@@ -758,8 +768,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 func_pure_slices = [slice(None)] * derivs_pure_total.ndim
                 func_mixed_slices = [slice(None)] * derivs_mixed_total.ndim
                 complete_slices = [slice(None)] * complete_funcs.ndim
-
-                # combine the functions together
                 for j in range(self.num_derivatives):
                     func_pure_slices[-1] = j
                     func_mixed_slices[-1] = j

@@ -147,6 +147,27 @@ def data_3d_random_pde():
 
 
 @pytest.fixture
+def data_5d_random_pde():
+    n = 8
+    t = np.linspace(0, n, n)
+    dt = t[1] - t[0]
+    v = np.linspace(0, 10, n)
+    w = np.linspace(0, 10, n)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
+    z = np.linspace(0, 10, n)
+    V, W, X, Y, Z = np.meshgrid(v, w, x, y, z, indexing="ij")
+    spatial_grid = np.asarray([V, W, X, Y, Z])
+    spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 4, 5, 0])
+    u = np.random.randn(n, n, n, n, n, n, 2)
+    u_dot = FiniteDifference(axis=5)._differentiate(u, t=dt)
+    u_flattened = np.reshape(u, (n ** 6, 2))
+    u_dot_flattened = np.reshape(u_dot, (n ** 6, 2))
+
+    return spatial_grid, u_flattened, u_dot_flattened
+
+
+@pytest.fixture
 def data_2d_resolved_pde():
     nx = 8
     ny = 8

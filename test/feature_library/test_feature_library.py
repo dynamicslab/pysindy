@@ -613,6 +613,22 @@ def test_3D_pdes(data_3d_random_pde):
     pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 2)
 
 
+def test_5D_pdes(data_5d_random_pde):
+    spatial_grid, u_flattened, u_dot_flattened = data_5d_random_pde
+
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatial_grid=spatial_grid,
+        include_bias=True,
+        is_uniform=True,
+    )
+    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 2)
+
+
 def test_1D_weak_pdes():
     t = np.linspace(0, 10, 20)
     x = np.linspace(0, 10, 20)
@@ -688,6 +704,36 @@ def test_3D_weak_pdes():
         derivative_order=4,
         spatiotemporal_grid=spatiotemporal_grid,
         H_xt=0.1,
+        K=2,
+        include_bias=True,
+        is_uniform=False,
+        num_pts_per_domain=4,
+    )
+    u_dot_integral = convert_u_dot_integral(u, pde_lib)
+
+    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 2)
+
+
+def test_5D_weak_pdes():
+    n = 6
+    t = np.linspace(0, 10, n)
+    v = np.linspace(0, 10, n)
+    w = np.linspace(0, 10, n)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
+    z = np.linspace(0, 10, n)
+    V, W, X, Y, Z, T = np.meshgrid(v, w, x, y, z, t, indexing="ij")
+    spatiotemporal_grid = np.asarray([V, W, X, Y, Z, T])
+    spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 4, 5, 6, 0])
+    u = np.random.randn(n, n, n, n, n, n, 2)
+    u_flattened = np.reshape(u, (n ** 6, 2))
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatiotemporal_grid=spatiotemporal_grid,
         K=2,
         include_bias=True,
         is_uniform=False,

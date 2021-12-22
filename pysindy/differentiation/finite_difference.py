@@ -321,7 +321,7 @@ class FiniteDifference(BaseDifferentiation):
                     - x[tuple(s5)]
                     + x[tuple(s6)]
                     - x[tuple(s7)] / 2.0
-                ) / ((t_diff / 2.0) ** 3)
+                ) / ((t_diff / 4.0) ** 3)
                 if not self.drop_endpoints:
                     x_dot[tuple(sp0)] = (
                         -2.5 * x[tuple(sp0)]
@@ -329,28 +329,28 @@ class FiniteDifference(BaseDifferentiation):
                         - 12 * x[tuple(sp2)]
                         + 7 * x[tuple(sp3)]
                         - 1.5 * x[tuple(sp4)]
-                    ) / ((t_diff[tuple(sp0)] / 2.0) ** 3)
+                    ) / ((t_diff[tuple(sp0)] / 4.0) ** 3)
                     x_dot[tuple(sp1)] = (
                         -2.5 * x[tuple(sp1)]
                         + 9 * x[tuple(sp2)]
                         - 12 * x[tuple(sp3)]
                         + 7 * x[tuple(sp4)]
                         - 1.5 * x[tuple(sp5)]
-                    ) / ((t_diff[tuple(sp1)] / 2.0) ** 3)
+                    ) / ((t_diff[tuple(sp1)] / 4.0) ** 3)
                     x_dot[tuple(sm1)] = (
                         2.5 * x[tuple(sm1)]
                         - 9 * x[tuple(sm2)]
                         + 12 * x[tuple(sm3)]
                         - 7 * x[tuple(sm4)]
                         + 1.5 * x[tuple(sm5)]
-                    ) / ((t_diff[tuple(sm1)] / 2.0) ** 3)
+                    ) / ((t_diff[tuple(sm1)] / 4.0) ** 3)
                     x_dot[tuple(sm2)] = (
                         2.5 * x[tuple(sm2)]
                         - 9 * x[tuple(sm3)]
                         + 12 * x[tuple(sm4)]
                         - 7 * x[tuple(sm5)]
                         + 1.5 * x[tuple(sm6)]
-                    ) / ((t_diff[tuple(sm2)] / 2.0) ** 3)
+                    ) / ((t_diff[tuple(sm2)] / 4.0) ** 3)
 
         if d > 3:
             return self._centered_difference(

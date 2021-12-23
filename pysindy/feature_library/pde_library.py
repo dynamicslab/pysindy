@@ -383,7 +383,6 @@ class PDELibrary(BaseFeatureLibrary):
         library_idx += self.num_derivatives * n_features
 
         # mixed function derivative terms
-        # Should include a self.interaction_only case as well?
         if self.include_interaction:
             xp[
                 :,

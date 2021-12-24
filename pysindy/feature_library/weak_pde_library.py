@@ -526,7 +526,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 for k in range(self.K):
                     func_new = func_interp(take(self.XT, k, axis=0))
                     func_temp = trapezoid(
-                        take(integral_weights, k, axis=0) * func_new,
+                        integral_weights[k] * func_new,
                         x=self.xtgrid_k[k, :, 0],
                         axis=0,
                     )
@@ -558,10 +558,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
             func_new = empty(
                 (self.K, *(self.grid_ndim * [self.num_pts_per_domain]), n_features)
             )
-            func_inds = [slice(None)] * func_new.ndim
             for k in range(self.K):
-                func_inds[0] = k
-                func_new[tuple(func_inds)] = transpose(
+                func_new[k] = transpose(
                     array(
                         [
                             func_interp[j](take(self.XT, k, axis=0))
@@ -615,7 +613,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
             for k in range(self.K):
                 func_temp = trapezoid(
-                    take(complete_funcs, k, axis=0),
+                    complete_funcs[k],
                     x=self.xtgrid_k[k, :, 0],
                     axis=0,
                 )
@@ -669,25 +667,20 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         n_features,
                     )
                 )
-                func_inds = [slice(None)] * func_pure_new.ndim
 
                 for k in range(self.K):
-                    func_inds[0] = k
-                    func_library_new[tuple(func_inds)] = transpose(
+                    func_library_new[k] = transpose(
                         array(
                             [
-                                func_library_interp[j](take(self.XT, k, axis=0))
+                                func_library_interp[j](self.XT[k])
                                 for j in range(n_library_terms)
                             ]
                         ),
                         [*range(1, self.grid_ndim + 1), 0],
                     )
-                    func_pure_new[tuple(func_inds)] = transpose(
+                    func_pure_new[k] = transpose(
                         array(
-                            [
-                                func_pure_interp[j](take(self.XT, k, axis=0))
-                                for j in range(n_features)
-                            ]
+                            [func_pure_interp[j](self.XT[k]) for j in range(n_features)]
                         ),
                         [*range(1, self.grid_ndim + 1), 0],
                     )
@@ -714,46 +707,40 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         self.num_derivatives,
                     )
                 )
-                integral_weights_expanded = transpose(
-                    array([*(n_library_terms * [integral_weights])]),
-                    axes=[*range(1, self.grid_ndim + 2), 0],
-                )
-                derivs_ind = [slice(None)] * integral_weights_expanded.ndim
+
                 deriv_slices = [slice(None)] * derivs_mixed_total.ndim
                 # Note excluding temporal derivatives in the feature library
                 # and the derivatives are computed within the subdomains
                 for deriv_ind, multiindex in enumerate(self.multiindices):
-                    derivs_mixed = func_library_new * integral_weights_expanded
-                    derivs_pure = func_pure_new
+                    derivs_mixed = func_library_new * reshape(
+                        integral_weights,
+                        concatenate([func_library_new.shape[:-1], [1]]),
+                    )
+                    derivs_pure = func_pure_new.copy()
                     for axis in range(self.grid_ndim - 1):
-                        t = [slice(None)] * self.xtgrid_k.ndim
-                        t[-1] = axis
-                        d_mixed = floor(multiindex[axis] / 2.0)
-                        d_pure = multiindex[axis] - d_mixed
+                        d_mixed = int(floor(multiindex[axis] / 2.0))
+                        d_pure = int(multiindex[axis] - d_mixed)
                         for k in range(self.K):
-                            t[0] = k
-                            derivs_ind[0] = k
                             if d_mixed > 0:
-                                derivs_mixed[tuple(derivs_ind)] = (
+                                derivs_mixed[k] = (
                                     FiniteDifference(
                                         d=d_mixed, axis=axis, is_uniform=self.is_uniform
                                     )._differentiate(
-                                        derivs_mixed[tuple(derivs_ind)],
-                                        self.xtgrid_k[tuple(t)],
+                                        derivs_mixed[k],
+                                        self.xtgrid_k[k, :, axis],
                                     )
                                     * (-1) ** (d_mixed % 2)
                                 )
                             if d_pure > 0:
-                                derivs_pure[tuple(derivs_ind)] = FiniteDifference(
+                                derivs_pure[k] = FiniteDifference(
                                     d=d_pure, axis=axis, is_uniform=self.is_uniform
                                 )._differentiate(
-                                    derivs_pure[tuple(derivs_ind)],
-                                    self.xtgrid_k[tuple(t)],
+                                    derivs_pure[k],
+                                    self.xtgrid_k[k, :, axis],
                                 )
                     deriv_slices[-1] = deriv_ind
                     derivs_mixed_total[tuple(deriv_slices)] = derivs_mixed
                     derivs_pure_total[tuple(deriv_slices)] = derivs_pure
-
                 # Okay, now assemble all the terms to integrate
                 complete_funcs = empty(
                     (
@@ -782,13 +769,15 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
                 for k in range(self.K):
                     mixed_temp = trapezoid(
-                        take(complete_funcs, k, axis=0),
+                        complete_funcs[k],
                         x=self.xtgrid_k[k, :, 0],
                         axis=0,
                     )
                     for i in range(1, self.grid_ndim):
                         mixed_temp = trapezoid(
-                            mixed_temp, x=self.xtgrid_k[k, :, i], axis=0
+                            mixed_temp,
+                            x=self.xtgrid_k[k, :, i],
+                            axis=0,
                         )
                     library_mixed_integrals[k, :] = mixed_temp
 
@@ -798,7 +787,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         if self.include_bias:
             for k in range(self.K):
                 func_temp = trapezoid(
-                    take(integral_weights, k, axis=0), x=self.xtgrid_k[k, :, 0], axis=0
+                    integral_weights[k], x=self.xtgrid_k[k, :, 0], axis=0
                 )
                 for i in range(1, self.grid_ndim):
                     func_temp = trapezoid(func_temp, x=self.xtgrid_k[k, :, i], axis=0)

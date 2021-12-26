@@ -113,6 +113,7 @@ class PDELibrary(BaseFeatureLibrary):
         is_uniform=False,
         library_ensemble=False,
         ensemble_indices=[0],
+        periodic=False,
     ):
         super(PDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -124,6 +125,7 @@ class PDELibrary(BaseFeatureLibrary):
         self.include_bias = include_bias
         self.include_interaction = include_interaction
         self.is_uniform = is_uniform
+        self.periodic = periodic
 
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
@@ -339,7 +341,10 @@ class PDELibrary(BaseFeatureLibrary):
                     s[axis] = slice(self.grid_dims[axis])
                     s[-1] = axis
                     derivs = FiniteDifference(
-                        d=multiindex[axis], axis=axis, is_uniform=self.is_uniform
+                        d=multiindex[axis],
+                        axis=axis,
+                        is_uniform=self.is_uniform,
+                        periodic=self.periodic,
                     )._differentiate(derivs, self.spatial_grid[tuple(s)])
             library_derivatives[:, library_idx : library_idx + n_features] = reshape(
                 derivs, (n_samples, n_features)

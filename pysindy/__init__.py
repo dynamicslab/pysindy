@@ -14,6 +14,7 @@ from . import utils
 from .pysindy import SINDy
 from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
+from .differentiation import SpectralDerivative
 from .differentiation import SINDyDerivative
 from .differentiation import SmoothedFiniteDifference
 from .feature_library import ConcatLibrary

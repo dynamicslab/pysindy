@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 
 from .base import BaseDifferentiation
@@ -15,14 +13,14 @@ class FiniteDifference(BaseDifferentiation):
     ----------
     order: int, optional (default 2)
         The order of the finite difference method to be used.
-        If 1, first order forward difference will be used.
-        If 2, second order centered difference will be used.
+        Currently only centered differences are implemented,
+        and order must be a multiple of 2
 
-    d : int, 1, 2, 3, 4 optional (default 1)
-        The order of derivative to take (d > 3 inaccurate).
+    d : int, optional (default 1)
+        The order of derivative to take.  Must be non-negative.
 
     axis: int, optional (default 0)
-        The axis to differentiate along
+        The axis to differentiate along.
 
     is_uniform : boolean, optional (default False)
         Parameter to tell the differentiation that, although a N-dim
@@ -34,6 +32,12 @@ class FiniteDifference(BaseDifferentiation):
         If False, endpoints will be set to np.nan.
         Note that which points are endpoints depends on the method
         being used.
+
+    periodic: boolean, optional (default False)
+        Whether to use periodic boundary conditions for endpoints.
+        Use forward differences for periodic=False and periodic boundaries
+        with centered differences for periodic=True on the boundaries.
+        No effect if drop_endpoints=True
 
     Examples
     --------
@@ -50,311 +54,231 @@ class FiniteDifference(BaseDifferentiation):
            [ 0.53780339, -0.84443737]])
     """
 
-    def __init__(self, order=2, d=1, axis=0, is_uniform=False, drop_endpoints=False):
-        if order <= 0 or not isinstance(order, int):
-            raise ValueError("order must be a positive int")
-        if d < 1:
-            raise ValueError("differentiation order must be a positive int")
-        elif order > 2:
-            raise NotImplementedError
+    def __init__(
+        self,
+        order=2,
+        d=1,
+        axis=0,
+        is_uniform=False,
+        drop_endpoints=False,
+        periodic=False,
+    ):
 
-        if d >= 4:
-            warnings.warn(
-                "Finite differences of arbitrary order are permitted"
-                " but please note that d >= 4 finite differences"
-                " will dramatically amplify any numerical noise."
-            )
-
-        if d > 1 and order != 2:
-            raise ValueError(
-                "For second or third order derivatives, order must equal 2 "
-                "because only centered differences are implemented"
-            )
+        if order <= 0 or not isinstance(order, int) or order % 2 == 1:
+            raise ValueError("order must be a positive even int")
+        if d < 0:
+            raise ValueError("differentiation order must be a nonnegative int")
 
         self.d = d
         self.order = order
-        self.drop_endpoints = drop_endpoints
         self.is_uniform = is_uniform
         self.axis = axis
+        self.drop_endpoints = drop_endpoints
+        self.periodic = periodic
+        self.n_stencil = int(2 * np.floor((self.d + 1) / 2) - 1 + self.order)
+        self.n_stencil_forward = self.d + self.order
+
+    def _coefficients(self, t):
+        nt = len(t)
+        self.stencil_inds = np.array(
+            [np.arange(i, nt - self.n_stencil + i + 1) for i in range(self.n_stencil)]
+        )
+        self.stencil = np.transpose(t[self.stencil_inds])
+
+        pows = np.arange(self.n_stencil)[np.newaxis, :, np.newaxis]
+        matrices = (
+            self.stencil
+            - t[
+                int((self.n_stencil - 1) / 2) : -int((self.n_stencil - 1) / 2),
+                np.newaxis,
+            ]
+        )[:, np.newaxis, :] ** pows
+        b = np.zeros(self.n_stencil)
+        b[self.d] = np.math.factorial(self.d)
+        return np.linalg.solve(matrices, [b])
+
+    def _coefficients_boundary_forward(self, t):
+        # use the same stencil for each boundary point, but change the evaluation point
+        left = np.arange(self.n_stencil_forward)[:, np.newaxis] * np.ones(
+            int((self.n_stencil - 1) / 2), dtype=int
+        )
+        right = (-1 - np.arange(self.n_stencil_forward))[:, np.newaxis] * np.ones(
+            int((self.n_stencil - 1) / 2), dtype=int
+        )
+        self.stencil_inds = np.concatenate([left, right], axis=1)
+        tinds = np.concatenate(
+            [
+                np.arange(int((self.n_stencil - 1) / 2), dtype=int),
+                np.flip(-1 - np.arange(int((self.n_stencil - 1) / 2), dtype=int)),
+            ]
+        )
+        pows = np.arange(self.n_stencil_forward)[np.newaxis, :, np.newaxis]
+
+        if np.isscalar(t):
+            matrices = np.transpose(
+                (t * (self.stencil_inds - tinds)[:, np.newaxis, :]) ** pows
+            )
+        else:
+            matrices = np.transpose(
+                ((t[self.stencil_inds] - t[tinds])[:, np.newaxis, :]) ** pows
+            )
+
+        b = np.transpose(np.zeros(self.stencil_inds.shape))
+        b[:, self.d] = np.math.factorial(self.d)
+        return np.linalg.solve(matrices, b)
+
+    def _coefficients_boundary_periodic(self, t):
+        # use centered periodic stencils
+        left = (np.arange(self.n_stencil) - int((self.n_stencil - 1) / 2))[
+            :, np.newaxis
+        ] + np.arange(int((self.n_stencil - 1) / 2), dtype=int)
+        right = np.flip(
+            (-1 - np.arange(self.n_stencil) + int((self.n_stencil - 1) / 2))[
+                :, np.newaxis
+            ]
+            - np.arange(int((self.n_stencil - 1) / 2), dtype=int),
+            axis=1,
+        )
+        self.stencil_inds = np.concatenate([left, right], axis=1)
+        tinds = np.concatenate(
+            [
+                np.arange(int((self.n_stencil - 1) / 2), dtype=int),
+                np.flip(-1 - np.arange(int((self.n_stencil - 1) / 2), dtype=int)),
+            ]
+        )
+        pows = np.arange(self.n_stencil)[np.newaxis, :, np.newaxis]
+
+        if np.isscalar(t):
+            matrices = (
+                np.transpose(
+                    t
+                    * (
+                        np.concatenate(
+                            [
+                                np.ones(int((self.n_stencil - 1) / 2)),
+                                -np.ones(int((self.n_stencil - 1) / 2)),
+                            ]
+                        )
+                        * (np.arange(self.n_stencil) - (self.n_stencil - 1) / 2)[
+                            :, np.newaxis
+                        ]
+                    )[:, np.newaxis, :]
+                )
+                ** pows
+            )
+        else:
+            period = t[-1] - t[0] + (t[1] - t[0])
+            matrices = np.transpose(
+                (
+                    (
+                        np.mod(t[self.stencil_inds] - t[tinds] + period / 2, period)
+                        - period / 2
+                    )[:, np.newaxis, :]
+                )
+                ** pows
+            )
+
+        b = np.transpose(np.zeros(self.stencil_inds.shape))
+        b[:, self.d] = np.math.factorial(self.d)
+        return np.linalg.solve(matrices, b)
+
+    def _constant_coefficients(self, dt):
+        pows = np.arange(self.n_stencil)[:, np.newaxis]
+        matrices = (dt * (np.arange(self.n_stencil) - (self.n_stencil - 1) / 2))[
+            np.newaxis, :
+        ] ** pows
+        b = np.zeros(self.n_stencil)
+        b[self.d] = np.math.factorial(self.d)
+        return np.linalg.solve(matrices, b)
+
+    def _accumulate(self, coeffs, x):
+        # slice to select the stencil indices
+        s = [slice(None)] * len(x.shape)
+        s[self.axis] = self.stencil_inds
+        # a new axis is introduced after self.axis for the stencil indices
+        # To contract with the coefficients, roll by -self.axis to put it first
+        # Then roll back by self.axis to return the order
+        trans = np.roll(np.arange(len(x.shape) + 1), -self.axis)
+        return np.transpose(
+            np.einsum(
+                "ij...,ij->j...",
+                np.transpose(x[tuple(s)], axes=trans),
+                np.transpose(coeffs),
+            ),
+            np.roll(np.arange(len(x.shape)), self.axis),
+        )
 
     def _differentiate(self, x, t):
         """
         Apply finite difference method.
         """
-        if self.order == 1:
-            return self._forward_difference(x, t)
-        else:
-            return self._centered_difference(x, t)
-
-    def _forward_difference(self, x, t=1):
-        """
-        First order forward difference
-        (and 2nd order backward difference for final point).
-
-        Note that in order to maintain compatibility with sklearn the,
-        array returned, x_dot, always satisfies np.ndim(x_dot) == 2.
-        """
-        if self.is_uniform and not np.isscalar(t):
-            t = t[1] - t[0]
-
         x_dot = np.full_like(x, fill_value=np.nan)
-        s0 = [slice(dim) for dim in x.shape]
-        s0[self.axis] = slice(0, -1, None)
-        sm1 = [slice(dim) for dim in x.shape]
-        sm1[self.axis] = slice(-1, None, None)
-        sm2 = [slice(dim) for dim in x.shape]
-        sm2[self.axis] = slice(-2, -1, None)
-        sm3 = [slice(dim) for dim in x.shape]
-        sm3[self.axis] = slice(-3, -2, None)
+        if self.axis < 0:
+            self.axis = len(x.shape) + self.axis
 
-        # Uniform timestep (assume t contains dt)
-        if np.isscalar(t):
-            x_dot[tuple(s0)] = (np.roll(x, -1, axis=self.axis) - x)[tuple(s0)] / t
-            if not self.drop_endpoints:
-                x_dot[tuple(sm1)] = (
-                    3 * x[tuple(sm1)] / 2 - 2 * x[tuple(sm2)] + x[tuple(sm3)] / 2
-                ) / t
+        # Central differences in interior of domain
+        if np.isscalar(t) or self.is_uniform:
+            dt = t
+            if not np.isscalar(t):
+                dt = t[1] - t[0]
 
-        # Variable timestep
-        else:
-            dims = np.ones(x.ndim, dtype=int)
-            dims[self.axis] = x.shape[self.axis] - 1
-            t_diff = np.reshape(t[1:] - t[:-1], dims)
+            coeffs = self._constant_coefficients(dt)
+            dims = np.array(x.shape)
+            dims[self.axis] = x.shape[self.axis] - (self.n_stencil - 1)
+            interior = np.zeros(dims)
+            # Slightly faster version of self._accumulate for uniform grid
+            s = [slice(None)] * len(x.shape)
+            for i in range(self.n_stencil):
+                if np.abs(coeffs[i]) > 0:
+                    start = i
+                    stop = -(self.n_stencil - start - 1)
+                    if stop >= 0:
+                        stop = None
+                    s[self.axis] = slice(start, stop)
+                    interior = interior + x[tuple(s)] * coeffs[i]
 
-            x_dot[tuple(s0)] = (np.roll(x, -1, axis=self.axis) - x)[tuple(s0)] / t_diff
-            if not self.drop_endpoints:
-                x_dot[tuple(sm1)] = (
-                    3 * x[tuple(sm1)] / 2 - 2 * x[tuple(sm2)] + x[tuple(sm3)] / 2
-                ) / t_diff[-1]
-
-        return x_dot
-
-    def _centered_difference(self, x, t=1, d=None):
-        """
-        Second order centered difference
-        with third order forward/backward difference at endpoints.
-
-        Warning: Sometimes has trouble with nonuniform grid spacing
-        near boundaries
-
-        Note that in order to maintain compatibility with sklearn the,
-        array returned, x_dot, always satisfies np.ndim(x_dot) == 2.
-        """
-        if self.is_uniform and not np.isscalar(t):
-            t = t[1] - t[0]
-
-        if d is None:
-            d = self.d
-
-        x_dot = np.full_like(x, fill_value=np.nan)
-
-        s0 = [slice(dim) for dim in x.shape]
-        s0[self.axis] = slice(1, -1, None)
-        s1 = [slice(dim) for dim in x.shape]
-        s1[self.axis] = slice(2, None, None)
-        s2 = [slice(dim) for dim in x.shape]
-        s2[self.axis] = slice(None, -2, None)
-        s3 = [slice(dim) for dim in x.shape]
-        s3[self.axis] = slice(2, -2, None)
-        s4 = [slice(dim) for dim in x.shape]
-        s4[self.axis] = slice(4, None, None)
-        s5 = [slice(dim) for dim in x.shape]
-        s5[self.axis] = slice(3, -1, None)
-        s6 = [slice(dim) for dim in x.shape]
-        s6[self.axis] = slice(1, -3, None)
-        s7 = [slice(dim) for dim in x.shape]
-        s7[self.axis] = slice(None, -4, None)
-
-        sp0 = [slice(dim) for dim in x.shape]
-        sp0[self.axis] = slice(0, 1, None)
-        sp1 = [slice(dim) for dim in x.shape]
-        sp1[self.axis] = slice(1, 2, None)
-        sp2 = [slice(dim) for dim in x.shape]
-        sp2[self.axis] = slice(2, 3, None)
-        sp3 = [slice(dim) for dim in x.shape]
-        sp3[self.axis] = slice(3, 4, None)
-        sp4 = [slice(dim) for dim in x.shape]
-        sp4[self.axis] = slice(4, 5, None)
-        sp5 = [slice(dim) for dim in x.shape]
-        sp5[self.axis] = slice(5, 6, None)
-
-        sm1 = [slice(dim) for dim in x.shape]
-        sm1[self.axis] = slice(-1, None, None)
-        sm2 = [slice(dim) for dim in x.shape]
-        sm2[self.axis] = slice(-2, -1, None)
-        sm3 = [slice(dim) for dim in x.shape]
-        sm3[self.axis] = slice(-3, -2, None)
-        sm4 = [slice(dim) for dim in x.shape]
-        sm4[self.axis] = slice(-4, -3, None)
-        sm5 = [slice(dim) for dim in x.shape]
-        sm5[self.axis] = slice(-5, -4, None)
-        sm6 = [slice(dim) for dim in x.shape]
-        sm6[self.axis] = slice(-6, -5, None)
-
-        if d == 1:
-            # Uniform timestep (assume t contains dt)
-            if np.isscalar(t):
-                x_dot[tuple(s0)] = (x[tuple(s1)] - x[tuple(s2)]) / (2 * t)
-                if not self.drop_endpoints:
-                    x_dot[tuple(sp0)] = (
-                        -11 / 6 * x[tuple(sp0)]
-                        + 3 * x[tuple(sp1)]
-                        - 3 / 2 * x[tuple(sp2)]
-                        + x[tuple(sp3)] / 3
-                    ) / t
-                    x_dot[tuple(sm1)] = (
-                        11 / 6 * x[tuple(sm1)]
-                        - 3 * x[tuple(sm2)]
-                        + 3 / 2 * x[tuple(sm3)]
-                        - x[tuple(sm4)] / 3
-                    ) / t
-
-            # Variable timestep
-            else:
-                dims = np.ones(x.ndim, dtype=int)
-                dims[self.axis] = x.shape[self.axis] - 2
-                t_diff = np.reshape(t[2:] - t[:-2], dims)
-                x_dot[tuple(s0)] = (x[tuple(s1)] - x[tuple(s2)]) / t_diff
-                if not self.drop_endpoints:
-                    x_dot[tuple(sp0)] = (
-                        -11 / 6 * x[tuple(sp0)]
-                        + 3 * x[tuple(sp1)]
-                        - 3 / 2 * x[tuple(sp2)]
-                        + x[tuple(sp3)] / 3
-                    ) / (t_diff[tuple(sp0)] / 2)
-                    x_dot[tuple(sm1)] = (
-                        11 / 6 * x[tuple(sm1)]
-                        - 3 * x[tuple(sm2)]
-                        + 3 / 2 * x[tuple(sm3)]
-                        - x[tuple(sm4)] / 3
-                    ) / (t_diff[tuple(sm1)] / 2)
-
-        if d == 2:
-            # Uniform timestep (assume t contains dt)
-            if np.isscalar(t):
-                x_dot[tuple(s0)] = (x[tuple(s1)] - 2 * x[tuple(s0)] + x[tuple(s2)]) / (
-                    t ** 2
-                )
-                if not self.drop_endpoints:
-                    x_dot[tuple(sp0)] = (
-                        2 * x[tuple(sp0)]
-                        - 5 * x[tuple(sp1)]
-                        + 4 * x[tuple(sp2)]
-                        - x[tuple(sp3)]
-                    ) / (t ** 2)
-                    x_dot[tuple(sm1)] = (
-                        2 * x[tuple(sm1)]
-                        - 5 * x[tuple(sm2)]
-                        + 4 * x[tuple(sm3)]
-                        - x[tuple(sm4)]
-                    ) / (t ** 2)
-
-            # Variable timestep
-            else:
-                dims = np.ones(x.ndim, dtype=int)
-                dims[self.axis] = x.shape[self.axis] - 2
-                t_diff = np.reshape(t[2:] - t[:-2], dims)
-
-                x_dot[tuple(s0)] = (x[tuple(s1)] - 2 * x[tuple(s0)] + x[tuple(s2)]) / (
-                    (t_diff / 2.0) ** 2
-                )
-                if not self.drop_endpoints:
-                    x_dot[tuple(sp0)] = (
-                        2 * x[tuple(sp0)]
-                        - 5 * x[tuple(sp1)]
-                        + 4 * x[tuple(sp2)]
-                        - x[tuple(sp3)]
-                    ) / ((t_diff[tuple(sp0)] / 2.0) ** 2)
-                    x_dot[tuple(sm1)] = (
-                        2 * x[tuple(sm1)]
-                        - 5 * x[tuple(sm2)]
-                        + 4 * x[tuple(sm3)]
-                        - x[tuple(sm4)]
-                    ) / ((t_diff[tuple(sm1)] / 2.0) ** 2)
-
-        if d == 3:
-            # Uniform timestep (assume t contains dt)
-            if np.isscalar(t):
-                x_dot[tuple(s3)] = (
-                    x[tuple(s4)] / 2.0
-                    - x[tuple(s5)]
-                    + x[tuple(s6)]
-                    - x[tuple(s7)] / 2.0
-                ) / (t ** 3)
-                if not self.drop_endpoints:
-                    x_dot[tuple(sp0)] = (
-                        -2.5 * x[tuple(sp0)]
-                        + 9 * x[tuple(sp1)]
-                        - 12 * x[tuple(sp2)]
-                        + 7 * x[tuple(sp3)]
-                        - 1.5 * x[tuple(sp4)]
-                    ) / (t ** 3)
-                    x_dot[tuple(sp1)] = (
-                        -2.5 * x[tuple(sp1)]
-                        + 9 * x[tuple(sp2)]
-                        - 12 * x[tuple(sp3)]
-                        + 7 * x[tuple(sp4)]
-                        - 1.5 * x[tuple(sp5)]
-                    ) / (t ** 3)
-                    x_dot[tuple(sm1)] = (
-                        2.5 * x[tuple(sm1)]
-                        - 9 * x[tuple(sm2)]
-                        + 12 * x[tuple(sm3)]
-                        - 7 * x[tuple(sm4)]
-                        + 1.5 * x[tuple(sm5)]
-                    ) / (t ** 3)
-                    x_dot[tuple(sm2)] = (
-                        2.5 * x[tuple(sm2)]
-                        - 9 * x[tuple(sm3)]
-                        + 12 * x[tuple(sm4)]
-                        - 7 * x[tuple(sm5)]
-                        + 1.5 * x[tuple(sm6)]
-                    ) / (t ** 3)
-
-            # Variable timestep
-            else:
-                dims = np.ones(x.ndim, dtype=int)
-                dims[self.axis] = x.shape[self.axis] - 4
-                t_diff = np.reshape(t[4:] - t[:-4], dims)
-                x_dot[tuple(s3)] = (
-                    x[tuple(s4)] / 2.0
-                    - x[tuple(s5)]
-                    + x[tuple(s6)]
-                    - x[tuple(s7)] / 2.0
-                ) / ((t_diff / 4.0) ** 3)
-                if not self.drop_endpoints:
-                    x_dot[tuple(sp0)] = (
-                        -2.5 * x[tuple(sp0)]
-                        + 9 * x[tuple(sp1)]
-                        - 12 * x[tuple(sp2)]
-                        + 7 * x[tuple(sp3)]
-                        - 1.5 * x[tuple(sp4)]
-                    ) / ((t_diff[tuple(sp0)] / 4.0) ** 3)
-                    x_dot[tuple(sp1)] = (
-                        -2.5 * x[tuple(sp1)]
-                        + 9 * x[tuple(sp2)]
-                        - 12 * x[tuple(sp3)]
-                        + 7 * x[tuple(sp4)]
-                        - 1.5 * x[tuple(sp5)]
-                    ) / ((t_diff[tuple(sp1)] / 4.0) ** 3)
-                    x_dot[tuple(sm1)] = (
-                        2.5 * x[tuple(sm1)]
-                        - 9 * x[tuple(sm2)]
-                        + 12 * x[tuple(sm3)]
-                        - 7 * x[tuple(sm4)]
-                        + 1.5 * x[tuple(sm5)]
-                    ) / ((t_diff[tuple(sm1)] / 4.0) ** 3)
-                    x_dot[tuple(sm2)] = (
-                        2.5 * x[tuple(sm2)]
-                        - 9 * x[tuple(sm3)]
-                        + 12 * x[tuple(sm4)]
-                        - 7 * x[tuple(sm5)]
-                        + 1.5 * x[tuple(sm6)]
-                    ) / ((t_diff[tuple(sm2)] / 4.0) ** 3)
-
-        if d > 3:
-            return self._centered_difference(
-                self._centered_difference(x, t, d=3), t, d=self.d - 3
+            s[self.axis] = slice(
+                int((self.n_stencil - 1) / 2), int(-(self.n_stencil - 1) / 2)
             )
+            x_dot[tuple(s)] = interior
+
+        else:
+            coeffs = self._coefficients(t)
+            interior = self._accumulate(coeffs, x)
+            s = [slice(None)] * len(x.shape)
+            s[self.axis] = slice(
+                int((self.n_stencil - 1) / 2), int(-(self.n_stencil - 1) / 2)
+            )
+            x_dot[tuple(s)] = interior
+
+        # Boundaries
+        if not self.drop_endpoints:
+            # Forward differences on boundary
+            if not self.periodic:
+                coeffs = self._coefficients_boundary_forward(t)
+                boundary = self._accumulate(coeffs, x)
+
+                s[self.axis] = np.concatenate(
+                    [
+                        np.arange(0, int((self.n_stencil - 1) / 2)),
+                        -np.flip(1 + np.arange(1, int((self.n_stencil - 1) / 2))),
+                        [-1],
+                    ]
+                )
+                x_dot[tuple(s)] = boundary
+
+            # Central differences on boundary with periodic bcs
+            else:
+                coeffs = self._coefficients_boundary_periodic(t)
+                boundary = self._accumulate(coeffs, x)
+
+                s[self.axis] = np.concatenate(
+                    [
+                        np.arange(0, int((self.n_stencil - 1) / 2)),
+                        -np.flip(1 + np.arange(1, int((self.n_stencil - 1) / 2))),
+                        np.array([-1]),
+                    ]
+                )
+                x_dot[tuple(s)] = boundary
 
         return x_dot

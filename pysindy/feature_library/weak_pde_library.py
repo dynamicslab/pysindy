@@ -155,6 +155,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         p=4,
         library_ensemble=False,
         ensemble_indices=[0],
+        periodic=False,
     ):
         super(WeakPDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -170,6 +171,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.num_pts_per_domain = num_pts_per_domain
         self.H_xt = H_xt
         self.p = p
+        self.periodic = periodic
 
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
@@ -724,7 +726,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
                             if d_mixed > 0:
                                 derivs_mixed[k] = (
                                     FiniteDifference(
-                                        d=d_mixed, axis=axis, is_uniform=self.is_uniform
+                                        d=d_mixed,
+                                        axis=axis,
+                                        is_uniform=self.is_uniform,
+                                        periodic=self.periodic,
                                     )._differentiate(
                                         derivs_mixed[k],
                                         self.xtgrid_k[k, :, axis],
@@ -733,7 +738,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                 )
                             if d_pure > 0:
                                 derivs_pure[k] = FiniteDifference(
-                                    d=d_pure, axis=axis, is_uniform=self.is_uniform
+                                    d=d_pure,
+                                    axis=axis,
+                                    is_uniform=self.is_uniform,
+                                    periodic=self.periodic,
                                 )._differentiate(
                                     derivs_pure[k],
                                     self.xtgrid_k[k, :, axis],

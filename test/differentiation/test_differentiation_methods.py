@@ -8,6 +8,7 @@ from derivative import dxdt
 from pysindy.differentiation import FiniteDifference
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
+from pysindy.differentiation import SpectralDerivative
 from pysindy.differentiation.base import BaseDifferentiation
 
 
@@ -37,10 +38,23 @@ def test_centered_difference_1d(data_derivative_1d):
     np.testing.assert_allclose(centered_difference(x), x_dot)
 
 
+def test_spectral_derivative_1d(data_derivative_periodic_1d):
+    t, x, x_dot = data_derivative_periodic_1d
+    spectral_derivative = SpectralDerivative()
+    print(spectral_derivative(x, t), x_dot)
+    np.testing.assert_allclose(spectral_derivative(x), x_dot)
+
+
 def test_centered_difference_2d(data_derivative_2d):
     x, x_dot = data_derivative_2d
     centered_difference = FiniteDifference(order=2)
     np.testing.assert_allclose(centered_difference(x), x_dot)
+
+
+def test_spectral_derivative_2d(data_derivative_periodic_2d):
+    t, x, x_dot = data_derivative_periodic_2d
+    spectral_derivative = SpectralDerivative()
+    np.testing.assert_allclose(spectral_derivative(x, t), x_dot)
 
 
 def test_centered_difference_2d_uniform(data_derivative_2d):
@@ -64,25 +78,13 @@ def test_centered_difference_2d_nonuniform_time(data_derivative_2d):
 
 
 def test_centered_difference_xy_yx(data_2dspatial):
-    u = data_2dspatial
-    x_grid = np.linspace(1, 100, 100)
-    y_grid = np.linspace(1, 50, 50)
-    u_x = np.zeros(u.shape)
-    u_y = np.zeros(u.shape)
+    x_grid, y_grid, u = data_2dspatial
     u_xy = np.zeros(u.shape)
     u_yx = np.zeros(u.shape)
-    for i in range(100):
-        u_y[i, :, :] = FiniteDifference(order=2, d=1)._differentiate(u[i, :, :], y_grid)
-    for i in range(50):
-        u_x[:, i, :] = FiniteDifference(order=2, d=1)._differentiate(u[:, i, :], x_grid)
-    for i in range(100):
-        u_xy[i, :, :] = FiniteDifference(order=2, d=1)._differentiate(
-            u_x[i, :, :], y_grid
-        )
-    for i in range(50):
-        u_yx[:, i, :] = FiniteDifference(order=2, d=1)._differentiate(
-            u_y[:, i, :], x_grid
-        )
+    u_y = FiniteDifference(order=2, d=1, axis=1)._differentiate(u, y_grid)
+    u_x = FiniteDifference(order=2, d=1, axis=0)._differentiate(u, x_grid)
+    u_xy = FiniteDifference(order=2, d=1, axis=1)._differentiate(u_x, y_grid)
+    u_yx = FiniteDifference(order=2, d=1, axis=0)._differentiate(u_y, x_grid)
     np.testing.assert_allclose(u_xy, u_yx)
 
 
@@ -98,6 +100,13 @@ def test_centered_difference_hot(data_derivative_2d):
             centered_difference(x, t=t),
             atol=atol,
         )
+    for d in range(1, 6):
+        spectral_deriv = SpectralDerivative(d=d, axis=-2)._differentiate
+        np.testing.assert_allclose(
+            spectral_deriv(x, t=dt),
+            spectral_deriv(x, t=t),
+            atol=atol,
+        )
 
 
 # Alternative implementation of the four tests above using parametrization
@@ -108,11 +117,15 @@ def test_centered_difference_hot(data_derivative_2d):
         (pytest.lazy_fixture("data_derivative_2d"), 2),
         (pytest.lazy_fixture("data_derivative_1d"), 4),
         (pytest.lazy_fixture("data_derivative_2d"), 4),
+        (pytest.lazy_fixture("data_derivative_1d"), 8),
+        (pytest.lazy_fixture("data_derivative_2d"), 8),
     ],
 )
 def test_finite_difference(data, order):
     x, x_dot = data
     method = FiniteDifference(order=order)
+    np.testing.assert_allclose(method(x), x_dot)
+    method = SmoothedFiniteDifference()
     np.testing.assert_allclose(method(x), x_dot)
 
 
@@ -277,6 +290,13 @@ def test_centered_difference_hot_axis(data_2d_resolved_pde):
         np.testing.assert_allclose(
             centered_difference(x, t=dt),
             centered_difference(x, t=t),
+            atol=atol,
+        )
+    for d in range(1, 6):
+        spectral_deriv = SpectralDerivative(d=d, axis=-2)._differentiate
+        np.testing.assert_allclose(
+            spectral_deriv(x, t=dt),
+            spectral_deriv(x, t=t),
             atol=atol,
         )
 

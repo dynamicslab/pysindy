@@ -193,6 +193,14 @@ def data_derivative_1d():
 
 
 @pytest.fixture
+def data_derivative_periodic_1d():
+    t = np.linspace(0, 2 * np.pi, 1000)
+    x = 2 * np.sin(t)
+    x_dot = 2 * np.cos(t).reshape(-1, 1)
+    return t, x, x_dot
+
+
+@pytest.fixture
 def data_derivative_2d():
     x = np.zeros((100, 2))
     x[:, 0] = 2 * np.linspace(1, 100, 100)
@@ -205,6 +213,18 @@ def data_derivative_2d():
 
 
 @pytest.fixture
+def data_derivative_periodic_2d():
+    t = np.linspace(0, 2 * np.pi, 1000)
+    x = np.zeros((1000, 2))
+    x[:, 0] = 2 * np.sin(t)
+    x[:, 1] = 2 * np.cos(2 * t)
+    x_dot = np.zeros((1000, 2))
+    x_dot[:, 0] = 2 * np.cos(t)
+    x_dot[:, 1] = -4 * np.sin(2 * t)
+    return t, x, x_dot
+
+
+@pytest.fixture
 def data_2dspatial():
     u = np.zeros((100, 50, 2))
     x = np.linspace(1, 100, 100)
@@ -212,7 +232,7 @@ def data_2dspatial():
     X, Y = np.meshgrid(x, y, indexing="ij")
     u[:, :, 0] = np.cos(X) * np.sin(Y)
     u[:, :, 1] = -np.sin(X) * np.cos(Y) ** 2
-    return u
+    return x, y, u
 
 
 @pytest.fixture

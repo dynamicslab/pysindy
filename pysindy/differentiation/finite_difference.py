@@ -6,8 +6,8 @@ from .base import BaseDifferentiation
 class FiniteDifference(BaseDifferentiation):
     """Finite difference derivatives.
 
-    For now only first and second order finite difference methods have been
-    implemented.
+    For now only first, second, and higher-even-order finite
+    difference methods have been implemented.
 
     Parameters
     ----------
@@ -43,8 +43,8 @@ class FiniteDifference(BaseDifferentiation):
     --------
     >>> import numpy as np
     >>> from pysindy.differentiation import FiniteDifference
-    >>> t = np.linspace(0,1,5)
-    >>> X = np.vstack((np.sin(t),np.cos(t))).T
+    >>> t = np.linspace(0, 1, 5)
+    >>> X = np.vstack((np.sin(t), np.cos(t))).T
     >>> fd = FiniteDifference()
     >>> fd._differentiate(X, t)
     array([[ 1.00114596,  0.00370551],
@@ -75,7 +75,8 @@ class FiniteDifference(BaseDifferentiation):
         self.axis = axis
         self.drop_endpoints = drop_endpoints
         self.periodic = periodic
-        self.n_stencil = int(2 * np.floor((self.d + 1) / 2) - 1 + self.order)
+        self.n_stencil = 2 * ((self.d + 1) // 2) - 1 + self.order
+        # self.n_stencil = int(2 * np.floor((self.d + 1) / 2) - 1 + self.order)
         self.n_stencil_forward = self.d + self.order
 
     def _coefficients(self, t):
@@ -89,7 +90,7 @@ class FiniteDifference(BaseDifferentiation):
         matrices = (
             self.stencil
             - t[
-                int((self.n_stencil - 1) / 2) : -int((self.n_stencil - 1) / 2),
+                (self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2,
                 np.newaxis,
             ]
         )[:, np.newaxis, :] ** pows
@@ -98,18 +99,19 @@ class FiniteDifference(BaseDifferentiation):
         return np.linalg.solve(matrices, [b])
 
     def _coefficients_boundary_forward(self, t):
-        # use the same stencil for each boundary point, but change the evaluation point
+        # use the same stencil for each boundary point,
+        # but change the evaluation point
         left = np.arange(self.n_stencil_forward)[:, np.newaxis] * np.ones(
-            int((self.n_stencil - 1) / 2), dtype=int
+            (self.n_stencil - 1) // 2, dtype=int
         )
         right = (-1 - np.arange(self.n_stencil_forward))[:, np.newaxis] * np.ones(
-            int((self.n_stencil - 1) / 2), dtype=int
+            (self.n_stencil - 1) // 2, dtype=int
         )
         self.stencil_inds = np.concatenate([left, right], axis=1)
         tinds = np.concatenate(
             [
-                np.arange(int((self.n_stencil - 1) / 2), dtype=int),
-                np.flip(-1 - np.arange(int((self.n_stencil - 1) / 2), dtype=int)),
+                np.arange((self.n_stencil - 1) // 2, dtype=int),
+                np.flip(-1 - np.arange((self.n_stencil - 1) // 2, dtype=int)),
             ]
         )
         pows = np.arange(self.n_stencil_forward)[np.newaxis, :, np.newaxis]
@@ -123,27 +125,25 @@ class FiniteDifference(BaseDifferentiation):
                 ((t[self.stencil_inds] - t[tinds])[:, np.newaxis, :]) ** pows
             )
 
-        b = np.transpose(np.zeros(self.stencil_inds.shape))
+        b = np.zeros(self.stencil_inds.shape).T
         b[:, self.d] = np.math.factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _coefficients_boundary_periodic(self, t):
         # use centered periodic stencils
-        left = (np.arange(self.n_stencil) - int((self.n_stencil - 1) / 2))[
+        left = (np.arange(self.n_stencil) - (self.n_stencil - 1) // 2)[
             :, np.newaxis
-        ] + np.arange(int((self.n_stencil - 1) / 2), dtype=int)
+        ] + np.arange((self.n_stencil - 1) // 2, dtype=int)
         right = np.flip(
-            (-1 - np.arange(self.n_stencil) + int((self.n_stencil - 1) / 2))[
-                :, np.newaxis
-            ]
-            - np.arange(int((self.n_stencil - 1) / 2), dtype=int),
+            (-1 - np.arange(self.n_stencil) + (self.n_stencil - 1) // 2)[:, np.newaxis]
+            - np.arange((self.n_stencil - 1) // 2, dtype=int),
             axis=1,
         )
         self.stencil_inds = np.concatenate([left, right], axis=1)
         tinds = np.concatenate(
             [
-                np.arange(int((self.n_stencil - 1) / 2), dtype=int),
-                np.flip(-1 - np.arange(int((self.n_stencil - 1) / 2), dtype=int)),
+                np.arange((self.n_stencil - 1) // 2, dtype=int),
+                np.flip(-1 - np.arange((self.n_stencil - 1) // 2, dtype=int)),
             ]
         )
         pows = np.arange(self.n_stencil)[np.newaxis, :, np.newaxis]
@@ -155,11 +155,11 @@ class FiniteDifference(BaseDifferentiation):
                     * (
                         np.concatenate(
                             [
-                                np.ones(int((self.n_stencil - 1) / 2)),
-                                -np.ones(int((self.n_stencil - 1) / 2)),
+                                np.ones((self.n_stencil - 1) // 2),
+                                -np.ones((self.n_stencil - 1) // 2),
                             ]
                         )
-                        * (np.arange(self.n_stencil) - (self.n_stencil - 1) / 2)[
+                        * (np.arange(self.n_stencil) - (self.n_stencil - 1) // 2)[
                             :, np.newaxis
                         ]
                     )[:, np.newaxis, :]
@@ -178,13 +178,13 @@ class FiniteDifference(BaseDifferentiation):
                 ** pows
             )
 
-        b = np.transpose(np.zeros(self.stencil_inds.shape))
+        b = np.zeros(self.stencil_inds.shape).T
         b[:, self.d] = np.math.factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _constant_coefficients(self, dt):
         pows = np.arange(self.n_stencil)[:, np.newaxis]
-        matrices = (dt * (np.arange(self.n_stencil) - (self.n_stencil - 1) / 2))[
+        matrices = (dt * (np.arange(self.n_stencil) - (self.n_stencil - 1) // 2))[
             np.newaxis, :
         ] ** pows
         b = np.zeros(self.n_stencil)
@@ -195,6 +195,7 @@ class FiniteDifference(BaseDifferentiation):
         # slice to select the stencil indices
         s = [slice(None)] * len(x.shape)
         s[self.axis] = self.stencil_inds
+
         # a new axis is introduced after self.axis for the stencil indices
         # To contract with the coefficients, roll by -self.axis to put it first
         # Then roll back by self.axis to return the order
@@ -214,6 +215,7 @@ class FiniteDifference(BaseDifferentiation):
         """
         x_dot = np.full_like(x, fill_value=np.nan)
         if self.axis < 0:
+            # Need to do this for _accumulate function to work properly?
             self.axis = len(x.shape) + self.axis
 
         # Central differences in interior of domain
@@ -229,7 +231,7 @@ class FiniteDifference(BaseDifferentiation):
             # Slightly faster version of self._accumulate for uniform grid
             s = [slice(None)] * len(x.shape)
             for i in range(self.n_stencil):
-                if np.abs(coeffs[i]) > 0:
+                if abs(coeffs[i]) > 0:
                     start = i
                     stop = -(self.n_stencil - start - 1)
                     if stop >= 0:
@@ -237,18 +239,14 @@ class FiniteDifference(BaseDifferentiation):
                     s[self.axis] = slice(start, stop)
                     interior = interior + x[tuple(s)] * coeffs[i]
 
-            s[self.axis] = slice(
-                int((self.n_stencil - 1) / 2), int(-(self.n_stencil - 1) / 2)
-            )
+            s[self.axis] = slice((self.n_stencil - 1) // 2, -(self.n_stencil - 1) // 2)
             x_dot[tuple(s)] = interior
 
         else:
             coeffs = self._coefficients(t)
             interior = self._accumulate(coeffs, x)
             s = [slice(None)] * len(x.shape)
-            s[self.axis] = slice(
-                int((self.n_stencil - 1) / 2), int(-(self.n_stencil - 1) / 2)
-            )
+            s[self.axis] = slice((self.n_stencil - 1) // 2, -(self.n_stencil - 1) // 2)
             x_dot[tuple(s)] = interior
 
         # Boundaries
@@ -260,8 +258,8 @@ class FiniteDifference(BaseDifferentiation):
 
                 s[self.axis] = np.concatenate(
                     [
-                        np.arange(0, int((self.n_stencil - 1) / 2)),
-                        -np.flip(1 + np.arange(1, int((self.n_stencil - 1) / 2))),
+                        np.arange(0, (self.n_stencil - 1) // 2),
+                        -np.flip(1 + np.arange(1, (self.n_stencil - 1) // 2)),
                         [-1],
                     ]
                 )
@@ -274,8 +272,8 @@ class FiniteDifference(BaseDifferentiation):
 
                 s[self.axis] = np.concatenate(
                     [
-                        np.arange(0, int((self.n_stencil - 1) / 2)),
-                        -np.flip(1 + np.arange(1, int((self.n_stencil - 1) / 2))),
+                        np.arange(0, (self.n_stencil - 1) // 2),
+                        -np.flip(1 + np.arange(1, (self.n_stencil - 1) // 2)),
                         np.array([-1]),
                     ]
                 )

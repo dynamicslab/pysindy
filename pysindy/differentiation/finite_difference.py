@@ -6,15 +6,12 @@ from .base import BaseDifferentiation
 class FiniteDifference(BaseDifferentiation):
     """Finite difference derivatives.
 
-    For now only first, second, and higher-even-order finite
-    difference methods have been implemented.
-
     Parameters
     ----------
     order: int, optional (default 2)
         The order of the finite difference method to be used.
-        Currently only centered differences are implemented,
-        and order must be a multiple of 2
+        Currently only centered differences are implemented, for even order
+        and left-off-centered differences for odd order
 
     d : int, optional (default 1)
         The order of derivative to take.  Must be non-negative.
@@ -64,7 +61,7 @@ class FiniteDifference(BaseDifferentiation):
         periodic=False,
     ):
 
-        if order <= 0 or not isinstance(order, int) or order % 2 == 1:
+        if order <= 0 or not isinstance(order, int):
             raise ValueError("order must be a positive even int")
         if d < 0:
             raise ValueError("differentiation order must be a nonnegative int")
@@ -76,8 +73,12 @@ class FiniteDifference(BaseDifferentiation):
         self.drop_endpoints = drop_endpoints
         self.periodic = periodic
         self.n_stencil = 2 * ((self.d + 1) // 2) - 1 + self.order
-        # self.n_stencil = int(2 * np.floor((self.d + 1) / 2) - 1 + self.order)
         self.n_stencil_forward = self.d + self.order
+
+        if self.d >= self.n_stencil or self.d > self.n_stencil_forward:
+            raise ValueError(
+                "combination of d and order not implement. use larger order"
+            )
 
     def _coefficients(self, t):
         nt = len(t)
@@ -101,19 +102,34 @@ class FiniteDifference(BaseDifferentiation):
     def _coefficients_boundary_forward(self, t):
         # use the same stencil for each boundary point,
         # but change the evaluation point
-        left = np.arange(self.n_stencil_forward)[:, np.newaxis] * np.ones(
-            (self.n_stencil - 1) // 2, dtype=int
-        )
-        right = (-1 - np.arange(self.n_stencil_forward))[:, np.newaxis] * np.ones(
-            (self.n_stencil - 1) // 2, dtype=int
-        )
+        if self.order % 2 == 0:
+            left = np.arange(self.n_stencil_forward)[:, np.newaxis] * np.ones(
+                (self.n_stencil - 1) // 2, dtype=int
+            )
+            right = (-1 - np.arange(self.n_stencil_forward))[:, np.newaxis] * np.ones(
+                (self.n_stencil - 1) // 2, dtype=int
+            )
+            tinds = np.concatenate(
+                [
+                    np.arange((self.n_stencil - 1) // 2, dtype=int),
+                    np.flip(-1 - np.arange((self.n_stencil - 1) // 2, dtype=int)),
+                ]
+            )
+        else:
+            left = np.arange(self.n_stencil_forward)[:, np.newaxis] * np.ones(
+                (self.n_stencil - 1) // 2, dtype=int
+            )
+            right = (-1 - np.arange(self.n_stencil_forward))[:, np.newaxis] * np.ones(
+                1 + (self.n_stencil - 1) // 2, dtype=int
+            )
+            tinds = np.concatenate(
+                [
+                    np.arange((self.n_stencil - 1) // 2, dtype=int),
+                    np.flip(-1 - np.arange(1 + (self.n_stencil - 1) // 2, dtype=int)),
+                ]
+            )
         self.stencil_inds = np.concatenate([left, right], axis=1)
-        tinds = np.concatenate(
-            [
-                np.arange((self.n_stencil - 1) // 2, dtype=int),
-                np.flip(-1 - np.arange((self.n_stencil - 1) // 2, dtype=int)),
-            ]
-        )
+
         pows = np.arange(self.n_stencil_forward)[np.newaxis, :, np.newaxis]
 
         if np.isscalar(t):
@@ -214,6 +230,8 @@ class FiniteDifference(BaseDifferentiation):
         Apply finite difference method.
         """
         x_dot = np.full_like(x, fill_value=np.nan)
+        s = [slice(None)] * len(x.shape)
+
         if self.axis < 0:
             # Need to do this for _accumulate function to work properly?
             self.axis = len(x.shape) + self.axis
@@ -229,7 +247,6 @@ class FiniteDifference(BaseDifferentiation):
             dims[self.axis] = x.shape[self.axis] - (self.n_stencil - 1)
             interior = np.zeros(dims)
             # Slightly faster version of self._accumulate for uniform grid
-            s = [slice(None)] * len(x.shape)
             for i in range(self.n_stencil):
                 if abs(coeffs[i]) > 0:
                     start = i
@@ -245,7 +262,6 @@ class FiniteDifference(BaseDifferentiation):
         else:
             coeffs = self._coefficients(t)
             interior = self._accumulate(coeffs, x)
-            s = [slice(None)] * len(x.shape)
             s[self.axis] = slice((self.n_stencil - 1) // 2, -(self.n_stencil - 1) // 2)
             x_dot[tuple(s)] = interior
 
@@ -256,13 +272,25 @@ class FiniteDifference(BaseDifferentiation):
                 coeffs = self._coefficients_boundary_forward(t)
                 boundary = self._accumulate(coeffs, x)
 
-                s[self.axis] = np.concatenate(
-                    [
-                        np.arange(0, (self.n_stencil - 1) // 2),
-                        -np.flip(1 + np.arange(1, (self.n_stencil - 1) // 2)),
-                        [-1],
-                    ]
-                )
+                if self.order % 2 == 0:
+                    s[self.axis] = np.concatenate(
+                        [
+                            np.arange((self.n_stencil - 1) // 2, dtype=int),
+                            np.flip(
+                                -1 - np.arange((self.n_stencil - 1) // 2, dtype=int)
+                            ),
+                        ]
+                    )
+                else:
+                    s[self.axis] = np.concatenate(
+                        [
+                            np.arange((self.n_stencil - 1) // 2, dtype=int),
+                            np.flip(
+                                -1 - np.arange(1 + (self.n_stencil - 1) // 2, dtype=int)
+                            ),
+                        ]
+                    )
+
                 x_dot[tuple(s)] = boundary
 
             # Central differences on boundary with periodic bcs
@@ -277,6 +305,7 @@ class FiniteDifference(BaseDifferentiation):
                         np.array([-1]),
                     ]
                 )
+
                 x_dot[tuple(s)] = boundary
 
         return x_dot

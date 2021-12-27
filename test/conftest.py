@@ -194,7 +194,7 @@ def data_derivative_1d():
 
 @pytest.fixture
 def data_derivative_periodic_1d():
-    t = np.linspace(0, 2 * np.pi, 1000)
+    t = np.arange(1000) * 2 * np.pi / 1000
     x = 2 * np.sin(t)
     x_dot = 2 * np.cos(t).reshape(-1, 1)
     return t, x, x_dot
@@ -214,7 +214,7 @@ def data_derivative_2d():
 
 @pytest.fixture
 def data_derivative_periodic_2d():
-    t = np.linspace(0, 2 * np.pi, 1000)
+    t = np.arange(1000) * 2 * np.pi / 1000
     x = np.zeros((1000, 2))
     x[:, 0] = 2 * np.sin(t)
     x[:, 1] = 2 * np.cos(2 * t)

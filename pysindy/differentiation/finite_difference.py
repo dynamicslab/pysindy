@@ -11,10 +11,10 @@ class FiniteDifference(BaseDifferentiation):
     order: int, optional (default 2)
         The order of the finite difference method to be used.
         Currently only centered differences are implemented, for even order
-        and left-off-centered differences for odd order
+        and left-off-centered differences for odd order.
 
     d : int, optional (default 1)
-        The order of derivative to take.  Must be non-negative.
+        The order of derivative to take.  Must be positive integer.
 
     axis: int, optional (default 0)
         The axis to differentiate along.
@@ -62,9 +62,9 @@ class FiniteDifference(BaseDifferentiation):
     ):
 
         if order <= 0 or not isinstance(order, int):
-            raise ValueError("order must be a positive even int")
-        if d < 0:
-            raise ValueError("differentiation order must be a nonnegative int")
+            raise ValueError("order must be a positive int")
+        if d <= 0:
+            raise ValueError("differentiation order must be a positive int")
 
         self.d = d
         self.order = order
@@ -75,9 +75,11 @@ class FiniteDifference(BaseDifferentiation):
         self.n_stencil = 2 * ((self.d + 1) // 2) - 1 + self.order
         self.n_stencil_forward = self.d + self.order
 
-        if self.d >= self.n_stencil or self.d > self.n_stencil_forward:
+        if self.d >= self.n_stencil:
             raise ValueError(
-                "combination of d and order not implement. use larger order"
+                "This combination of d and order is not implemented. "
+                "It is required that d >= stencil_size, where "
+                "stencil_size = 2 * (d + 1) // 2 - 1 + order. "
             )
 
     def _coefficients(self, t):
@@ -102,32 +104,22 @@ class FiniteDifference(BaseDifferentiation):
     def _coefficients_boundary_forward(self, t):
         # use the same stencil for each boundary point,
         # but change the evaluation point
+        left = np.arange(self.n_stencil_forward)[:, np.newaxis] * np.ones(
+            (self.n_stencil - 1) // 2, dtype=int
+        )
         if self.order % 2 == 0:
-            left = np.arange(self.n_stencil_forward)[:, np.newaxis] * np.ones(
-                (self.n_stencil - 1) // 2, dtype=int
-            )
-            right = (-1 - np.arange(self.n_stencil_forward))[:, np.newaxis] * np.ones(
-                (self.n_stencil - 1) // 2, dtype=int
-            )
-            tinds = np.concatenate(
-                [
-                    np.arange((self.n_stencil - 1) // 2, dtype=int),
-                    np.flip(-1 - np.arange((self.n_stencil - 1) // 2, dtype=int)),
-                ]
-            )
+            right_len = (self.n_stencil - 1) // 2
         else:
-            left = np.arange(self.n_stencil_forward)[:, np.newaxis] * np.ones(
-                (self.n_stencil - 1) // 2, dtype=int
-            )
-            right = (-1 - np.arange(self.n_stencil_forward))[:, np.newaxis] * np.ones(
-                1 + (self.n_stencil - 1) // 2, dtype=int
-            )
-            tinds = np.concatenate(
-                [
-                    np.arange((self.n_stencil - 1) // 2, dtype=int),
-                    np.flip(-1 - np.arange(1 + (self.n_stencil - 1) // 2, dtype=int)),
-                ]
-            )
+            right_len = 1 + (self.n_stencil - 1) // 2
+        right = (-1 - np.arange(self.n_stencil_forward))[:, np.newaxis] * np.ones(
+            right_len, dtype=int
+        )
+        tinds = np.concatenate(
+            [
+                np.arange((self.n_stencil - 1) // 2, dtype=int),
+                np.flip(-1 - np.arange(right_len, dtype=int)),
+            ]
+        )
         self.stencil_inds = np.concatenate([left, right], axis=1)
 
         pows = np.arange(self.n_stencil_forward)[np.newaxis, :, np.newaxis]
@@ -255,15 +247,11 @@ class FiniteDifference(BaseDifferentiation):
                         stop = None
                     s[self.axis] = slice(start, stop)
                     interior = interior + x[tuple(s)] * coeffs[i]
-
-            s[self.axis] = slice((self.n_stencil - 1) // 2, -(self.n_stencil - 1) // 2)
-            x_dot[tuple(s)] = interior
-
         else:
             coeffs = self._coefficients(t)
             interior = self._accumulate(coeffs, x)
-            s[self.axis] = slice((self.n_stencil - 1) // 2, -(self.n_stencil - 1) // 2)
-            x_dot[tuple(s)] = interior
+        s[self.axis] = slice((self.n_stencil - 1) // 2, -(self.n_stencil - 1) // 2)
+        x_dot[tuple(s)] = interior
 
         # Boundaries
         if not self.drop_endpoints:
@@ -273,31 +261,19 @@ class FiniteDifference(BaseDifferentiation):
                 boundary = self._accumulate(coeffs, x)
 
                 if self.order % 2 == 0:
-                    s[self.axis] = np.concatenate(
-                        [
-                            np.arange((self.n_stencil - 1) // 2, dtype=int),
-                            np.flip(
-                                -1 - np.arange((self.n_stencil - 1) // 2, dtype=int)
-                            ),
-                        ]
-                    )
+                    right_len = (self.n_stencil - 1) // 2
                 else:
-                    s[self.axis] = np.concatenate(
-                        [
-                            np.arange((self.n_stencil - 1) // 2, dtype=int),
-                            np.flip(
-                                -1 - np.arange(1 + (self.n_stencil - 1) // 2, dtype=int)
-                            ),
-                        ]
-                    )
-
-                x_dot[tuple(s)] = boundary
-
+                    right_len = 1 + (self.n_stencil - 1) // 2
+                s[self.axis] = np.concatenate(
+                    [
+                        np.arange((self.n_stencil - 1) // 2, dtype=int),
+                        np.flip(-1 - np.arange(right_len, dtype=int)),
+                    ]
+                )
             # Central differences on boundary with periodic bcs
             else:
                 coeffs = self._coefficients_boundary_periodic(t)
                 boundary = self._accumulate(coeffs, x)
-
                 s[self.axis] = np.concatenate(
                     [
                         np.arange(0, (self.n_stencil - 1) // 2),
@@ -305,7 +281,5 @@ class FiniteDifference(BaseDifferentiation):
                         np.array([-1]),
                     ]
                 )
-
-                x_dot[tuple(s)] = boundary
-
+            x_dot[tuple(s)] = boundary
         return x_dot

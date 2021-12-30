@@ -92,44 +92,37 @@ def data_discrete_time_multiple_trajectories():
 
 @pytest.fixture
 def data_1d_random_pde():
-    nx = 8
-    t = np.linspace(0, 10, nx)
+    n = 10
+    t = np.linspace(0, 10, n)
     dt = t[1] - t[0]
-    x = np.linspace(0, 10, nx)
-    u = np.random.randn(nx, nx, 1)
+    x = np.linspace(0, 10, n)
+    u = np.random.randn(n, n, 1)
     u_dot = FiniteDifference(axis=1)._differentiate(u, t=dt)
-    u_flattened = np.reshape(u, (nx * nx, 1))
-    u_dot_flattened = np.reshape(u_dot, (nx * nx, 1))
-
-    return x, u_flattened, u_dot_flattened
+    return x, u, u_dot
 
 
 @pytest.fixture
 def data_2d_random_pde():
-    nx = 8
-    ny = 8
-    t = np.linspace(0, 10, nx)
+    n = 4
+    t = np.linspace(0, 10, n)
     dt = t[1] - t[0]
-    x = np.linspace(0, 10, nx)
-    y = np.linspace(0, 10, ny)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
     X, Y = np.meshgrid(x, y)
     spatial_grid = np.asarray([X, Y]).T
-    u = np.random.randn(nx, ny, nx, 2)
+    u = np.random.randn(n, n, n, 2)
     u_dot = FiniteDifference(axis=2)._differentiate(u, t=dt)
-    u_flattened = np.reshape(u, (nx * ny * nx, 2))
-    u_dot_flattened = np.reshape(u_dot, (nx * ny * nx, 2))
-
-    return spatial_grid, u_flattened, u_dot_flattened
+    return spatial_grid, u, u_dot
 
 
 @pytest.fixture
 def data_3d_random_pde():
-    nx = 8
-    t = np.linspace(0, 10, nx)
+    n = 4
+    t = np.linspace(0, 10, n)
     dt = t[1] - t[0]
-    x = np.linspace(0, 10, nx)
-    y = np.linspace(0, 10, nx)
-    z = np.linspace(0, 10, nx)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
+    z = np.linspace(0, 10, n)
     (
         X,
         Y,
@@ -137,18 +130,14 @@ def data_3d_random_pde():
     ) = np.meshgrid(x, y, z, indexing="ij")
     spatial_grid = np.asarray([X, Y, Z])
     spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
-    n = len(x)
     u = np.random.randn(n, n, n, n, 2)
     u_dot = FiniteDifference(axis=3)._differentiate(u, t=dt)
-    u_flattened = np.reshape(u, (n ** 4, 2))
-    u_dot_flattened = np.reshape(u_dot, (n ** 4, 2))
-
-    return spatial_grid, u_flattened, u_dot_flattened
+    return spatial_grid, u, u_dot
 
 
 @pytest.fixture
 def data_5d_random_pde():
-    n = 8
+    n = 4
     t = np.linspace(0, n, n)
     dt = t[1] - t[0]
     v = np.linspace(0, 10, n)
@@ -161,28 +150,22 @@ def data_5d_random_pde():
     spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 4, 5, 0])
     u = np.random.randn(n, n, n, n, n, n, 2)
     u_dot = FiniteDifference(axis=5)._differentiate(u, t=dt)
-    u_flattened = np.reshape(u, (n ** 6, 2))
-    u_dot_flattened = np.reshape(u_dot, (n ** 6, 2))
-
-    return spatial_grid, u_flattened, u_dot_flattened
+    return spatial_grid, u, u_dot
 
 
 @pytest.fixture
 def data_2d_resolved_pde():
-    nx = 8
-    ny = 8
+    n = 8
     nt = 1000
     t = np.linspace(0, 10, nt)
     dt = t[1] - t[0]
-    x = np.linspace(0, 10, nx)
-    y = np.linspace(0, 10, ny)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
     X, Y = np.meshgrid(x, y)
     spatial_grid = np.asarray([X, Y]).T
-    u = np.random.randn(nx, ny, nt, 2)
+    u = np.random.randn(n, n, nt, 2)
     u_dot = FiniteDifference(axis=-2)._differentiate(u, t=dt)
-    u_flattened = np.reshape(u, (nx * ny * nt, 2))
-    u_dot_flattened = np.reshape(u_dot, (nx * ny * nt, 2))
-    return spatial_grid, u_flattened, u_dot_flattened
+    return spatial_grid, u, u_dot
 
 
 @pytest.fixture
@@ -193,7 +176,7 @@ def data_derivative_1d():
 
 
 @pytest.fixture
-def data_derivative_periodic_1d():
+def data_derivative_quasiperiodic_1d():
     t = np.arange(1000) * 2 * np.pi / 1000
     x = 2 * np.sin(t)
     x_dot = 2 * np.cos(t).reshape(-1, 1)
@@ -213,7 +196,7 @@ def data_derivative_2d():
 
 
 @pytest.fixture
-def data_derivative_periodic_2d():
+def data_derivative_quasiperiodic_2d():
     t = np.arange(1000) * 2 * np.pi / 1000
     x = np.zeros((1000, 2))
     x[:, 0] = 2 * np.sin(t)

@@ -68,10 +68,14 @@ def test_centered_difference_1d(data_derivative_1d):
     np.testing.assert_allclose(centered_difference(x), x_dot)
 
 
-def test_spectral_derivative_1d(data_derivative_periodic_1d):
-    t, x, x_dot = data_derivative_periodic_1d
+def test_spectral_derivative_1d(data_derivative_quasiperiodic_1d):
+    t, x, x_dot = data_derivative_quasiperiodic_1d
     spectral_derivative = SpectralDerivative()
     np.testing.assert_allclose(spectral_derivative(x, t), x_dot, atol=1e-12)
+    centered_difference = FiniteDifference(order=2, periodic=True)._differentiate(x, t)
+    np.testing.assert_allclose(
+        centered_difference[0], centered_difference[-1], rtol=1e-4
+    )
 
 
 def test_centered_difference_2d(data_derivative_2d):
@@ -80,10 +84,14 @@ def test_centered_difference_2d(data_derivative_2d):
     np.testing.assert_allclose(centered_difference(x), x_dot)
 
 
-def test_spectral_derivative_2d(data_derivative_periodic_2d):
-    t, x, x_dot = data_derivative_periodic_2d
+def test_spectral_derivative_2d(data_derivative_quasiperiodic_2d):
+    t, x, x_dot = data_derivative_quasiperiodic_2d
     spectral_derivative = SpectralDerivative()
     np.testing.assert_allclose(spectral_derivative(x, t), x_dot, atol=1e-12)
+    centered_difference = FiniteDifference(order=2, periodic=True)._differentiate(x, t)
+    np.testing.assert_allclose(
+        centered_difference[0, 0], centered_difference[-1, 0], rtol=1e-4
+    )
 
 
 def test_centered_difference_2d_uniform(data_derivative_2d):
@@ -115,6 +123,11 @@ def test_centered_difference_xy_yx(data_2dspatial):
     u_xy = FiniteDifference(order=2, d=1, axis=1)._differentiate(u_x, y_grid)
     u_yx = FiniteDifference(order=2, d=1, axis=0)._differentiate(u_y, x_grid)
     np.testing.assert_allclose(u_xy, u_yx)
+    u_y = FiniteDifference(order=1, d=1, axis=1)._differentiate(u, y_grid)
+    u_x = FiniteDifference(order=1, d=1, axis=0)._differentiate(u, x_grid)
+    u_xy = FiniteDifference(order=1, d=1, axis=1)._differentiate(u_x, y_grid)
+    u_yx = FiniteDifference(order=1, d=1, axis=0)._differentiate(u_y, x_grid)
+    np.testing.assert_allclose(u_xy, u_yx)
 
 
 def test_centered_difference_hot(data_derivative_2d):
@@ -122,6 +135,13 @@ def test_centered_difference_hot(data_derivative_2d):
     t = np.linspace(0, x.shape[0], x.shape[0])
     dt = t[1] - t[0]
     atol = 1e-8
+    for d in range(1, 2):
+        forward_difference = FiniteDifference(order=1, d=d)._differentiate
+        np.testing.assert_allclose(
+            forward_difference(x, t=dt),
+            forward_difference(x, t=t),
+            atol=atol,
+        )
     for d in range(1, 6):
         centered_difference = FiniteDifference(order=2, d=d)._differentiate
         np.testing.assert_allclose(
@@ -130,7 +150,7 @@ def test_centered_difference_hot(data_derivative_2d):
             atol=atol,
         )
     for d in range(1, 6):
-        spectral_deriv = SpectralDerivative(d=d, axis=-2)._differentiate
+        spectral_deriv = SpectralDerivative(d=d)._differentiate
         np.testing.assert_allclose(
             spectral_deriv(x, t=dt),
             spectral_deriv(x, t=t),
@@ -180,6 +200,12 @@ def test_order_error():
         FiniteDifference(d=-1)
     with pytest.raises(ValueError):
         FiniteDifference(d=2, order=1)
+    with pytest.raises(ValueError):
+        FiniteDifference(d=1, order=0.5)
+    with pytest.raises(ValueError):
+        FiniteDifference(d=1, order=0)
+    with pytest.raises(ValueError):
+        FiniteDifference(d=0, order=1)
 
 
 def test_base_class(data_derivative_1d):
@@ -312,6 +338,13 @@ def test_centered_difference_hot_axis(data_2d_resolved_pde):
     t = np.linspace(0, 10, 1000)
     dt = t[1] - t[0]
     atol = 1e-8
+    for d in range(1, 2):
+        forward_difference = FiniteDifference(order=1, d=d, axis=-2)._differentiate
+        np.testing.assert_allclose(
+            forward_difference(x, t=dt),
+            forward_difference(x, t=t),
+            atol=atol,
+        )
     for d in range(1, 6):
         centered_difference = FiniteDifference(order=2, d=d, axis=-2)._differentiate
         np.testing.assert_allclose(

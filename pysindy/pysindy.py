@@ -29,6 +29,7 @@ from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
+from .utils import convert_u_dot_integral
 from .utils import drop_nan_rows
 from .utils import drop_random_rows
 from .utils import equations
@@ -299,6 +300,15 @@ class SINDy(BaseEstimator):
         """
         if t is None:
             t = self.t_default
+        if isinstance(self.feature_library, WeakPDELibrary):
+            x_dot = convert_u_dot_integral(x, self.feature_library)
+            x = x.reshape(x.size // x.shape[-1], x.shape[-1])
+        if isinstance(self.feature_library, PDELibrary):
+            x_orig = x
+            x = x.reshape(x.size // x.shape[-1], x.shape[-1])
+            if x_dot is None:
+                x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x_orig, t=t)
+                x_dot = x_dot.reshape(x.shape)
         if u is None:
             self.n_control_features_ = 0
         else:

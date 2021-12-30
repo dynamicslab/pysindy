@@ -364,8 +364,11 @@ def supports_multiple_targets(estimator):
         return False
 
 
-# Convert u_dot into a weak form using a pre-defined weak pde library
 def convert_u_dot_integral(u, weak_pde_library):
+    """
+    Takes a full set of spatiotemporal fields u(x, t) and finds the weak
+    form of u_dot using a pre-defined weak pde library.
+    """
     K = weak_pde_library.K
     gdim = weak_pde_library.grid_ndim
     u_dot_integral = np.zeros((K, u.shape[-1]))
@@ -374,12 +377,12 @@ def convert_u_dot_integral(u, weak_pde_library):
     w_diff = -weak_pde_library._smooth_ppoly(deriv_orders)
     for j in range(u.shape[-1]):
         u_interp = RegularGridInterpolator(
-            weak_pde_library.grid_pts, np.take(u, j, axis=-1)
+            tuple(weak_pde_library.grid_pts), np.take(u, j, axis=-1)
         )
         for k in range(K):
             u_new = u_interp(np.take(weak_pde_library.XT, k, axis=0))
             u_dot_integral_temp = trapezoid(
-                np.take(w_diff, k, axis=0) * u_new,
+                w_diff[k] * u_new,
                 x=weak_pde_library.xtgrid_k[k, :, 0],
                 axis=0,
             )

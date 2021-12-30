@@ -24,7 +24,6 @@ from pysindy.feature_library import WeakPDELibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import STLSQ
-from pysindy.utils import convert_u_dot_integral
 
 
 def test_form_custom_library():
@@ -549,25 +548,22 @@ def test_generalized_library(data_lorenz):
 
 
 # Helper function for testing PDE libraries
-def pde_library_helper(library, u_flattened, u_dot_flattened, coef_first_dim):
+def pde_library_helper(library, u, coef_first_dim):
     opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
     model = SINDy(optimizer=opt, feature_library=library)
-    model.fit(u_flattened, x_dot=u_dot_flattened)
+    model.fit(u)
     assert np.any(opt.coef_ != 0.0)
 
     n_features = len(model.get_feature_names())
-    model.fit(
-        u_flattened, x_dot=u_dot_flattened, ensemble=True, n_subset=50, n_models=10
-    )
+    model.fit(u, ensemble=True, n_subset=50, n_models=10)
     assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
 
-    model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
+    model.fit(u, library_ensemble=True, n_models=10)
     assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
 
 
 def test_1D_pdes(data_1d_random_pde):
-    spatial_grid, u_flattened, u_dot_flattened = data_1d_random_pde
-
+    spatial_grid, u, _ = data_1d_random_pde
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
@@ -578,12 +574,11 @@ def test_1D_pdes(data_1d_random_pde):
         include_bias=True,
         is_uniform=True,
     )
-    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 1)
+    pde_library_helper(pde_lib, u, 1)
 
 
 def test_2D_pdes(data_2d_random_pde):
-    spatial_grid, u_flattened, u_dot_flattened = data_2d_random_pde
-
+    spatial_grid, u, _ = data_2d_random_pde
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
@@ -594,12 +589,11 @@ def test_2D_pdes(data_2d_random_pde):
         include_bias=True,
         is_uniform=True,
     )
-    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 2)
+    pde_library_helper(pde_lib, u, 2)
 
 
 def test_3D_pdes(data_3d_random_pde):
-    spatial_grid, u_flattened, u_dot_flattened = data_3d_random_pde
-
+    spatial_grid, u, _ = data_3d_random_pde
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
@@ -610,12 +604,11 @@ def test_3D_pdes(data_3d_random_pde):
         include_bias=True,
         is_uniform=True,
     )
-    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 2)
+    pde_library_helper(pde_lib, u, 2)
 
 
 def test_5D_pdes(data_5d_random_pde):
-    spatial_grid, u_flattened, u_dot_flattened = data_5d_random_pde
-
+    spatial_grid, u, _ = data_5d_random_pde
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
@@ -626,15 +619,14 @@ def test_5D_pdes(data_5d_random_pde):
         include_bias=True,
         is_uniform=True,
     )
-    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 2)
+    pde_library_helper(pde_lib, u, 2)
 
 
 def test_1D_weak_pdes():
-    t = np.linspace(0, 10, 20)
-    x = np.linspace(0, 10, 20)
-    nx = len(x)
-    u = np.random.randn(nx, len(t), 1)
-    u_flattened = np.reshape(u, (nx * len(t), 1))
+    n = 4
+    t = np.linspace(0, 10, n)
+    x = np.linspace(0, 10, n)
+    u = np.random.randn(n, n, 1)
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     X, T = np.meshgrid(x, t, indexing="ij")
@@ -651,22 +643,18 @@ def test_1D_weak_pdes():
         is_uniform=False,
         num_pts_per_domain=20,
     )
-    u_dot_integral = convert_u_dot_integral(u, pde_lib)
-
-    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 1)
+    pde_library_helper(pde_lib, u, 1)
 
 
 def test_2D_weak_pdes():
-    t = np.linspace(0, 10, 20)
-    x = np.linspace(0, 10, 20)
-    y = np.linspace(0, 10, 20)
+    n = 4
+    t = np.linspace(0, 10, n)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
     X, Y, T = np.meshgrid(x, y, t, indexing="ij")
     spatiotemporal_grid = np.asarray([X, Y, T])
     spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 0])
-    nx = len(x)
-    ny = len(y)
-    u = np.random.randn(nx, ny, len(t), 1)
-    u_flattened = np.reshape(u, (nx * ny * len(t), 1))
+    u = np.random.randn(n, n, n, 1)
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = WeakPDELibrary(
@@ -680,22 +668,19 @@ def test_2D_weak_pdes():
         is_uniform=False,
         num_pts_per_domain=10,
     )
-    u_dot_integral = convert_u_dot_integral(u, pde_lib)
-
-    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 1)
+    pde_library_helper(pde_lib, u, 1)
 
 
 def test_3D_weak_pdes():
-    t = np.linspace(0, 10, 7)
-    x = np.linspace(0, 10, 7)
-    y = np.linspace(0, 10, 7)
-    z = np.linspace(0, 10, 7)
+    n = 4
+    t = np.linspace(0, 10, n)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
+    z = np.linspace(0, 10, n)
     X, Y, Z, T = np.meshgrid(x, y, z, t, indexing="ij")
     spatiotemporal_grid = np.asarray([X, Y, Z, T])
     spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 4, 0])
-    n = len(x)
     u = np.random.randn(n, n, n, n, 2)
-    u_flattened = np.reshape(u, (n ** 4, 2))
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = WeakPDELibrary(
@@ -709,13 +694,11 @@ def test_3D_weak_pdes():
         is_uniform=False,
         num_pts_per_domain=4,
     )
-    u_dot_integral = convert_u_dot_integral(u, pde_lib)
-
-    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 2)
+    pde_library_helper(pde_lib, u, 2)
 
 
 def test_5D_weak_pdes():
-    n = 6
+    n = 4
     t = np.linspace(0, 10, n)
     v = np.linspace(0, 10, n)
     w = np.linspace(0, 10, n)
@@ -726,7 +709,6 @@ def test_5D_weak_pdes():
     spatiotemporal_grid = np.asarray([V, W, X, Y, Z, T])
     spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 4, 5, 6, 0])
     u = np.random.randn(n, n, n, n, n, n, 2)
-    u_flattened = np.reshape(u, (n ** 6, 2))
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = WeakPDELibrary(
@@ -739,9 +721,7 @@ def test_5D_weak_pdes():
         is_uniform=False,
         num_pts_per_domain=4,
     )
-    u_dot_integral = convert_u_dot_integral(u, pde_lib)
-
-    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 2)
+    pde_library_helper(pde_lib, u, 2)
 
 
 def test_sindypi_library(data_lorenz):
@@ -785,5 +765,3 @@ def test_sindypi_library(data_lorenz):
     assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(
         sindy_opt.coef_[3, :] != 0.0
     )
-
-    sindy_library.get_feature_names()

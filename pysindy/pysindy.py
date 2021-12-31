@@ -1,16 +1,7 @@
 import warnings
 from typing import Sequence
 
-import numpy.random
-from numpy import concatenate
-from numpy import insert
-from numpy import isscalar
-from numpy import median
-from numpy import ndim
-from numpy import newaxis
-from numpy import sort
-from numpy import vstack
-from numpy import zeros
+import numpy as np
 from scipy.integrate import odeint
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
@@ -23,6 +14,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
+from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
 from .feature_library import SINDyPILibrary
@@ -300,15 +292,6 @@ class SINDy(BaseEstimator):
         """
         if t is None:
             t = self.t_default
-        if isinstance(self.feature_library, WeakPDELibrary):
-            x_dot = convert_u_dot_integral(x, self.feature_library)
-            x = x.reshape(x.size // x.shape[-1], x.shape[-1])
-        if isinstance(self.feature_library, PDELibrary):
-            x_orig = x
-            x = x.reshape(x.size // x.shape[-1], x.shape[-1])
-            if x_dot is None:
-                x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x_orig, t=t)
-                x_dot = x_dot.reshape(x.shape)
         if u is None:
             self.n_control_features_ = 0
         else:
@@ -320,6 +303,11 @@ class SINDy(BaseEstimator):
                 trim_last_point=trim_last_point,
             )
             self.n_control_features_ = u.shape[1]
+        if isinstance(x, list) and not multiple_trajectories:
+            raise ValueError(
+                "x is a list (assumed to be a list of trajectories), but "
+                "multiple_trajectories is set to False."
+            )
 
         if (ensemble or library_ensemble) and n_models is None:
             n_models = 20
@@ -339,6 +327,23 @@ class SINDy(BaseEstimator):
             raise ValueError("n_models must be a positive integer")
         if (n_subset is not None) and n_subset <= 0:
             raise ValueError("n_subset must be a positive integer")
+        if x_dot is None:
+            if isinstance(self.feature_library, WeakPDELibrary):
+                x_dot = convert_u_dot_integral(x, self.feature_library)
+            elif isinstance(self.feature_library, PDELibrary):
+                x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
+            elif isinstance(self.feature_library, GeneralizedLibrary):
+                weak_libraries = isinstance(
+                    np.array(self.feature_library.libraries_), WeakPDELibrary
+                )
+                if np.any(weak_libraries):
+                    x_dot = convert_u_dot_integral(
+                        x, self.feature_library.libraries_[weak_libraries]
+                    )
+                elif np.any(
+                    isinstance(np.array(self.feature_library.libraries_), PDELibrary)
+                ):
+                    x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
         if multiple_trajectories:
             x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         else:
@@ -362,7 +367,7 @@ class SINDy(BaseEstimator):
 
         # Append control variables
         if self.n_control_features_ > 0:
-            x = concatenate((x, u), axis=1)
+            x = np.concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known unless using weak PDE form
         if not isinstance(self.feature_library, WeakPDELibrary):
@@ -406,8 +411,8 @@ class SINDy(BaseEstimator):
                 n_output_features = self.feature_library.n_output_features_
                 self.coef_list = []
                 for i in range(n_models):
-                    self.feature_library.ensemble_indices = sort(
-                        numpy.random.choice(
+                    self.feature_library.ensemble_indices = np.sort(
+                        np.random.choice(
                             range(n_output_features),
                             n_candidates_to_drop,
                             replace=False,
@@ -416,7 +421,7 @@ class SINDy(BaseEstimator):
                     self.model.fit(x, x_dot)
                     coef_partial = self.model.steps[-1][1].coef_
                     for j in range(n_candidates_to_drop):
-                        coef_partial = insert(
+                        coef_partial = np.insert(
                             coef_partial,
                             self.feature_library.ensemble_indices[j],
                             0,
@@ -438,8 +443,8 @@ class SINDy(BaseEstimator):
                         pde_library_flag,
                     )
                     for j in range(n_models):
-                        self.feature_library.ensemble_indices = sort(
-                            numpy.random.choice(
+                        self.feature_library.ensemble_indices = np.sort(
+                            np.random.choice(
                                 range(n_output_features),
                                 n_candidates_to_drop,
                                 replace=False,
@@ -448,7 +453,7 @@ class SINDy(BaseEstimator):
                         self.model.fit(x_ensemble, x_dot_ensemble)
                         coef_partial = self.model.steps[-1][1].coef_
                         for k in range(n_candidates_to_drop):
-                            coef_partial = insert(
+                            coef_partial = np.insert(
                                 coef_partial,
                                 self.feature_library.ensemble_indices[k],
                                 0,
@@ -461,7 +466,7 @@ class SINDy(BaseEstimator):
         # Get average coefficients if ensembling was used
         if ensemble or library_ensemble:
             if ensemble_aggregator is None:
-                self.model.coef_ = median(self.coef_list, axis=0)
+                self.model.coef_ = np.median(self.coef_list, axis=0)
             else:
                 self.model_coef_ = ensemble_aggregator(self.coef_list)
 
@@ -520,25 +525,45 @@ class SINDy(BaseEstimator):
                     " not used when the model was fit"
                 )
             if multiple_trajectories:
+                x_shapes = []
+                for xi in x:
+                    x_shapes.append(xi.shape)
                 x = [validate_input(xi) for xi in x]
-                return [self.model.predict(xi) for xi in x]
+                return [
+                    self.model.predict(xi).reshape(x_shapes[i])
+                    for i, xi in enumerate(x)
+                ]
             else:
+                x_shape = np.shape(x)
                 x = validate_input(x)
-                return self.model.predict(x)
+                return self.model.predict(x).reshape(x_shape)
         else:
             if multiple_trajectories:
+                x_shapes = []
+                for xi in x:
+                    x_shapes.append(xi.shape)
                 x = [validate_input(xi) for xi in x]
                 u = validate_control_variables(
                     x, u, multiple_trajectories=True, return_array=False
                 )
+                print(
+                    x[1].shape,
+                    u[1].shape,
+                    self.model.predict(np.concatenate((x[1], u[1]), axis=1)).shape,
+                )
                 return [
-                    self.model.predict(concatenate((xi, ui), axis=1))
-                    for xi, ui in zip(x, u)
+                    self.model.predict(np.concatenate((xi, ui), axis=1)).reshape(
+                        x_shapes[i]
+                    )
+                    for i, (xi, ui) in enumerate(zip(x, u))
                 ]
             else:
+                x_shape = np.shape(x)
                 x = validate_input(x)
                 u = validate_control_variables(x, u)
-                return self.model.predict(concatenate((x, u), axis=1))
+                return self.model.predict(np.concatenate((x, u), axis=1)).reshape(
+                    x_shape
+                )
 
     def equations(self, precision=3):
         """
@@ -690,18 +715,16 @@ class SINDy(BaseEstimator):
                 else:
                     x_dot = self.differentiation_method(x, t)
 
-        if ndim(x_dot) == 1:
+        if x_dot.ndim == 1:
             x_dot = x_dot.reshape(-1, 1)
 
         # Append control variables
         if u is not None and self.n_control_features_ > 0:
-            x = concatenate((x, u), axis=1)
+            x = np.concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known (usually endpoints)
         if not isinstance(self.feature_library, WeakPDELibrary):
             x, x_dot = drop_nan_rows(x, x_dot)
-        else:
-            self.feature_library.temporal_grid = t
 
         x_dot_predict = self.model.predict(x)
         return metric(x_dot, x_dot_predict, **metric_kws)
@@ -785,7 +808,7 @@ class SINDy(BaseEstimator):
                     x_dot = [validate_input(xd, t) for xd in x_dot]
 
         if return_array:
-            return vstack(x), vstack(x_dot)
+            return np.vstack(x), np.vstack(x_dot)
         else:
             return x, x_dot
 
@@ -939,16 +962,16 @@ class SINDy(BaseEstimator):
 
             # New version of sklearn changes attribute name
             if float(__version__[:3]) >= 1.0:
-                x = zeros((t, self.n_features_in_ - self.n_control_features_))
+                x = np.zeros((t, self.n_features_in_ - self.n_control_features_))
             else:
-                x = zeros((t, self.n_input_features_ - self.n_control_features_))
+                x = np.zeros((t, self.n_input_features_ - self.n_control_features_))
             x[0] = x0
 
             if u is None or self.n_control_features_ == 0:
                 if u is not None:
                     warnings.warn(
-                        "Control variables u were ignored because control variables"
-                        " were not used when the model was fit"
+                        "Control variables u were ignored because control "
+                        "variables were not used when the model was fit"
                     )
                 for i in range(1, t):
                     x[i] = self.predict(x[i - 1 : i])
@@ -956,12 +979,12 @@ class SINDy(BaseEstimator):
                         return x[: i + 1]
             else:
                 for i in range(1, t):
-                    x[i] = self.predict(x[i - 1 : i], u=u[i - 1, newaxis])
+                    x[i] = self.predict(x[i - 1 : i], u=u[i - 1, np.newaxis])
                     if check_stop_condition(x[i]):
                         return x[: i + 1]
             return x
         else:
-            if isscalar(t):
+            if np.isscalar(t):
                 raise ValueError(
                     "For continuous time model, t must be an array of time"
                     " points at which to simulate"
@@ -970,12 +993,12 @@ class SINDy(BaseEstimator):
             if u is None or self.n_control_features_ == 0:
                 if u is not None:
                     warnings.warn(
-                        "Control variables u were ignored because control variables"
-                        " were not used when the model was fit"
+                        "Control variables u were ignored because control "
+                        "variables were not used when the model was fit"
                     )
 
                 def rhs(t, x):
-                    return self.predict(x[newaxis, :])[0]
+                    return self.predict(x[np.newaxis, :])[0]
 
             else:
                 if not callable(u):
@@ -988,22 +1011,24 @@ class SINDy(BaseEstimator):
 
                     t = t[:-1]
                     warnings.warn(
-                        "Last time point dropped in simulation because interpolation"
-                        " of control input was used. To avoid this, pass in a callable"
-                        " for u."
+                        "Last time point dropped in simulation because "
+                        "interpolation of control input was used. To avoid "
+                        "this, pass in a callable for u."
                     )
                 else:
                     u_fun = u
 
-                if ndim(u_fun(t[0])) == 1:
+                if u_fun(t[0]).ndim == 1:
 
                     def rhs(t, x):
-                        return self.predict(x[newaxis, :], u_fun(t).reshape(1, -1))[0]
+                        return self.predict(x[np.newaxis, :], u_fun(t).reshape(1, -1))[
+                            0
+                        ]
 
                 else:
 
                     def rhs(t, x):
-                        return self.predict(x[newaxis, :], u_fun(t))[0]
+                        return self.predict(x[np.newaxis, :], u_fun(t))[0]
 
             # Need to hard-code below, because odeint and solve_ivp
             # have different syntax and integration options.

@@ -713,3 +713,18 @@ def test_bad_ensemble_weakform():
     model = SINDy(feature_library=pde_lib)
     with pytest.raises(ValueError):
         model.fit(x=x, x_dot=x_dot, ensemble=True)
+
+
+def test_data_shapes():
+    model = SINDy()
+    n = 10
+    x = np.ones(n)
+    model.fit(x)
+    x = np.ones((n, 2))
+    model.fit(x)
+    x = np.ones((n, n, 2))
+    model.fit(x)
+    x = np.ones((n, n, n, 2))
+    model.fit(x)
+    x = np.ones((n, n, n, n, 2))
+    model.fit(x)

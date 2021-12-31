@@ -2,15 +2,7 @@ from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
 
-from numpy import array
-from numpy import concatenate
-from numpy import empty
-from numpy import newaxis
-from numpy import ones
-from numpy import product
-from numpy import reshape
-from numpy import shape
-from numpy import sum
+import numpy as np
 from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
@@ -144,12 +136,12 @@ class PDELibrary(BaseFeatureLibrary):
             )
 
         if spatial_grid is None:
-            spatial_grid = array([])
+            spatial_grid = np.array([])
 
         # list of derivatives
         indices = ()
-        if len(shape(spatial_grid)) == 1:
-            spatial_grid = reshape(spatial_grid, (len(spatial_grid), 1))
+        if np.array(spatial_grid).ndim == 1:
+            spatial_grid = np.reshape(spatial_grid, (len(spatial_grid), 1))
         dims = spatial_grid.shape[:-1]
         self.grid_dims = dims
         self.grid_ndim = len(dims)
@@ -159,10 +151,10 @@ class PDELibrary(BaseFeatureLibrary):
 
         multiindices = []
         for ind in iproduct(*indices):
-            current = array(ind)
-            if sum(ind) > 0 and sum(ind) <= derivative_order:
+            current = np.array(ind)
+            if np.sum(ind) > 0 and np.sum(ind) <= derivative_order:
                 multiindices.append(current)
-        multiindices = array(multiindices)
+        multiindices = np.array(multiindices)
         num_derivatives = len(multiindices)
 
         self.num_derivatives = num_derivatives
@@ -320,21 +312,23 @@ class PDELibrary(BaseFeatureLibrary):
             if n_features != self.n_input_features_:
                 raise ValueError("x shape does not match training shape")
 
-        if product(self.grid_dims) > 0:
-            num_time = n_samples // product(self.grid_dims)
+        if np.product(self.grid_dims) > 0:
+            num_time = n_samples // np.product(self.grid_dims)
         else:
             num_time = n_samples
 
-        xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
+        xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
 
         # derivative terms
-        library_derivatives = empty(
+        library_derivatives = np.empty(
             (n_samples, n_features * self.num_derivatives), dtype=x.dtype
         )
         library_idx = 0
 
         for multiindex in self.multiindices:
-            derivs = reshape(x, concatenate([self.grid_dims, [num_time], [n_features]]))
+            derivs = np.reshape(
+                x, np.concatenate([self.grid_dims, [num_time], [n_features]])
+            )
             for axis in range(self.grid_ndim):
                 if multiindex[axis] > 0:
                     s = [0 for dim in self.spatial_grid.shape]
@@ -346,7 +340,7 @@ class PDELibrary(BaseFeatureLibrary):
                         is_uniform=self.is_uniform,
                         periodic=self.periodic,
                     )._differentiate(derivs, self.spatial_grid[tuple(s)])
-            library_derivatives[:, library_idx : library_idx + n_features] = reshape(
+            library_derivatives[:, library_idx : library_idx + n_features] = np.reshape(
                 derivs, (n_samples, n_features)
             )
             library_idx += n_features
@@ -359,13 +353,13 @@ class PDELibrary(BaseFeatureLibrary):
             ):
                 n_library_terms += 1
 
-        library_functions = empty((n_samples, n_library_terms), dtype=x.dtype)
+        library_functions = np.empty((n_samples, n_library_terms), dtype=x.dtype)
         library_idx = 0
         for f in self.functions:
             for c in self._combinations(
                 n_features, f.__code__.co_argcount, self.interaction_only
             ):
-                library_functions[:, library_idx] = reshape(
+                library_functions[:, library_idx] = np.reshape(
                     f(*[x[:, j] for j in c]), (n_samples)
                 )
                 library_idx += 1
@@ -374,7 +368,7 @@ class PDELibrary(BaseFeatureLibrary):
 
         # constant term
         if self.include_bias:
-            xp[:, library_idx] = ones(n_samples, dtype=x.dtype)
+            xp[:, library_idx] = np.ones(n_samples, dtype=x.dtype)
             library_idx += 1
 
         # library function terms
@@ -393,8 +387,9 @@ class PDELibrary(BaseFeatureLibrary):
                 :,
                 library_idx : library_idx
                 + n_library_terms * self.num_derivatives * n_features,
-            ] = reshape(
-                library_functions[:, :, newaxis] * library_derivatives[:, newaxis, :],
+            ] = np.reshape(
+                library_functions[:, :, np.newaxis]
+                * library_derivatives[:, np.newaxis, :],
                 (n_samples, n_library_terms * self.num_derivatives * n_features),
             )
             library_idx += n_library_terms * self.num_derivatives * n_features

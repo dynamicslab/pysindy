@@ -358,6 +358,7 @@ def test_simulate_discrete_time(data):
 def test_predict_discrete_time(data):
     x, u = data
     model = SINDy(discrete_time=True)
+    print(x, u)
     model.fit(x, u=u)
     assert len(model.predict(x, u=u)) == len(x)
 

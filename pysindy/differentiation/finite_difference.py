@@ -66,13 +66,13 @@ class FiniteDifference(BaseDifferentiation):
         if d <= 0:
             raise ValueError("differentiation order must be a positive int")
 
-        self.d = d
-        self.order = order
+        self.d = int(d)
+        self.order = int(order)
         self.is_uniform = is_uniform
         self.axis = axis
         self.drop_endpoints = drop_endpoints
         self.periodic = periodic
-        self.n_stencil = 2 * ((self.d + 1) // 2) - 1 + self.order
+        self.n_stencil = int(2 * ((self.d + 1) // 2) - 1 + self.order)
         self.n_stencil_forward = self.d + self.order
 
         if self.d >= self.n_stencil:

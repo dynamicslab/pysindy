@@ -2,21 +2,7 @@ from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
 
-import numpy.random
-from numpy import array
-from numpy import concatenate
-from numpy import empty
-from numpy import floor
-from numpy import isscalar
-from numpy import linspace
-from numpy import meshgrid
-from numpy import prod
-from numpy import reshape
-from numpy import shape
-from numpy import sum as np_sum
-from numpy import take
-from numpy import transpose
-from numpy import zeros
+import numpy as np
 from scipy.integrate import trapezoid
 from scipy.interpolate import RegularGridInterpolator
 from scipy.special import hyp2f1
@@ -191,8 +177,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         # list of integrals
         indices = ()
-        if len(shape(spatiotemporal_grid)) == 1:
-            spatiotemporal_grid = reshape(
+        if np.array(spatiotemporal_grid).ndim == 1:
+            spatiotemporal_grid = np.reshape(
                 spatiotemporal_grid, (len(spatiotemporal_grid), 1)
             )
         dims = spatiotemporal_grid.shape[:-1]
@@ -205,10 +191,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         multiindices = []
         for ind in iproduct(*indices):
-            current = array(ind)
-            if sum(ind) > 0 and sum(ind) <= derivative_order:
+            current = np.array(ind)
+            if np.sum(ind) > 0 and np.sum(ind) <= derivative_order:
                 multiindices.append(current)
-        multiindices = array(multiindices)
+        multiindices = np.array(multiindices)
         num_derivatives = len(multiindices)
 
         self.num_derivatives = num_derivatives
@@ -222,8 +208,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         xt1, xt2 = self._get_spatial_endpoints()
         L_xt = xt2 - xt1
         if self.H_xt is not None:
-            if isscalar(self.H_xt):
-                self.H_xt = array(self.grid_ndim * [self.H_xt])
+            if np.isscalar(self.H_xt):
+                self.H_xt = np.array(self.grid_ndim * [self.H_xt])
             if self.grid_ndim != len(self.H_xt):
                 raise ValueError(
                     "The user-defined grid (spatiotemporal_grid) and "
@@ -232,7 +218,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     "dimensions. For instance, if spatiotemporal_grid is 4D, "
                     "then H_xt should be a 4D list of the subdomain lengths."
                 )
-            if any(self.H_xt <= zeros(len(self.H_xt))):
+            if any(self.H_xt <= np.zeros(len(self.H_xt))):
                 raise ValueError("Values in H_xt must be a positive float")
             elif any(self.H_xt >= L_xt / 2.0):
                 raise ValueError(
@@ -253,8 +239,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self._set_up_grids()
 
     def _get_spatial_endpoints(self):
-        x1 = zeros(self.grid_ndim)
-        x2 = zeros(self.grid_ndim)
+        x1 = np.zeros(self.grid_ndim)
+        x2 = np.zeros(self.grid_ndim)
         for i in range(self.grid_ndim):
             inds = [slice(None)] * (self.grid_ndim + 1)
             for j in range(self.grid_ndim):
@@ -266,28 +252,28 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     def _set_up_grids(self):
         xt1, xt2 = self._get_spatial_endpoints()
-        domain_centers = zeros((self.K, self.grid_ndim))
+        domain_centers = np.zeros((self.K, self.grid_ndim))
         for i in range(self.grid_ndim):
-            domain_centers[:, i] = numpy.random.uniform(
+            domain_centers[:, i] = np.random.uniform(
                 xt1[i] + self.H_xt[i], xt2[i] - self.H_xt[i], size=self.K
             )
-        xtgrid_k = zeros((self.K, self.num_pts_per_domain, self.grid_ndim))
+        xtgrid_k = np.zeros((self.K, self.num_pts_per_domain, self.grid_ndim))
         xt1_k = domain_centers - self.H_xt
         xt2_k = domain_centers + self.H_xt
         for k in range(self.K):
             for i in range(self.grid_ndim):
-                xtgrid_k[k, :, i] = linspace(
+                xtgrid_k[k, :, i] = np.linspace(
                     xt1_k[k, i], xt2_k[k, i], self.num_pts_per_domain
                 )
-        XT = zeros(
+        XT = np.zeros(
             (self.K, *(self.grid_ndim * [self.num_pts_per_domain]), self.grid_ndim)
         )
         inds_XT = [slice(None)] * XT.ndim
         for k in range(self.K):
             inds_XT[0] = k
-            grid_k = array([xtgrid_k[k, :, i] for i in range(self.grid_ndim)])
-            XT[tuple(inds_XT)] = transpose(
-                array(meshgrid(*grid_k, indexing="ij")),
+            grid_k = np.array([xtgrid_k[k, :, i] for i in range(self.grid_ndim)])
+            XT[tuple(inds_XT)] = np.transpose(
+                np.array(np.meshgrid(*grid_k, indexing="ij")),
                 [*range(1, self.grid_ndim + 1), 0],
             )
         self.xtgrid_k = xtgrid_k
@@ -304,7 +290,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
             grid_pts.append(self.spatiotemporal_grid[tuple(inds)])
         self.grid_pts = grid_pts
 
-        self.domain_centers_expanded = zeros(
+        self.domain_centers_expanded = np.zeros(
             (self.K, *(self.grid_ndim * [self.num_pts_per_domain]), self.grid_ndim)
         )
         domain_inds = [slice(None)] * self.XT.ndim
@@ -322,7 +308,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     def _poly_derivative(self, xt, d_xt):
         """Compute analytic derivatives instead of relying on finite diffs"""
-        return prod(
+        return np.prod(
             (2 * xt) ** d_xt
             * (xt ** 2 - 1) ** (self.p - d_xt)
             * hyp2f1((1 - d_xt) / 2.0, -d_xt / 2.0, self.p + 1 - d_xt, 1 - 1 / xt ** 2)
@@ -491,7 +477,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         if self.spatiotemporal_grid is not None:
             n_samples = self.K
 
-        xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
+        xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
 
         # library function terms
         n_library_terms = 0
@@ -502,31 +488,33 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 n_library_terms += 1
 
         # get original-size library functions before integrating
-        nonweak_functions = empty((n_samples_original, n_library_terms), dtype=x.dtype)
+        nonweak_functions = np.empty(
+            (n_samples_original, n_library_terms), dtype=x.dtype
+        )
         library_idx = 0
         for f in self.functions:
             for c in self._combinations(
                 n_features, f.__code__.co_argcount, self.interaction_only
             ):
-                nonweak_functions[:, library_idx] = reshape(
+                nonweak_functions[:, library_idx] = np.reshape(
                     f(*[x[:, j] for j in c]), (n_samples_original)
                 )
                 library_idx += 1
 
-        library_functions = empty((n_samples, n_library_terms), dtype=x.dtype)
+        library_functions = np.empty((n_samples, n_library_terms), dtype=x.dtype)
         library_idx = 0
 
-        integral_weights = self._smooth_ppoly(zeros(self.grid_ndim))
-        func_final = zeros(self.K)
+        integral_weights = self._smooth_ppoly(np.zeros(self.grid_ndim))
+        func_final = np.zeros(self.K)
         for f in self.functions:
             for c in self._combinations(
                 n_features, f.__code__.co_argcount, self.interaction_only
             ):
                 func = f(*[x[:, j] for j in c])
-                func = reshape(func, self.grid_dims)
+                func = np.reshape(func, self.grid_dims)
                 func_interp = RegularGridInterpolator(tuple(self.grid_pts), func)
                 for k in range(self.K):
-                    func_new = func_interp(take(self.XT, k, axis=0))
+                    func_new = func_interp(np.take(self.XT, k, axis=0))
                     func_temp = trapezoid(
                         integral_weights[k] * func_new,
                         x=self.xtgrid_k[k, :, 0],
@@ -542,29 +530,29 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         if self.derivative_order != 0:
             # pure integral terms, need to differentiate the weight functions
-            library_integrals = empty(
+            library_integrals = np.empty(
                 (n_samples, n_features * self.num_derivatives), dtype=x.dtype
             )
-            funcs = reshape(x, concatenate([self.grid_dims, [n_features]]))
+            funcs = np.reshape(x, np.concatenate([self.grid_dims, [n_features]]))
 
             # Build interpolating function for each feature
             func_interp = []
             for j in range(n_features):
                 func_interp.append(
                     RegularGridInterpolator(
-                        tuple(self.grid_pts), take(funcs, j, axis=-1)
+                        tuple(self.grid_pts), np.take(funcs, j, axis=-1)
                     )
                 )
 
             # interpolate all the functions onto each of the subdomains
-            func_new = empty(
+            func_new = np.empty(
                 (self.K, *(self.grid_ndim * [self.num_pts_per_domain]), n_features)
             )
             for k in range(self.K):
-                func_new[k] = transpose(
-                    array(
+                func_new[k] = np.transpose(
+                    np.array(
                         [
-                            func_interp[j](take(self.XT, k, axis=0))
+                            func_interp[j](np.take(self.XT, k, axis=0))
                             for j in range(n_features)
                         ]
                     ),
@@ -572,7 +560,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 )
 
             # Compute derivatives of the subdomain weight functions
-            integral_weight_derivs = empty(
+            integral_weight_derivs = np.empty(
                 (
                     self.K,
                     *(self.grid_ndim * [self.num_pts_per_domain]),
@@ -582,18 +570,18 @@ class WeakPDELibrary(BaseFeatureLibrary):
             deriv_slices = [slice(None)] * integral_weight_derivs.ndim
             # Note excluding temporal derivatives in the feature library
             for deriv_ind, multiindex in enumerate(self.multiindices):
-                derivs = zeros(self.grid_ndim)
+                derivs = np.zeros(self.grid_ndim)
                 for axis in range(self.grid_ndim - 1):
                     if multiindex[axis] > 0:
                         derivs[axis] = multiindex[axis]
                 deriv_slices[-1] = deriv_ind
                 integral_weight_derivs[tuple(deriv_slices)] = self._smooth_ppoly(
                     derivs
-                ) * (-1) ** (np_sum(derivs) % 2)
+                ) * (-1) ** (np.sum(derivs) % 2)
 
             # Arrange all the terms to be integrated...
             # subdomain weight functions * the interpolated functions
-            complete_funcs = empty(
+            complete_funcs = np.empty(
                 (
                     self.K,
                     *(self.grid_ndim * [self.num_pts_per_domain]),
@@ -626,43 +614,46 @@ class WeakPDELibrary(BaseFeatureLibrary):
             # Mixed derivative/non-derivative terms
             if self.include_interaction:
                 # mixed integral terms
-                library_mixed_integrals = empty(
+                library_mixed_integrals = np.empty(
                     (n_samples, n_library_terms * n_features * self.num_derivatives),
                     dtype=x.dtype,
                 )
 
                 # Build interpolating functions for all
                 # the library functions and features.
-                nonweak_terms = reshape(
-                    nonweak_functions, concatenate([self.grid_dims, [n_library_terms]])
+                nonweak_terms = np.reshape(
+                    nonweak_functions,
+                    np.concatenate([self.grid_dims, [n_library_terms]]),
                 )
-                nonweak_id = reshape(x, concatenate([self.grid_dims, [n_features]]))
+                nonweak_id = np.reshape(
+                    x, np.concatenate([self.grid_dims, [n_features]])
+                )
                 func_library_interp = []
                 func_pure_interp = []
                 for j in range(n_library_terms):
                     func_library_interp.append(
                         RegularGridInterpolator(
                             tuple(self.grid_pts),
-                            take(nonweak_terms, j, axis=-1),
+                            np.take(nonweak_terms, j, axis=-1),
                         )
                     )
                     if j < n_features:
                         func_pure_interp.append(
                             RegularGridInterpolator(
                                 tuple(self.grid_pts),
-                                take(nonweak_id, j, axis=-1),
+                                np.take(nonweak_id, j, axis=-1),
                             )
                         )
 
                 # Interpolate library functions and features onto subdomains
-                func_library_new = empty(
+                func_library_new = np.empty(
                     (
                         self.K,
                         *(self.grid_ndim * [self.num_pts_per_domain]),
                         n_library_terms,
                     )
                 )
-                func_pure_new = empty(
+                func_pure_new = np.empty(
                     (
                         self.K,
                         *(self.grid_ndim * [self.num_pts_per_domain]),
@@ -671,8 +662,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 )
 
                 for k in range(self.K):
-                    func_library_new[k] = transpose(
-                        array(
+                    func_library_new[k] = np.transpose(
+                        np.array(
                             [
                                 func_library_interp[j](self.XT[k])
                                 for j in range(n_library_terms)
@@ -680,8 +671,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         ),
                         [*range(1, self.grid_ndim + 1), 0],
                     )
-                    func_pure_new[k] = transpose(
-                        array(
+                    func_pure_new[k] = np.transpose(
+                        np.array(
                             [func_pure_interp[j](self.XT[k]) for j in range(n_features)]
                         ),
                         [*range(1, self.grid_ndim + 1), 0],
@@ -693,7 +684,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 # that this is different than the full derivatives, which are
                 # differentiated on the global grid, and then interpolated
                 # onto the subdomains.
-                derivs_mixed_total = empty(
+                derivs_mixed_total = np.empty(
                     (
                         self.K,
                         *(self.grid_ndim * [self.num_pts_per_domain]),
@@ -701,7 +692,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         self.num_derivatives,
                     )
                 )
-                derivs_pure_total = empty(
+                derivs_pure_total = np.empty(
                     (
                         self.K,
                         *(self.grid_ndim * [self.num_pts_per_domain]),
@@ -714,14 +705,14 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 # Note excluding temporal derivatives in the feature library
                 # and the derivatives are computed within the subdomains
                 for deriv_ind, multiindex in enumerate(self.multiindices):
-                    derivs_mixed = func_library_new * reshape(
+                    derivs_mixed = func_library_new * np.reshape(
                         integral_weights,
-                        concatenate([func_library_new.shape[:-1], [1]]),
+                        np.concatenate([func_library_new.shape[:-1], [1]]),
                     )
                     derivs_pure = func_pure_new.copy()
                     for axis in range(self.grid_ndim - 1):
-                        d_mixed = int(floor(multiindex[axis] / 2.0))
-                        d_pure = int(multiindex[axis] - d_mixed)
+                        d_mixed = multiindex[axis] // 2.0
+                        d_pure = multiindex[axis] - d_mixed
                         for k in range(self.K):
                             if d_mixed > 0:
                                 derivs_mixed[k] = (
@@ -750,7 +741,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     derivs_mixed_total[tuple(deriv_slices)] = derivs_mixed
                     derivs_pure_total[tuple(deriv_slices)] = derivs_pure
                 # Okay, now assemble all the terms to integrate
-                complete_funcs = empty(
+                complete_funcs = np.empty(
                     (
                         self.K,
                         *(self.grid_ndim * [self.num_pts_per_domain]),
@@ -790,7 +781,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     library_mixed_integrals[k, :] = mixed_temp
 
         library_idx = 0
-        constants_final = zeros(self.K)
+        constants_final = np.zeros(self.K)
         # Constant term
         if self.include_bias:
             for k in range(self.K):

@@ -178,21 +178,6 @@ def test_finite_difference(data, order):
     np.testing.assert_allclose(method(x), x_dot)
 
 
-# pytest can also check that methods throw errors when appropriate
-def test_forward_difference_dim():
-    x = np.ones((5, 5, 5))
-    forward_difference = FiniteDifference(order=1)
-    with pytest.raises(ValueError):
-        forward_difference(x)
-
-
-def test_centered_difference_dim():
-    x = np.ones((5, 5, 5))
-    centered_difference = FiniteDifference(order=2)
-    with pytest.raises(ValueError):
-        centered_difference(x)
-
-
 def test_order_error():
     with pytest.raises(ValueError):
         FiniteDifference(order=-1)

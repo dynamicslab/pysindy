@@ -22,7 +22,7 @@ def validate_input(x, t=T_DEFAULT):
         raise ValueError("x must be array-like")
     elif x.ndim == 1:
         x = x.reshape(-1, 1)
-    check_array(x)
+    check_array(x, ensure_2d=False, allow_nd=True)
 
     if t is not T_DEFAULT:
         if t is None:
@@ -40,7 +40,11 @@ def validate_input(x, t=T_DEFAULT):
         else:
             raise ValueError("t must be a scalar or array-like.")
 
-    return x
+    if x.ndim != 2:
+        x_new = x.reshape(x.size // x.shape[-1], x.shape[-1])
+    else:
+        x_new = x
+    return x_new
 
 
 def validate_control_variables(
@@ -86,14 +90,15 @@ def _check_control_shape(x, u, trim_last_point):
         )
     if np.ndim(u) == 0:
         u = u[np.newaxis]
+    if u.ndim == 1:
+        u = u.reshape(-1, 1)
+    elif u.ndim != 2:
+        u = u.reshape(u.size // u.shape[-1], u.shape[-1])
     if len(x) != u.shape[0]:
         raise ValueError(
             "control variables u must have same number of rows as x. "
             "u has {} rows and x has {} rows".format(u.shape[0], len(x))
         )
-
-    if np.ndim(u) == 1:
-        u = u.reshape(-1, 1)
     return u[:-1] if trim_last_point else u
 
 

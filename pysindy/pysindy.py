@@ -392,8 +392,13 @@ class SINDy(BaseEstimator):
             if isinstance(self.feature_library, WeakPDELibrary):
                 if self.feature_library.spatiotemporal_grid is not None:
                     pde_library_flag = "WeakPDE"
+
             if ensemble and not library_ensemble:
                 self.coef_list = []
+                # save the grid
+                if pde_library_flag == "WeakPDE":
+                    old_spatiotemporal_grid = self.feature_library.spatiotemporal_grid
+
                 for i in range(n_models):
                     x_ensemble, x_dot_ensemble = drop_random_rows(
                         x,
@@ -405,6 +410,14 @@ class SINDy(BaseEstimator):
                     )
                     self.model.fit(x_ensemble, x_dot_ensemble)
                     self.coef_list.append(self.model.steps[-1][1].coef_)
+
+                    # reset the grid
+                    if pde_library_flag == "WeakPDE":
+                        self.feature_library.spatiotemporal_grid = (
+                            old_spatiotemporal_grid
+                        )
+                        self.feature_library._set_up_grids()
+
             elif library_ensemble and not ensemble:
                 self.feature_library.library_ensemble = True
                 (self.feature_library).fit(x)

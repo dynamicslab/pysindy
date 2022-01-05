@@ -251,6 +251,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
         return x1, x2
 
     def _set_up_grids(self):
+        dims = self.spatiotemporal_grid.shape[:-1]
+        self.grid_dims = dims
+
         xt1, xt2 = self._get_spatial_endpoints()
         domain_centers = np.zeros((self.K, self.grid_ndim))
         for i in range(self.grid_ndim):

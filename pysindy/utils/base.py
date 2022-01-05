@@ -116,7 +116,10 @@ def drop_random_rows(x, x_dot, n_subset, replace, feature_library, pde_library_f
         if pde_library_flag == "WeakPDE":
             # Weak form needs uniform, ascending grid, so cannot replace
             replace = False
-            spatial_grid = np.take(feature_library.spatiotemporal_grid, 0, axis=-2)
+            s = [slice(None, None)] * len(feature_library.spatiotemporal_grid.shape)
+            s[-2] = 0
+            s[-1] = slice(None, -1)
+            spatial_grid = feature_library.spatiotemporal_grid[tuple(s)]
             temporal_grid = feature_library.grid_pts[-1]
             num_time = len(temporal_grid)
             dims = spatial_grid.shape[:-1]
@@ -142,16 +145,16 @@ def drop_random_rows(x, x_dot, n_subset, replace, feature_library, pde_library_f
         x_new = np.reshape(
             x_shaped[tuple(s0)], (np.product(dims) * n_subset, x.shape[1])
         )
+
         if pde_library_flag == "WeakPDE":
-            x_dot_new = x_dot
-            grids_separate = np.array(
-                [feature_library.grid_pts[i] for i in range(feature_library.grid_ndim)]
-            )
-            spatiotemporal_grid = np.array(np.meshgrid(*grids_separate, indexing="ij"))
-            feature_library.spatiotemporal_grid = np.transpose(
-                spatiotemporal_grid, [*list(range(1, spatiotemporal_grid.ndim)), 0]
-            )
+            spatiotemporal_grid = feature_library.spatiotemporal_grid
+            s1 = [slice(None)] * len(spatiotemporal_grid.shape)
+            s1[-2] = rand_inds
+            new_spatiotemporal_grid = spatiotemporal_grid[tuple(s1)]
+            feature_library.spatiotemporal_grid = new_spatiotemporal_grid
             feature_library._set_up_grids()
+            x_dot_new = convert_u_dot_integral(x_shaped[tuple(s0)], feature_library)
+
         else:
             x_dot_shaped = np.reshape(
                 x_dot, np.concatenate([dims, [num_time], [n_features]])

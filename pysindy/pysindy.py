@@ -327,22 +327,24 @@ class SINDy(BaseEstimator):
             raise ValueError("n_models must be a positive integer")
         if (n_subset is not None) and n_subset <= 0:
             raise ValueError("n_subset must be a positive integer")
+        pde_libraries = False
+        weak_libraries = False
         if x_dot is None:
             if isinstance(self.feature_library, WeakPDELibrary):
                 x_dot = convert_u_dot_integral(x, self.feature_library)
             elif isinstance(self.feature_library, PDELibrary):
                 x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
             elif isinstance(self.feature_library, GeneralizedLibrary):
-                weak_libraries = isinstance(
-                    np.array(self.feature_library.libraries_), WeakPDELibrary
-                )
-                if np.any(weak_libraries):
+                for lib in self.feature_library.libraries_:
+                    if isinstance(lib, WeakPDELibrary):
+                        weak_libraries = True
+                    if isinstance(lib, PDELibrary):
+                        pde_libraries = True
+                if weak_libraries:
                     x_dot = convert_u_dot_integral(
-                        x, self.feature_library.libraries_[weak_libraries]
+                        x, self.feature_library.libraries_[0]
                     )
-                elif np.any(
-                    isinstance(np.array(self.feature_library.libraries_), PDELibrary)
-                ):
+                elif pde_libraries:
                     x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
         if multiple_trajectories:
             x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
@@ -358,7 +360,9 @@ class SINDy(BaseEstimator):
             else:
                 if x_dot is None:
                     x_dot = self.differentiation_method(x, t)
-                else:
+                elif (not isinstance(self.feature_library, WeakPDELibrary)) and (
+                    not weak_libraries
+                ):
                     x_dot = validate_input(x_dot, t)
 
         # Set ensemble variables
@@ -558,11 +562,6 @@ class SINDy(BaseEstimator):
                 x = [validate_input(xi) for xi in x]
                 u = validate_control_variables(
                     x, u, multiple_trajectories=True, return_array=False
-                )
-                print(
-                    x[1].shape,
-                    u[1].shape,
-                    self.model.predict(np.concatenate((x[1], u[1]), axis=1)).shape,
                 )
                 return [
                     self.model.predict(np.concatenate((xi, ui), axis=1)).reshape(

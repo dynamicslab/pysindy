@@ -98,7 +98,7 @@ def data_1d_random_pde():
     x = np.linspace(0, 10, n)
     u = np.random.randn(n, n, 1)
     u_dot = FiniteDifference(axis=1)._differentiate(u, t=dt)
-    return x, u, u_dot
+    return t, x, u, u_dot
 
 
 @pytest.fixture

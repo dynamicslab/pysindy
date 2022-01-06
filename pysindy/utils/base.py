@@ -33,8 +33,8 @@ def validate_input(x, t=T_DEFAULT):
                 raise ValueError("t must be positive")
         # Only apply these tests if t is array-like
         elif isinstance(t, np.ndarray):
-            if not len(t) == x.shape[0]:
-                raise ValueError("Length of t should match x.shape[0].")
+            if not len(t) == x.shape[-2]:
+                raise ValueError("Length of t should match x.shape[-2].")
             if not np.all(t[:-1] < t[1:]):
                 raise ValueError("Values in t should be in strictly increasing order.")
         else:
@@ -116,7 +116,7 @@ def drop_random_rows(x, x_dot, n_subset, replace, feature_library, pde_library_f
         if pde_library_flag == "WeakPDE":
             # Weak form needs uniform, ascending grid, so cannot replace
             replace = False
-            s = [slice(None, None)] * len(feature_library.spatiotemporal_grid.shape)
+            s = [slice(None, None)] * feature_library.spatiotemporal_grid.ndim
             s[-2] = 0
             s[-1] = slice(None, -1)
             spatial_grid = feature_library.spatiotemporal_grid[tuple(s)]
@@ -137,14 +137,20 @@ def drop_random_rows(x, x_dot, n_subset, replace, feature_library, pde_library_f
         if n_subset > num_time:
             n_subset = num_time
         rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
-        x_shaped = np.reshape(x, np.concatenate([dims, [num_time], [n_features]]))
 
+        if len(dims) > 0:
+            x_shaped = np.reshape(x, np.concatenate([dims, [num_time], [n_features]]))
+        else:
+            x_shaped = np.reshape(x, np.concatenate([[num_time], [n_features]]))
         s0 = [slice(dim) for dim in x_shaped.shape]
         s0[len(dims)] = rand_inds
 
-        x_new = np.reshape(
-            x_shaped[tuple(s0)], (np.product(dims) * n_subset, x.shape[1])
-        )
+        if len(dims) > 0:
+            x_new = np.reshape(
+                x_shaped[tuple(s0)], (np.product(dims) * n_subset, x.shape[1])
+            )
+        else:
+            x_new = np.reshape(x_shaped[tuple(s0)], (n_subset, x.shape[1]))
 
         if pde_library_flag == "WeakPDE":
             spatiotemporal_grid = feature_library.spatiotemporal_grid

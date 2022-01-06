@@ -150,6 +150,7 @@ def test_weak_pde_library_bad_parameters(params):
     "params",
     [
         dict(libraries=[]),
+        dict(libraries=[PolynomialLibrary, WeakPDELibrary]),
         dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 0]]),
         dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 1]]),
         dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[1, -1]]),
@@ -547,6 +548,75 @@ def test_generalized_library(data_lorenz):
     assert len(model.get_feature_names()) == 29
 
 
+def test_generalized_library_pde(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    poly_library = PolynomialLibrary(include_bias=False)
+    fourier_library = FourierLibrary()
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_library = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatial_grid=x,
+        include_bias=True,
+        is_uniform=True,
+    )
+
+    # First try without tensor libraries and subset of the input variables
+    sindy_library = GeneralizedLibrary(
+        [poly_library, fourier_library, pde_library],
+    )
+    sindy_opt = STLSQ(threshold=0.25)
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+    )
+    model.fit(u, t=t)
+    model.print()
+    model.get_feature_names()
+    assert len(model.get_feature_names()) == 13
+
+
+def test_generalized_library_weak_pde(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    X, T = np.meshgrid(x, t)
+    XT = np.array([X, T]).T
+    weak_library1 = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatiotemporal_grid=XT,
+        include_bias=True,
+        is_uniform=True,
+    )
+    library_functions = [lambda x: x * x * x]
+    library_function_names = [lambda x: x + x + x]
+    weak_library2 = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=0,
+        spatiotemporal_grid=XT,
+        is_uniform=True,
+    )
+
+    # First try without tensor libraries and subset of the input variables
+    sindy_library = GeneralizedLibrary(
+        [weak_library1, weak_library2],
+    )
+    sindy_opt = STLSQ(threshold=0.25)
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+    )
+    model.fit(u, t=t)
+    model.print()
+    model.get_feature_names()
+    assert len(model.get_feature_names()) == 10
+
+
 # Helper function for testing PDE libraries
 def pde_library_helper(library, u, coef_first_dim):
     opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
@@ -563,7 +633,7 @@ def pde_library_helper(library, u, coef_first_dim):
 
 
 def test_1D_pdes(data_1d_random_pde):
-    spatial_grid, u, _ = data_1d_random_pde
+    _, spatial_grid, u, _ = data_1d_random_pde
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(

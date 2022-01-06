@@ -3,10 +3,11 @@ from typing import Sequence
 
 import numpy as np
 from numpy.random import choice
+from scipy.integrate import trapezoid
+from scipy.interpolate import RegularGridInterpolator
 from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
-
 
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default
@@ -21,7 +22,7 @@ def validate_input(x, t=T_DEFAULT):
         raise ValueError("x must be array-like")
     elif x.ndim == 1:
         x = x.reshape(-1, 1)
-    check_array(x)
+    check_array(x, ensure_2d=False, allow_nd=True)
 
     if t is not T_DEFAULT:
         if t is None:
@@ -32,14 +33,18 @@ def validate_input(x, t=T_DEFAULT):
                 raise ValueError("t must be positive")
         # Only apply these tests if t is array-like
         elif isinstance(t, np.ndarray):
-            if not len(t) == x.shape[0]:
-                raise ValueError("Length of t should match x.shape[0].")
+            if not len(t) == x.shape[-2]:
+                raise ValueError("Length of t should match x.shape[-2].")
             if not np.all(t[:-1] < t[1:]):
                 raise ValueError("Values in t should be in strictly increasing order.")
         else:
             raise ValueError("t must be a scalar or array-like.")
 
-    return x
+    if x.ndim != 2:
+        x_new = x.reshape(x.size // x.shape[-1], x.shape[-1])
+    else:
+        x_new = x
+    return x_new
 
 
 def validate_control_variables(
@@ -85,14 +90,15 @@ def _check_control_shape(x, u, trim_last_point):
         )
     if np.ndim(u) == 0:
         u = u[np.newaxis]
+    if u.ndim == 1:
+        u = u.reshape(-1, 1)
+    elif u.ndim != 2:
+        u = u.reshape(u.size // u.shape[-1], u.shape[-1])
     if len(x) != u.shape[0]:
         raise ValueError(
             "control variables u must have same number of rows as x. "
             "u has {} rows and x has {} rows".format(u.shape[0], len(x))
         )
-
-    if np.ndim(u) == 1:
-        u = u.reshape(-1, 1)
     return u[:-1] if trim_last_point else u
 
 
@@ -102,97 +108,72 @@ def drop_nan_rows(x, x_dot):
     return x, x_dot
 
 
-def drop_random_rows(
-    x, x_dot, n_subset, replace, tgrid, feature_library, is_pde_library
-):
+def drop_random_rows(x, x_dot, n_subset, replace, feature_library, pde_library_flag):
     # Can't choose random n_subset points if data is from a PDE
     # (and therefore is spatially local).
     # Need to unfold it and just choose n_subset from the temporal slices
-    if is_pde_library:
-        spatial_grid = feature_library.spatial_grid
-        num_gridx = (spatial_grid).shape[0]
-        if len(np.shape(spatial_grid)) == 1:
-            num_time = np.shape(x)[0] // num_gridx
-            if n_subset > num_time:
-                n_subset = num_time
+    if pde_library_flag is not None:
+        if pde_library_flag == "WeakPDE":
             # Weak form needs uniform, ascending grid, so cannot replace
-            if feature_library.weak_form:
-                replace = False
-            rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
-            x_shaped = np.reshape(x, (num_gridx, num_time, x.shape[1]))
-            x_shaped = x_shaped[:, rand_inds, :]
-            x_new = np.reshape(x_shaped, (num_gridx * n_subset, x.shape[1]))
-            if not feature_library.weak_form:
-                x_dot_shaped = np.reshape(x_dot, (num_gridx, num_time, x.shape[1]))
-                x_dot_shaped = x_dot_shaped[:, rand_inds, :]
-                x_dot_new = np.reshape(x_dot_shaped, (num_gridx * n_subset, x.shape[1]))
-            elif feature_library.weak_form:
-                x_dot_new = x_dot
-                feature_library.temporal_grid = tgrid[rand_inds]
-        if len(np.shape(spatial_grid)) == 3:
-            num_gridy = (spatial_grid).shape[1]
-            num_time = np.shape(x)[0] // num_gridx // num_gridy
-            if n_subset > num_time:
-                n_subset = num_time
-            # Weak form needs uniform, ascending grid, so cannot replace
-            if feature_library.weak_form:
-                replace = False
-            rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
-            x_shaped = np.reshape(x, (num_gridx, num_gridy, num_time, x.shape[1]))
-            x_shaped = x_shaped[:, :, rand_inds, :]
-            x_new = np.reshape(x_shaped, (num_gridx * num_gridy * n_subset, x.shape[1]))
-            if not feature_library.weak_form:
-                x_dot_shaped = np.reshape(
-                    x_dot, (num_gridx, num_gridy, num_time, x.shape[1])
-                )
-                x_dot_shaped = x_dot_shaped[:, :, rand_inds, :]
-                x_dot_new = np.reshape(
-                    x_dot_shaped, (num_gridx * num_gridy * n_subset, x.shape[1])
-                )
-            elif feature_library.weak_form:
-                x_dot_new = x_dot
-                feature_library.temporal_grid = tgrid[rand_inds]
-        if len(np.shape(spatial_grid)) == 4:
-            num_gridy = (spatial_grid).shape[1]
-            num_gridz = (spatial_grid).shape[2]
-            num_time = np.shape(x)[0] // num_gridx // num_gridy // num_gridz
-            if n_subset > num_time:
-                n_subset = num_time
-            # Weak form needs uniform, ascending grid, so cannot replace
-            if feature_library.weak_form:
-                replace = False
-            rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
-            x_shaped = np.reshape(
-                x, (num_gridx, num_gridy, num_gridz, num_time, x.shape[1])
-            )
-            x_shaped = x_shaped[:, :, :, rand_inds, :]
+            replace = False
+            s = [slice(None, None)] * feature_library.spatiotemporal_grid.ndim
+            s[-2] = 0
+            s[-1] = slice(None, -1)
+            spatial_grid = feature_library.spatiotemporal_grid[tuple(s)]
+            temporal_grid = feature_library.grid_pts[-1]
+            num_time = len(temporal_grid)
+            dims = spatial_grid.shape[:-1]
+        else:
+            # new bagging for arbitrary samples
+            n_samples = x.shape[0]
+            spatial_grid = feature_library.spatial_grid
+            dims = spatial_grid.shape[:-1]
+            if len(dims) > 0:
+                num_time = n_samples // np.product(dims)
+            else:
+                num_time = n_samples
+
+        n_features = x.shape[1]
+        if n_subset > num_time:
+            n_subset = num_time
+        rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
+
+        if len(dims) > 0:
+            x_shaped = np.reshape(x, np.concatenate([dims, [num_time], [n_features]]))
+        else:
+            x_shaped = np.reshape(x, np.concatenate([[num_time], [n_features]]))
+        s0 = [slice(dim) for dim in x_shaped.shape]
+        s0[len(dims)] = rand_inds
+
+        if len(dims) > 0:
             x_new = np.reshape(
-                x_shaped, (num_gridx * num_gridy * num_gridz * n_subset, x.shape[1])
+                x_shaped[tuple(s0)], (np.product(dims) * n_subset, x.shape[1])
             )
-            if not feature_library.weak_form:
-                x_dot_shaped = np.reshape(
-                    x_dot, (num_gridx, num_gridy, num_gridz, num_time, x.shape[1])
-                )
-                x_dot_shaped = x_dot_shaped[:, :, :, rand_inds, :]
-                x_dot_new = np.reshape(
-                    x_dot_shaped,
-                    (num_gridx * num_gridy * num_gridz * n_subset, x.shape[1]),
-                )
-            elif feature_library.weak_form:
-                x_dot_new = x_dot
-                feature_library.temporal_grid = tgrid[rand_inds]
+        else:
+            x_new = np.reshape(x_shaped[tuple(s0)], (n_subset, x.shape[1]))
+
+        if pde_library_flag == "WeakPDE":
+            spatiotemporal_grid = feature_library.spatiotemporal_grid
+            s1 = [slice(None)] * len(spatiotemporal_grid.shape)
+            s1[-2] = rand_inds
+            new_spatiotemporal_grid = spatiotemporal_grid[tuple(s1)]
+            feature_library.spatiotemporal_grid = new_spatiotemporal_grid
+            feature_library._set_up_grids()
+            x_dot_new = convert_u_dot_integral(x_shaped[tuple(s0)], feature_library)
+
+        else:
+            x_dot_shaped = np.reshape(
+                x_dot, np.concatenate([dims, [num_time], [n_features]])
+            )
+            x_dot_new = np.reshape(
+                x_dot_shaped[tuple(s0)], (np.product(dims) * n_subset, x.shape[1])
+            )
     else:
         # Choose random n_subset points to use
         rand_inds = np.sort(choice(range(np.shape(x)[0]), n_subset, replace=replace))
         x_new = x[rand_inds, :]
-        if hasattr(feature_library, "weak_form"):
-            if feature_library.weak_form:
-                x_dot_new = x_dot
-                feature_library.temporal_grid = tgrid[rand_inds]
-            else:
-                x_dot_new = x_dot[rand_inds, :]
-        else:
-            x_dot_new = x_dot[rand_inds, :]
+        x_dot_new = x_dot[rand_inds, :]
+
     return x_new, x_dot_new
 
 
@@ -395,3 +376,33 @@ def supports_multiple_targets(estimator):
         return estimator._more_tags()["multioutput"]
     except (AttributeError, KeyError):
         return False
+
+
+def convert_u_dot_integral(u, weak_pde_library):
+    """
+    Takes a full set of spatiotemporal fields u(x, t) and finds the weak
+    form of u_dot using a pre-defined weak pde library.
+    """
+    K = weak_pde_library.K
+    gdim = weak_pde_library.grid_ndim
+    u_dot_integral = np.zeros((K, u.shape[-1]))
+    deriv_orders = np.zeros(gdim)
+    deriv_orders[-1] = 1
+    w_diff = -weak_pde_library._smooth_ppoly(deriv_orders)
+    for j in range(u.shape[-1]):
+        u_interp = RegularGridInterpolator(
+            tuple(weak_pde_library.grid_pts), np.take(u, j, axis=-1)
+        )
+        for k in range(K):
+            u_new = u_interp(np.take(weak_pde_library.XT, k, axis=0))
+            u_dot_integral_temp = trapezoid(
+                w_diff[k] * u_new,
+                x=weak_pde_library.xtgrid_k[k, :, 0],
+                axis=0,
+            )
+            for i in range(1, gdim):
+                u_dot_integral_temp = trapezoid(
+                    u_dot_integral_temp, x=weak_pde_library.xtgrid_k[k, :, i], axis=0
+                )
+            u_dot_integral[k, j] = u_dot_integral_temp
+    return u_dot_integral

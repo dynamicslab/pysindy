@@ -7,6 +7,7 @@ from .identity_library import IdentityLibrary
 from .pde_library import PDELibrary
 from .polynomial_library import PolynomialLibrary
 from .sindy_pi_library import SINDyPILibrary
+from .weak_pde_library import WeakPDELibrary
 
 __all__ = [
     "ConcatLibrary",
@@ -17,5 +18,6 @@ __all__ = [
     "IdentityLibrary",
     "PolynomialLibrary",
     "PDELibrary",
+    "WeakPDELibrary",
     "SINDyPILibrary",
 ]

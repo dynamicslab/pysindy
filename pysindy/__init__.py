@@ -14,6 +14,7 @@ from . import utils
 from .pysindy import SINDy
 from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
+from .differentiation import SpectralDerivative
 from .differentiation import SINDyDerivative
 from .differentiation import SmoothedFiniteDifference
 from .feature_library import ConcatLibrary
@@ -24,6 +25,7 @@ from .feature_library import FourierLibrary
 from .feature_library import IdentityLibrary
 from .feature_library import PolynomialLibrary
 from .feature_library import PDELibrary
+from .feature_library import WeakPDELibrary
 from .feature_library import SINDyPILibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3

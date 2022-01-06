@@ -3,9 +3,6 @@ Unit tests for feature libraries.
 """
 import numpy as np
 import pytest
-from scipy.integrate import trapezoid
-from scipy.interpolate import RectBivariateSpline
-from scipy.interpolate import RegularGridInterpolator
 from scipy.sparse import coo_matrix
 from scipy.sparse import csc_matrix
 from scipy.sparse import csr_matrix
@@ -23,6 +20,7 @@ from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library import TensoredLibrary
+from pysindy.feature_library import WeakPDELibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import STLSQ
@@ -105,40 +103,6 @@ def test_bad_parameters():
         dict(spatial_grid=range(10), derivative_order=-1),
         dict(spatial_grid=np.zeros((10, 10))),
         dict(spatial_grid=np.zeros((10, 10, 10, 10, 10))),
-        dict(spatial_grid=np.zeros((10, 10, 10, 10, 10))),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, p=-1),
-        dict(weak_form=True, spatial_grid=range(10)),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hx=-1),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hx=11),
-        dict(
-            spatial_grid=np.asarray(np.meshgrid(range(10), range(10))).T,
-            temporal_grid=range(10),
-            weak_form=True,
-            Hy=-1,
-        ),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Hy=11),
-        dict(
-            spatial_grid=np.transpose(
-                np.asarray(np.meshgrid(range(10), range(10), range(10), indexing="ij")),
-                axes=[1, 2, 3, 0],
-            ),
-            temporal_grid=range(10),
-            weak_form=True,
-            Hz=-1,
-        ),
-        dict(
-            spatial_grid=np.transpose(
-                np.asarray(np.meshgrid(range(10), range(10), range(10), indexing="ij")),
-                axes=[1, 2, 3, 0],
-            ),
-            temporal_grid=range(10),
-            weak_form=True,
-            Hz=11,
-        ),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, K=-1),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Ht=11),
-        dict(spatial_grid=range(10), temporal_grid=range(10), weak_form=True, Ht=-1),
-        dict(spatial_grid=range(10), temporal_grid=np.zeros((10, 3)), weak_form=True),
     ],
 )
 def test_pde_library_bad_parameters(params):
@@ -150,7 +114,43 @@ def test_pde_library_bad_parameters(params):
 @pytest.mark.parametrize(
     "params",
     [
+        dict(spatiotemporal_grid=range(10), p=-1),
+        dict(spatiotemporal_grid=range(10), H_xt=-1),
+        dict(spatiotemporal_grid=range(10), H_xt=11),
+        dict(spatiotemporal_grid=range(10), K=-1),
+        dict(),
+        dict(
+            spatiotemporal_grid=np.asarray(np.meshgrid(range(10), range(10))).T,
+            H_xt=-1,
+        ),
+        dict(spatiotemporal_grid=range(10), H_xt=11),
+        dict(
+            spatiotemporal_grid=np.transpose(
+                np.asarray(np.meshgrid(range(10), range(10), range(10), indexing="ij")),
+                axes=[1, 2, 3, 0],
+            ),
+            H_xt=-1,
+        ),
+        dict(
+            spatiotemporal_grid=np.transpose(
+                np.asarray(np.meshgrid(range(10), range(10), range(10), indexing="ij")),
+                axes=[1, 2, 3, 0],
+            ),
+            H_xt=11,
+        ),
+    ],
+)
+def test_weak_pde_library_bad_parameters(params):
+    params["library_functions"] = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    with pytest.raises(ValueError):
+        WeakPDELibrary(**params)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
         dict(libraries=[]),
+        dict(libraries=[PolynomialLibrary, WeakPDELibrary]),
         dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 0]]),
         dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 1]]),
         dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[1, -1]]),
@@ -548,24 +548,92 @@ def test_generalized_library(data_lorenz):
     assert len(model.get_feature_names()) == 29
 
 
+def test_generalized_library_pde(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    poly_library = PolynomialLibrary(include_bias=False)
+    fourier_library = FourierLibrary()
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_library = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatial_grid=x,
+        include_bias=True,
+        is_uniform=True,
+    )
+
+    # First try without tensor libraries and subset of the input variables
+    sindy_library = GeneralizedLibrary(
+        [poly_library, fourier_library, pde_library],
+    )
+    sindy_opt = STLSQ(threshold=0.25)
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+    )
+    model.fit(u, t=t)
+    model.print()
+    model.get_feature_names()
+    assert len(model.get_feature_names()) == 13
+
+
+def test_generalized_library_weak_pde(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    X, T = np.meshgrid(x, t)
+    XT = np.array([X, T]).T
+    weak_library1 = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatiotemporal_grid=XT,
+        include_bias=True,
+        is_uniform=True,
+    )
+    library_functions = [lambda x: x * x * x]
+    library_function_names = [lambda x: x + x + x]
+    weak_library2 = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=0,
+        spatiotemporal_grid=XT,
+        is_uniform=True,
+    )
+
+    # First try without tensor libraries and subset of the input variables
+    sindy_library = GeneralizedLibrary(
+        [weak_library1, weak_library2],
+    )
+    sindy_opt = STLSQ(threshold=0.25)
+    model = SINDy(
+        optimizer=sindy_opt,
+        feature_library=sindy_library,
+    )
+    model.fit(u, t=t)
+    model.print()
+    model.get_feature_names()
+    assert len(model.get_feature_names()) == 10
+
+
 # Helper function for testing PDE libraries
-def pde_library_helper(library, u_flattened, u_dot_flattened, coef_first_dim):
+def pde_library_helper(library, u, coef_first_dim):
     opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
     model = SINDy(optimizer=opt, feature_library=library)
-    model.fit(u_flattened, x_dot=u_dot_flattened)
+    model.fit(u)
     assert np.any(opt.coef_ != 0.0)
 
     n_features = len(model.get_feature_names())
-    model.fit(u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10)
+    model.fit(u, ensemble=True, n_subset=50, n_models=10)
     assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
 
-    model.fit(u_flattened, x_dot=u_dot_flattened, library_ensemble=True, n_models=10)
+    model.fit(u, library_ensemble=True, n_models=10)
     assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
 
 
 def test_1D_pdes(data_1d_random_pde):
-    spatial_grid, u_flattened, u_dot_flattened = data_1d_random_pde
-
+    _, spatial_grid, u, _ = data_1d_random_pde
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
@@ -576,12 +644,11 @@ def test_1D_pdes(data_1d_random_pde):
         include_bias=True,
         is_uniform=True,
     )
-    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 1)
+    pde_library_helper(pde_lib, u, 1)
 
 
 def test_2D_pdes(data_2d_random_pde):
-    spatial_grid, u_flattened, u_dot_flattened = data_2d_random_pde
-
+    spatial_grid, u, _ = data_2d_random_pde
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
@@ -592,12 +659,11 @@ def test_2D_pdes(data_2d_random_pde):
         include_bias=True,
         is_uniform=True,
     )
-    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 2)
+    pde_library_helper(pde_lib, u, 2)
 
 
 def test_3D_pdes(data_3d_random_pde):
-    spatial_grid, u_flattened, u_dot_flattened = data_3d_random_pde
-
+    spatial_grid, u, _ = data_3d_random_pde
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
@@ -608,223 +674,124 @@ def test_3D_pdes(data_3d_random_pde):
         include_bias=True,
         is_uniform=True,
     )
-    pde_library_helper(pde_lib, u_flattened, u_dot_flattened, 2)
+    pde_library_helper(pde_lib, u, 2)
+
+
+def test_5D_pdes(data_5d_random_pde):
+    spatial_grid, u, _ = data_5d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatial_grid=spatial_grid,
+        include_bias=True,
+        is_uniform=True,
+    )
+    pde_library_helper(pde_lib, u, 2)
 
 
 def test_1D_weak_pdes():
-    t = np.linspace(0, 10, 20)
-    x = np.linspace(0, 10, 20)
-    nx = len(x)
-    u = np.random.randn(nx, len(t), 1)
-    u_flattened = np.reshape(u, (nx * len(t), 1))
+    n = 4
+    t = np.linspace(0, 10, n)
+    x = np.linspace(0, 10, n)
+    u = np.random.randn(n, n, 1)
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
+    X, T = np.meshgrid(x, t, indexing="ij")
+    spatiotemporal_grid = np.asarray([X, T])
+    spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 0])
+    pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=4,
-        spatial_grid=x,
-        Hx=0.1,
-        Ht=0.1,
-        temporal_grid=t,
+        spatiotemporal_grid=spatiotemporal_grid,
+        H_xt=0.1,
         include_bias=True,
         K=5,
         is_uniform=False,
-        weak_form=True,
         num_pts_per_domain=20,
     )
-
-    K = pde_lib.K
-    num_pts_per_domain = pde_lib.num_pts_per_domain
-    u_dot_integral = np.zeros((K, 1))
-    u_shaped = np.reshape(u, (len(x), len(t)))
-    u_interp = RectBivariateSpline(x, t, u_shaped)
-    for k in range(K):
-        X = np.ravel(pde_lib.X[k, :, :])
-        t = np.ravel(pde_lib.t[k, :, :])
-        u_new = u_interp.ev(X, t)
-        u_new = np.reshape(u_new, (num_pts_per_domain, num_pts_per_domain, 1))
-        w_diff = pde_lib._smooth_ppoly(
-            np.reshape(pde_lib.xgrid_k[k, :], (num_pts_per_domain, 1)),
-            pde_lib.tgrid_k[k, :],
-            k,
-            0,
-            0,
-            0,
-            1,
-        )
-        u_dot_integral[k] = (-1) * (
-            trapezoid(
-                trapezoid(u_new * w_diff, x=pde_lib.xgrid_k[k, :], axis=0),
-                x=pde_lib.tgrid_k[k, :],
-                axis=0,
-            )
-        )
-
-    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 1)
+    pde_library_helper(pde_lib, u, 1)
 
 
 def test_2D_weak_pdes():
-    t = np.linspace(0, 10, 8)
-    x = np.linspace(0, 10, 8)
-    y = np.linspace(0, 10, 8)
-    X, Y = np.meshgrid(x, y)
-    spatial_grid = np.asarray([X, Y]).T
-    nx = len(x)
-    ny = len(y)
-    u = np.random.randn(nx, ny, len(t), 1)
-    u_flattened = np.reshape(u, (nx * ny * len(t), 1))
+    n = 4
+    t = np.linspace(0, 10, n)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
+    X, Y, T = np.meshgrid(x, y, t, indexing="ij")
+    spatiotemporal_grid = np.asarray([X, Y, T])
+    spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 0])
+    u = np.random.randn(n, n, n, 1)
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
+    pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=4,
-        spatial_grid=spatial_grid,
-        Hx=0.1,
-        Hy=0.1,
-        Ht=0.1,
+        spatiotemporal_grid=spatiotemporal_grid,
+        H_xt=0.1,
         K=2,
-        temporal_grid=t,
         include_bias=True,
         is_uniform=False,
-        weak_form=True,
         num_pts_per_domain=10,
     )
-
-    K = pde_lib.K
-    num_pts_per_domain = pde_lib.num_pts_per_domain
-    u_dot_integral = np.zeros((K, 1))
-    u_shaped = np.reshape(u, (nx, ny, len(t), 1))
-    u_interp = RegularGridInterpolator((x, y, t), u_shaped[:, :, :, 0])
-    for k in range(K):
-        X = np.ravel(pde_lib.X[k, :, :, :])
-        Y = np.ravel(pde_lib.Y[k, :, :, :])
-        t = np.ravel(pde_lib.t[k, :, :, :])
-        XYt = np.array((X, Y, t)).T
-        u_new = u_interp(XYt)
-        u_new = np.reshape(
-            u_new, (num_pts_per_domain, num_pts_per_domain, num_pts_per_domain, 1)
-        )
-        w_diff = pde_lib._smooth_ppoly(
-            np.transpose((pde_lib.xgrid_k[k, :], pde_lib.ygrid_k[k, :])),
-            pde_lib.tgrid_k[k, :],
-            k,
-            0,
-            0,
-            0,
-            1,
-        )
-        u_dot_integral[k, :] = (-1) * (
-            trapezoid(
-                trapezoid(
-                    trapezoid(u_new * w_diff, x=pde_lib.xgrid_k[k, :], axis=0),
-                    x=pde_lib.ygrid_k[k, :],
-                    axis=0,
-                ),
-                x=pde_lib.tgrid_k[k, :],
-                axis=0,
-            )
-        )
-
-    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 1)
+    pde_library_helper(pde_lib, u, 1)
 
 
 def test_3D_weak_pdes():
-    t = np.linspace(0, 10, 7)
-    x = np.linspace(0, 10, 7)
-    y = np.linspace(0, 10, 7)
-    z = np.linspace(0, 10, 7)
-    X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
-    spatial_grid = np.asarray([X, Y, Z])
-    spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
-    n = len(x)
+    n = 4
+    t = np.linspace(0, 10, n)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
+    z = np.linspace(0, 10, n)
+    X, Y, Z, T = np.meshgrid(x, y, z, t, indexing="ij")
+    spatiotemporal_grid = np.asarray([X, Y, Z, T])
+    spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 4, 0])
     u = np.random.randn(n, n, n, n, 2)
-    u_flattened = np.reshape(u, (n ** 4, 2))
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
+    pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=4,
-        spatial_grid=spatial_grid,
-        Hx=0.1,
-        Hy=0.1,
-        Hz=0.1,
-        Ht=0.1,
+        spatiotemporal_grid=spatiotemporal_grid,
+        H_xt=0.1,
         K=2,
-        temporal_grid=t,
         include_bias=True,
         is_uniform=False,
-        weak_form=True,
         num_pts_per_domain=4,
     )
+    pde_library_helper(pde_lib, u, 2)
 
-    K = pde_lib.K
-    num_pts_per_domain = pde_lib.num_pts_per_domain
-    u_dot_integral = np.zeros((K, 2))
-    for kk in range(2):
-        u_interp = RegularGridInterpolator(
-            (
-                pde_lib.spatial_grid[:, 0, 0, 0],
-                pde_lib.spatial_grid[0, :, 0, 1],
-                pde_lib.spatial_grid[0, 0, :, 2],
-                t,
-            ),
-            u[:, :, :, :, kk],
-        )
-        for k in range(K):
-            XYZt = np.array(
-                (
-                    np.ravel(pde_lib.X[k, :, :, :, :]),
-                    np.ravel(pde_lib.Y[k, :, :, :, :]),
-                    np.ravel(pde_lib.Z[k, :, :, :, :]),
-                    np.ravel(pde_lib.t[k, :, :, :, :]),
-                )
-            ).T
-            u_new = u_interp(XYZt)
-            u_new = np.reshape(
-                u_new,
-                (
-                    num_pts_per_domain,
-                    num_pts_per_domain,
-                    num_pts_per_domain,
-                    num_pts_per_domain,
-                    1,
-                ),
-            )
-            w_diff = pde_lib._smooth_ppoly(
-                np.transpose(
-                    (
-                        pde_lib.xgrid_k[k, :],
-                        pde_lib.ygrid_k[k, :],
-                        pde_lib.zgrid_k[k, :],
-                    )
-                ),
-                pde_lib.tgrid_k[k, :],
-                k,
-                0,
-                0,
-                0,
-                1,
-            )
-            u_dot_integral[k, :] = (-1) * (
-                trapezoid(
-                    trapezoid(
-                        trapezoid(
-                            trapezoid(u_new * w_diff, x=pde_lib.xgrid_k[k, :], axis=0),
-                            x=pde_lib.ygrid_k[k, :],
-                            axis=0,
-                        ),
-                        x=pde_lib.zgrid_k[k, :],
-                        axis=0,
-                    ),
-                    x=pde_lib.tgrid_k[k, :],
-                    axis=0,
-                )
-            )
 
-    pde_library_helper(pde_lib, u_flattened, u_dot_integral, 2)
+def test_5D_weak_pdes():
+    n = 4
+    t = np.linspace(0, 10, n)
+    v = np.linspace(0, 10, n)
+    w = np.linspace(0, 10, n)
+    x = np.linspace(0, 10, n)
+    y = np.linspace(0, 10, n)
+    z = np.linspace(0, 10, n)
+    V, W, X, Y, Z, T = np.meshgrid(v, w, x, y, z, t, indexing="ij")
+    spatiotemporal_grid = np.asarray([V, W, X, Y, Z, T])
+    spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 4, 5, 6, 0])
+    u = np.random.randn(n, n, n, n, n, n, 2)
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatiotemporal_grid=spatiotemporal_grid,
+        K=2,
+        include_bias=True,
+        is_uniform=False,
+        num_pts_per_domain=4,
+    )
+    pde_library_helper(pde_lib, u, 2)
 
 
 def test_sindypi_library(data_lorenz):
@@ -868,5 +835,3 @@ def test_sindypi_library(data_lorenz):
     assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(
         sindy_opt.coef_[3, :] != 0.0
     )
-
-    sindy_library.get_feature_names()

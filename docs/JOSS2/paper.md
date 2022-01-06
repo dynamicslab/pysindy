@@ -20,6 +20,8 @@ authors:
     affiliation: 3
   - name: Charles B. Delahunt
     affiliation: 2
+  - name: Zachary G. Nicolaou
+    affiliation: 2
   - name: Kathleen Champion
     affiliation: 2
   - name: Jean-Christophe Loiseau
@@ -81,7 +83,7 @@ Recent variants of the SINDy method are available that address systems with cont
 In order to incorporate these new developments and accommodate the wide variety of possible dynamical systems, we have extended `PySINDy` to a more general setting and added significant new functionality. Our code\footnote{\url{https://github.com/dynamicslab/pysindy}} is thoroughly documented, contains extensive examples, and integrates a wide range of functionality, some of which may be found in a number of other local SINDy implementations\footnote{\url{https://github.com/snagcliffs/PDE-FIND}, \url{https://github.com/eurika-kaiser/SINDY-MPC},\\ \url{https://github.com/dynamicslab/SINDy-PI}, \url{https://github.com/SchatzLabGT/SymbolicRegression},\\ \url{https://github.com/dynamicslab/databook_python}, \url{https://github.com/sheadan/SINDy-BVP},\\ \url{https://github.com/sethhirsh/BayesianSindy}, \url{https://github.com/racdale/sindyr},\\ \url{https://github.com/SciML/DataDrivenDiffEq.jl}, \url{https://github.com/MathBioCU/WSINDy_PDE},\\ \url{https://github.com/pakreinbold/PDE_Discovery_Weak_Formulation}, \url{https://github.com/ZIB-IOL/CINDy}}. In contrast to some of these existing implementations, `PySINDy` is completely open-source, professionally-maintained (for instance, providing unit tests and adhering to PEP8 stylistic standards), and minimally dependent on non-standard Python packages.
 
 # New features
-Given spatiotemporal data $\mathbf{Q}(\mathbf{x}, t) \in \mathbb{R}^{m\times n}$, and optional control inputs $\mathbf{u} \in \mathbb{R}^{m \times r}$ (note $m$ has been redefined here to be the product of the number of spatial measurements and the number of time samples), `PySINDy` can now approximate algebraic systems of PDEs (and corresponding weak forms) in up to 3 spatial dimensions. Assuming the system is described by a function $\mathbf{g}$, we have
+Given spatiotemporal data $\mathbf{Q}(\mathbf{x}, t) \in \mathbb{R}^{m\times n}$, and optional control inputs $\mathbf{u} \in \mathbb{R}^{m \times r}$ (note $m$ has been redefined here to be the product of the number of spatial measurements and the number of time samples), `PySINDy` can now approximate algebraic systems of PDEs (and corresponding weak forms) in an arbitrary number of spatial dimensions. Assuming the system is described by a function $\mathbf{g}$, we have
 \begin{equation}\label{eq:pysindy_eq}
     \mathbf{g}(\mathbf{q},\mathbf q_t, \mathbf q_x, \mathbf q_y, \mathbf q_{xx}, ..., \mathbf{u}) = 0.
 \end{equation}

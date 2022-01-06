@@ -29,9 +29,11 @@ from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
+from pysindy.feature_library import WeakPDELibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
+from pysindy.utils import convert_u_dot_integral
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -641,12 +643,105 @@ def test_ensemble(data_lorenz):
     assert len(model.coef_list) == 10
 
 
+def test_ensemble_pdes(data_1d_random_pde):
+    t, spatial_grid, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatial_grid=spatial_grid,
+        include_bias=True,
+        is_uniform=True,
+    )
+    model = SINDy(feature_library=pde_lib).fit(
+        u, t, ensemble=True, n_models=10, n_subset=len(t) // 2
+    )
+    print(np.shape(model.coef_list))
+    assert len(model.coef_list) == 10
+    model = SINDy(feature_library=pde_lib).fit(
+        u, x_dot=u_dot, ensemble=True, n_models=10, n_subset=len(t) // 2
+    )
+    assert len(model.coef_list) == 10
+
+
+def test_ensemble_weak_pdes(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    X, T = np.meshgrid(x, t)
+    XT = np.array([X, T]).T
+    weak_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatiotemporal_grid=XT,
+        include_bias=True,
+        is_uniform=False,
+    )
+    model = SINDy(feature_library=weak_lib).fit(
+        u, t=t, ensemble=True, n_models=10, n_subset=len(t) // 2
+    )
+    assert len(model.coef_list) == 10
+    model = SINDy(feature_library=weak_lib).fit(
+        u, x_dot=u_dot, ensemble=True, n_models=10, n_subset=len(t) // 2
+    )
+    assert len(model.coef_list) == 10
+
+
 def test_library_ensemble(data_lorenz):
     x, t = data_lorenz
     library = PolynomialLibrary()
-    optimizer = SR3()
-    model = SINDy(feature_library=library, optimizer=optimizer).fit(
-        x, t, library_ensemble=True, n_models=10
+    model = SINDy(feature_library=library).fit(
+        x, t=t, library_ensemble=True, n_models=10
+    )
+    assert len(model.coef_list) == 10
+
+
+def test_library_ensemble_pde(data_1d_random_pde):
+    t, spatial_grid, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatial_grid=spatial_grid,
+        include_bias=True,
+        is_uniform=True,
+    )
+    model = SINDy(feature_library=pde_lib).fit(
+        u, t=t, library_ensemble=True, n_models=10
+    )
+    assert len(model.coef_list) == 10
+    model = SINDy(feature_library=pde_lib).fit(
+        u, x_dot=u_dot, library_ensemble=True, n_models=10
+    )
+    assert len(model.coef_list) == 10
+
+
+def test_library_ensemble_weak_pde(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    X, T = np.meshgrid(x, t)
+    XT = np.array([X, T]).T
+    weak_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatiotemporal_grid=XT,
+        include_bias=True,
+        is_uniform=False,
+    )
+    model = SINDy(feature_library=weak_lib).fit(
+        u, t=t, library_ensemble=True, n_models=10
+    )
+    assert len(model.coef_list) == 10
+    u_dot = convert_u_dot_integral(u, weak_lib)
+    model = SINDy(feature_library=weak_lib).fit(
+        u, x_dot=u_dot, library_ensemble=True, n_models=10
     )
     assert len(model.coef_list) == 10
 
@@ -654,11 +749,57 @@ def test_library_ensemble(data_lorenz):
 def test_both_ensemble(data_lorenz):
     x, t = data_lorenz
     library = PolynomialLibrary()
-    optimizer = SR3()
-    model = SINDy(feature_library=library, optimizer=optimizer).fit(
-        x, t, ensemble=True, library_ensemble=True, n_models=10
+    model = SINDy(feature_library=library).fit(
+        x, t=t, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 100
+    assert len(model.coef_list) == 4
+
+
+def test_both_ensemble_pde(data_1d_random_pde):
+    t, spatial_grid, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatial_grid=spatial_grid,
+        include_bias=True,
+        is_uniform=True,
+    )
+    model = SINDy(feature_library=pde_lib).fit(
+        u, t=t, ensemble=True, library_ensemble=True, n_models=2
+    )
+    assert len(model.coef_list) == 4
+    model = SINDy(feature_library=pde_lib).fit(
+        u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
+    )
+    assert len(model.coef_list) == 4
+
+
+def test_both_ensemble_weak_pde(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    X, T = np.meshgrid(x, t)
+    XT = np.array([X, T]).T
+    weak_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatiotemporal_grid=XT,
+        include_bias=True,
+        is_uniform=False,
+    )
+    model = SINDy(feature_library=weak_lib).fit(
+        u, t=t, ensemble=True, library_ensemble=True, n_models=2
+    )
+    assert len(model.coef_list) == 4
+    u_dot = convert_u_dot_integral(u, weak_lib)
+    model = SINDy(feature_library=weak_lib).fit(
+        u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
+    )
+    assert len(model.coef_list) == 4
 
 
 @pytest.mark.parametrize(
@@ -698,18 +839,33 @@ def test_bad_ensemble_weakform():
     x_dot = np.zeros(100)
     X = np.linspace(0, 10)
     t = np.linspace(0, 10)
+    X, T = np.meshgrid(x, t)
+    XT = np.asarray([X, T]).T
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
+    pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=2,
-        spatial_grid=X,
-        temporal_grid=t,
+        spatiotemporal_grid=XT,
         is_uniform=True,
-        weak_form=True,
     )
 
     model = SINDy(feature_library=pde_lib)
     with pytest.raises(ValueError):
         model.fit(x=x, x_dot=x_dot, ensemble=True)
+
+
+def test_data_shapes():
+    model = SINDy()
+    n = 10
+    x = np.ones(n)
+    model.fit(x)
+    x = np.ones((n, 2))
+    model.fit(x)
+    x = np.ones((n, n, 2))
+    model.fit(x)
+    x = np.ones((n, n, n, 2))
+    model.fit(x)
+    x = np.ones((n, n, n, n, 2))
+    model.fit(x)

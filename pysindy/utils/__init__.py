@@ -1,4 +1,5 @@
 from .base import capped_simplex_projection
+from .base import convert_u_dot_integral
 from .base import drop_nan_rows
 from .base import drop_random_rows
 from .base import equations

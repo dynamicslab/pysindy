@@ -133,7 +133,7 @@ class SSR(BaseOptimizer):
 
     def _model_residual(self, x, y, coef, inds):
         """Choose model with lowest residual error"""
-        x_shape = np.shape(x)[1]
+        x_shape = np.shape(x)[-1]
         c = np.zeros((x_shape, x_shape - 1))
         err = np.zeros(x_shape)
         for i in range(x_shape):

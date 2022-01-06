@@ -21,7 +21,8 @@ class PDELibrary(BaseFeatureLibrary):
         applied to each input variable (but not their derivatives)
 
     derivative_order : int, optional (default 0)
-        Order of derivative to take on each input variable, max 4
+        Order of derivative to take on each input variable,
+        can be arbitrary non-negative integer.
 
     spatial_grid : np.ndarray, optional (default None)
         The spatial grid for computing derivatives

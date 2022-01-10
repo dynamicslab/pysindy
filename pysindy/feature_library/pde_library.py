@@ -324,12 +324,18 @@ class PDELibrary(BaseFeatureLibrary):
         xp_full = np.empty(
             (self.num_trajectories, n_samples, self.n_output_features_), dtype=x.dtype
         )
-        x_full = np.reshape(
-            x,
-            np.concatenate(
-                [[self.num_trajectories], self.grid_dims, [num_time, n_features]]
-            ),
-        )
+        if len(self.spatial_grid) > 0:
+            x_full = np.reshape(
+                x,
+                np.concatenate(
+                    [[self.num_trajectories], self.grid_dims, [num_time, n_features]]
+                ),
+            )
+        else:
+            x_full = np.reshape(
+                x,
+                np.concatenate([[self.num_trajectories], [num_time, n_features]]),
+            )
 
         # Loop over each trajectory
         for trajectory_ind in range(self.num_trajectories):

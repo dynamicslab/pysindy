@@ -119,6 +119,7 @@ class PDELibrary(BaseFeatureLibrary):
         self.include_interaction = include_interaction
         self.is_uniform = is_uniform
         self.periodic = periodic
+        self.num_trajectories = 1
 
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
@@ -305,7 +306,9 @@ class PDELibrary(BaseFeatureLibrary):
 
         x = check_array(x)
 
-        n_samples, n_features = x.shape
+        n_samples_full, n_features = x.shape
+        n_samples = n_samples_full // self.num_trajectories
+
         if float(__version__[:3]) >= 1.0:
             if n_features != self.n_features_in_:
                 raise ValueError("x shape does not match training shape")
@@ -318,81 +321,97 @@ class PDELibrary(BaseFeatureLibrary):
         else:
             num_time = n_samples
 
-        xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
-
-        # derivative terms
-        library_derivatives = np.empty(
-            (n_samples, n_features * self.num_derivatives), dtype=x.dtype
+        xp_full = np.empty(
+            (self.num_trajectories, n_samples, self.n_output_features_), dtype=x.dtype
         )
-        library_idx = 0
+        x_full = np.reshape(
+            x,
+            np.concatenate(
+                [[self.num_trajectories], self.grid_dims, [num_time, n_features]]
+            ),
+        )
 
-        for multiindex in self.multiindices:
-            derivs = np.reshape(
-                x, np.concatenate([self.grid_dims, [num_time], [n_features]])
+        # Loop over each trajectory
+        for trajectory_ind in range(self.num_trajectories):
+            x = np.reshape(x_full[trajectory_ind], (n_samples, n_features))
+            xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
+
+            # derivative terms
+            library_derivatives = np.empty(
+                (n_samples, n_features * self.num_derivatives), dtype=x.dtype
             )
-            for axis in range(self.grid_ndim):
-                if multiindex[axis] > 0:
-                    s = [0 for dim in self.spatial_grid.shape]
-                    s[axis] = slice(self.grid_dims[axis])
-                    s[-1] = axis
-                    derivs = FiniteDifference(
-                        d=multiindex[axis],
-                        axis=axis,
-                        is_uniform=self.is_uniform,
-                        periodic=self.periodic,
-                    )._differentiate(derivs, self.spatial_grid[tuple(s)])
-            library_derivatives[:, library_idx : library_idx + n_features] = np.reshape(
-                derivs, (n_samples, n_features)
-            )
-            library_idx += n_features
+            library_idx = 0
 
-        # library function terms
-        n_library_terms = 0
-        for f in self.functions:
-            for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interaction_only
-            ):
-                n_library_terms += 1
-
-        library_functions = np.empty((n_samples, n_library_terms), dtype=x.dtype)
-        library_idx = 0
-        for f in self.functions:
-            for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interaction_only
-            ):
-                library_functions[:, library_idx] = np.reshape(
-                    f(*[x[:, j] for j in c]), (n_samples)
+            for multiindex in self.multiindices:
+                derivs = np.reshape(
+                    x, np.concatenate([self.grid_dims, [num_time], [n_features]])
                 )
+                for axis in range(self.grid_ndim):
+                    if multiindex[axis] > 0:
+                        s = [0 for dim in self.spatial_grid.shape]
+                        s[axis] = slice(self.grid_dims[axis])
+                        s[-1] = axis
+                        derivs = FiniteDifference(
+                            d=multiindex[axis],
+                            axis=axis,
+                            is_uniform=self.is_uniform,
+                            periodic=self.periodic,
+                        )._differentiate(derivs, self.spatial_grid[tuple(s)])
+                library_derivatives[
+                    :, library_idx : library_idx + n_features
+                ] = np.reshape(derivs, (n_samples, n_features))
+                library_idx += n_features
+
+            # library function terms
+            n_library_terms = 0
+            for f in self.functions:
+                for c in self._combinations(
+                    n_features, f.__code__.co_argcount, self.interaction_only
+                ):
+                    n_library_terms += 1
+
+            library_functions = np.empty((n_samples, n_library_terms), dtype=x.dtype)
+            library_idx = 0
+            for f in self.functions:
+                for c in self._combinations(
+                    n_features, f.__code__.co_argcount, self.interaction_only
+                ):
+                    library_functions[:, library_idx] = np.reshape(
+                        f(*[x[:, j] for j in c]), (n_samples)
+                    )
+                    library_idx += 1
+
+            library_idx = 0
+
+            # constant term
+            if self.include_bias:
+                xp[:, library_idx] = np.ones(n_samples, dtype=x.dtype)
                 library_idx += 1
 
-        library_idx = 0
+            # library function terms
+            xp[:, library_idx : library_idx + n_library_terms] = library_functions
+            library_idx += n_library_terms
 
-        # constant term
-        if self.include_bias:
-            xp[:, library_idx] = np.ones(n_samples, dtype=x.dtype)
-            library_idx += 1
-
-        # library function terms
-        xp[:, library_idx : library_idx + n_library_terms] = library_functions
-        library_idx += n_library_terms
-
-        # pure derivative terms
-        xp[
-            :, library_idx : library_idx + self.num_derivatives * n_features
-        ] = library_derivatives
-        library_idx += self.num_derivatives * n_features
-
-        # mixed function derivative terms
-        if self.include_interaction:
+            # pure derivative terms
             xp[
-                :,
-                library_idx : library_idx
-                + n_library_terms * self.num_derivatives * n_features,
-            ] = np.reshape(
-                library_functions[:, :, np.newaxis]
-                * library_derivatives[:, np.newaxis, :],
-                (n_samples, n_library_terms * self.num_derivatives * n_features),
-            )
-            library_idx += n_library_terms * self.num_derivatives * n_features
+                :, library_idx : library_idx + self.num_derivatives * n_features
+            ] = library_derivatives
+            library_idx += self.num_derivatives * n_features
 
-        return self._ensemble(xp)
+            # mixed function derivative terms
+            if self.include_interaction:
+                xp[
+                    :,
+                    library_idx : library_idx
+                    + n_library_terms * self.num_derivatives * n_features,
+                ] = np.reshape(
+                    library_functions[:, :, np.newaxis]
+                    * library_derivatives[:, np.newaxis, :],
+                    (n_samples, n_library_terms * self.num_derivatives * n_features),
+                )
+                library_idx += n_library_terms * self.num_derivatives * n_features
+            xp_full[trajectory_ind] = xp
+
+        return self._ensemble(
+            np.reshape(xp_full, (n_samples_full, self.n_output_features_))
+        )

@@ -329,11 +329,24 @@ class SINDy(BaseEstimator):
             raise ValueError("n_subset must be a positive integer")
         pde_libraries = False
         weak_libraries = False
+
         if x_dot is None:
             if isinstance(self.feature_library, WeakPDELibrary):
-                x_dot = convert_u_dot_integral(x, self.feature_library)
+                if multiple_trajectories:
+                    x_dot = [
+                        convert_u_dot_integral(xi, self.feature_library) for xi in x
+                    ]
+                else:
+                    x_dot = convert_u_dot_integral(x, self.feature_library)
             elif isinstance(self.feature_library, PDELibrary):
-                x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
+                if multiple_trajectories:
+                    x_dot = [
+                        FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
+                        for xi in x
+                    ]
+                else:
+                    x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
+
             elif isinstance(self.feature_library, GeneralizedLibrary):
                 for lib in self.feature_library.libraries_:
                     if isinstance(lib, WeakPDELibrary):
@@ -341,13 +354,40 @@ class SINDy(BaseEstimator):
                     if isinstance(lib, PDELibrary):
                         pde_libraries = True
                 if weak_libraries:
-                    x_dot = convert_u_dot_integral(
-                        x, self.feature_library.libraries_[0]
-                    )
+                    if multiple_trajectories:
+                        x_dot = [
+                            convert_u_dot_integral(
+                                xi, self.feature_library.libraries_[0]
+                            )
+                            for xi in x
+                        ]
+                    else:
+                        x_dot = convert_u_dot_integral(
+                            x, self.feature_library.libraries_[0]
+                        )
                 elif pde_libraries:
-                    x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
+                    if multiple_trajectories:
+                        x_dot = [
+                            FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
+                            for xi in x
+                        ]
+                    else:
+                        x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
+
         if multiple_trajectories:
+            if isinstance(self.feature_library, PDELibrary):
+                self.feature_library.num_trajectories = len(x)
+            if isinstance(self.feature_library, WeakPDELibrary):
+                self.feature_library.num_trajectories = len(x)
+            if isinstance(self.feature_library, GeneralizedLibrary):
+                for lib in self.feature_library.libraries_:
+                    if isinstance(lib, PDELibrary):
+                        lib.num_trajectories = len(x)
+                    if isinstance(lib, WeakPDELibrary):
+                        lib.num_trajectories = len(x)
+
             x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
+
         else:
             x = validate_input(x, t)
 
@@ -817,7 +857,8 @@ class SINDy(BaseEstimator):
                     x_dot = [validate_input(xd, ti) for xd, ti in zip(x_dot, t)]
                 else:
                     x = [validate_input(xi, t) for xi in x]
-                    x_dot = [validate_input(xd, t) for xd in x_dot]
+                    if not isinstance(self.feature_library, WeakPDELibrary):
+                        x_dot = [validate_input(xd, t) for xd in x_dot]
 
         if return_array:
             return np.vstack(x), np.vstack(x_dot)

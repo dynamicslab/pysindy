@@ -33,6 +33,7 @@ def validate_input(x, t=T_DEFAULT):
                 raise ValueError("t must be positive")
         # Only apply these tests if t is array-like
         elif isinstance(t, np.ndarray):
+            print(len(t), x.shape)
             if not len(t) == x.shape[-2]:
                 raise ValueError("Length of t should match x.shape[-2].")
             if not np.all(t[:-1] < t[1:]):

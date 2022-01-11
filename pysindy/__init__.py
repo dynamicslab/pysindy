@@ -36,6 +36,7 @@ from .optimizers import SSR
 from .optimizers import STLSQ
 from .optimizers import SINDyPI
 from .optimizers import TrappingSR3
+from .optimizers import TrappingGeneralizedSR3
 
 
 __all__ = ["SINDy"]

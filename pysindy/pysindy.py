@@ -329,7 +329,7 @@ class SINDy(BaseEstimator):
             raise ValueError("n_subset must be a positive integer")
         pde_libraries = False
         weak_libraries = False
-        if x_dot is None:
+        if x_dot is None and not multiple_trajectories:
             if isinstance(self.feature_library, WeakPDELibrary):
                 x_dot = convert_u_dot_integral(x, self.feature_library)
             elif isinstance(self.feature_library, PDELibrary):
@@ -374,8 +374,9 @@ class SINDy(BaseEstimator):
             x = np.concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known unless using weak PDE form
-        if not isinstance(self.feature_library, WeakPDELibrary):
-            x, x_dot = drop_nan_rows(x, x_dot)
+
+        # if not isinstance(self.feature_library, WeakPDELibrary):
+        #    x, x_dot = drop_nan_rows(x, x_dot)
 
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
@@ -797,15 +798,83 @@ class SINDy(BaseEstimator):
                     )
                 x_dot = [validate_input(xd) for xd in x_dot]
         else:
+            pde_libraries = False
+            weak_libraries = False
             if x_dot is None:
                 if isinstance(t, Sequence):
+                    if isinstance(self.feature_library, WeakPDELibrary):
+                        x_dot = [
+                            convert_u_dot_integral(
+                                xi, self.feature_library
+                            ) for xi in x
+                        ]
+                    elif isinstance(self.feature_library, PDELibrary):
+                        x_dot = [
+                            FiniteDifference(
+                                d=1, axis=-2
+                            )._differentiate(xi, ti) for xi, ti in zip(x, t)
+                        ]
+                    elif isinstance(self.feature_library, GeneralizedLibrary):
+                        for lib in self.feature_library.libraries_:
+                            if isinstance(lib, WeakPDELibrary):
+                                weak_libraries = True
+                            if isinstance(lib, PDELibrary):
+                                pde_libraries = True
+                        if weak_libraries:
+                            x_dot = [
+                                convert_u_dot_integral(
+                                    xi, self.feature_library.libraries_[0]
+                                ) for xi in x
+                            ]
+                        elif pde_libraries:
+                            x_dot = [
+                                FiniteDifference(
+                                    d=1, axis=-2
+                                )._differentiate(xi, ti) for xi, ti in zip(x, t)
+                            ]
+                    else:
+                        x_dot = [
+                            self.differentiation_method(xi, ti) for xi, ti in zip(x, t)
+                        ]
                     x = [validate_input(xi, ti) for xi, ti in zip(x, t)]
-                    x_dot = [
-                        self.differentiation_method(xi, ti) for xi, ti in zip(x, t)
-                    ]
+                    x_dot = [validate_input(xd, ti) for xd, ti in zip(x_dot, t)]
                 else:
+                    if isinstance(self.feature_library, WeakPDELibrary):
+                        x_dot = [
+                            convert_u_dot_integral(
+                                xi, self.feature_library
+                            ) for xi in x
+                        ]
+                    elif isinstance(self.feature_library, PDELibrary):
+                        x_dot = [
+                            FiniteDifference(
+                                d=1, axis=-2
+                            )._differentiate(xi, t) for xi in x
+                        ]
+                    elif isinstance(self.feature_library, GeneralizedLibrary):
+                        for lib in self.feature_library.libraries_:
+                            if isinstance(lib, WeakPDELibrary):
+                                weak_libraries = True
+                            if isinstance(lib, PDELibrary):
+                                pde_libraries = True
+                        if weak_libraries:
+                            x_dot = [
+                                convert_u_dot_integral(
+                                    xi, self.feature_library.libraries_[0]
+                                ) for xi in x
+                            ]
+                        elif pde_libraries:
+                            x_dot = [
+                                FiniteDifference(
+                                    d=1, axis=-2
+                                )._differentiate(xi, ti) for xi in x
+                            ]
+                    else:
+                        x_dot = [
+                            self.differentiation_method(xi, t) for xi in x
+                        ]
                     x = [validate_input(xi, t) for xi in x]
-                    x_dot = [self.differentiation_method(xi, t) for xi in x]
+                    x_dot = [validate_input(xd, t) for xd in x_dot]
             else:
                 if not isinstance(x_dot, Sequence):
                     raise TypeError(

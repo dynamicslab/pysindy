@@ -7,6 +7,7 @@ from .sr3 import SR3
 from .ssr import SSR
 from .stlsq import STLSQ
 from .trapping_sr3 import TrappingSR3
+from .trapping_generalized_sr3 import TrappingGeneralizedSR3
 
 __all__ = [
     "BaseOptimizer",
@@ -15,6 +16,7 @@ __all__ = [
     "STLSQ",
     "ConstrainedSR3",
     "TrappingSR3",
+    "TrappingGeneralizedSR3",
     "SSR",
     "FROLS",
     "SINDyPI",

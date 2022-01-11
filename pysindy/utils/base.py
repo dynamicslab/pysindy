@@ -108,7 +108,16 @@ def drop_nan_rows(x, x_dot):
     return x, x_dot
 
 
-def drop_random_rows(x, x_dot, n_subset, replace, feature_library, pde_library_flag):
+def drop_random_rows(
+    x,
+    x_dot,
+    n_subset,
+    replace,
+    feature_library,
+    pde_library_flag,
+    multiple_trajectories,
+):
+    num_trajectories = feature_library.num_trajectories
     # Can't choose random n_subset points if data is from a PDE
     # (and therefore is spatially local).
     # Need to unfold it and just choose n_subset from the temporal slices
@@ -129,9 +138,9 @@ def drop_random_rows(x, x_dot, n_subset, replace, feature_library, pde_library_f
             spatial_grid = feature_library.spatial_grid
             dims = spatial_grid.shape[:-1]
             if len(dims) > 0:
-                num_time = n_samples // np.product(dims)
+                num_time = n_samples // np.product(dims) // num_trajectories
             else:
-                num_time = n_samples
+                num_time = n_samples // num_trajectories
 
         n_features = x.shape[1]
         if n_subset > num_time:
@@ -139,18 +148,29 @@ def drop_random_rows(x, x_dot, n_subset, replace, feature_library, pde_library_f
         rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
 
         if len(dims) > 0:
-            x_shaped = np.reshape(x, np.concatenate([dims, [num_time], [n_features]]))
+            x_shaped = np.reshape(
+                x, np.concatenate([dims, [num_time * num_trajectories], [n_features]])
+            )
         else:
-            x_shaped = np.reshape(x, np.concatenate([[num_time], [n_features]]))
+            x_shaped = np.reshape(
+                x, np.concatenate([[num_time * num_trajectories], [n_features]])
+            )
         s0 = [slice(dim) for dim in x_shaped.shape]
-        s0[len(dims)] = rand_inds
+
+        rand_inds_total = []
+        for i in range(num_trajectories):
+            rand_inds_total.append(rand_inds + num_time * i)
+        s0[len(dims)] = rand_inds_total
 
         if len(dims) > 0:
             x_new = np.reshape(
-                x_shaped[tuple(s0)], (np.product(dims) * n_subset, x.shape[1])
+                x_shaped[tuple(s0)],
+                (np.product(dims) * n_subset * num_trajectories, x.shape[1]),
             )
         else:
-            x_new = np.reshape(x_shaped[tuple(s0)], (n_subset, x.shape[1]))
+            x_new = np.reshape(
+                x_shaped[tuple(s0)], (n_subset * num_trajectories, x.shape[1])
+            )
 
         if pde_library_flag == "WeakPDE":
             spatiotemporal_grid = feature_library.spatiotemporal_grid
@@ -159,14 +179,25 @@ def drop_random_rows(x, x_dot, n_subset, replace, feature_library, pde_library_f
             new_spatiotemporal_grid = spatiotemporal_grid[tuple(s1)]
             feature_library.spatiotemporal_grid = new_spatiotemporal_grid
             feature_library._set_up_grids()
-            x_dot_new = convert_u_dot_integral(x_shaped[tuple(s0)], feature_library)
-
+            s0[len(dims)] = rand_inds
+            if multiple_trajectories:
+                x_dot_new = [
+                    convert_u_dot_integral(xi[tuple(s0)], feature_library)
+                    for xi in feature_library.old_x
+                ]
+                x_dot_new = np.vstack(x_dot_new)
+            else:
+                x_dot_new = convert_u_dot_integral(
+                    feature_library.old_x[tuple(s0)], feature_library
+                )
         else:
             x_dot_shaped = np.reshape(
-                x_dot, np.concatenate([dims, [num_time], [n_features]])
+                x_dot,
+                np.concatenate([dims, [num_time * num_trajectories], [n_features]]),
             )
             x_dot_new = np.reshape(
-                x_dot_shaped[tuple(s0)], (np.product(dims) * n_subset, x.shape[1])
+                x_dot_shaped[tuple(s0)],
+                (np.product(dims) * n_subset * num_trajectories, x.shape[1]),
             )
     else:
         # Choose random n_subset points to use

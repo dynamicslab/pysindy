@@ -312,7 +312,15 @@ class SINDy(BaseEstimator):
         if (ensemble or library_ensemble) and n_models is None:
             n_models = 20
         if ensemble and n_subset is None:
-            n_subset = x.shape[0]
+            if multiple_trajectories:
+                if x[0].ndim == 1:
+                    n_subset = x[0].shape[0]
+                else:
+                    n_subset = x[0].shape[-2]
+            elif x.ndim == 1:
+                n_subset = x.shape[0]
+            else:
+                n_subset = x.shape[-2]
         if (
             ensemble
             and isinstance(self.feature_library, WeakPDELibrary)
@@ -330,6 +338,8 @@ class SINDy(BaseEstimator):
         pde_libraries = False
         weak_libraries = False
 
+        if isinstance(self.feature_library, WeakPDELibrary):
+            self.feature_library.old_x = np.copy(x)
         if x_dot is None:
             if isinstance(self.feature_library, WeakPDELibrary):
                 if multiple_trajectories:
@@ -339,7 +349,12 @@ class SINDy(BaseEstimator):
                 else:
                     x_dot = convert_u_dot_integral(x, self.feature_library)
             elif isinstance(self.feature_library, PDELibrary):
-                if multiple_trajectories:
+                if multiple_trajectories and isinstance(t, Sequence):
+                    x_dot = [
+                        FiniteDifference(d=1, axis=-2)._differentiate(xi, t=ti)
+                        for xi, ti in zip(x, t)
+                    ]
+                elif multiple_trajectories:
                     x_dot = [
                         FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
                         for xi in x
@@ -366,7 +381,12 @@ class SINDy(BaseEstimator):
                             x, self.feature_library.libraries_[0]
                         )
                 elif pde_libraries:
-                    if multiple_trajectories:
+                    if multiple_trajectories and isinstance(t, Sequence):
+                        x_dot = [
+                            FiniteDifference(d=1, axis=-2)._differentiate(xi, t=ti)
+                            for xi, ti in zip(x, t)
+                        ]
+                    elif multiple_trajectories:
                         x_dot = [
                             FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
                             for xi in x
@@ -375,20 +395,16 @@ class SINDy(BaseEstimator):
                         x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
 
         if multiple_trajectories:
-            if isinstance(self.feature_library, PDELibrary):
-                self.feature_library.num_trajectories = len(x)
-            if isinstance(self.feature_library, WeakPDELibrary):
-                self.feature_library.num_trajectories = len(x)
+            self.feature_library.num_trajectories = len(x)
             if isinstance(self.feature_library, GeneralizedLibrary):
                 for lib in self.feature_library.libraries_:
                     if isinstance(lib, PDELibrary):
                         lib.num_trajectories = len(x)
                     if isinstance(lib, WeakPDELibrary):
                         lib.num_trajectories = len(x)
-
             x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
-
         else:
+            self.feature_library.num_trajectories = 1
             x = validate_input(x, t)
 
             if self.discrete_time:
@@ -442,7 +458,6 @@ class SINDy(BaseEstimator):
                 # save the grid
                 if pde_library_flag == "WeakPDE":
                     old_spatiotemporal_grid = self.feature_library.spatiotemporal_grid
-
                 for i in range(n_models):
                     x_ensemble, x_dot_ensemble = drop_random_rows(
                         x,
@@ -451,6 +466,7 @@ class SINDy(BaseEstimator):
                         replace,
                         self.feature_library,
                         pde_library_flag,
+                        multiple_trajectories,
                     )
                     self.model.fit(x_ensemble, x_dot_ensemble)
                     self.coef_list.append(self.model.steps[-1][1].coef_)
@@ -498,6 +514,7 @@ class SINDy(BaseEstimator):
                         replace,
                         self.feature_library,
                         pde_library_flag,
+                        multiple_trajectories,
                     )
                     for j in range(n_models):
                         self.feature_library.ensemble_indices = np.sort(
@@ -823,7 +840,6 @@ class SINDy(BaseEstimator):
         """
         if not isinstance(x, Sequence):
             raise TypeError("Input x must be a list")
-
         if self.discrete_time:
             x = [validate_input(xi) for xi in x]
             if x_dot is None:

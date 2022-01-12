@@ -16,15 +16,23 @@ class TrappingSR3(SR3):
     This optimizer can be used to identify systems with
     stable (bounded) solutions.
 
-    Attempts to minimize the objective function
+    Attempts to minimize one of two related objective functions
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(w)
+        0.5\\|y-Xw\\|^2_2 + \\lambda R(w)
         + 0.5\\|Pw-A\\|^2_2/\\eta + \\delta_0(Cw-d)
-        + \\delta_{\\Lambda}(A)}
+        + \\delta_{\\Lambda}(A)
 
-    where :math:`R(w)` is a regularization function.
+    or
+
+    .. math::
+
+        0.5\\|y-Xw\\|^2_2 + \\lambda R(w)
+        + \\delta_0(Cw-d)
+        + 0.5 max_eigenvalue(A)/\\eta
+
+    where :math:`R(w)` is a regularization function, which must be convex.
     See the following references for more details:
 
         Kaptanoglu, Alan A., et al. "Promoting global stability in
@@ -134,6 +142,15 @@ class TrappingSR3(SR3):
         by dividing by the L2-norm. Note that the 'normalize' option in sklearn
         is deprecated in sklearn versions >= 1.0 and will be removed.
 
+    verbose : bool, optional (default False)
+        If True, prints out the different error terms every
+        max_iter / 10 iterations.
+
+    verbose_cvxpy : bool, optional (default False)
+        Boolean flag which is passed to CVXPY solve function to indicate if
+        output should be verbose or not. Only relevant for optimizers that
+        use the CVXPY package in some capabity.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -223,6 +240,8 @@ class TrappingSR3(SR3):
         constraint_lhs=None,
         constraint_rhs=None,
         constraint_order="target",
+        verbose=False,
+        verbose_cvxpy=False,
     ):
         super(TrappingSR3, self).__init__(
             threshold=threshold,
@@ -232,6 +251,7 @@ class TrappingSR3(SR3):
             copy_X=copy_X,
             thresholder=thresholder,
             thresholds=thresholds,
+            verbose=verbose,
         )
         if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
             raise ValueError("Regularizer must be (weighted) L1 or L2")
@@ -284,6 +304,7 @@ class TrappingSR3(SR3):
         self.tol = tol
         self.tol_m = tol_m
         self.accel = accel
+        self.verbose_cvxpy = verbose_cvxpy
         self.A_history_ = []
         self.m_history_ = []
         self.PW_history_ = []
@@ -454,6 +475,10 @@ class TrappingSR3(SR3):
 
     def _objective(self, x, y, coef_sparse, A, PW, q):
         """Objective function"""
+        if q != 0:
+            print_ind = q % (self.max_iter // 10.0)
+        else:
+            print_ind = q
 
         # Compute the errors
         R2 = (y - np.dot(x, coef_sparse)) ** 2
@@ -461,9 +486,18 @@ class TrappingSR3(SR3):
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
 
         # convoluted way to print every max_iter / 10 iterations
-        if q % max(int(self.max_iter / 10.0), 1) == 0 or self.threshold != 0.0:
-            row = [q, 0.5 * np.sum(R2), 0.5 * np.sum(A2) / self.eta, L1]
-            print("{0:12d} {1:12.5e} {2:12.5e} {3:12.5e}".format(*row))
+        if print_ind == 0 and self.verbose:
+            row = [
+                q,
+                0.5 * np.sum(R2),
+                0.5 * np.sum(A2) / self.eta,
+                L1,
+                0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1,
+            ]
+            print(
+                "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
+                " ... {4:10.4e}".format(*row)
+            )
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
     def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
@@ -495,13 +529,21 @@ class TrappingSR3(SR3):
 
         # default solver is OSQP here but switches to ECOS for L2
         try:
-            prob.solve(eps_abs=self.eps_solver, eps_rel=self.eps_solver)
+            prob.solve(
+                eps_abs=self.eps_solver,
+                eps_rel=self.eps_solver,
+                verbose=self.verbose_cvxpy,
+            )
         # Annoying error coming from L2 norm switching to use the ECOS
         # solver, which uses "max_iters" instead of "max_iter", and
         # similar semantic changes for the other variables.
         except TypeError:
             try:
-                prob.solve(abstol=self.eps_solver, reltol=self.eps_solver)
+                prob.solve(
+                    abstol=self.eps_solver,
+                    reltol=self.eps_solver,
+                    verbose=self.verbose_cvxpy,
+                )
             except cp.error.SolverError:
                 print("Solver failed, setting coefs to zeros")
                 xi.value = np.zeros(N * r)
@@ -595,12 +637,16 @@ class TrappingSR3(SR3):
 
         # default solver is SCS here
         try:
-            prob.solve(eps=self.eps_solver)
+            prob.solve(eps=self.eps_solver, verbose=self.verbose_cvxpy)
         # Annoying error coming from L2 norm switching to use the ECOS
         # solver, which uses "max_iters" instead of "max_iter", and
         # similar semantic changes for the other variables.
         except TypeError:
-            prob.solve(abstol=self.eps_solver, reltol=self.eps_solver)
+            prob.solve(
+                abstol=self.eps_solver,
+                reltol=self.eps_solver,
+                verbose=self.verbose_cvxpy,
+            )
         except cp.error.SolverError:
             print("Solver failed, setting coefs to zeros")
             xi.value = np.zeros(N * r)
@@ -623,7 +669,7 @@ class TrappingSR3(SR3):
             prob_m = cp.Problem(cp.Minimize(cost_m))
 
             # default solver is SCS here
-            prob_m.solve(eps=self.eps_solver)
+            prob_m.solve(eps=self.eps_solver, verbose=self.verbose_cvxpy)
 
             m = m_cp.value
             if m is None:
@@ -656,8 +702,18 @@ class TrappingSR3(SR3):
         coef_sparse = self.coef_.T
 
         # Print initial values for each term in the optimization
-        row = ["Iteration", "Data Error", "Stability Error", "L1 Error"]
-        print("{: >10} | {: >10} | {: >10} | {: >10}".format(*row))
+        if self.verbose:
+            row = [
+                "Iteration",
+                "Data Error",
+                "Stability Error",
+                "L1 Error",
+                "Total Error",
+            ]
+            print(
+                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
+                " ... {: >10}".format(*row)
+            )
 
         # initial A
         if self.A0 is not None:

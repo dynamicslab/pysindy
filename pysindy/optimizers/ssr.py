@@ -52,6 +52,9 @@ class SSR(BaseOptimizer):
     ridge_kw : dict, optional (default None)
         Optional keyword arguments to pass to the ridge regression.
 
+    verbose : bool, optional (default False)
+        If True, prints out the different error terms every iteration.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -95,6 +98,7 @@ class SSR(BaseOptimizer):
         copy_X=True,
         criteria="coefficient_value",
         kappa=None,
+        verbose=False,
     ):
         super(SSR, self).__init__(
             max_iter=max_iter,
@@ -121,6 +125,7 @@ class SSR(BaseOptimizer):
         self.alpha = alpha
         self.ridge_kw = ridge_kw
         self.kappa = kappa
+        self.verbose = verbose
 
     def _coefficient_value(self, coef):
         """Eliminate the smallest element of the weight vector(s)"""
@@ -169,9 +174,30 @@ class SSR(BaseOptimizer):
         """
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
+        cond_num = np.linalg.cond(x)
+        if self.kappa is not None:
+            l0_penalty = self.kappa * cond_num
+        else:
+            l0_penalty = 0
 
         coef = self._regress(x, y)
         inds = np.ones((n_targets, n_features), dtype=bool)
+
+        # Print initial values for each term in the optimization
+        if self.verbose:
+            row = [
+                "Iteration",
+                "|y - Xw|^2",
+                "a * |w|_2",
+                "|w|_0",
+                "b * |w|_0",
+                "Total: |y-Xw|^2+a*|w|_2+b*|w|_0",
+            ]
+            print(
+                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
+                " ... {: >10} ... {: >10}".format(*row)
+            )
+
         self.err_history_ = []
         for k in range(self.max_iter):
             for i in range(n_targets):
@@ -189,13 +215,18 @@ class SSR(BaseOptimizer):
                         coef[i, inds[i, :]] = self._regress(x[:, inds[i, :]], y[:, i])
 
             self.history_.append(np.copy(coef))
-            if self.kappa is not None:
-                l0_penalty = self.kappa * np.linalg.cond(x)
-                self.err_history_.append(
-                    np.sum((y - x @ coef.T) ** 2) + l0_penalty * np.count_nonzero(coef)
+            if self.verbose:
+                R2 = np.sum((y - np.dot(x, coef.T)) ** 2)
+                L2 = self.alpha * np.sum(coef ** 2)
+                L0 = np.count_nonzero(coef)
+                row = [k, R2, L2, L0, l0_penalty * L0, R2 + L2 + l0_penalty * L0]
+                print(
+                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10d}"
+                    " ... {4:10.4e} ... {5:10.4e}".format(*row)
                 )
-            else:
-                self.err_history_.append(np.sum((y - x @ coef.T) ** 2))
+            self.err_history_.append(
+                np.sum((y - x @ coef.T) ** 2) + l0_penalty * np.count_nonzero(coef)
+            )
             if np.all(np.sum(np.asarray(inds, dtype=int), axis=1) <= 1):
                 # each equation has one last term
                 break

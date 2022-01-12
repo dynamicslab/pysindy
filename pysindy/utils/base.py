@@ -316,6 +316,8 @@ def get_regularization(regularization):
         return lambda x, lam: lam * np.sum(x ** 2)
     elif regularization.lower() == "weighted_l2":
         return lambda x, lam: np.sum(lam @ x ** 2)
+    elif regularization.lower() == "cad":  # dummy function
+        return lambda x, lam: 0
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
 

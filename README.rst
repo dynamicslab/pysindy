@@ -144,7 +144,7 @@ Documentation
 -------------
 The documentation site for PySINDy can be found `here <https://pysindy.readthedocs.io/en/latest/>`__. There are numerous `examples <https://pysindy.readthedocs.io/en/latest/examples/index.html>`_ of PySINDy in action to help you get started. Examples are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`__. A video overview of PySINDy can be found on `Youtube <https://www.youtube.com/watch?v=DvbbXX8Bd90>`__. We have also created a `video playlist <https://www.youtube.com/playlist?list=PLN90bHJU-JLoOfEk0KyBs2qLTV7OkMZ25>`__ with practical PySINDy tips.
 
-PySINDy implements a lot of advanced functionality that may be overwhelming for new users or folks who are unfamiliar with these methods. Below, we provide a helpful flowchart for figuring out which methods to use, given the characteristics of your dataset:
+PySINDy implements a lot of advanced functionality that may be overwhelming for new users or folks who are unfamiliar with these methods. Below (see here if image does not render https://github.com/dynamicslab/pysindy/blob/master/docs/JOSS2/Fig3.png), we provide a helpful flowchart for figuring out which methods to use, given the characteristics of your dataset:
 
 .. image:: https://github.com/dynamicslab/pysindy/blob/master/docs/JOSS2/Fig3.png
 

@@ -3,3 +3,4 @@ numpy
 scipy
 derivative
 cvxpy
+matplotlib

@@ -30,9 +30,12 @@ class TrappingSR3(SR3):
 
         0.5\\|y-Xw\\|^2_2 + \\lambda R(w)
         + \\delta_0(Cw-d)
-        + 0.5 max_eigenvalue(A)/\\eta
+        + 0.5 * maximumeigenvalue(A)/\\eta
 
-    where :math:`R(w)` is a regularization function, which must be convex.
+    where :math:`R(w)` is a regularization function, which must be convex,
+    :math:`\\delta_0` is an indicator function that provides a hard constraint
+    of CW = d, and :math:\\delta_{\\Lambda} is a term to project the :math:`A`
+    matrix onto the space of negative definite matrices.
     See the following references for more details:
 
         Kaptanoglu, Alan A., et al. "Promoting global stability in

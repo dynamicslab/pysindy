@@ -25,9 +25,9 @@ class ConstrainedSR3(SR3):
 
     .. math::
 
-        CW = d
+        Cw = d
 
-    over U and W, where :math:`R(U)` is a regularization function, C is a
+    over u and w, where :math:`R(u)` is a regularization function, C is a
     constraint matrix, and d is a vector of values. See the following
     reference for more details:
 

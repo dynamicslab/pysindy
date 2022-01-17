@@ -21,11 +21,9 @@ class ConstrainedSR3(SR3):
         0.5\\|y-Xw\\|^2_2 + \\lambda R(u)
         + (0.5 / \\nu)\\|w-u\\|^2_2
 
-        \\text{subject to}
-
     .. math::
 
-        Cw = d
+        \\text{subject to } Cw = d
 
     over u and w, where :math:`R(u)` is a regularization function, C is a
     constraint matrix, and d is a vector of values. See the following

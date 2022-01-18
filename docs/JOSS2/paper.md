@@ -16,7 +16,7 @@ authors:
     affiliation: 3
   - name: Kadierdan Kaheman
     affiliation: 3
-  - name: Andy Goldschmidt
+  - name: Andy J. Goldschmidt
     affiliation: 1
   - name: Jared Callaham
     affiliation: 3

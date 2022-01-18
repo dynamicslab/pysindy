@@ -215,7 +215,7 @@ If you use PySINDy in your work, please cite it using the following two referenc
 
 Brian M. de Silva, Kathleen Champion, Markus Quade, Jean-Christophe Loiseau, J. Nathan Kutz, and Steven L. Brunton., (2020). *PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data.* Journal of Open Source Software, 5(49), 2104, https://doi.org/10.21105/joss.02104
 
-Alan A. Kaptanoglu, Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Jared L. Callaham,   Charles  B.  Delahunt,   Zachary G. Nicolaou,   Kathleen  Champion,   Jean-Christophe  Loiseau,J. Nathan Kutz, and Steven L. Brunton. *PySINDy:  A comprehensive Python packagefor robust sparse system identification.* arXiv preprint arXiv:2111.08481, 2021.
+Alan A. Kaptanoglu, Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Andy J. Goldschmidt, Jared L. Callaham,   Charles  B.  Delahunt,   Zachary G. Nicolaou,   Kathleen  Champion,   Jean-Christophe  Loiseau,J. Nathan Kutz, and Steven L. Brunton. *PySINDy:  A comprehensive Python package for robust sparse system identification.* arXiv preprint arXiv:2111.08481, 2021.
 
 Bibtex:
 
@@ -240,7 +240,7 @@ Bibtex:
 
       @article{kaptanoglu2021pysindy,
       title={PySINDy: A comprehensive Python package for robust sparse system identification},
-      author={Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Jared L. Callaham and Charles B. Delahunt and Zachary G. Nicolaou and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
+      author={Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Andy J. Goldschmidt and Jared L. Callaham and Charles B. Delahunt and Zachary G. Nicolaou and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
       year={2021},
 	  Journal = {arXiv preprint arXiv:2111.08481},
       }
@@ -253,7 +253,7 @@ References
    nonlinear dynamics from data.* arXiv preprint arXiv:2004.08424 (2020)
    `[arXiv] <https://arxiv.org/abs/2004.08424>`__
 
--  Kaptanoglu, Alan A., Brian M. de Silva, Urban Fasel, Kadierdan Kaheman,
+-  Kaptanoglu, Alan A., Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Andy J. Goldschmidt
    Jared L. Callaham, Charles B. Delahunt, Zachary G. Nicolaou, Kathleen Champion, 
    Jean-Christophe Loiseau, J. Nathan Kutz, and Steven L. Brunton.
    *PySINDy: A comprehensive Python package for robust sparse system identification.*
@@ -276,10 +276,10 @@ References
    IFAC-PapersOnLine 49.18 (2016): 710-715.
    `[DOI] <https://doi.org/10.1016/j.ifacol.2016.10.249>`__
 
-- Kaheman, K., Kutz, J. N., & Brunton, S. L. (2020).
-  *SINDy-PI: a robust algorithm for parallel implicit sparse identification
-  of nonlinear dynamics.* Proceedings of the Royal Society A, 476(2242), 20200279.
-  `[DOI] <https://doi.org/10.1098/rspa.2020.0279>`__
+-  Kaheman, K., Kutz, J. N., & Brunton, S. L. (2020).
+   *SINDy-PI: a robust algorithm for parallel implicit sparse identification
+   of nonlinear dynamics.* Proceedings of the Royal Society A, 476(2242), 20200279.
+   `[DOI] <https://doi.org/10.1098/rspa.2020.0279>`__
 
 -  Kaptanoglu, A. A., Callaham, J. L., Aravkin, A., Hansen, C. J., & Brunton, S. L. (2021).
    *Promoting global stability in data-driven models of quadratic nonlinear dynamics.*

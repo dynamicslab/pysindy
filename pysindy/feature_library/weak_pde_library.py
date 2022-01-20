@@ -780,6 +780,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                             weights
                                             * self.dfx_k_j[k][j1][..., m]
                                             * self.dx_k_j[k][j2][..., n]
+                                        ) * np.product(
+                                            binom(derivs_mixed, deriv)
                                         )
                         for n in range(n_features):
                             for m in range(n_library_terms):

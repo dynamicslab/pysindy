@@ -129,7 +129,7 @@ def data_discrete_time_multiple_trajectories():
 
 @pytest.fixture
 def data_1d_random_pde():
-    n = 10
+    n = 100
     t = np.linspace(0, 10, n)
     dt = t[1] - t[0]
     x = np.linspace(0, 10, n)

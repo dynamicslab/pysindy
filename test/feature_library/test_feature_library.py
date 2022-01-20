@@ -693,7 +693,7 @@ def test_5D_pdes(data_5d_random_pde):
 
 
 def test_1D_weak_pdes():
-    n = 4
+    n = 10
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     u = np.random.randn(n, n, 1)
@@ -707,17 +707,15 @@ def test_1D_weak_pdes():
         function_names=library_function_names,
         derivative_order=4,
         spatiotemporal_grid=spatiotemporal_grid,
-        H_xt=0.1,
+        H_xt=2,
         include_bias=True,
-        K=5,
         is_uniform=False,
-        num_pts_per_domain=20,
     )
     pde_library_helper(pde_lib, u, 1)
 
 
 def test_2D_weak_pdes():
-    n = 4
+    n = 5
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -732,17 +730,16 @@ def test_2D_weak_pdes():
         function_names=library_function_names,
         derivative_order=4,
         spatiotemporal_grid=spatiotemporal_grid,
-        H_xt=0.1,
-        K=2,
+        H_xt=2,
+        K=10,
         include_bias=True,
         is_uniform=False,
-        num_pts_per_domain=10,
     )
     pde_library_helper(pde_lib, u, 1)
 
 
 def test_3D_weak_pdes():
-    n = 4
+    n = 5
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -758,17 +755,16 @@ def test_3D_weak_pdes():
         function_names=library_function_names,
         derivative_order=4,
         spatiotemporal_grid=spatiotemporal_grid,
-        H_xt=0.1,
-        K=2,
+        H_xt=2,
+        K=10,
         include_bias=True,
         is_uniform=False,
-        num_pts_per_domain=4,
     )
     pde_library_helper(pde_lib, u, 2)
 
 
 def test_5D_weak_pdes():
-    n = 4
+    n = 5
     t = np.linspace(0, 10, n)
     v = np.linspace(0, 10, n)
     w = np.linspace(0, 10, n)
@@ -786,10 +782,10 @@ def test_5D_weak_pdes():
         function_names=library_function_names,
         derivative_order=2,
         spatiotemporal_grid=spatiotemporal_grid,
-        K=2,
+        H_xt=2,
+        K=10,
         include_bias=True,
         is_uniform=False,
-        num_pts_per_domain=4,
     )
     pde_library_helper(pde_lib, u, 2)
 

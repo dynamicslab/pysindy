@@ -21,12 +21,13 @@ from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
-from .utils import convert_u_dot_integral
 from .utils import drop_nan_rows
 from .utils import drop_random_rows
 from .utils import equations
 from .utils import validate_control_variables
 from .utils import validate_input
+
+# from .utils import convert_u_dot_integral
 
 
 class SINDy(BaseEstimator):
@@ -344,10 +345,10 @@ class SINDy(BaseEstimator):
             if isinstance(self.feature_library, WeakPDELibrary):
                 if multiple_trajectories:
                     x_dot = [
-                        convert_u_dot_integral(xi, self.feature_library) for xi in x
+                        self.feature_library.convert_u_dot_integral(xi) for xi in x
                     ]
                 else:
-                    x_dot = convert_u_dot_integral(x, self.feature_library)
+                    x_dot = self.feature_library.convert_u_dot_integral(x)
             elif isinstance(self.feature_library, PDELibrary):
                 if multiple_trajectories and isinstance(t, Sequence):
                     x_dot = [
@@ -371,15 +372,15 @@ class SINDy(BaseEstimator):
                 if weak_libraries:
                     if multiple_trajectories:
                         x_dot = [
-                            convert_u_dot_integral(
-                                xi, self.feature_library.libraries_[0]
+                            self.feature_library.libraries_[0].convert_u_dot_integral(
+                                xi
                             )
                             for xi in x
                         ]
                     else:
-                        x_dot = convert_u_dot_integral(
-                            x, self.feature_library.libraries_[0]
-                        )
+                        x_dot = self.feature_library.libraries_[
+                            0
+                        ].convert_u_dot_integral(x)
                 elif pde_libraries:
                     if multiple_trajectories and isinstance(t, Sequence):
                         x_dot = [
@@ -430,7 +431,12 @@ class SINDy(BaseEstimator):
             x = np.concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known unless using weak PDE form
-        if not isinstance(self.feature_library, WeakPDELibrary):
+        # OR If this is a generalized library with weak libraries
+        if isinstance(self.feature_library, GeneralizedLibrary):
+            for lib in self.feature_library.libraries_:
+                if isinstance(lib, WeakPDELibrary):
+                    weak_libraries = True
+        if not isinstance(self.feature_library, WeakPDELibrary) and not weak_libraries:
             x, x_dot = drop_nan_rows(x, x_dot)
 
         if hasattr(self.optimizer, "unbias"):

@@ -438,17 +438,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
         deriv_orders = np.zeros(gdim)
         deriv_orders[-1] = 1
 
-        # Interpolate the input onto the boundary of each domain
-        grids = []
-        for axis in range(gdim):
-            s = [0] * (gdim + 1)
-            s[axis] = slice(None)
-            s[-1] = axis
-            grids = grids + [self.spatiotemporal_grid[tuple(s)]]
-
+        # Extract the input features on indices in each domain cell
         dims = np.array(self.spatiotemporal_grid.shape)
         dims[-1] = u.shape[-1]
-
         for k in range(K):
             weights = self._get_weights(
                 self.xtilde_k[k], deriv_orders, self.p
@@ -633,12 +625,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
             xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
 
             # Extract the input features on indices in each domain cell
-            grids = []
-            for axis in range(self.grid_ndim):
-                s = [0] * (self.grid_ndim + 1)
-                s[axis] = slice(None)
-                s[-1] = axis
-                grids = grids + [self.spatiotemporal_grid[tuple(s)]]
             dims = np.array(self.spatiotemporal_grid.shape)
             dims[-1] = n_features
             self.x_k = [

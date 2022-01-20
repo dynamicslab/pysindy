@@ -344,7 +344,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         if float(__version__[:3]) >= 1.0:
             n_features = self.n_features_in_
         else:
-            n_features = self.n_input_features
+            n_features = self.n_input_features_
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
         if self.function_names is None:

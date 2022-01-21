@@ -640,18 +640,36 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     n_library_terms += 1
             library_functions = np.empty((n_samples, n_library_terms), dtype=x.dtype)
 
+            # Evaluate the functions on the indices of domain cells
+            x_shaped = np.reshape(
+                x,
+                np.concatenate([self.spatiotemporal_grid.shape[:-1], [x.shape[-1]]]),
+            )
+            dims = np.array(x_shaped.shape)
+            dims[-1] = n_library_terms
+            funcs = np.zeros(dims)
+            func_idx = 0
+            for f in self.functions:
+                for c in self._combinations(
+                    n_features, f.__code__.co_argcount, self.interaction_only
+                ):
+                    funcs[..., func_idx] = f(*[x_shaped[..., j] for j in c])
+                    func_idx += 1
+
             for k in range(self.K):
                 library_idx = 0
+                func_idx = 0
                 for f in self.functions:
                     for c in self._combinations(
                         n_features, f.__code__.co_argcount, self.interaction_only
                     ):
                         # integral of product over subdomain
-                        func = f(*[self.x_k[k][..., j] for j in c])
                         library_functions[k, library_idx] = np.sum(
-                            func * self.weights0[k]
+                            funcs[..., func_idx][np.ix_(*self.inds_k[k])]
+                            * self.weights0[k]
                         )
                         library_idx += 1
+                        func_idx += 1
 
             if self.derivative_order != 0:
                 # pure integral terms
@@ -679,25 +697,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         ),
                         dtype=x.dtype,
                     )
-
-                    x_shaped = np.reshape(
-                        x,
-                        np.concatenate(
-                            [self.spatiotemporal_grid.shape[:-1], [x.shape[-1]]]
-                        ),
-                    )
-
-                    # Evaluate the functions on the indices of domain cells
-                    dims = np.array(x_shaped.shape)
-                    dims[-1] = n_library_terms
-                    funcs = np.zeros(dims)
-                    func_idx = 0
-                    for f in self.functions:
-                        for c in self._combinations(
-                            n_features, f.__code__.co_argcount, self.interaction_only
-                        ):
-                            funcs[..., func_idx] = f(*[x_shaped[..., j] for j in c])
-                            func_idx += 1
 
                     # Calculate the necessary function and feature derivatives
                     funcs_derivs = np.zeros(

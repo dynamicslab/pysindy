@@ -103,7 +103,7 @@ The goal of the `PySINDy` package is to enable anyone with access to measurement
 
 # Acknowledgments
 `PySINDy` is a fork of [`sparsereg`](https://github.com/Ohjeah/sparsereg) [@markus_quade_sparsereg].
-SLB, AAK, KK, and UF acknowledge support from the Army Research Office (ARO  W911NF-19-1-0045). JLC acknowledges support from funding support from the Department of Defense (DoD) through the National Defense Science \& Engineering Graduate (NDSEG) Fellowship Program. 
+SLB, AAK, KK, and UF acknowledge support from the Army Research Office (ARO  W911NF-19-1-0045). JLC acknowledges support from funding support from the Department of Defense (DoD) through the National Defense Science \& Engineering Graduate (NDSEG) Fellowship Program. ZGN is a Washington Research Foundation Postdoctoral Fellow.
 
 ![Summary of SINDy features organized by (a) `PySINDy` structure and (b) functionality. (a) Hierarchy from the sparse regression problem solved by SINDy, to the submodules of `PySINDy`, to the individual optimizers, libraries, and differentiation methods implemented in the code.
 (b) Flow chart for organizing the SINDy variants and functionality in the literature. Bright color boxes indicate the features that have been implemented through this work, roughly organized by functionality. Semi-transparent boxes indicate features that have not yet been implemented.\label{fig:package-structure}](Fig1.png)

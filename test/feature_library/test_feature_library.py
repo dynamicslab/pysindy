@@ -715,7 +715,7 @@ def test_1D_weak_pdes():
 
 
 def test_2D_weak_pdes():
-    n = 5
+    n = 10
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -730,7 +730,7 @@ def test_2D_weak_pdes():
         function_names=library_function_names,
         derivative_order=4,
         spatiotemporal_grid=spatiotemporal_grid,
-        H_xt=2,
+        H_xt=4,
         K=10,
         include_bias=True,
         is_uniform=False,
@@ -739,7 +739,7 @@ def test_2D_weak_pdes():
 
 
 def test_3D_weak_pdes():
-    n = 5
+    n = 10
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -755,7 +755,7 @@ def test_3D_weak_pdes():
         function_names=library_function_names,
         derivative_order=4,
         spatiotemporal_grid=spatiotemporal_grid,
-        H_xt=2,
+        H_xt=4,
         K=10,
         include_bias=True,
         is_uniform=False,
@@ -782,7 +782,7 @@ def test_5D_weak_pdes():
         function_names=library_function_names,
         derivative_order=2,
         spatiotemporal_grid=spatiotemporal_grid,
-        H_xt=2,
+        H_xt=4,
         K=10,
         include_bias=True,
         is_uniform=False,

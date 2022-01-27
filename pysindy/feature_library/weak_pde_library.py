@@ -400,6 +400,24 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 )
             self.weights1 = self.weights1 + [weights2]
 
+        self.fulltweights = []
+        deriv=np.zeros(self.grid_ndim)
+        deriv[-1]=1
+        for k in range(self.K):
+
+            ret = np.ones(self.shapes_k[k])
+            for i in range(self.grid_ndim):
+                s = [0] * (self.grid_ndim + 1)
+                s[i] = slice(None, None, None)
+                s[-1] = i
+                dims = np.ones(self.grid_ndim, dtype=int)
+                dims[i] = self.shapes_k[k][i]
+                ret = ret * np.reshape(
+                    self.tweights[i][self.lefts[i][k] : self.rights[i][k] + 1], dims
+                )
+
+            self.fulltweights = self.fulltweights + [ret * np.product(self.H_xt_k[k] ** (1.0 - deriv))]
+
         self.fullweights0 = []
         for k in range(self.K):
 
@@ -545,14 +563,15 @@ class WeakPDELibrary(BaseFeatureLibrary):
         dims[-1] = u.shape[-1]
 
         for k in range(self.K):
-            ret = -u[np.ix_(*self.inds_k[k])]
-            for i in range(self.grid_ndim):
-                ret = self.H_xt_k[k][i] ** (1 - deriv_orders[i]) * np.tensordot(
-                    ret,
-                    self.tweights[i][self.lefts[i][k] : self.rights[i][k] + 1],
-                    axes=(0, 0),
-                )
-            u_dot_integral[k] = ret
+            u_dot_integral[k] = np.tensordot(
+                self.fulltweights[k],
+                -u[np.ix_(*self.inds_k[k])],
+                axes=(
+                    tuple(np.arange(self.grid_ndim)),
+                    tuple(np.arange(self.grid_ndim)),
+                ),
+            )
+
 
         return u_dot_integral
 
@@ -914,16 +933,14 @@ class WeakPDELibrary(BaseFeatureLibrary):
             if self.include_bias:
                 constants_final = np.zeros(self.K)
                 for k in range(self.K):
-                    ret = np.ones(
-                        [len(self.inds_k[k][i]) for i in range(self.grid_ndim)]
+                    constants_final[k] = np.tensordot(
+                        self.fullweights0[k],
+                        np.ones(self.shapes_k[k]),
+                        axes=(
+                            tuple(np.arange(self.grid_ndim)),
+                            tuple(np.arange(self.grid_ndim)),
+                        ),
                     )
-                    for i in range(self.grid_ndim):
-                        ret = self.H_xt_k[k][i] * np.tensordot(
-                            ret,
-                            self.weights0[i][self.lefts[i][k] : self.rights[i][k] + 1],
-                            axes=(0, 0),
-                        )
-                    constants_final[k] = ret
                 xp[:, library_idx] = constants_final
                 library_idx += 1
 

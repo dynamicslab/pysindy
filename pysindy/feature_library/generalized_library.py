@@ -251,12 +251,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         n_samples, n_features = x.shape
 
-        weak_libraries = False
-        for lib in self.libraries_:
-            if isinstance(lib, WeakPDELibrary):
-                weak_libraries = True
-        if weak_libraries:
-            n_samples = self.libraries_[0].K
+        if isinstance(self.libraries_[0], WeakPDELibrary):
+            n_samples = self.libraries_[0].K * self.libraries_[0].num_trajectories
 
         if float(__version__[:3]) >= 1.0:
             n_input_features = self.n_features_in_

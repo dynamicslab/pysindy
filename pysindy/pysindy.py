@@ -880,7 +880,13 @@ class SINDy(BaseEstimator):
                 else:
                     x = [validate_input(xi, t) for xi in x]
                     if not isinstance(self.feature_library, WeakPDELibrary):
-                        x_dot = [validate_input(xd, t) for xd in x_dot]
+                        if isinstance(self.feature_library, GeneralizedLibrary):
+                            if not isinstance(
+                                self.feature_library._libraries_[0], WeakPDELibrary
+                            ):
+                                x_dot = [validate_input(xd, t) for xd in x_dot]
+                        else:
+                            x_dot = [validate_input(xd, t) for xd in x_dot]
 
         if return_array:
             return np.vstack(x), np.vstack(x_dot)

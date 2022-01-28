@@ -401,8 +401,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
             self.weights1 = self.weights1 + [weights2]
 
         self.fulltweights = []
-        deriv=np.zeros(self.grid_ndim)
-        deriv[-1]=1
+        deriv = np.zeros(self.grid_ndim)
+        deriv[-1] = 1
         for k in range(self.K):
 
             ret = np.ones(self.shapes_k[k])
@@ -416,7 +416,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     self.tweights[i][self.lefts[i][k] : self.rights[i][k] + 1], dims
                 )
 
-            self.fulltweights = self.fulltweights + [ret * np.product(self.H_xt_k[k] ** (1.0 - deriv))]
+            self.fulltweights = self.fulltweights + [
+                ret * np.product(self.H_xt_k[k] ** (1.0 - deriv))
+            ]
 
         self.fullweights0 = []
         for k in range(self.K):
@@ -571,7 +573,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     tuple(np.arange(self.grid_ndim)),
                 ),
             )
-
 
         return u_dot_integral
 

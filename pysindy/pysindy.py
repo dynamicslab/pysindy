@@ -882,7 +882,7 @@ class SINDy(BaseEstimator):
                     if not isinstance(self.feature_library, WeakPDELibrary):
                         if isinstance(self.feature_library, GeneralizedLibrary):
                             if not isinstance(
-                                self.feature_library._libraries_[0], WeakPDELibrary
+                                self.feature_library.libraries_[0], WeakPDELibrary
                             ):
                                 x_dot = [validate_input(xd, t) for xd in x_dot]
                         else:

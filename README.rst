@@ -1,7 +1,7 @@
 PySINDy
 =========
 
-|BuildCI| |RTD| |PyPI| |Codecov| |JOSS| |DOI|
+|BuildCI| |RTD| |PyPI| |Codecov| |JOSS1| |JOSS2| |DOI|
 
 **PySINDy** is a sparse regression package with several implementations for the Sparse Identification of Nonlinear Dynamical systems (SINDy) method introduced in Brunton et al. (2016a), including the unified optimization approach of Champion et al. (2019), SINDy with control from Brunton et al. (2016b), Trapping SINDy from Kaptanoglu et al. (2021), SINDy-PI from Kaheman et al. (2020), PDE-FIND from Rudy et al. (2017), and so on. A comprehensive literature review is given in de Silva et al. (2020) and Kaptanoglu, de Silva et al. (2021).
 
@@ -319,8 +319,11 @@ Thanks to the members of the community who have contributed to PySINDy!
 .. |Codecov| image:: https://codecov.io/gh/dynamicslab/pysindy/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/dynamicslab/pysindy
 
-.. |JOSS| image:: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644/status.svg
+.. |JOSS1| image:: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644/status.svg
     :target: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644
+    
+.. |JOSS2| image:: https://joss.theoj.org/papers/10.21105/joss.03994/status.svg
+    :target: https://doi.org/10.21105/joss.03994
 
 .. |DOI| image:: https://zenodo.org/badge/186055899.svg
    :target: https://zenodo.org/badge/latestdoi/186055899

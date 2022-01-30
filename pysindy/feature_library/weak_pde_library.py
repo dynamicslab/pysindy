@@ -189,7 +189,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.grid_ndim = len(dims)
 
         # if want to include temporal terms -> range(len(dims))
-        for i in range(len(dims) - 1):
+        for i in range(len(dims)):
             indices = indices + (range(derivative_order + 1),)
 
         multiindices = []
@@ -373,7 +373,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
             def derivative_string(multiindex):
                 ret = ""
-                for axis in range(self.grid_ndim - 1):
+                for axis in range(self.grid_ndim):
                     for i in range(multiindex[axis]):
                         ret = ret + str(axis + 1)
                 return ret
@@ -590,7 +590,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 # Note excluding temporal derivatives in the feature library
                 for deriv_ind, multiindex in enumerate(self.multiindices):
                     derivs = np.zeros(self.grid_ndim)
-                    for axis in range(self.grid_ndim - 1):
+                    for axis in range(self.grid_ndim):
                         if multiindex[axis] > 0:
                             derivs[axis] = multiindex[axis]
                     deriv_slices[-1] = deriv_ind
@@ -737,7 +737,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                             np.concatenate([func_library_new.shape[:-1], [1]]),
                         )
                         derivs_pure = func_pure_new.copy()
-                        for axis in range(self.grid_ndim - 1):
+                        for axis in range(self.grid_ndim):
                             d_mixed = multiindex[axis] // 2.0
                             d_pure = multiindex[axis] - d_mixed
                             for k in range(self.K):

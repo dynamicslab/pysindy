@@ -5,6 +5,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from .base import BaseFeatureLibrary
 from .weak_pde_library import WeakPDELibrary
+from .tensor_library import TensoredLibrary
 
 
 class GeneralizedLibrary(BaseFeatureLibrary):
@@ -104,6 +105,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         super(GeneralizedLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
         )
+        self.n_samples = None
         if len(libraries) > 0:
             self.libraries_ = libraries
             weak_libraries = False
@@ -111,6 +113,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             for lib in self.libraries_:
                 if isinstance(lib, WeakPDELibrary):
                     weak_libraries = True
+                    self.n_samples = lib.K
                 else:
                     nonweak_libraries = True
             if weak_libraries and nonweak_libraries:
@@ -214,7 +217,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 library_full = library_subset[0]
                 n_output_features = library_subset[0].n_output_features_
                 for j in range(1, len(library_subset)):
-                    library_full = library_full * library_subset[j]
+                    library_full = TensoredLibrary([library_full, library_subset[j]])
                     n_output_features = (
                         n_output_features * library_subset[j].n_output_features_
                     )
@@ -251,6 +254,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             check_is_fitted(lib)
 
         n_samples, n_features = x.shape
+        if self.n_samples is not None:
+            n_samples = self.n_samples
 
         if float(__version__[:3]) >= 1.0:
             n_input_features = self.n_features_in_

@@ -14,6 +14,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
+from .feature_library import TensoredLibrary
 from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
@@ -362,7 +363,7 @@ class SINDy(BaseEstimator):
                 else:
                     x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
 
-            elif isinstance(self.feature_library, GeneralizedLibrary):
+            elif isinstance(self.feature_library, GeneralizedLibrary) or isinstance(self.feature_library, TensoredLibrary):
                 for lib in self.feature_library.libraries_:
                     if isinstance(lib, WeakPDELibrary):
                         weak_libraries = True
@@ -396,7 +397,7 @@ class SINDy(BaseEstimator):
 
         if multiple_trajectories:
             self.feature_library.num_trajectories = len(x)
-            if isinstance(self.feature_library, GeneralizedLibrary):
+            if isinstance(self.feature_library, GeneralizedLibrary) or isinstance(self.feature_library, TensoredLibrary):
                 for lib in self.feature_library.libraries_:
                     if isinstance(lib, PDELibrary):
                         lib.num_trajectories = len(x)
@@ -430,7 +431,7 @@ class SINDy(BaseEstimator):
             x = np.concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known unless using weak PDE form
-        if not isinstance(self.feature_library, WeakPDELibrary):
+        if not isinstance(self.feature_library, WeakPDELibrary) and not weak_libraries:
             x, x_dot = drop_nan_rows(x, x_dot)
 
         if hasattr(self.optimizer, "unbias"):

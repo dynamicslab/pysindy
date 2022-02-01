@@ -1,5 +1,5 @@
 from .base import ConcatLibrary
-from .base import TensoredLibrary
+from .tensor_library import TensoredLibrary
 from .custom_library import CustomLibrary
 from .fourier_library import FourierLibrary
 from .generalized_library import GeneralizedLibrary

@@ -215,7 +215,7 @@ If you use PySINDy in your work, please cite it using the following two referenc
 
 Brian M. de Silva, Kathleen Champion, Markus Quade, Jean-Christophe Loiseau, J. Nathan Kutz, and Steven L. Brunton., (2020). *PySINDy: A Python package for the sparse identification of nonlinear dynamical systems from data.* Journal of Open Source Software, 5(49), 2104, https://doi.org/10.21105/joss.02104
 
-Alan A. Kaptanoglu, Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Andy J. Goldschmidt, Jared L. Callaham,   Charles  B.  Delahunt,   Zachary G. Nicolaou,   Kathleen  Champion,   Jean-Christophe  Loiseau,J. Nathan Kutz, and Steven L. Brunton. *PySINDy:  A comprehensive Python package for robust sparse system identification.* arXiv preprint arXiv:2111.08481, 2021.
+Kaptanoglu et al., (2022). PySINDy: A comprehensive Python package for robust sparse system identification. Journal of Open Source Software, 7(69), 3994, https://doi.org/10.21105/joss.03994
 
 Bibtex:
 
@@ -238,12 +238,19 @@ Bibtex:
 
 .. code-block:: text
 
-      @article{kaptanoglu2021pysindy,
-      title={PySINDy: A comprehensive Python package for robust sparse system identification},
-      author={Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Andy J. Goldschmidt and Jared L. Callaham and Charles B. Delahunt and Zachary G. Nicolaou and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
-      year={2021},
-	  Journal = {arXiv preprint arXiv:2111.08481},
-      }
+      @article{Kaptanoglu2022,
+  	doi = {10.21105/joss.03994},
+  	url = {https://doi.org/10.21105/joss.03994},
+  	year = {2022},
+  	publisher = {The Open Journal},
+  	volume = {7},
+  	number = {69},
+  	pages = {3994},
+  	author = {Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Andy J. Goldschmidt and Jared Callaham and Charles B. Delahunt and Zachary G. Nicolaou and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
+  	title = {PySINDy: A comprehensive Python package for robust sparse system identification},
+  	journal = {Journal of Open Source Software}
+	}
+
 
 References
 ----------------------

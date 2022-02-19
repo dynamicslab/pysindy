@@ -36,6 +36,43 @@ from pysindy.optimizers import STLSQ
 from pysindy.utils import convert_u_dot_integral
 
 
+def test_x_tuple_input(data_1d):
+    x, t = data_1d
+    model = SINDy()
+    model.fit(tuple(x))
+    check_is_fitted(model)
+
+    model = SINDy()
+    model.fit(tuple(x), x_dot=tuple(x))
+    check_is_fitted(model)
+
+    model = SINDy()
+    model.fit(x, x_dot=tuple(x))
+    check_is_fitted(model)
+
+
+def test_tuple_multiple_trajectory(data_multiple_trajctories):
+    x, t = data_multiple_trajctories
+    model = SINDy()
+    model.fit(tuple(x), multiple_trajectories=True)
+    check_is_fitted(model)
+
+    model = SINDy()
+    model.fit(tuple(x), x_dot=tuple(x), multiple_trajectories=True)
+    check_is_fitted(model)
+
+    # In case each trajectory is tuple
+    for i in range(len(x)):
+        x[i] = tuple(x[i])
+    model = SINDy()
+    model.fit(tuple(x), multiple_trajectories=True)
+    check_is_fitted(model)
+
+    model = SINDy()
+    model.fit(tuple(x), x_dot=tuple(x), multiple_trajectories=True)
+    check_is_fitted(model)
+
+
 def test_get_feature_names_len(data_lorenz):
     x, t = data_lorenz
     model = SINDy()

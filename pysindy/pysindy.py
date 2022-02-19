@@ -290,6 +290,25 @@ class SINDy(BaseEstimator):
         -------
         self: a fitted :class:`SINDy` instance
         """
+        if multiple_trajectories:
+            if type(x) is tuple:
+                x = list(x)
+            for i in range(len(x)):
+                if type(x[i]) is tuple:
+                    x[i] = np.asarray(x[i])
+        elif type(x) is tuple:
+            x = np.asarray(x)
+
+        if x_dot is not None:
+            if multiple_trajectories:
+                if type(x_dot) is tuple:
+                    x_dot = list(x_dot)
+                for i in range(len(x_dot)):
+                    if type(x_dot[i]) is tuple:
+                        x_dot[i] = np.asarray(x_dot[i])
+            elif type(x_dot) is tuple:
+                x_dot = np.asarray(x_dot)
+
         if t is None:
             t = self.t_default
         if u is None:

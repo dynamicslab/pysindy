@@ -7,6 +7,7 @@ from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import capped_simplex_projection
 from ..utils import get_prox
+from ..utils import get_regularization
 from .base import BaseOptimizer
 
 
@@ -18,14 +19,14 @@ class SR3(BaseOptimizer):
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
-        + (0.5 / \\nu)\\|w-v\\|^2_2
+        0.5\\|y-Xw\\|^2_2 + \\lambda R(u)
+        + (0.5 / \\nu)\\|w-u\\|^2_2
 
-    where :math:`R(v)` is a regularization function.
+    where :math:`R(u)` is a regularization function.
     See the following references for more details:
 
         Zheng, Peng, et al. "A unified framework for sparse relaxed
-        regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
+        regularized regression: SR3." IEEE Access 7 (2018): 1404-1423.
 
         Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N.
         (2020). A unified sparse optimization framework to learn parsimonious
@@ -95,6 +96,10 @@ class SR3(BaseOptimizer):
         threshold to be used for the (j + 1)st library function in the equation
         for the (i + 1)st measurement variable.
 
+    verbose : bool, optional (default False)
+        If True, prints out the different error terms every
+        max_iter / 10 iterations.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -144,6 +149,7 @@ class SR3(BaseOptimizer):
         copy_X=True,
         initial_guess=None,
         normalize_columns=False,
+        verbose=False,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
@@ -203,6 +209,7 @@ class SR3(BaseOptimizer):
         self.nu = nu
         self.tol = tol
         self.thresholder = thresholder
+        self.reg = get_regularization(thresholder)
         self.prox = get_prox(thresholder)
         if trimming_fraction == 0.0:
             self.use_trimming = False
@@ -210,6 +217,7 @@ class SR3(BaseOptimizer):
             self.use_trimming = True
         self.trimming_fraction = trimming_fraction
         self.trimming_step_size = trimming_step_size
+        self.verbose = verbose
 
     def enable_trimming(self, trimming_fraction):
         """
@@ -228,6 +236,48 @@ class SR3(BaseOptimizer):
         """Disable trimming of potential outliers."""
         self.use_trimming = False
         self.trimming_fraction = None
+
+    def _objective(self, x, y, q, coef_full, coef_sparse, trimming_array=None):
+        """Objective function"""
+        if q != 0:
+            print_ind = q % (self.max_iter // 10.0)
+        else:
+            print_ind = q
+        R2 = (y - np.dot(x, coef_full)) ** 2
+        D2 = (coef_full - coef_sparse) ** 2
+        if self.use_trimming:
+            assert trimming_array is not None
+            R2 *= trimming_array.reshape(x.shape[0], 1)
+        if self.thresholds is None:
+            regularization = self.reg(coef_full, self.threshold ** 2 / self.nu)
+            if print_ind == 0 and self.verbose:
+                row = [
+                    q,
+                    np.sum(R2),
+                    np.sum(D2) / self.nu,
+                    regularization,
+                    np.sum(R2) + np.sum(D2) + regularization,
+                ]
+                print(
+                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
+                    " ... {4:10.4e}".format(*row)
+                )
+            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
+        else:
+            regularization = self.reg(coef_full, self.thresholds ** 2 / self.nu)
+            if print_ind == 0 and self.verbose:
+                row = [
+                    q,
+                    np.sum(R2),
+                    np.sum(D2) / self.nu,
+                    regularization,
+                    np.sum(R2) + np.sum(D2) + regularization,
+                ]
+                print(
+                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
+                    " ... {4:10.4e}".format(*row)
+                )
+            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
         """Update the unregularized weight vector"""
@@ -289,13 +339,30 @@ class SR3(BaseOptimizer):
             coef_full = coef_sparse.copy()
             trimming_array = np.repeat(1.0 - self.trimming_fraction, n_samples)
             self.history_trimming_ = [trimming_array]
+        else:
+            trimming_array = None
 
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
         cho = cho_factor(np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu)))
         x_transpose_y = np.dot(x.T, y)
 
-        for _ in range(self.max_iter):
+        # Print initial values for each term in the optimization
+        if self.verbose:
+            row = [
+                "Iteration",
+                "|y - Xw|^2",
+                "|w-u|^2/v",
+                "R(u)",
+                "Total Error: |y-Xw|^2 + |w-u|^2/v + R(u)",
+            ]
+            print(
+                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
+                " ... {: >10}".format(*row)
+            )
+        objective_history = []
+
+        for k in range(self.max_iter):
             if self.use_trimming:
                 x_weighted = x * trimming_array.reshape(n_samples, 1)
                 cho = cho_factor(
@@ -307,12 +374,13 @@ class SR3(BaseOptimizer):
             coef_full = self._update_full_coef(cho, x_transpose_y, coef_sparse)
             coef_sparse = self._update_sparse_coef(coef_full)
             self.history_.append(coef_sparse.T)
-
             if self.use_trimming:
                 trimming_array = self._update_trimming_array(
                     coef_full, trimming_array, trimming_grad
                 )
-
+            objective_history.append(
+                self._objective(x, y, k, coef_full, coef_sparse, trimming_array)
+            )
             if self._convergence_criterion() < self.tol:
                 # Could not (further) select important features
                 break
@@ -327,3 +395,4 @@ class SR3(BaseOptimizer):
         self.coef_full_ = coef_full.T
         if self.use_trimming:
             self.trimming_array = trimming_array
+        self.objective_history = objective_history

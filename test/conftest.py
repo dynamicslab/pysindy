@@ -6,6 +6,7 @@ import pytest
 from scipy.integrate import solve_ivp
 
 from pysindy.differentiation import FiniteDifference
+from pysindy.differentiation import SpectralDerivative
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import GeneralizedLibrary
@@ -61,6 +62,42 @@ def data_multiple_trajctories():
         x_list.append(solve_ivp(lorenz, (t[0], t[-1]), x0, t_eval=t).y.T)
 
     return x_list, t_list
+
+
+@pytest.fixture
+def diffuse_multiple_trajectories():
+    def diffuse(t, u, dx, nx):
+        u = np.reshape(u, nx)
+        du = SpectralDerivative(d=2, axis=0)._differentiate(u, dx)
+        return np.reshape(u * du, nx)
+
+    # Required for accurate solve_ivp results
+    integrator_keywords = {}
+    integrator_keywords["rtol"] = 1e-12
+    integrator_keywords["method"] = "LSODA"
+    integrator_keywords["atol"] = 1e-12
+    N = 200
+    h0 = 1.0
+    L = 5
+    T = 1
+    t = np.linspace(0, T, N)
+    x = np.arange(0, N) * L / N
+    ep = 0.5 * h0
+    y0 = np.reshape(
+        h0 + ep * np.cos(4 * np.pi / L * x) + ep * np.cos(2 * np.pi / L * x), N
+    )
+    y1 = np.reshape(
+        h0 + ep * np.cos(4 * np.pi / L * x) - ep * np.cos(2 * np.pi / L * x), N
+    )
+    dx = x[1] - x[0]
+    sol1 = solve_ivp(
+        diffuse, (t[0], t[-1]), y0=y0, t_eval=t, args=(dx, N), **integrator_keywords
+    )
+    sol2 = solve_ivp(
+        diffuse, (t[0], t[-1]), y0=y1, t_eval=t, args=(dx, N), **integrator_keywords
+    )
+    u = [np.reshape(sol1.y, (N, N, 1)), np.reshape(sol2.y, (N, N, 1))]
+    return t, x, u
 
 
 @pytest.fixture

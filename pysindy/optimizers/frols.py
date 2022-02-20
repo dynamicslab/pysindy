@@ -46,6 +46,10 @@ class FROLS(BaseOptimizer):
     ridge_kw : dict, optional (default None)
         Optional keyword arguments to pass to the ridge regression.
 
+    verbose : bool, optional (default False)
+        If True, prints out the different error terms every
+        iteration.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -84,6 +88,7 @@ class FROLS(BaseOptimizer):
         max_iter=10,
         alpha=0.05,
         ridge_kw=None,
+        verbose=False,
     ):
         super(FROLS, self).__init__(
             fit_intercept=fit_intercept,
@@ -96,6 +101,7 @@ class FROLS(BaseOptimizer):
         self.kappa = kappa
         if self.max_iter <= 0:
             raise ValueError("Max iteration must be > 0")
+        self.verbose = verbose
 
     def _normed_cov(self, a, b):
         return np.vdot(a, b) / np.vdot(a, a)
@@ -135,6 +141,31 @@ class FROLS(BaseOptimizer):
         """
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
+        cond_num = np.linalg.cond(x)
+        if self.kappa is not None:
+            l0_penalty = self.kappa * cond_num
+        else:
+            l0_penalty = 0.0
+
+        # Print initial values for each term in the optimization
+        if self.verbose:
+            row = [
+                "Iteration",
+                "Index",
+                "|y - Xw|^2",
+                "a * |w|_2",
+                "|w|_0",
+                "b * |w|_0",
+                "Total: |y-Xw|^2+a*|w|_2+b*|w|_0",
+            ]
+            print(
+                "{: >10} ... {: >5} ... {: >10} ... {: >10} ... {: >5}"
+                " ... {: >10} ... {: >10}".format(*row)
+            )
+            print(
+                " Note that these error metrics are related but not the same"
+                " as the loss function being minimized by FROLS!"
+            )
 
         # History of selected functions: [iteration x output x coefficients]
         self.history_ = np.zeros((n_features, n_targets, n_features), dtype=x.dtype)
@@ -191,14 +222,19 @@ class FROLS(BaseOptimizer):
 
                 if i >= self.max_iter:
                     break
-
-        if self.kappa is not None:
-            l0_penalty = self.kappa * np.linalg.cond(x)
-        else:
-            l0_penalty = 0.0
+                if self.verbose:
+                    coef = self.history_[i, k, :]
+                    R2 = np.sum((y[:, k] - np.dot(x, coef).T) ** 2)
+                    L2 = self.alpha * np.sum(coef ** 2)
+                    L0 = np.count_nonzero(coef)
+                    row = [i, k, R2, L2, L0, l0_penalty * L0, R2 + L2 + l0_penalty * L0]
+                    print(
+                        "{0:10d} ... {1:5d} ... {2:10.4e} ... {3:10.4e}"
+                        " ... {4:5d} ... {5:10.4e} ... {6:10.4e}".format(*row)
+                    )
 
         # Function selection: L2 error for output k at iteration i is given by
-        #    sum(ERR_global[k, :i]), and the number of nonzero coefficients is (i+1)
+        # sum(ERR_global[k, :i]), and the number of nonzero coefficients is (i+1)
         l2_err = np.cumsum(self.ERR_global, axis=1)
         l0_norm = np.arange(1, n_features + 1)[:, None]
         self.loss_ = l2_err + l0_penalty * l0_norm  # Save for debugging

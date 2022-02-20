@@ -9,7 +9,8 @@ from .base import BaseOptimizer
 
 
 class STLSQ(BaseOptimizer):
-    """Sequentially thresholded least squares algorithm.
+    """Sequentially thresholded least squares algorithm. Defaults to doing
+    Sequentially thresholded Ridge regression.
 
     Attempts to minimize the objective function
     :math:`\\|y - Xw\\|^2_2 + \\alpha \\|w\\|^2_2`
@@ -57,6 +58,9 @@ class STLSQ(BaseOptimizer):
         Initial guess for coefficients ``coef_``.
         If None, least-squares is used to obtain an initial guess.
 
+    verbose : bool, optional (default False)
+        If True, prints out the different error terms every iteration.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -101,6 +105,7 @@ class STLSQ(BaseOptimizer):
         fit_intercept=False,
         copy_X=True,
         initial_guess=None,
+        verbose=False,
     ):
         super(STLSQ, self).__init__(
             max_iter=max_iter,
@@ -118,6 +123,7 @@ class STLSQ(BaseOptimizer):
         self.alpha = alpha
         self.ridge_kw = ridge_kw
         self.initial_guess = initial_guess
+        self.verbose = verbose
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):
         """Perform thresholding of the weight vector(s)"""
@@ -152,14 +158,27 @@ class STLSQ(BaseOptimizer):
         """
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess
-        self.Theta = x
 
         ind = self.ind_
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
         n_features_selected = np.sum(ind)
 
-        for _ in range(self.max_iter):
+        # Print initial values for each term in the optimization
+        if self.verbose:
+            row = [
+                "Iteration",
+                "|y - Xw|^2",
+                "a * |w|_2",
+                "|w|_0",
+                "Total error: |y - Xw|^2 + a * |w|_2",
+            ]
+            print(
+                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
+                " ... {: >10}".format(*row)
+            )
+
+        for k in range(self.max_iter):
             if np.count_nonzero(ind) == 0:
                 warnings.warn(
                     "Sparsity parameter is too big ({}) and eliminated all "
@@ -184,6 +203,15 @@ class STLSQ(BaseOptimizer):
                 ind[i] = ind_i
 
             self.history_.append(coef)
+            if self.verbose:
+                R2 = np.sum((y - np.dot(x, coef.T)) ** 2)
+                L2 = self.alpha * np.sum(coef ** 2)
+                L0 = np.count_nonzero(coef)
+                row = [k, R2, L2, L0, R2 + L2]
+                print(
+                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10d}"
+                    " ... {4:10.4e}".format(*row)
+                )
             if np.sum(ind) == n_features_selected or self._no_change():
                 # could not (further) select important features
                 break

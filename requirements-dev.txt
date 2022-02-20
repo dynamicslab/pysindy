@@ -1,6 +1,5 @@
 -e .
 -r requirements.txt
-matplotlib
 pytest
 pytest-cov
 pytest-lazy-fixture

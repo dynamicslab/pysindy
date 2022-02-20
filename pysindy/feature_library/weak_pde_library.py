@@ -160,6 +160,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.H_xt = H_xt
         self.p = p
         self.periodic = periodic
+        self.num_trajectories = 1
 
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
@@ -343,7 +344,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         if float(__version__[:3]) >= 1.0:
             n_features = self.n_features_in_
         else:
-            n_features = self.n_input_features
+            n_features = self.n_input_features_
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
         if self.function_names is None:
@@ -471,7 +472,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         x = check_array(x)
 
-        n_samples_original, n_features = x.shape
+        n_samples_original_full, n_features = x.shape
+        n_samples_original = n_samples_original_full // self.num_trajectories
+
         if float(__version__[:3]) >= 1.0:
             if n_features != self.n_features_in_:
                 raise ValueError("x shape does not match training shape")
@@ -481,47 +484,145 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         if self.spatiotemporal_grid is not None:
             n_samples = self.K
+            n_samples_full = self.K * self.num_trajectories
 
-        xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
-
-        # library function terms
-        n_library_terms = 0
-        for f in self.functions:
-            for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interaction_only
-            ):
-                n_library_terms += 1
-
-        # get original-size library functions before integrating
-        nonweak_functions = np.empty(
-            (n_samples_original, n_library_terms), dtype=x.dtype
+        xp_full = np.empty(
+            (self.num_trajectories, n_samples, self.n_output_features_), dtype=x.dtype
         )
-        library_idx = 0
-        for f in self.functions:
-            for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interaction_only
-            ):
-                nonweak_functions[:, library_idx] = np.reshape(
-                    f(*[x[:, j] for j in c]), (n_samples_original)
+        x_full = np.reshape(
+            x, np.concatenate([[self.num_trajectories], self.grid_dims, [n_features]])
+        )
+
+        # Loop over each trajectory
+        for trajectory_ind in range(self.num_trajectories):
+            x = np.reshape(x_full[trajectory_ind], (n_samples_original, n_features))
+            xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
+
+            # library function terms
+            n_library_terms = 0
+            for f in self.functions:
+                for c in self._combinations(
+                    n_features, f.__code__.co_argcount, self.interaction_only
+                ):
+                    n_library_terms += 1
+
+            # get original-size library functions before integrating
+            nonweak_functions = np.empty(
+                (n_samples_original, n_library_terms), dtype=x.dtype
+            )
+            library_idx = 0
+            for f in self.functions:
+                for c in self._combinations(
+                    n_features, f.__code__.co_argcount, self.interaction_only
+                ):
+                    nonweak_functions[:, library_idx] = np.reshape(
+                        f(*[x[:, j] for j in c]), (n_samples_original)
+                    )
+                    library_idx += 1
+
+            library_functions = np.empty((n_samples, n_library_terms), dtype=x.dtype)
+            library_idx = 0
+
+            integral_weights = self._smooth_ppoly(np.zeros(self.grid_ndim))
+            func_final = np.zeros(self.K)
+            for f in self.functions:
+                for c in self._combinations(
+                    n_features, f.__code__.co_argcount, self.interaction_only
+                ):
+                    func = f(*[x[:, j] for j in c])
+                    func = np.reshape(func, self.grid_dims)
+                    func_interp = RegularGridInterpolator(tuple(self.grid_pts), func)
+                    for k in range(self.K):
+                        func_new = func_interp(np.take(self.XT, k, axis=0))
+                        func_temp = trapezoid(
+                            integral_weights[k] * func_new,
+                            x=self.xtgrid_k[k, :, 0],
+                            axis=0,
+                        )
+                        for i in range(1, self.grid_ndim):
+                            func_temp = trapezoid(
+                                func_temp, x=self.xtgrid_k[k, :, i], axis=0
+                            )
+                        func_final[k] = func_temp
+                    library_functions[:, library_idx] = func_final
+                    library_idx += 1
+
+            if self.derivative_order != 0:
+                # pure integral terms, need to differentiate the weight functions
+                library_integrals = np.empty(
+                    (n_samples, n_features * self.num_derivatives), dtype=x.dtype
                 )
-                library_idx += 1
+                funcs = np.reshape(x, np.concatenate([self.grid_dims, [n_features]]))
 
-        library_functions = np.empty((n_samples, n_library_terms), dtype=x.dtype)
-        library_idx = 0
+                # Build interpolating function for each feature
+                func_interp = []
+                for j in range(n_features):
+                    func_interp.append(
+                        RegularGridInterpolator(
+                            tuple(self.grid_pts), np.take(funcs, j, axis=-1)
+                        )
+                    )
 
-        integral_weights = self._smooth_ppoly(np.zeros(self.grid_ndim))
-        func_final = np.zeros(self.K)
-        for f in self.functions:
-            for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interaction_only
-            ):
-                func = f(*[x[:, j] for j in c])
-                func = np.reshape(func, self.grid_dims)
-                func_interp = RegularGridInterpolator(tuple(self.grid_pts), func)
+                # interpolate all the functions onto each of the subdomains
+                func_new = np.empty(
+                    (self.K, *(self.grid_ndim * [self.num_pts_per_domain]), n_features)
+                )
                 for k in range(self.K):
-                    func_new = func_interp(np.take(self.XT, k, axis=0))
+                    func_new[k] = np.transpose(
+                        np.array(
+                            [
+                                func_interp[j](np.take(self.XT, k, axis=0))
+                                for j in range(n_features)
+                            ]
+                        ),
+                        [*range(1, self.grid_ndim + 1), 0],
+                    )
+
+                # Compute derivatives of the subdomain weight functions
+                integral_weight_derivs = np.empty(
+                    (
+                        self.K,
+                        *(self.grid_ndim * [self.num_pts_per_domain]),
+                        self.num_derivatives,
+                    )
+                )
+                deriv_slices = [slice(None)] * integral_weight_derivs.ndim
+                # Note excluding temporal derivatives in the feature library
+                for deriv_ind, multiindex in enumerate(self.multiindices):
+                    derivs = np.zeros(self.grid_ndim)
+                    for axis in range(self.grid_ndim - 1):
+                        if multiindex[axis] > 0:
+                            derivs[axis] = multiindex[axis]
+                    deriv_slices[-1] = deriv_ind
+                    integral_weight_derivs[tuple(deriv_slices)] = self._smooth_ppoly(
+                        derivs
+                    ) * (-1) ** (np.sum(derivs) % 2)
+
+                # Arrange all the terms to be integrated...
+                # subdomain weight functions * the interpolated functions
+                complete_funcs = np.empty(
+                    (
+                        self.K,
+                        *(self.grid_ndim * [self.num_pts_per_domain]),
+                        self.num_derivatives * n_features,
+                    )
+                )
+                func_slices = [slice(None)] * func_new.ndim
+                complete_slices = [slice(None)] * complete_funcs.ndim
+                # combine the functions together
+                for j in range(self.num_derivatives):
+                    deriv_slices[-1] = j
+                    for i in range(n_features):
+                        func_slices[-1] = i
+                        complete_slices[-1] = j * n_features + i
+                        complete_funcs[tuple(complete_slices)] = (
+                            integral_weight_derivs[tuple(deriv_slices)]
+                            * func_new[tuple(func_slices)]
+                        )
+
+                for k in range(self.K):
                     func_temp = trapezoid(
-                        integral_weights[k] * func_new,
+                        complete_funcs[k],
                         x=self.xtgrid_k[k, :, 0],
                         axis=0,
                     )
@@ -529,295 +630,223 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         func_temp = trapezoid(
                             func_temp, x=self.xtgrid_k[k, :, i], axis=0
                         )
-                    func_final[k] = func_temp
-                library_functions[:, library_idx] = func_final
-                library_idx += 1
+                    library_integrals[k, :] = func_temp
 
-        if self.derivative_order != 0:
-            # pure integral terms, need to differentiate the weight functions
-            library_integrals = np.empty(
-                (n_samples, n_features * self.num_derivatives), dtype=x.dtype
-            )
-            funcs = np.reshape(x, np.concatenate([self.grid_dims, [n_features]]))
-
-            # Build interpolating function for each feature
-            func_interp = []
-            for j in range(n_features):
-                func_interp.append(
-                    RegularGridInterpolator(
-                        tuple(self.grid_pts), np.take(funcs, j, axis=-1)
-                    )
-                )
-
-            # interpolate all the functions onto each of the subdomains
-            func_new = np.empty(
-                (self.K, *(self.grid_ndim * [self.num_pts_per_domain]), n_features)
-            )
-            for k in range(self.K):
-                func_new[k] = np.transpose(
-                    np.array(
-                        [
-                            func_interp[j](np.take(self.XT, k, axis=0))
-                            for j in range(n_features)
-                        ]
-                    ),
-                    [*range(1, self.grid_ndim + 1), 0],
-                )
-
-            # Compute derivatives of the subdomain weight functions
-            integral_weight_derivs = np.empty(
-                (
-                    self.K,
-                    *(self.grid_ndim * [self.num_pts_per_domain]),
-                    self.num_derivatives,
-                )
-            )
-            deriv_slices = [slice(None)] * integral_weight_derivs.ndim
-            # Note excluding temporal derivatives in the feature library
-            for deriv_ind, multiindex in enumerate(self.multiindices):
-                derivs = np.zeros(self.grid_ndim)
-                for axis in range(self.grid_ndim - 1):
-                    if multiindex[axis] > 0:
-                        derivs[axis] = multiindex[axis]
-                deriv_slices[-1] = deriv_ind
-                integral_weight_derivs[tuple(deriv_slices)] = self._smooth_ppoly(
-                    derivs
-                ) * (-1) ** (np.sum(derivs) % 2)
-
-            # Arrange all the terms to be integrated...
-            # subdomain weight functions * the interpolated functions
-            complete_funcs = np.empty(
-                (
-                    self.K,
-                    *(self.grid_ndim * [self.num_pts_per_domain]),
-                    self.num_derivatives * n_features,
-                )
-            )
-            func_slices = [slice(None)] * func_new.ndim
-            complete_slices = [slice(None)] * complete_funcs.ndim
-            # combine the functions together
-            for j in range(self.num_derivatives):
-                deriv_slices[-1] = j
-                for i in range(n_features):
-                    func_slices[-1] = i
-                    complete_slices[-1] = j * n_features + i
-                    complete_funcs[tuple(complete_slices)] = (
-                        integral_weight_derivs[tuple(deriv_slices)]
-                        * func_new[tuple(func_slices)]
+                # Mixed derivative/non-derivative terms
+                if self.include_interaction:
+                    # mixed integral terms
+                    library_mixed_integrals = np.empty(
+                        (
+                            n_samples,
+                            n_library_terms * n_features * self.num_derivatives,
+                        ),
+                        dtype=x.dtype,
                     )
 
-            for k in range(self.K):
-                func_temp = trapezoid(
-                    complete_funcs[k],
-                    x=self.xtgrid_k[k, :, 0],
-                    axis=0,
-                )
-                for i in range(1, self.grid_ndim):
-                    func_temp = trapezoid(func_temp, x=self.xtgrid_k[k, :, i], axis=0)
-                library_integrals[k, :] = func_temp
-
-            # Mixed derivative/non-derivative terms
-            if self.include_interaction:
-                # mixed integral terms
-                library_mixed_integrals = np.empty(
-                    (n_samples, n_library_terms * n_features * self.num_derivatives),
-                    dtype=x.dtype,
-                )
-
-                # Build interpolating functions for all
-                # the library functions and features.
-                nonweak_terms = np.reshape(
-                    nonweak_functions,
-                    np.concatenate([self.grid_dims, [n_library_terms]]),
-                )
-                nonweak_id = np.reshape(
-                    x, np.concatenate([self.grid_dims, [n_features]])
-                )
-                func_library_interp = []
-                func_pure_interp = []
-                for j in range(n_library_terms):
-                    func_library_interp.append(
-                        RegularGridInterpolator(
-                            tuple(self.grid_pts),
-                            np.take(nonweak_terms, j, axis=-1),
-                        )
+                    # Build interpolating functions for all
+                    # the library functions and features.
+                    nonweak_terms = np.reshape(
+                        nonweak_functions,
+                        np.concatenate([self.grid_dims, [n_library_terms]]),
                     )
-                    if j < n_features:
-                        func_pure_interp.append(
+                    nonweak_id = np.reshape(
+                        x, np.concatenate([self.grid_dims, [n_features]])
+                    )
+                    func_library_interp = []
+                    func_pure_interp = []
+                    for j in range(n_library_terms):
+                        func_library_interp.append(
                             RegularGridInterpolator(
                                 tuple(self.grid_pts),
-                                np.take(nonweak_id, j, axis=-1),
+                                np.take(nonweak_terms, j, axis=-1),
                             )
                         )
+                        if j < n_features:
+                            func_pure_interp.append(
+                                RegularGridInterpolator(
+                                    tuple(self.grid_pts),
+                                    np.take(nonweak_id, j, axis=-1),
+                                )
+                            )
 
-                # Interpolate library functions and features onto subdomains
-                func_library_new = np.empty(
-                    (
-                        self.K,
-                        *(self.grid_ndim * [self.num_pts_per_domain]),
-                        n_library_terms,
+                    # Interpolate library functions and features onto subdomains
+                    func_library_new = np.empty(
+                        (
+                            self.K,
+                            *(self.grid_ndim * [self.num_pts_per_domain]),
+                            n_library_terms,
+                        )
                     )
-                )
-                func_pure_new = np.empty(
-                    (
-                        self.K,
-                        *(self.grid_ndim * [self.num_pts_per_domain]),
-                        n_features,
-                    )
-                )
-
-                for k in range(self.K):
-                    func_library_new[k] = np.transpose(
-                        np.array(
-                            [
-                                func_library_interp[j](self.XT[k])
-                                for j in range(n_library_terms)
-                            ]
-                        ),
-                        [*range(1, self.grid_ndim + 1), 0],
-                    )
-                    func_pure_new[k] = np.transpose(
-                        np.array(
-                            [func_pure_interp[j](self.XT[k]) for j in range(n_features)]
-                        ),
-                        [*range(1, self.grid_ndim + 1), 0],
+                    func_pure_new = np.empty(
+                        (
+                            self.K,
+                            *(self.grid_ndim * [self.num_pts_per_domain]),
+                            n_features,
+                        )
                     )
 
-                # functions now interpolated onto the subdomains, and need
-                # to take derivatives of these terms on each of the subdomains,
-                # where correct number of integration by parts is used. Note
-                # that this is different than the full derivatives, which are
-                # differentiated on the global grid, and then interpolated
-                # onto the subdomains.
-                derivs_mixed_total = np.empty(
-                    (
-                        self.K,
-                        *(self.grid_ndim * [self.num_pts_per_domain]),
-                        n_library_terms,
-                        self.num_derivatives,
-                    )
-                )
-                derivs_pure_total = np.empty(
-                    (
-                        self.K,
-                        *(self.grid_ndim * [self.num_pts_per_domain]),
-                        n_features,
-                        self.num_derivatives,
-                    )
-                )
+                    for k in range(self.K):
+                        func_library_new[k] = np.transpose(
+                            np.array(
+                                [
+                                    func_library_interp[j](self.XT[k])
+                                    for j in range(n_library_terms)
+                                ]
+                            ),
+                            [*range(1, self.grid_ndim + 1), 0],
+                        )
+                        func_pure_new[k] = np.transpose(
+                            np.array(
+                                [
+                                    func_pure_interp[j](self.XT[k])
+                                    for j in range(n_features)
+                                ]
+                            ),
+                            [*range(1, self.grid_ndim + 1), 0],
+                        )
 
-                deriv_slices = [slice(None)] * derivs_mixed_total.ndim
-                # Note excluding temporal derivatives in the feature library
-                # and the derivatives are computed within the subdomains
-                for deriv_ind, multiindex in enumerate(self.multiindices):
-                    derivs_mixed = func_library_new * np.reshape(
-                        integral_weights,
-                        np.concatenate([func_library_new.shape[:-1], [1]]),
+                    # functions now interpolated onto the subdomains, and need
+                    # to take derivatives of these terms on each of the subdomains,
+                    # where correct number of integration by parts is used. Note
+                    # that this is different than the full derivatives, which are
+                    # differentiated on the global grid, and then interpolated
+                    # onto the subdomains.
+                    derivs_mixed_total = np.empty(
+                        (
+                            self.K,
+                            *(self.grid_ndim * [self.num_pts_per_domain]),
+                            n_library_terms,
+                            self.num_derivatives,
+                        )
                     )
-                    derivs_pure = func_pure_new.copy()
-                    for axis in range(self.grid_ndim - 1):
-                        d_mixed = multiindex[axis] // 2.0
-                        d_pure = multiindex[axis] - d_mixed
-                        for k in range(self.K):
-                            if d_mixed > 0:
-                                derivs_mixed[k] = (
-                                    FiniteDifference(
-                                        d=d_mixed,
+                    derivs_pure_total = np.empty(
+                        (
+                            self.K,
+                            *(self.grid_ndim * [self.num_pts_per_domain]),
+                            n_features,
+                            self.num_derivatives,
+                        )
+                    )
+
+                    deriv_slices = [slice(None)] * derivs_mixed_total.ndim
+                    # Note excluding temporal derivatives in the feature library
+                    # and the derivatives are computed within the subdomains
+                    for deriv_ind, multiindex in enumerate(self.multiindices):
+                        derivs_mixed = func_library_new * np.reshape(
+                            integral_weights,
+                            np.concatenate([func_library_new.shape[:-1], [1]]),
+                        )
+                        derivs_pure = func_pure_new.copy()
+                        for axis in range(self.grid_ndim - 1):
+                            d_mixed = multiindex[axis] // 2.0
+                            d_pure = multiindex[axis] - d_mixed
+                            for k in range(self.K):
+                                if d_mixed > 0:
+                                    derivs_mixed[k] = (
+                                        FiniteDifference(
+                                            d=d_mixed,
+                                            axis=axis,
+                                            is_uniform=self.is_uniform,
+                                            periodic=self.periodic,
+                                        )._differentiate(
+                                            derivs_mixed[k],
+                                            self.xtgrid_k[k, :, axis],
+                                        )
+                                        * (-1) ** (d_mixed % 2)
+                                    )
+                                if d_pure > 0:
+                                    derivs_pure[k] = FiniteDifference(
+                                        d=d_pure,
                                         axis=axis,
                                         is_uniform=self.is_uniform,
                                         periodic=self.periodic,
                                     )._differentiate(
-                                        derivs_mixed[k],
+                                        derivs_pure[k],
                                         self.xtgrid_k[k, :, axis],
                                     )
-                                    * (-1) ** (d_mixed % 2)
-                                )
-                            if d_pure > 0:
-                                derivs_pure[k] = FiniteDifference(
-                                    d=d_pure,
-                                    axis=axis,
-                                    is_uniform=self.is_uniform,
-                                    periodic=self.periodic,
-                                )._differentiate(
-                                    derivs_pure[k],
-                                    self.xtgrid_k[k, :, axis],
-                                )
-                    deriv_slices[-1] = deriv_ind
-                    derivs_mixed_total[tuple(deriv_slices)] = derivs_mixed
-                    derivs_pure_total[tuple(deriv_slices)] = derivs_pure
-                # Okay, now assemble all the terms to integrate
-                complete_funcs = np.empty(
-                    (
-                        self.K,
-                        *(self.grid_ndim * [self.num_pts_per_domain]),
-                        self.num_derivatives * n_features * n_library_terms,
+                        deriv_slices[-1] = deriv_ind
+                        derivs_mixed_total[tuple(deriv_slices)] = derivs_mixed
+                        derivs_pure_total[tuple(deriv_slices)] = derivs_pure
+                    # Okay, now assemble all the terms to integrate
+                    complete_funcs = np.empty(
+                        (
+                            self.K,
+                            *(self.grid_ndim * [self.num_pts_per_domain]),
+                            self.num_derivatives * n_features * n_library_terms,
+                        )
                     )
-                )
-                func_pure_slices = [slice(None)] * derivs_pure_total.ndim
-                func_mixed_slices = [slice(None)] * derivs_mixed_total.ndim
-                complete_slices = [slice(None)] * complete_funcs.ndim
-                for j in range(self.num_derivatives):
-                    func_pure_slices[-1] = j
-                    func_mixed_slices[-1] = j
-                    for i in range(n_features):
-                        func_pure_slices[-2] = i
-                        for k in range(n_library_terms):
-                            func_mixed_slices[-2] = k
-                            complete_slices[-1] = (
-                                j * n_features + i
-                            ) * n_library_terms + k
-                            complete_funcs[tuple(complete_slices)] = (
-                                derivs_mixed_total[tuple(func_mixed_slices)]
-                                * derivs_pure_total[tuple(func_pure_slices)]
-                            )
+                    func_pure_slices = [slice(None)] * derivs_pure_total.ndim
+                    func_mixed_slices = [slice(None)] * derivs_mixed_total.ndim
+                    complete_slices = [slice(None)] * complete_funcs.ndim
+                    for j in range(self.num_derivatives):
+                        func_pure_slices[-1] = j
+                        func_mixed_slices[-1] = j
+                        for i in range(n_features):
+                            func_pure_slices[-2] = i
+                            for k in range(n_library_terms):
+                                func_mixed_slices[-2] = k
+                                complete_slices[-1] = (
+                                    j * n_features + i
+                                ) * n_library_terms + k
+                                complete_funcs[tuple(complete_slices)] = (
+                                    derivs_mixed_total[tuple(func_mixed_slices)]
+                                    * derivs_pure_total[tuple(func_pure_slices)]
+                                )
 
-                for k in range(self.K):
-                    mixed_temp = trapezoid(
-                        complete_funcs[k],
-                        x=self.xtgrid_k[k, :, 0],
-                        axis=0,
-                    )
-                    for i in range(1, self.grid_ndim):
+                    for k in range(self.K):
                         mixed_temp = trapezoid(
-                            mixed_temp,
-                            x=self.xtgrid_k[k, :, i],
+                            complete_funcs[k],
+                            x=self.xtgrid_k[k, :, 0],
                             axis=0,
                         )
-                    library_mixed_integrals[k, :] = mixed_temp
+                        for i in range(1, self.grid_ndim):
+                            mixed_temp = trapezoid(
+                                mixed_temp,
+                                x=self.xtgrid_k[k, :, i],
+                                axis=0,
+                            )
+                        library_mixed_integrals[k, :] = mixed_temp
 
-        library_idx = 0
-        constants_final = np.zeros(self.K)
-        # Constant term
-        if self.include_bias:
-            for k in range(self.K):
-                func_temp = trapezoid(
-                    integral_weights[k], x=self.xtgrid_k[k, :, 0], axis=0
-                )
-                for i in range(1, self.grid_ndim):
-                    func_temp = trapezoid(func_temp, x=self.xtgrid_k[k, :, i], axis=0)
-                constants_final[k] = func_temp
-            xp[:, library_idx] = constants_final
-            library_idx += 1
+            library_idx = 0
+            constants_final = np.zeros(self.K)
+            # Constant term
+            if self.include_bias:
+                for k in range(self.K):
+                    func_temp = trapezoid(
+                        integral_weights[k], x=self.xtgrid_k[k, :, 0], axis=0
+                    )
+                    for i in range(1, self.grid_ndim):
+                        func_temp = trapezoid(
+                            func_temp, x=self.xtgrid_k[k, :, i], axis=0
+                        )
+                    constants_final[k] = func_temp
+                xp[:, library_idx] = constants_final
+                library_idx += 1
 
-        # library function terms
-        xp[:, library_idx : library_idx + n_library_terms] = library_functions
-        library_idx += n_library_terms
+            # library function terms
+            xp[:, library_idx : library_idx + n_library_terms] = library_functions
+            library_idx += n_library_terms
 
-        if self.derivative_order != 0:
-            # pure integral terms
-            xp[
-                :, library_idx : library_idx + self.num_derivatives * n_features
-            ] = library_integrals
-            library_idx += self.num_derivatives * n_features
-
-            # mixed function integral terms
-            if self.include_interaction:
+            if self.derivative_order != 0:
+                # pure integral terms
                 xp[
-                    :,
-                    library_idx : library_idx
-                    + n_library_terms * self.num_derivatives * n_features,
-                ] = library_mixed_integrals
-                library_idx += n_library_terms * self.num_derivatives * n_features
+                    :, library_idx : library_idx + self.num_derivatives * n_features
+                ] = library_integrals
+                library_idx += self.num_derivatives * n_features
+
+                # mixed function integral terms
+                if self.include_interaction:
+                    xp[
+                        :,
+                        library_idx : library_idx
+                        + n_library_terms * self.num_derivatives * n_features,
+                    ] = library_mixed_integrals
+                    library_idx += n_library_terms * self.num_derivatives * n_features
+
+            xp_full[trajectory_ind] = xp
 
         # If library bagging, return xp missing the terms at ensemble_indices
-        return self._ensemble(xp)
+        # return self._ensemble(xp)
+        return self._ensemble(
+            np.reshape(xp_full, (n_samples_full, self.n_output_features_))
+        )

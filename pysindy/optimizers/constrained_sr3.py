@@ -18,22 +18,20 @@ class ConstrainedSR3(SR3):
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(v)
-        + (0.5 / nu)\\|w-v\\|^2_2
-
-        \\text{subject to}
+        0.5\\|y-Xw\\|^2_2 + \\lambda R(u)
+        + (0.5 / \\nu)\\|w-u\\|^2_2
 
     .. math::
 
-        Cw = d
+        \\text{subject to } Cw = d
 
-    over v and w where :math:`R(v)` is a regularization function, C is a
+    over u and w, where :math:`R(u)` is a regularization function, C is a
     constraint matrix, and d is a vector of values. See the following
     reference for more details:
 
         Champion, Kathleen, et al. "A unified sparse optimization framework
         to learn parsimonious physics-informed models from data."
-        arXiv preprint arXiv:1906.10612 (2019).
+        IEEE Access 8 (2020): 169259-169271.
 
     Parameters
     ----------
@@ -115,6 +113,15 @@ class ConstrainedSR3(SR3):
     inequality_constraints : bool, optional (default False)
         If True, CVXPY methods are used to solve the problem.
 
+    verbose : bool, optional (default False)
+        If True, prints out the different error terms every
+        max_iter / 10 iterations.
+
+    verbose_cvxpy : bool, optional (default False)
+        Boolean flag which is passed to CVXPY solve function to indicate if
+        output should be verbose or not. Only relevant for optimizers that
+        use the CVXPY package in some capabity.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -150,6 +157,8 @@ class ConstrainedSR3(SR3):
         initial_guess=None,
         thresholds=None,
         inequality_constraints=False,
+        verbose=False,
+        verbose_cvxpy=False,
     ):
         super(ConstrainedSR3, self).__init__(
             threshold=threshold,
@@ -164,8 +173,10 @@ class ConstrainedSR3(SR3):
             fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
+            verbose=verbose,
         )
 
+        self.verbose_cvxpy = verbose_cvxpy
         self.reg = get_regularization(thresholder)
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
@@ -243,13 +254,18 @@ class ConstrainedSR3(SR3):
 
         # default solver is OSQP here but switches to ECOS for L2
         try:
-            prob.solve(max_iter=self.max_iter, eps_abs=self.tol, eps_rel=self.tol)
+            prob.solve(
+                max_iter=self.max_iter,
+                eps_abs=self.tol,
+                eps_rel=self.tol,
+                verbose=self.verbose_cvxpy,
+            )
         # Annoying error coming from L2 norm switching to use the ECOS
         # solver, which uses "max_iters" instead of "max_iter", and
         # similar semantic changes for the other variables.
         except TypeError:
             try:
-                prob.solve(abstol=self.tol, reltol=self.tol)
+                prob.solve(abstol=self.tol, reltol=self.tol, verbose=self.verbose_cvxpy)
             except cp.error.SolverError:
                 print("Solver failed, setting coefs to zeros")
                 xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
@@ -276,25 +292,48 @@ class ConstrainedSR3(SR3):
         self.history_.append(coef_sparse.T)
         return coef_sparse
 
-    def _objective(self, x, y, coef_full, coef_sparse, trimming_array=None):
+    def _objective(self, x, y, q, coef_full, coef_sparse, trimming_array=None):
         """Objective function"""
+        if q != 0:
+            print_ind = q % (self.max_iter // 10.0)
+        else:
+            print_ind = q
         R2 = (y - np.dot(x, coef_full)) ** 2
         D2 = (coef_full - coef_sparse) ** 2
         if self.use_trimming:
             assert trimming_array is not None
             R2 *= trimming_array.reshape(x.shape[0], 1)
+
         if self.thresholds is None:
-            return (
-                0.5 * np.sum(R2)
-                + self.reg(coef_full, 0.5 * self.threshold ** 2 / self.nu)
-                + 0.5 * np.sum(D2) / self.nu
-            )
+            regularization = self.reg(coef_full, self.threshold ** 2 / self.nu)
+            if print_ind == 0 and self.verbose:
+                row = [
+                    q,
+                    np.sum(R2),
+                    np.sum(D2) / self.nu,
+                    regularization,
+                    np.sum(R2) + np.sum(D2) + regularization,
+                ]
+                print(
+                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
+                    " ... {4:10.4e}".format(*row)
+                )
+            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
         else:
-            return (
-                0.5 * np.sum(R2)
-                + self.reg(coef_full, 0.5 * self.thresholds ** 2 / self.nu)
-                + 0.5 * np.sum(D2) / self.nu
-            )
+            regularization = self.reg(coef_full, self.thresholds ** 2 / self.nu)
+            if print_ind == 0 and self.verbose:
+                row = [
+                    q,
+                    np.sum(R2),
+                    np.sum(D2) / self.nu,
+                    regularization,
+                    np.sum(R2) + np.sum(D2) + regularization,
+                ]
+                print(
+                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
+                    " ... {4:10.4e}".format(*row)
+                )
+            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
 
     def _reduce(self, x, y):
         """
@@ -333,12 +372,25 @@ class ConstrainedSR3(SR3):
                 x_expanded, (n_samples * n_targets, n_targets * n_features)
             )
 
+        # Print initial values for each term in the optimization
+        if self.verbose:
+            row = [
+                "Iteration",
+                "|y - Xw|^2",
+                "|w-u|^2/v",
+                "R(u)",
+                "Total Error: |y - Xw|^2 + |w - u|^2 / v + R(u)",
+            ]
+            print(
+                "{: >10} ... {: >10} ... {: >10} ... {: >10} ... {: >10}".format(*row)
+            )
+
         objective_history = []
         if self.inequality_constraints:
             coef_sparse = self._update_coef_cvxpy(x_expanded, y, coef_sparse)
-            objective_history.append(self._objective(x, y, coef_full, coef_sparse))
+            objective_history.append(self._objective(x, y, 0, coef_full, coef_sparse))
         else:
-            for _ in range(self.max_iter):
+            for k in range(self.max_iter):
                 if self.use_trimming:
                     x_weighted = x * trimming_array.reshape(n_samples, 1)
                     H = np.dot(x_weighted.T, x) + np.diag(
@@ -363,11 +415,11 @@ class ConstrainedSR3(SR3):
                     )
 
                     objective_history.append(
-                        self._objective(x, y, coef_full, coef_sparse, trimming_array)
+                        self._objective(x, y, k, coef_full, coef_sparse, trimming_array)
                     )
                 else:
                     objective_history.append(
-                        self._objective(x, y, coef_full, coef_sparse)
+                        self._objective(x, y, k, coef_full, coef_sparse)
                     )
                 if self._convergence_criterion() < self.tol:
                     # TODO: Update this for trimming/constraints

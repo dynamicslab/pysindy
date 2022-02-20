@@ -81,7 +81,7 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
     n_informative=integers(min_value=3, max_value=9),
     random_state=integers(min_value=0, max_value=2 ** 32 - 1),
 )
-@settings(max_examples=20)
+@settings(max_examples=20, deadline=None)
 def test_complexity_parameter(
     opt_cls, reg_name, n_samples, n_features, n_informative, random_state
 ):
@@ -111,5 +111,4 @@ def test_complexity_parameter(
         opt.fit(x, y)
 
     for less_complex, more_complex in zip(optimizers, optimizers[1:]):
-        print(less_complex.complexity, more_complex.complexity)
         assert less_complex.complexity <= more_complex.complexity

@@ -15,7 +15,7 @@ class SINDyPI(SR3):
 
     .. math::
 
-        0.5\\|X-Xw\\|^2_2 + \\lambda \\times R(v)
+        0.5\\|X-Xw\\|^2_2 + \\lambda R(w)
 
     over w where :math:`R(v)` is a regularization function. See the following
     reference for more details:
@@ -76,6 +76,11 @@ class SINDyPI(SR3):
         candidate functions. This can take a long time for 4D systems
         or larger.
 
+    verbose_cvxpy : bool, optional (default False)
+        Boolean flag which is passed to CVXPY solve function to indicate if
+        output should be verbose or not. Only relevant for optimizers that
+        use the CVXPY package in some capabity.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -101,6 +106,7 @@ class SINDyPI(SR3):
         thresholds=None,
         model_subset=None,
         normalize_columns=False,
+        verbose_cvxpy=False,
     ):
         super(SINDyPI, self).__init__(
             threshold=threshold,
@@ -125,6 +131,7 @@ class SINDyPI(SR3):
             )
 
         self.unbias = False
+        self.verbose_cvxpy = verbose_cvxpy
         if model_subset is not None:
             if not isinstance(model_subset, list):
                 raise ValueError("Model subset must be in list format.")
@@ -155,6 +162,7 @@ class SINDyPI(SR3):
                 "of features in the candidate library"
             )
         for i in self.model_subset:
+            print("Model ", i)
             xi = cp.Variable(n_features)
             # Note that norm choice below must be convex,
             # so thresholder must be L1 or L2
@@ -183,7 +191,12 @@ class SINDyPI(SR3):
                 [xi[i] == 0.0],
             )
             try:
-                prob.solve(max_iter=self.max_iter, eps_abs=self.tol, eps_rel=self.tol)
+                prob.solve(
+                    max_iter=self.max_iter,
+                    eps_abs=self.tol,
+                    eps_rel=self.tol,
+                    verbose=self.verbose_cvxpy,
+                )
                 if xi.value is None:
                     warnings.warn(
                         "Infeasible solve on iteration " + str(i) + ", try "
@@ -195,7 +208,12 @@ class SINDyPI(SR3):
             # solver, which uses "max_iters" instead of "max_iter", and
             # similar semantic changes for the other variables.
             except TypeError:
-                prob.solve(max_iters=self.max_iter, abstol=self.tol, reltol=self.tol)
+                prob.solve(
+                    max_iters=self.max_iter,
+                    abstol=self.tol,
+                    reltol=self.tol,
+                    verbose=self.verbose_cvxpy,
+                )
                 if xi.value is None:
                     warnings.warn(
                         "Infeasible solve on iteration " + str(i) + ", try "

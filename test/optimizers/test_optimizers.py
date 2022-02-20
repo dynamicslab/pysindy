@@ -587,7 +587,7 @@ def test_prox_functions(data_derivative_1d, optimizer, thresholder):
 def test_cad_prox_function(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    model = SR3(thresholder="cAd")
+    model = SR3(thresholder="cad")
     model.fit(x, x_dot)
     check_is_fitted(model)
 
@@ -982,3 +982,41 @@ def test_ssr_criteria(data_lorenz):
     model = SINDy(optimizer=opt)
     model.fit(x)
     assert np.shape(opt.coef_) == (3, 10)
+
+
+@pytest.mark.parametrize(
+    "optimizer",
+    [
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
+)
+def test_optimizers_verbose(data_lorenz, optimizer):
+    x, t = data_lorenz
+    dt = t[1] - t[0]
+    x_dot = FiniteDifference()._differentiate(x, t=dt)
+    model = optimizer(verbose=True)
+    model.fit(x, x_dot)
+    check_is_fitted(model)
+
+
+@pytest.mark.parametrize(
+    "optimizer",
+    [
+        SINDyPI,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
+)
+def test_optimizers_verbose_cvxpy(data_lorenz, optimizer):
+    x, t = data_lorenz
+    dt = t[1] - t[0]
+    x_dot = FiniteDifference()._differentiate(x, t=dt)
+
+    model = optimizer(verbose_cvxpy=True)
+    model.fit(x, x_dot)
+    check_is_fitted(model)

@@ -658,7 +658,6 @@ def test_ensemble_pdes(data_1d_random_pde):
     model = SINDy(feature_library=pde_lib).fit(
         u, t, ensemble=True, n_models=10, n_subset=len(t) // 2
     )
-    print(np.shape(model.coef_list))
     assert len(model.coef_list) == 10
     model = SINDy(feature_library=pde_lib).fit(
         u, x_dot=u_dot, ensemble=True, n_models=10, n_subset=len(t) // 2
@@ -869,3 +868,62 @@ def test_data_shapes():
     model.fit(x)
     x = np.ones((n, n, n, n, 2))
     model.fit(x)
+
+
+def test_multiple_trajectories_and_ensemble(diffuse_multiple_trajectories):
+    t, x, u = diffuse_multiple_trajectories
+    library_functions = [lambda x: x]
+    library_function_names = [lambda x: x]
+
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatial_grid=x,
+        is_uniform=True,
+    )
+
+    X, T = np.meshgrid(x, t, indexing="ij")
+    XT = np.transpose([X, T], [1, 2, 0])
+
+    weak_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatiotemporal_grid=XT,
+        K=100,
+        is_uniform=False,
+        num_pts_per_domain=30,
+    )
+
+    optimizer = STLSQ(threshold=0.1, alpha=1e-5, normalize_columns=False)
+    model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
+    model.fit(u, multiple_trajectories=True, t=t, ensemble=False)
+    print(model.coefficients(), model.coefficients()[0][-1])
+    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
+    assert np.all(model.coefficients()[0][:-1] == 0)
+
+    model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
+    model.fit(u, multiple_trajectories=True, t=t, ensemble=False)
+    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
+    assert np.all(model.coefficients()[0][:-1] == 0)
+
+    model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
+    model.fit(u, multiple_trajectories=True, t=t, ensemble=True, n_subset=len(t))
+    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
+    assert np.all(model.coefficients()[0][:-1] == 0)
+
+    model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
+    model.fit(u, multiple_trajectories=True, t=t, ensemble=True, n_subset=len(t))
+    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
+    assert np.all(model.coefficients()[0][:-1] == 0)
+
+    model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
+    model.fit(u, multiple_trajectories=True, t=t, ensemble=True)
+    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
+    assert np.all(model.coefficients()[0][:-1] == 0)
+
+    model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
+    model.fit(u, multiple_trajectories=True, t=t, ensemble=True)
+    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
+    assert np.all(model.coefficients()[0][:-1] == 0)

@@ -310,7 +310,7 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
 
     # Test validate_input
     t[0] = None
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         model.fit(x, t=t, multiple_trajectories=True)
 
 

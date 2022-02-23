@@ -209,7 +209,6 @@ def test_sr3_bad_parameters(optimizer, params):
         dict(eta=1, alpha_m=-1),
         dict(eta=1, alpha_A=-1),
         dict(gamma=1),
-        dict(evolve_w=False, relax_optim=False),
         dict(thresholder="l0"),
         dict(threshold=-1),
         dict(max_iter=0),
@@ -304,7 +303,7 @@ def test_sindypi_fit(params):
     sindy_library = SINDyPILibrary(
         library_functions=x_library_functions,
         x_dot_library_functions=x_dot_library_functions,
-        t=t[1:-1],
+        t=t,
         function_names=library_function_names,
         include_bias=True,
     )
@@ -313,7 +312,6 @@ def test_sindypi_fit(params):
     model = SINDy(
         optimizer=opt,
         feature_library=sindy_library,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
     )
     model.fit(x_train, t=t)
     assert np.shape(opt.coef_) == (10, 10)
@@ -412,7 +410,6 @@ def test_constrained_sr3_quadratic_library(params):
     [
         dict(),
         dict(accel=True),
-        dict(relax_optim=False),
     ],
 )
 @pytest.mark.parametrize(
@@ -756,7 +753,7 @@ def test_row_format_constraints(data_linear_combination, optimizer, target_value
     model.fit(x, x_dot)
 
     np.testing.assert_allclose(
-        np.array([model.coef_[0, 0], model.coef_[1, 1]]), target_value, atol=1e-8
+        np.array([model.coef_[0, 0], model.coef_[1, 1]]), target_value, atol=1e-7
     )
 
 
@@ -806,7 +803,6 @@ def test_constrained_inequality_constraints(data_lorenz, params):
     model = SINDy(
         optimizer=opt,
         feature_library=poly_lib,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
         feature_names=feature_names,
     )
     model.fit(x, t=t[1] - t[0])
@@ -837,7 +833,6 @@ def test_trapping_inequality_constraints(data_lorenz, params):
         constraint_rhs=constraint_rhs,
         constraint_order="feature",
         inequality_constraints=True,
-        relax_optim=True,
         **params,
     )
     poly_lib = PolynomialLibrary(degree=2)
@@ -849,30 +844,6 @@ def test_trapping_inequality_constraints(data_lorenz, params):
     model.fit(x, t=t[1] - t[0])
     # This sometimes fails with L2 norm so just check the model is fitted
     check_is_fitted(model)
-
-    # Run Trapping SR3 with CVXPY for the m solve
-    opt = TrappingSR3(
-        constraint_lhs=constraint_matrix,
-        constraint_rhs=constraint_rhs,
-        constraint_order="feature",
-        inequality_constraints=True,
-        relax_optim=False,
-        **params,
-    )
-    model = SINDy(
-        optimizer=opt,
-        feature_library=poly_lib,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
-        feature_names=feature_names,
-    )
-    model.fit(x, t=t[1] - t[0])
-    assert np.all(
-        np.dot(constraint_matrix, (model.coefficients()).flatten()) <= constraint_rhs
-    ) or np.allclose(
-        np.dot(constraint_matrix, (model.coefficients()).flatten()),
-        constraint_rhs,
-        atol=1e-3,
-    )
 
 
 def test_inequality_constraints_reqs():
@@ -887,7 +858,6 @@ def test_inequality_constraints_reqs():
             constraint_rhs=constraint_rhs,
             constraint_order="feature",
             inequality_constraints=True,
-            relax_optim=True,
         )
 
 

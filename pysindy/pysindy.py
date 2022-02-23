@@ -290,8 +290,6 @@ class SINDy(BaseEstimator):
         -------
         self: a fitted :class:`SINDy` instance
         """
-        if t is None:
-            t = self.t_default
         if u is None:
             self.n_control_features_ = 0
         else:
@@ -303,6 +301,8 @@ class SINDy(BaseEstimator):
                 trim_last_point=trim_last_point,
             )
             self.n_control_features_ = u.shape[1]
+        if t is None:
+            t = self.t_default
         if isinstance(x, list) and not multiple_trajectories:
             raise ValueError(
                 "x is a list (assumed to be a list of trajectories), but "
@@ -429,9 +429,8 @@ class SINDy(BaseEstimator):
             x = np.concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known unless using weak PDE form
-
-        # if not isinstance(self.feature_library, WeakPDELibrary):
-        #    x, x_dot = drop_nan_rows(x, x_dot)
+        if not isinstance(self.feature_library, WeakPDELibrary):
+            x, x_dot = drop_nan_rows(x, x_dot)
 
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
@@ -859,15 +858,12 @@ class SINDy(BaseEstimator):
                 if isinstance(t, Sequence):
                     if isinstance(self.feature_library, WeakPDELibrary):
                         x_dot = [
-                            convert_u_dot_integral(
-                                xi, self.feature_library
-                            ) for xi in x
+                            convert_u_dot_integral(xi, self.feature_library) for xi in x
                         ]
                     elif isinstance(self.feature_library, PDELibrary):
                         x_dot = [
-                            FiniteDifference(
-                                d=1, axis=-2
-                            )._differentiate(xi, ti) for xi, ti in zip(x, t)
+                            FiniteDifference(d=1, axis=-2)._differentiate(xi, ti)
+                            for xi, ti in zip(x, t)
                         ]
                     elif isinstance(self.feature_library, GeneralizedLibrary):
                         for lib in self.feature_library.libraries_:
@@ -879,13 +875,13 @@ class SINDy(BaseEstimator):
                             x_dot = [
                                 convert_u_dot_integral(
                                     xi, self.feature_library.libraries_[0]
-                                ) for xi in x
+                                )
+                                for xi in x
                             ]
                         elif pde_libraries:
                             x_dot = [
-                                FiniteDifference(
-                                    d=1, axis=-2
-                                )._differentiate(xi, ti) for xi, ti in zip(x, t)
+                                FiniteDifference(d=1, axis=-2)._differentiate(xi, ti)
+                                for xi, ti in zip(x, t)
                             ]
                     else:
                         x_dot = [
@@ -896,15 +892,12 @@ class SINDy(BaseEstimator):
                 else:
                     if isinstance(self.feature_library, WeakPDELibrary):
                         x_dot = [
-                            convert_u_dot_integral(
-                                xi, self.feature_library
-                            ) for xi in x
+                            convert_u_dot_integral(xi, self.feature_library) for xi in x
                         ]
                     elif isinstance(self.feature_library, PDELibrary):
                         x_dot = [
-                            FiniteDifference(
-                                d=1, axis=-2
-                            )._differentiate(xi, t) for xi in x
+                            FiniteDifference(d=1, axis=-2)._differentiate(xi, t)
+                            for xi in x
                         ]
                     elif isinstance(self.feature_library, GeneralizedLibrary):
                         for lib in self.feature_library.libraries_:
@@ -916,18 +909,16 @@ class SINDy(BaseEstimator):
                             x_dot = [
                                 convert_u_dot_integral(
                                     xi, self.feature_library.libraries_[0]
-                                ) for xi in x
+                                )
+                                for xi in x
                             ]
                         elif pde_libraries:
                             x_dot = [
-                                FiniteDifference(
-                                    d=1, axis=-2
-                                )._differentiate(xi, ti) for xi in x
+                                FiniteDifference(d=1, axis=-2)._differentiate(xi, t)
+                                for xi in x
                             ]
                     else:
-                        x_dot = [
-                            self.differentiation_method(xi, t) for xi in x
-                        ]
+                        x_dot = [self.differentiation_method(xi, t) for xi in x]
                     x = [validate_input(xi, t) for xi in x]
                     x_dot = [validate_input(xd, t) for xd in x_dot]
             else:

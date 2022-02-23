@@ -12,30 +12,30 @@ from .sr3 import SR3
 
 class TrappingSR3(SR3):
     """
-    Trapping variant of sparse relaxed regularized regression.
-    This optimizer can be used to identify systems with
-    stable (bounded) solutions.
+    Generalized trapping variant of sparse relaxed regularized regression.
+    This optimizer can be used to identify quadratically nonlinear systems with
+    either a-priori globally or locally stable (bounded) solutions.
 
-    Attempts to minimize one of two related objective functions
+    This optimizer can be used to minimize five different objective functions:
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + \\lambda R(w)
+        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(w)
         + 0.5\\|Pw-A\\|^2_2/\\eta + \\delta_0(Cw-d)
-        + \\delta_{\\Lambda}(A)
+        + \\delta_{\\Lambda}(A)} + \\alpha \\|Qijk\\|
+        + \\beta \\|Q_{ijk} + Q_{jik} + Q_{kij}\\|
 
-    or
+    where :math:`R(w)` is a regularization function, C is a constraint matrix
+    detailing affine constraints on the model coefficients, A is a proxy for
+    the quadratic contributions to the energy evolution, and
+    :math:`Q_{ijk}` are the quadratic coefficients in the model. For
+    provably globally bounded solutions, use :math:`\\alpha >> 1`,
+    :math:`\\beta >> 1`, and equality constraints. For maximizing the local
+    stability radius of the model one has the choice to do this by
+    (1) minimizing the values in :math:`Q_{ijk}`, (2) promoting models
+    with skew-symmetrix :math:`Q_{ijk}` coefficients, or
+    (3) using inequality constraints for skew-symmetry in :math:`Q_{ijk}`.
 
-    .. math::
-
-        0.5\\|y-Xw\\|^2_2 + \\lambda R(w)
-        + \\delta_0(Cw-d)
-        + 0.5 * maximumeigenvalue(A)/\\eta
-
-    where :math:`R(w)` is a regularization function, which must be convex,
-    :math:`\\delta_0` is an indicator function that provides a hard constraint
-    of CW = d, and :math:\\delta_{\\Lambda} is a term to project the :math:`A`
-    matrix onto the space of negative definite matrices.
     See the following references for more details:
 
         Kaptanoglu, Alan A., et al. "Promoting global stability in
@@ -77,6 +77,17 @@ class TrappingSR3(SR3):
         For convergence, need alpha_A <= eta, so typically
         alpha_A = eta is used.
 
+    alpha : float, optional (default 1.0e20)
+        Determines the strength of the local stability term ||Qijk||^2 in the
+        optimization. The default value is very large so that the
+        algorithm default is to ignore this term.
+
+    beta : float, optional (default 1.0e20)
+        Determines the strength of the local stability term
+        ||Qijk + Qjik + Qkij||^2 in the
+        optimization. The default value is very large so that the
+        algorithm default is to ignore this term.
+
     gamma : float, optional (default 0.1)
         Determines the negative interval that matrix A is projected onto.
         For most applications gamma = 0.1 - 1.0 works pretty well.
@@ -111,13 +122,8 @@ class TrappingSR3(SR3):
         If threshold != 0, this specifies the error tolerance in the
         CVXPY (OSQP) solve. Default is 1.0e-3 in OSQP.
 
-    relax_optim : bool, optional (default True)
-        If relax_optim = True, use the relax-and-split method. If False,
-        try a direct minimization on the largest eigenvalue.
-
     inequality_constraints : bool, optional (default False)
-        If True, relax_optim must be false or relax_optim = True
-        AND threshold != 0, so that the CVXPY methods are used.
+        If True, requires threshold != 0, so that the CVXPY methods are used.
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -146,8 +152,7 @@ class TrappingSR3(SR3):
         is deprecated in sklearn versions >= 1.0 and will be removed.
 
     verbose : bool, optional (default False)
-        If True, prints out the different error terms every
-        max_iter / 10 iterations.
+        If True, prints out the different error terms every iteration.
 
     verbose_cvxpy : bool, optional (default False)
         Boolean flag which is passed to CVXPY solve function to indicate if
@@ -222,9 +227,11 @@ class TrappingSR3(SR3):
         evolve_w=True,
         threshold=0.1,
         eps_solver=1e-7,
-        relax_optim=True,
         inequality_constraints=False,
         eta=None,
+        alpha=None,
+        beta=None,
+        mod_matrix=None,
         alpha_A=None,
         alpha_m=None,
         gamma=-0.1,
@@ -275,6 +282,22 @@ class TrappingSR3(SR3):
                 alpha_A = eta
         if eta <= 0:
             raise ValueError("eta must be positive")
+        if alpha is None:
+            alpha = 1e20
+            warnings.warn(
+                "alpha was not set, so defaulting to alpha = 1e20 "
+                "which is so"
+                "large that the ||Qijk|| term in the optimization "
+                "will be essentially ignored."
+            )
+        if beta is None:
+            beta = 1e20
+            warnings.warn(
+                "beta was not set, so defaulting to beta = 1e20 "
+                "which is so"
+                "large that the ||Qijk + Qjik + Qkij|| "
+                "term in the optimization will be essentially ignored."
+            )
         if alpha_m < 0 or alpha_m > eta:
             raise ValueError("0 <= alpha_m <= eta")
         if alpha_A < 0 or alpha_A > eta:
@@ -283,38 +306,37 @@ class TrappingSR3(SR3):
             raise ValueError("gamma must be negative")
         if tol <= 0 or tol_m <= 0 or eps_solver <= 0:
             raise ValueError("tol and tol_m must be positive")
-        if not evolve_w and not relax_optim:
-            raise ValueError("If doing direct solve, must evolve w")
-        if inequality_constraints and relax_optim and threshold == 0.0:
-            raise ValueError(
-                "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
-            )
+        if inequality_constraints and threshold == 0.0:
+            raise ValueError("Ineq. constraints require threshold != 0")
         if inequality_constraints and not evolve_w:
             raise ValueError(
                 "Use of inequality constraints requires solving for xi (evolve_w=True)."
             )
 
+        self.mod_matrix = mod_matrix
         self.evolve_w = evolve_w
         self.eps_solver = eps_solver
-        self.relax_optim = relax_optim
         self.inequality_constraints = inequality_constraints
         self.m0 = m0
         self.A0 = A0
         self.alpha_A = alpha_A
         self.alpha_m = alpha_m
         self.eta = eta
+        self.alpha = alpha
+        self.beta = beta
         self.gamma = gamma
         self.tol = tol
         self.tol_m = tol_m
         self.accel = accel
-        self.verbose_cvxpy = verbose_cvxpy
         self.A_history_ = []
         self.m_history_ = []
+        self.p_history_ = []
         self.PW_history_ = []
         self.PWeigs_history_ = []
         self.history_ = []
         self.objective_history = objective_history
         self.unbias = False
+        self.verbose_cvxpy = verbose_cvxpy
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
         )
@@ -361,9 +383,21 @@ class TrappingSR3(SR3):
                         for n in range(N):
                             if (j == k) and (n == N - r + j) and (i == kk):
                                 PQ_tensor[i, j, k, kk, n] = 1.0
-                            if (j != k) and (n == r + j + k - 1) and (i == kk):
-                                PQ_tensor[i, j, k, kk, n] = 1 / 2
-
+        running_ind = 0
+        for i in range(r):
+            for j in range(r - 1):
+                if j > 0:
+                    running_ind += r - j
+                else:
+                    running_ind = 0
+                for k in range(j + 1, r):
+                    for kk in range(r):
+                        for n in range(N):
+                            # if (j != k) and (n == r + j + k - 1) and (i == kk):
+                            #     PQ_tensor[i, j, k, kk, n] = 1 / 2
+                            if (n == r + running_ind + k - 1 - j) and (i == kk):
+                                PQ_tensor[i, j, k, kk, n] = 1
+        PQ_tensor = (PQ_tensor + np.transpose(PQ_tensor, [0, 2, 1, 3, 4])) / 2.0
         return PL_tensor_unsym, PL_tensor, PQ_tensor
 
     def _bad_PL(self, PL):
@@ -476,32 +510,42 @@ class TrappingSR3(SR3):
         """Calculate the convergence criterion for the optimization over m"""
         return np.sum(np.abs(self.m_history_[-2] - self.m_history_[-1]))
 
-    def _objective(self, x, y, coef_sparse, A, PW, q):
+    def _objective(self, x, y, coef_sparse, A, PW, k):
         """Objective function"""
-        if q != 0:
-            print_ind = q % (self.max_iter // 10.0)
-        else:
-            print_ind = q
 
         # Compute the errors
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
+        Qijk = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
+        beta2 = Qijk + np.transpose(Qijk, [1, 2, 0]) + np.transpose(Qijk, [2, 0, 1])
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
+        R2 = 0.5 * np.sum(R2)
+        stability_term = 0.5 * np.sum(A2) / self.eta
+        alpha_term = 0.5 * np.sum(Qijk) / self.alpha
+        beta_term = 0.5 * np.sum(beta2) / self.beta
 
-        # convoluted way to print every max_iter / 10 iterations
-        if print_ind == 0 and self.verbose:
+        if self.verbose:
             row = [
-                q,
-                0.5 * np.sum(R2),
-                0.5 * np.sum(A2) / self.eta,
+                k,
+                R2,
+                stability_term,
                 L1,
-                0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1,
+                alpha_term,
+                beta_term,
+                R2 + stability_term + L1 + alpha_term + beta_term,
             ]
-            print(
-                "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                " ... {4:10.4e}".format(*row)
-            )
-        return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
+            if self.threshold == 0:
+                if k % max(int(self.max_iter / 10.0), 1) == 0:
+                    print(
+                        "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
+                        " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
+                    )
+            else:
+                print(
+                    "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
+                    " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
+                )
+        return R2 + stability_term + L1 + alpha_term + beta_term
 
     def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
         """Solve coefficient update with CVXPY if threshold != 0"""
@@ -516,6 +560,15 @@ class TrappingSR3(SR3):
         elif self.thresholder.lower() == "weighted_l2":
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+        # new terms minimizing quadratic piece ||P^Q @ xi||_2^2
+        Q = np.reshape(self.PQ_, (r * r * r, N * r))
+        cost = cost + cp.sum_squares(Q @ xi) / self.alpha
+        Q = np.reshape(self.PQ_, (r, r, r, N * r))
+        Q_ep = Q + np.transpose(Q, [1, 2, 0, 3]) + np.transpose(Q, [2, 0, 1, 3])
+        Q_ep = np.reshape(Q_ep, (r * r * r, N * r))
+        cost = cost + cp.sum_squares(Q_ep @ xi) / self.beta
+
+        # Constraints
         if self.use_constraints:
             if self.inequality_constraints:
                 prob = cp.Problem(
@@ -574,10 +627,19 @@ class TrappingSR3(SR3):
             tk = (1 + np.sqrt(1 + 4 * tk_previous ** 2)) / 2.0
             m_partial = m + (tk_previous - 1.0) / tk * (m - m_prev)
             tk_previous = tk
-            mPQ = np.tensordot(m_partial, self.PQ_, axes=([0], [0]))
+            mPQ = -np.tensordot(self.PQ_, m_partial, axes=([2], [0])) - np.tensordot(
+                np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
+                m_partial,
+                axes=([1], [0]),
+            )
         else:
-            mPQ = np.tensordot(m, self.PQ_, axes=([0], [0]))
-        p = self.PL_ - mPQ
+            mPQ = -np.tensordot(self.PQ_, m, axes=([2], [0])) - np.tensordot(
+                np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
+                m,
+                axes=([1], [0]),
+            )
+        mPQ = (mPQ + np.transpose(mPQ, [1, 0, 2, 3])) / 2.0
+        p = np.tensordot(self.mod_matrix, self.PL_ - mPQ, axes=([1], [0]))
         PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
         PQW = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
         A_b = (A - PW) / self.eta
@@ -605,81 +667,6 @@ class TrappingSR3(SR3):
             )
         return coef_sparse
 
-    def _solve_direct_cvxpy(self, r, N, x_expanded, y, Pmatrix, coef_prev):
-        """
-        If using the direct formulation of trapping SINDy, solves the
-        entire problem in CVXPY regardless of the threshold value.
-        Note that this is a convex-composite (i.e. technically nonconvex)
-        problem, solved in CVXPY, so convergence/quality guarantees are
-        not available here!
-        """
-        xi = cp.Variable(N * r)
-        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi) ** 2
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
-        cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
-        if self.use_constraints:
-            if self.inequality_constraints:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi <= self.constraint_rhs],
-                )
-            else:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi == self.constraint_rhs],
-                )
-        else:
-            prob = cp.Problem(cp.Minimize(cost))
-
-        # default solver is SCS here
-        try:
-            prob.solve(eps=self.eps_solver, verbose=self.verbose_cvxpy)
-        # Annoying error coming from L2 norm switching to use the ECOS
-        # solver, which uses "max_iters" instead of "max_iter", and
-        # similar semantic changes for the other variables.
-        except TypeError:
-            prob.solve(
-                abstol=self.eps_solver,
-                reltol=self.eps_solver,
-                verbose=self.verbose_cvxpy,
-            )
-        except cp.error.SolverError:
-            print("Solver failed, setting coefs to zeros")
-            xi.value = np.zeros(N * r)
-
-        if xi.value is None:
-            print("Infeasible solve, increase/decrease eta")
-            return None, None
-        coef_sparse = (xi.value).reshape(coef_prev.shape)
-
-        if np.all(self.PL_ == 0) and np.all(self.PQ_ == 0):
-            return np.zeros(r), coef_sparse  # no optimization over m
-        else:
-            m_cp = cp.Variable(r)
-            L = np.tensordot(self.PL_, coef_sparse, axes=([3, 2], [0, 1]))
-            Q = np.reshape(
-                np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])), (r, r * r)
-            )
-            Ls = 0.5 * (L + L.T).flatten()
-            cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (r, r)))
-            prob_m = cp.Problem(cp.Minimize(cost_m))
-
-            # default solver is SCS here
-            prob_m.solve(eps=self.eps_solver, verbose=self.verbose_cvxpy)
-
-            m = m_cp.value
-            if m is None:
-                print("Infeasible solve over m, increase/decrease eta")
-                return None, coef_sparse
-            return m, coef_sparse
-
     def _reduce(self, x, y):
         """
         Perform at most ``self.max_iter`` iterations of the
@@ -690,6 +677,9 @@ class TrappingSR3(SR3):
         n_samples, n_features = x.shape
         r = y.shape[1]
         N = int((r ** 2 + 3 * r) / 2.0)
+
+        if self.mod_matrix is None:
+            self.mod_matrix = np.eye(r)
 
         # Define PL and PQ tensors, only relevant if the stability term in
         # trapping SINDy is turned on.
@@ -707,15 +697,17 @@ class TrappingSR3(SR3):
         # Print initial values for each term in the optimization
         if self.verbose:
             row = [
-                "Iteration",
-                "Data Error",
-                "Stability Error",
-                "L1 Error",
-                "Total Error",
+                "Iter",
+                "|y-Xw|^2",
+                "|Pw-A|^2/eta",
+                "|w|_1",
+                "|Qijk|/a",
+                "|Qijk+...|/b",
+                "Total:",
             ]
             print(
-                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
-                " ... {: >10}".format(*row)
+                "{: >5} ... {: >8} ... {: >10} ... {: >5}"
+                " ... {: >8} ... {: >10} ... {: >8}".format(*row)
             )
 
         # initial A
@@ -752,28 +744,38 @@ class TrappingSR3(SR3):
         for k in range(self.max_iter):
 
             # update P tensor from the newest m
-            mPQ = np.tensordot(m, self.PQ_, axes=([0], [0]))
-            p = self.PL_ - mPQ
+            mPQ = -np.tensordot(self.PQ_, m, axes=([2], [0])) - np.tensordot(
+                np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
+                m,
+                axes=([1], [0]),
+            )
+            mPQ = (mPQ + np.transpose(mPQ, [1, 0, 2, 3])) / 2.0
+            p = np.tensordot(self.mod_matrix, self.PL_ - mPQ, axes=([1], [0]))
             Pmatrix = p.reshape(r * r, r * n_features)
 
             # update w
             coef_prev = coef_sparse
             if self.evolve_w:
-                if self.relax_optim:
-                    if self.threshold > 0.0:
-                        coef_sparse = self._solve_sparse_relax_and_split(
-                            r, n_features, x_expanded, y, Pmatrix, A, coef_prev
-                        )
-                    else:
-                        pTp = np.dot(Pmatrix.T, Pmatrix)
-                        H = xTx + pTp / self.eta
-                        P_transpose_A = np.dot(Pmatrix.T, A.flatten())
-                        coef_sparse = self._solve_nonsparse_relax_and_split(
-                            H, xTy, P_transpose_A, coef_prev
-                        )
+                if self.threshold > 0.0:
+                    coef_sparse = self._solve_sparse_relax_and_split(
+                        r, n_features, x_expanded, y, Pmatrix, A, coef_prev
+                    )
                 else:
-                    m, coef_sparse = self._solve_direct_cvxpy(
-                        r, n_features, x_expanded, y, Pmatrix, coef_prev
+                    pTp = np.dot(Pmatrix.T, Pmatrix)
+                    Q = np.reshape(self.PQ_, (r * r * r, r * n_features))
+                    PQTPQ = np.dot(Q.T, Q)
+                    Q = np.reshape(self.PQ_, (r, r, r, N * r))
+                    Q_ep = (
+                        Q
+                        + np.transpose(Q, [1, 2, 0, 3])
+                        + np.transpose(Q, [2, 0, 1, 3])
+                    )
+                    Q_ep = np.reshape(Q_ep, (r * r * r, N * r))
+                    PQTPQ_ep = np.dot(Q_ep.T, Q_ep)
+                    H = xTx + pTp / self.eta + PQTPQ / self.alpha + PQTPQ_ep / self.beta
+                    P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+                    coef_sparse = self._solve_nonsparse_relax_and_split(
+                        H, xTy, P_transpose_A, coef_prev
                     )
 
             # If problem over xi becomes infeasible, break out of the loop
@@ -781,10 +783,10 @@ class TrappingSR3(SR3):
                 coef_sparse = coef_prev
                 break
 
-            if self.relax_optim:
-                m_prev, m, A, tk_prev = self._solve_m_relax_and_split(
-                    r, n_features, m_prev, m, A, coef_sparse, tk_prev
-                )
+            # Now solve optimization for m and A
+            m_prev, m, A, tk_prev = self._solve_m_relax_and_split(
+                r, n_features, m_prev, m, A, coef_sparse, tk_prev
+            )
 
             # If problem over m becomes infeasible, break out of the loop
             if m is None:
@@ -799,6 +801,15 @@ class TrappingSR3(SR3):
             eigvals, eigvecs = np.linalg.eig(PW)
             self.PW_history_.append(PW)
             self.PWeigs_history_.append(np.sort(eigvals))
+
+            mPQ = -np.tensordot(self.PQ_, m, axes=([2], [0])) - np.tensordot(
+                np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
+                m,
+                axes=([1], [0]),
+            )
+            mPQ = (mPQ + np.transpose(mPQ, [1, 0, 2, 3])) / 2.0
+            p = np.tensordot(self.mod_matrix, self.PL_ - mPQ, axes=([1], [0]))
+            self.p_history_.append(p)
 
             # update objective
             objective_history.append(self._objective(x, y, coef_sparse, A, PW, k))

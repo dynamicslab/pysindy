@@ -4,3 +4,4 @@ scipy
 derivative
 cvxpy
 matplotlib
+cmake

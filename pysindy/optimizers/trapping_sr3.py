@@ -517,11 +517,13 @@ class TrappingSR3(SR3):
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
         Qijk = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
-        beta2 = Qijk + np.transpose(Qijk, [1, 2, 0]) + np.transpose(Qijk, [2, 0, 1])
+        beta2 = (
+            Qijk + np.transpose(Qijk, [1, 2, 0]) + np.transpose(Qijk, [2, 0, 1])
+        ) ** 2
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
         R2 = 0.5 * np.sum(R2)
         stability_term = 0.5 * np.sum(A2) / self.eta
-        alpha_term = 0.5 * np.sum(Qijk) / self.alpha
+        alpha_term = 0.5 * np.sum(Qijk ** 2) / self.alpha
         beta_term = 0.5 * np.sum(beta2) / self.beta
 
         if self.verbose:

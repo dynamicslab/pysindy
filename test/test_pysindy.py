@@ -105,6 +105,7 @@ def test_tuple_pde(data_3d_random_pde):
 
 
 def test_tuple_weak_pde(data_5d_random_pde):
+    # for weak pde
     x, u, u_dot = data_5d_random_pde
     t = np.linspace(0, 4, 4)
     library_functions = [lambda x: x, lambda x: x * x]
@@ -130,7 +131,12 @@ def test_tuple_weak_pde(data_5d_random_pde):
         )
     with pytest.raises(ValueError):
         SINDy(feature_library=weak_lib).fit(
-            tuple(test_u), t=t, x_dot=test_u_dot, ensemble=True, n_models=10, n_subset=len(t) // 4
+            tuple(test_u),
+            t=t,
+            x_dot=test_u_dot,
+            ensemble=True,
+            n_models=10,
+            n_subset=len(t) // 4,
         )
 
 

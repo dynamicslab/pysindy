@@ -97,7 +97,6 @@ def test_tuple_pde(data_3d_random_pde):
         SINDy(feature_library=pde_lib).fit(
             test_u, t, ensemble=True, n_models=10, n_subset=len(t) // 2
         )
-
     with pytest.raises(ValueError):
         SINDy(feature_library=pde_lib).fit(
             test_u, t, test_u_dot, ensemble=True, n_models=10, n_subset=len(t) // 2

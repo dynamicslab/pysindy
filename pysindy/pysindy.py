@@ -309,6 +309,35 @@ class SINDy(BaseEstimator):
             elif type(x_dot) is tuple:
                 x_dot = np.asarray(x_dot)
 
+        # PDE tuple check
+        if isinstance(self.feature_library, WeakPDELibrary) or isinstance(self.feature_library, PDELibrary):
+            curr = [x]
+            while True:
+                try:
+                    iterator = iter(curr)
+                    temp = next(iterator)
+                    if type(temp) is tuple:
+                        raise ValueError(
+                            "x contains tuple, but expected to be arrays"
+                        )
+                    curr = temp
+                except TypeError:
+                    break
+
+            if x_dot is not None:
+                curr_x_dot = [x_dot]
+                while True:
+                    try:
+                        iterator = iter(curr_x_dot)
+                        temp = next(iterator)
+                        if type(temp) is tuple:
+                            raise ValueError(
+                                "x contains tuple, but expected to be arrays"
+                            )
+                        curr_x_dot = temp
+                    except TypeError:
+                        break
+
         if t is None:
             t = self.t_default
         if u is None:

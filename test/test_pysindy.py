@@ -94,12 +94,12 @@ def test_tuple_pde(data_3d_random_pde):
         for l2 in l1:
             l2 = tuple(l2)
     with pytest.raises(ValueError):
-        model = SINDy(feature_library=pde_lib).fit(
+        SINDy(feature_library=pde_lib).fit(
             test_u, t, ensemble=True, n_models=10, n_subset=len(t) // 2
         )
 
     with pytest.raises(ValueError):
-        model = SINDy(feature_library=pde_lib).fit(
+        SINDy(feature_library=pde_lib).fit(
             test_u, t, test_u_dot, ensemble=True, n_models=10, n_subset=len(t) // 2
         )
 
@@ -124,11 +124,11 @@ def test_tuple_weak_pde(data_5d_random_pde):
         for l2 in l1:
             l2 = tuple(l2)
     with pytest.raises(ValueError):
-        model = SINDy(feature_library=weak_lib).fit(
+        SINDy(feature_library=weak_lib).fit(
             tuple(test_u), t=t, ensemble=True, n_models=10, n_subset=len(t) // 4
         )
     with pytest.raises(ValueError):
-        model = SINDy(feature_library=weak_lib).fit(
+        SINDy(feature_library=weak_lib).fit(
             tuple(test_u), t=t, x_dot=test_u_dot, ensemble=True, n_models=10, n_subset=len(t) // 4
         )
 

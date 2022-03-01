@@ -74,7 +74,8 @@ def test_tuple_multiple_trajectory(data_multiple_trajctories):
 
 
 def test_tuple_pde(data_3d_random_pde):
-    t, spatial_grid, u, u_dot = data_3d_random_pde
+    spatial_grid, u, u_dot = data_3d_random_pde
+    t = np.linspace(0, 10, 4)
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
@@ -104,7 +105,8 @@ def test_tuple_pde(data_3d_random_pde):
 
 
 def test_tuple_weak_pde(data_5d_random_pde):
-    t, x, u, u_dot = data_5d_random_pde
+    x, u, u_dot = data_5d_random_pde
+    t = np.linspace(0, 4, 4)
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
     X, T = np.meshgrid(x, t)

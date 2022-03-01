@@ -169,7 +169,7 @@ def data_3d_random_pde():
     spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
     u = np.random.randn(n, n, n, n, 2)
     u_dot = FiniteDifference(axis=3)._differentiate(u, t=dt)
-    return t, spatial_grid, u, u_dot
+    return spatial_grid, u, u_dot
 
 
 @pytest.fixture
@@ -187,7 +187,7 @@ def data_5d_random_pde():
     spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 4, 5, 0])
     u = np.random.randn(n, n, n, n, n, n, 2)
     u_dot = FiniteDifference(axis=5)._differentiate(u, t=dt)
-    return t, spatial_grid, u, u_dot
+    return spatial_grid, u, u_dot
 
 
 @pytest.fixture

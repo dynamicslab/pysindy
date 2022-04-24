@@ -272,14 +272,14 @@ def test_sindypi_fit(params):
     x_library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y, z: x * y * z,
-        lambda x, y: x * y ** 2,
-        lambda x: x ** 3,
+        lambda x, y: x * y**2,
+        lambda x: x**3,
         lambda x, y, z, w: x * y * z * w,
-        lambda x, y, z: x * y * z ** 2,
-        lambda x, y: x * y ** 3,
-        lambda x: x ** 4,
+        lambda x, y, z: x * y * z**2,
+        lambda x, y: x * y**3,
+        lambda x: x**4,
     ]
     # initialize a linear polynomial library for x_dot
     x_dot_library_functions = [lambda x: x]
@@ -337,7 +337,7 @@ def test_sr3_quadratic_library(params):
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     library_function_names = [
         lambda x: str(x),
@@ -373,7 +373,7 @@ def test_constrained_sr3_quadratic_library(params):
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     library_function_names = [
         lambda x: str(x),
@@ -476,10 +476,10 @@ def test_trapping_cubic_library():
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y, z: x * y * z,
-        lambda x, y: x ** 2 * y,
-        lambda x: x ** 3,
+        lambda x, y: x**2 * y,
+        lambda x: x**3,
     ]
     library_function_names = [
         lambda x: str(x),

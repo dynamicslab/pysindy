@@ -185,7 +185,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         if num_pts_per_domain is not None:
             raise DeprecationWarning(
                 "The parameter num_pts_per_domain is now deprecated. This "
-                "value will be ignored."
+                "value will be ignored by the library."
             )
 
         # list of integrals
@@ -934,19 +934,18 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                     0
                                 ]
                                 # weighted sum for product rule term
-                                integral[k] = (
-                                    integral[k]
-                                    + (-1) ** (np.sum(derivs_mixed))
-                                    * np.tensordot(
-                                        weights,
-                                        self.dfx_k_j[k][j1][..., np.newaxis]
-                                        * self.dx_k_j[k][j2][..., np.newaxis, :],
-                                        axes=(
-                                            tuple(np.arange(self.grid_ndim)),
-                                            tuple(np.arange(self.grid_ndim)),
-                                        ),
-                                    )
-                                    * np.product(binom(derivs_mixed, deriv))
+                                integral[k] = integral[k] + (-1) ** (
+                                    np.sum(derivs_mixed)
+                                ) * np.tensordot(
+                                    weights,
+                                    self.dfx_k_j[k][j1][..., np.newaxis]
+                                    * self.dx_k_j[k][j2][..., np.newaxis, :],
+                                    axes=(
+                                        tuple(np.arange(self.grid_ndim)),
+                                        tuple(np.arange(self.grid_ndim)),
+                                    ),
+                                ) * np.product(
+                                    binom(derivs_mixed, deriv)
                                 )
                         # collect the results
                         for n in range(n_features):

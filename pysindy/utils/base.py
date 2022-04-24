@@ -7,10 +7,6 @@ from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
 
-# from scipy.interpolate import RegularGridInterpolator
-
-# from scipy.integrate import trapezoid
-
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default
 # value of t to be None, but it is possible for the user
@@ -318,9 +314,9 @@ def get_regularization(regularization):
     elif regularization.lower() == "weighted_l1":
         return lambda x, lam: np.sum(np.abs(lam @ x))
     elif regularization.lower() == "l2":
-        return lambda x, lam: lam * np.sum(x ** 2)
+        return lambda x, lam: lam * np.sum(x**2)
     elif regularization.lower() == "weighted_l2":
-        return lambda x, lam: np.sum(lam @ x ** 2)
+        return lambda x, lam: np.sum(lam @ x**2)
     elif regularization.lower() == "cad":  # dummy function
         return lambda x, lam: 0
     else:

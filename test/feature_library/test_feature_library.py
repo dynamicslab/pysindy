@@ -27,7 +27,7 @@ from pysindy.optimizers import STLSQ
 
 
 def test_form_custom_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    library_functions = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     function_names = [
         lambda s: str(s),
         lambda s: "{}^2".format(s),
@@ -42,7 +42,7 @@ def test_form_custom_library():
 
 
 def test_form_pde_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    library_functions = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     function_names = [
         lambda s: str(s),
         lambda s: "{}^2".format(s),
@@ -57,7 +57,7 @@ def test_form_pde_library():
 
 
 def test_form_sindy_pi_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    library_functions = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     function_names = [
         lambda s: str(s),
         lambda s: "{}^2".format(s),
@@ -86,7 +86,7 @@ def test_bad_parameters():
     with pytest.raises(ValueError):
         FourierLibrary(include_sin=False, include_cos=False)
     with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        library_functions = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
         function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
         CustomLibrary(
             library_functions=library_functions, function_names=function_names
@@ -106,7 +106,7 @@ def test_bad_parameters():
     ],
 )
 def test_pde_library_bad_parameters(params):
-    params["library_functions"] = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    params["library_functions"] = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     with pytest.raises(ValueError):
         PDELibrary(**params)
 
@@ -141,7 +141,7 @@ def test_pde_library_bad_parameters(params):
     ],
 )
 def test_weak_pde_library_bad_parameters(params):
-    params["library_functions"] = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    params["library_functions"] = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     with pytest.raises(ValueError):
         WeakPDELibrary(**params)
 
@@ -192,18 +192,18 @@ def test_generalized_library_bad_parameters(data_lorenz, params):
     "params",
     [
         dict(
-            library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x],
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
             function_names=[lambda s: str(s), lambda s: "{}^2".format(s)],
         ),
         dict(
-            x_dot_library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x],
+            x_dot_library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
             function_names=[lambda s: str(s), lambda s: "{}^2".format(s)],
         ),
-        dict(x_dot_library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x]),
+        dict(x_dot_library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x]),
         dict(),
         dict(
-            library_functions=[lambda x: x, lambda x: x ** 2],
-            x_dot_library_functions=[lambda x: x, lambda x: x ** 2],
+            library_functions=[lambda x: x, lambda x: x**2],
+            x_dot_library_functions=[lambda x: x, lambda x: x**2],
             function_names=[lambda s: s, lambda s: s + s],
         ),
     ],
@@ -795,7 +795,7 @@ def test_sindypi_library(data_lorenz):
     x_library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     x_dot_library_functions = [lambda x: x]
 

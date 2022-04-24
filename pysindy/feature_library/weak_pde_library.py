@@ -91,6 +91,14 @@ class WeakPDELibrary(BaseFeatureLibrary):
     ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library.
 
+    periodic : boolean, optional (default False)
+        If True, assume the grid is periodic in all spatial directions.
+
+    num_pts_per_domain : int, deprecated (default None)
+        Included here to retain backwards compatability with older code
+        that uses this parameter. However, it merely raises a
+        DeprecationWarning and then is ignored.
+
     Attributes
     ----------
     functions : list of functions
@@ -141,6 +149,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         library_ensemble=False,
         ensemble_indices=[0],
         periodic=False,
+        num_pts_per_domain=None,
     ):
         super(WeakPDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -172,6 +181,11 @@ class WeakPDELibrary(BaseFeatureLibrary):
             raise ValueError(
                 "Spatiotemporal grid was not passed, and at least a 1D"
                 " grid is required, corresponding to the time base."
+            )
+        if num_pts_per_domain is not None:
+            raise DeprecationWarning(
+                "The parameter num_pts_per_domain is now deprecated. This "
+                "value will be ignored in favor of the newer code."
             )
 
         # list of integrals
@@ -250,6 +264,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
         return x1, x2
 
     def _set_up_grids(self):
+        """
+            Sets up grids needed for the weak library.
+        """
         dims = self.spatiotemporal_grid.shape[:-1]
         self.grid_dims = dims
 
@@ -283,7 +300,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 if len(newinds) < 2:
                     for i in range(self.grid_ndim):
                         self.domain_centers[k, i] = np.random.uniform(
-                            xt1[i] + self.H_xt[i], xt2[i] - self.H_xt[i], size=1
+                            xt1[i] + self.H_xt[i],
+                            xt2[i] - self.H_xt[i],
+                            size=1
                         )
                     include = False
                     break
@@ -339,46 +358,46 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 np.concatenate([[0], np.cumsum(self.shapes_k[:, i])[:-1]])
             ]
 
-        self.tweights = []
+        tweights = []
         deriv = np.zeros(self.grid_ndim)
         deriv[-1] = 1
         for i in range(self.grid_ndim):
-            self.tweights = self.tweights + [
+            tweights = tweights + [
                 self._linear_weights(self.grids[i], deriv[i], self.p)
             ]
-            self.tweights[i][self.lefts[i]] = self._left_weights(
+            tweights[i][self.lefts[i]] = self._left_weights(
                 self.grids[i][self.lefts[i]],
                 self.grids[i][self.lefts[i] + 1],
                 deriv[i],
                 self.p,
             )
-            self.tweights[i][self.rights[i]] = self._right_weights(
+            tweights[i][self.rights[i]] = self._right_weights(
                 self.grids[i][self.rights[i] - 1],
                 self.grids[i][self.rights[i]],
                 deriv[i],
                 self.p,
             )
 
-        self.weights0 = []
+        weights0 = []
         deriv = np.zeros(self.grid_ndim)
         for i in range(self.grid_ndim):
-            self.weights0 = self.weights0 + [
+            weights0 = weights0 + [
                 self._linear_weights(self.grids[i], deriv[i], self.p)
             ]
-            self.weights0[i][self.lefts[i]] = self._left_weights(
+            weights0[i][self.lefts[i]] = self._left_weights(
                 self.grids[i][self.lefts[i]],
                 self.grids[i][self.lefts[i] + 1],
                 deriv[i],
                 self.p,
             )
-            self.weights0[i][self.rights[i]] = self._right_weights(
+            weights0[i][self.rights[i]] = self._right_weights(
                 self.grids[i][self.rights[i] - 1],
                 self.grids[i][self.rights[i]],
                 deriv[i],
                 self.p,
             )
 
-        self.weights1 = []
+        weights1 = []
         for j in range(self.num_derivatives):
             weights2 = []
             for i in range(self.grid_ndim):
@@ -398,7 +417,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     deriv[i],
                     self.p,
                 )
-            self.weights1 = self.weights1 + [weights2]
+            weights1 = weights1 + [weights2]
 
         self.fulltweights = []
         deriv = np.zeros(self.grid_ndim)
@@ -413,7 +432,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 dims = np.ones(self.grid_ndim, dtype=int)
                 dims[i] = self.shapes_k[k][i]
                 ret = ret * np.reshape(
-                    self.tweights[i][self.lefts[i][k] : self.rights[i][k] + 1], dims
+                    tweights[i][self.lefts[i][k]:self.rights[i][k] + 1], dims
                 )
 
             self.fulltweights = self.fulltweights + [
@@ -431,7 +450,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 dims = np.ones(self.grid_ndim, dtype=int)
                 dims[i] = self.shapes_k[k][i]
                 ret = ret * np.reshape(
-                    self.weights0[i][self.lefts[i][k] : self.rights[i][k] + 1], dims
+                    weights0[i][self.lefts[i][k]:self.rights[i][k] + 1], dims
                 )
 
             self.fullweights0 = self.fullweights0 + [ret * np.product(self.H_xt_k[k])]
@@ -451,7 +470,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     dims = np.ones(self.grid_ndim, dtype=int)
                     dims[i] = self.shapes_k[k][i]
                     ret = ret * np.reshape(
-                        self.weights1[j][i][self.lefts[i][k] : self.rights[i][k] + 1],
+                        weights1[j][i][self.lefts[i][k]:self.rights[i][k] + 1],
                         dims,
                     )
 
@@ -462,14 +481,18 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
-        """Get the combinations of features to be passed to a library function."""
+        """
+            Get the combinations of features to be passed to a library function.
+        """
         comb = combinations if interaction_only else combinations_w_r
         return comb(range(n_features), n_args)
 
     def _phi(self, x, d, p):
-        """One-dimensional polynomial test function (1-x**2)**p,
-        differentiated d times, calculated term-wise in the binomial
-        expansion."""
+        """
+            One-dimensional polynomial test function (1-x**2)**p,
+            differentiated d times, calculated term-wise in the binomial
+            expansion.
+        """
         ks = np.arange(self.p + 1)
         ks = ks[np.where(2 * (self.p - ks) - d >= 0)][:, np.newaxis]
         return np.sum(
@@ -481,9 +504,11 @@ class WeakPDELibrary(BaseFeatureLibrary):
         )
 
     def _phi_int(self, x, d, p):
-        """Indefinite integral of one-dimensional polynomial test
-        function (1-x**2)**p, differentiated d times, calculated
-        term-wise in the binomial expansion."""
+        """
+            Indefinite integral of one-dimensional polynomial test
+            function (1-x**2)**p, differentiated d times, calculated
+            term-wise in the binomial expansion.
+        """
         ks = np.arange(self.p + 1)
         ks = ks[np.where(2 * (self.p - ks) - d >= 0)][:, np.newaxis]
         return np.sum(
@@ -496,9 +521,11 @@ class WeakPDELibrary(BaseFeatureLibrary):
         )
 
     def _xphi_int(self, x, d, p):
-        """Indefinite integral of one-dimensional polynomial test function
-        x*(1-x**2)**p, differentiated d times, calculated term-wise in the
-        binomial expansion."""
+        """
+            Indefinite integral of one-dimensional polynomial test function
+            x*(1-x**2)**p, differentiated d times, calculated term-wise in the
+            binomial expansion.
+        """
         ks = np.arange(self.p + 1)
         ks = ks[np.where(2 * (self.p - ks) - d >= 0)][:, np.newaxis]
         return np.sum(
@@ -511,11 +538,13 @@ class WeakPDELibrary(BaseFeatureLibrary):
         )
 
     def _linear_weights(self, x, d, p):
-        """One dimensioal weights for integration against the dth derivative
-        of the polynomial test function (1-x**2)**p. This is derived assuming
-        the function to integrate is linear between grid points:
-        f(x)=f_i+(x-x_i)/(x_{i+1}-x_i)*(f_{i+1}-f_i)
-        so that f(x)*dphi(x) is a piecewise polynomial."""
+        """
+            One dimensioal weights for integration against the dth derivative
+            of the polynomial test function (1-x**2)**p. This is derived
+            assuming the function to integrate is linear between grid points:
+            f(x)=f_i+(x-x_i)/(x_{i+1}-x_i)*(f_{i+1}-f_i)
+            so that f(x)*dphi(x) is a piecewise polynomial.
+        """
         ws = self._phi_int(x, d, p)
         zs = self._xphi_int(x, d, p)
         return np.concatenate(
@@ -736,10 +765,15 @@ class WeakPDELibrary(BaseFeatureLibrary):
             n_samples_full = self.K * self.num_trajectories
 
         xp_full = np.empty(
-            (self.num_trajectories, n_samples, self.n_output_features_), dtype=x.dtype
+            (self.num_trajectories, n_samples, self.n_output_features_),
+            dtype=x.dtype
         )
         x_full = np.reshape(
-            x, np.concatenate([[self.num_trajectories], self.grid_dims, [n_features]])
+            x,
+            np.concatenate(
+                [[self.num_trajectories],
+                 self.grid_dims, [n_features]]
+                )
         )
 
         # Loop over each trajectory
@@ -960,7 +994,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 if self.include_interaction:
                     xp[
                         :,
-                        library_idx : library_idx
+                        library_idx:library_idx
                         + n_library_terms * self.num_derivatives * n_features,
                     ] = library_mixed_integrals
                     library_idx += n_library_terms * self.num_derivatives * n_features

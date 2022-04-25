@@ -620,7 +620,7 @@ class SINDy(BaseEstimator):
 
                 if isinstance(self.feature_library, WeakPDELibrary):
                     for i in range(len(x)):
-                        x_shape[i][0] = self.feature_library.K
+                        x_shapes[i][0] = self.feature_library.K
 
                 return [
                     self.model.predict(xi).reshape(x_shapes[i])
@@ -794,15 +794,13 @@ class SINDy(BaseEstimator):
 
         if multiple_trajectories:
             if isinstance(self.feature_library, WeakPDELibrary):
-                x_dot = [
-                    self.feature_library.convert_u_dot_integral(xi) for xi in x
-                ]
+                x_dot = [self.feature_library.convert_u_dot_integral(xi) for xi in x]
             x, x_dot = self._process_multiple_trajectories(
                 x, t, x_dot, return_array=True
             )
         else:
             if x_dot is None and isinstance(self.feature_library, WeakPDELibrary):
-                    x_dot = self.feature_library.convert_u_dot_integral(x)
+                x_dot = self.feature_library.convert_u_dot_integral(x)
 
             x = validate_input(x, t)
 

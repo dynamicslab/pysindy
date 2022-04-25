@@ -983,7 +983,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                 j2 = np.where(np.all(derivs == derivs_pure, axis=1))[0][
                                     0
                                 ]
-<<<<<<< HEAD
                                 # Calculate the integral by taking the dot product
                                 # of the weights and data x_k over each axis.
                                 # Integration by parts gives power of (-1).
@@ -1001,21 +1000,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                         ),
                                     )
                                     * np.product(binom(derivs_mixed, deriv))
-=======
-                                # weighted sum for product rule term
-                                integral[k] = integral[k] + (-1) ** (
-                                    np.sum(derivs_mixed)
-                                ) * np.tensordot(
-                                    weights,
-                                    self.dfx_k_j[k][j1][..., np.newaxis]
-                                    * self.dx_k_j[k][j2][..., np.newaxis, :],
-                                    axes=(
-                                        tuple(np.arange(self.grid_ndim)),
-                                        tuple(np.arange(self.grid_ndim)),
-                                    ),
-                                ) * np.product(
-                                    binom(derivs_mixed, deriv)
->>>>>>> 75a7b2ba30b7de1cc01b9b551083aeef2ccb64df
                                 )
                         # collect the results
                         for n in range(n_features):

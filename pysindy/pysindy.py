@@ -606,16 +606,24 @@ class SINDy(BaseEstimator):
                 )
             if multiple_trajectories:
                 x_shapes = []
+                x = [validate_input(xi) for xi in x]
                 for xi in x:
                     x_shapes.append(xi.shape)
-                x = [validate_input(xi) for xi in x]
+
+                if isinstance(self.feature_library, WeakPDELibrary):
+                    for i in range(len(x)):
+                        x_shape[i][0] = self.feature_library.K
+
                 return [
                     self.model.predict(xi).reshape(x_shapes[i])
                     for i, xi in enumerate(x)
                 ]
             else:
-                x_shape = np.shape(x)
                 x = validate_input(x)
+                x_shape = np.array(np.shape(x))
+                if isinstance(self.feature_library, WeakPDELibrary):
+                    x_shape[0] = self.feature_library.K
+
                 return self.model.predict(x).reshape(x_shape)
         else:
             if multiple_trajectories:
@@ -777,12 +785,19 @@ class SINDy(BaseEstimator):
             )
 
         if multiple_trajectories:
+            if isinstance(self.feature_library, WeakPDELibrary):
+                x_dot = [
+                    self.feature_library.convert_u_dot_integral(xi) for xi in x
+                ]
             x, x_dot = self._process_multiple_trajectories(
                 x, t, x_dot, return_array=True
             )
         else:
-            if not isinstance(self.feature_library, WeakPDELibrary):
-                x = validate_input(x, t)
+            if x_dot is None and isinstance(self.feature_library, WeakPDELibrary):
+                    x_dot = self.feature_library.convert_u_dot_integral(x)
+
+            x = validate_input(x, t)
+
             if x_dot is None:
                 if self.discrete_time:
                     x_dot = x[1:]

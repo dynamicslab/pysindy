@@ -987,19 +987,18 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                 # of the weights and data x_k over each axis.
                                 # Integration by parts gives power of (-1).
                                 # Binomial factor comes by product rule.
-                                integral[k] = (
-                                    integral[k]
-                                    + (-1) ** (np.sum(derivs_mixed))
-                                    * np.tensordot(
-                                        weights,
-                                        self.dfx_k_j[k][j1][..., np.newaxis]
-                                        * self.dx_k_j[k][j2][..., np.newaxis, :],
-                                        axes=(
-                                            tuple(np.arange(self.grid_ndim)),
-                                            tuple(np.arange(self.grid_ndim)),
-                                        ),
-                                    )
-                                    * np.product(binom(derivs_mixed, deriv))
+                                integral[k] = integral[k] + (-1) ** (
+                                    np.sum(derivs_mixed)
+                                ) * np.tensordot(
+                                    weights,
+                                    self.dfx_k_j[k][j1][..., np.newaxis]
+                                    * self.dx_k_j[k][j2][..., np.newaxis, :],
+                                    axes=(
+                                        tuple(np.arange(self.grid_ndim)),
+                                        tuple(np.arange(self.grid_ndim)),
+                                    ),
+                                ) * np.product(
+                                    binom(derivs_mixed, deriv)
                                 )
                         # collect the results
                         for n in range(n_features):

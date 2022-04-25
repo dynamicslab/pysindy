@@ -390,7 +390,7 @@ class SINDy(BaseEstimator):
         if multiple_trajectories:
             if self.discrete_time:
                 if x_dot is None:
-                    x_dot_None = True
+                    x_dot_None = True  # set the flag
             self.feature_library.num_trajectories = len(x)
             if isinstance(self.feature_library, GeneralizedLibrary):
                 for lib in self.feature_library.libraries_:

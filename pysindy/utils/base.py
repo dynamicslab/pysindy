@@ -97,7 +97,7 @@ def _check_control_shape(x, u, trim_last_point):
             )
     if u.ndim != 2:
         u = u.reshape(u.size // u.shape[-1], u.shape[-1])
-        if ((x.size // x.shape[-1]) != u.shape[0]):
+        if (x.size // x.shape[-1]) != u.shape[0]:
             raise ValueError(
                 "control variables u must have same number of rows as x. "
                 "u has {} rows and x has {} rows".format(u.shape[0], x.shape[0])
@@ -121,6 +121,7 @@ def drop_random_rows(
     multiple_trajectories,
 ):
     num_trajectories = feature_library.num_trajectories
+
     # Can't choose random n_subset points if data is from a PDE
     # (and therefore is spatially local).
     # Need to unfold it and just choose n_subset from the temporal slices

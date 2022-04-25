@@ -431,7 +431,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         for lib in self.libraries_:
             check_is_fitted(lib)
             if hasattr(lib, "spatiotemporal_grid"):
-                if lib.spatiotemporal_grid is not None:
+                if lib.spatiotemporal_grid is not None:  # check if weak form
                     n_samples = self.n_samples
 
         # preallocate matrix

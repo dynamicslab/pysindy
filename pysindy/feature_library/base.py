@@ -327,6 +327,11 @@ class TensoredLibrary(BaseFeatureLibrary):
         )
         self.libraries_ = libraries
         self.inputs_per_library_ = inputs_per_library
+        for lib in self.libraries_:
+            if hasattr(lib, "spatiotemporal_grid"):
+                if lib.spatiotemporal_grid is not None:
+                    self.n_samples = lib.K
+                    self.spatiotemporal_grid = lib.spatiotemporal_grid
 
     def _combinations(self, lib_i, lib_j):
         """
@@ -422,9 +427,12 @@ class TensoredLibrary(BaseFeatureLibrary):
             generated from applying the custom functions to the inputs.
 
         """
+        n_samples = x.shape[0]
         for lib in self.libraries_:
             check_is_fitted(lib)
-        n_samples = x.shape[0]
+            if hasattr(lib, "spatiotemporal_grid"):
+                if lib.spatiotemporal_grid is not None:
+                    n_samples = self.n_samples
 
         # preallocate matrix
         xp = np.zeros((n_samples, self.n_output_features_))

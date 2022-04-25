@@ -1,6 +1,7 @@
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
+import warnings
 
 import numpy as np
 from scipy.special import binom
@@ -183,7 +184,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 " grid is required, corresponding to the time base."
             )
         if num_pts_per_domain is not None:
-            raise DeprecationWarning(
+            warnings.warn(
                 "The parameter num_pts_per_domain is now deprecated. This "
                 "value will be ignored by the library."
             )

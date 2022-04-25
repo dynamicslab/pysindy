@@ -90,13 +90,18 @@ def _check_control_shape(x, u, trim_last_point):
         u = u[np.newaxis]
     if u.ndim == 1:
         u = u.reshape(-1, 1)
-    elif u.ndim != 2:
+        if len(x) != u.shape[0]:
+            raise ValueError(
+                "control variables u must have same number of rows as x. "
+                "u has {} rows and x has {} rows".format(u.shape[0], len(x))
+            )
+    if u.ndim != 2:
         u = u.reshape(u.size // u.shape[-1], u.shape[-1])
-    if len(x) != u.shape[0]:
-        raise ValueError(
-            "control variables u must have same number of rows as x. "
-            "u has {} rows and x has {} rows".format(u.shape[0], len(x))
-        )
+        if ((x.size // x.shape[-1]) != u.shape[0]):
+            raise ValueError(
+                "control variables u must have same number of rows as x. "
+                "u has {} rows and x has {} rows".format(u.shape[0], x.shape[0])
+            )
     return u[:-1] if trim_last_point else u
 
 

@@ -293,17 +293,6 @@ class SINDy(BaseEstimator):
         """
         if t is None:
             t = self.t_default
-        if u is None:
-            self.n_control_features_ = 0
-        else:
-            trim_last_point = self.discrete_time and (x_dot is None)
-            u = validate_control_variables(
-                x,
-                u,
-                multiple_trajectories=multiple_trajectories,
-                trim_last_point=trim_last_point,
-            )
-            self.n_control_features_ = u.shape[1]
         if isinstance(x, list) and not multiple_trajectories:
             raise ValueError(
                 "x is a list (assumed to be a list of trajectories), but "
@@ -395,7 +384,13 @@ class SINDy(BaseEstimator):
                     else:
                         x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
 
+        # save copy of x in case there are control inputs to be validated
+        x_list = x
+        x_dot_None = False  # flag for discrete time functionality
         if multiple_trajectories:
+            if self.discrete_time:
+                if x_dot is None:
+                    x_dot_None = True  # set the flag
             self.feature_library.num_trajectories = len(x)
             if isinstance(self.feature_library, GeneralizedLibrary):
                 for lib in self.feature_library.libraries_:
@@ -410,6 +405,7 @@ class SINDy(BaseEstimator):
 
             if self.discrete_time:
                 if x_dot is None:
+                    x_dot_None = True
                     x_dot = x[1:]
                     x = x[:-1]
                 else:
@@ -421,6 +417,18 @@ class SINDy(BaseEstimator):
                     not weak_libraries
                 ):
                     x_dot = validate_input(x_dot, t)
+
+        if u is None:
+            self.n_control_features_ = 0
+        else:
+            trim_last_point = self.discrete_time and x_dot_None
+            u = validate_control_variables(
+                x_list,
+                u,
+                multiple_trajectories=multiple_trajectories,
+                trim_last_point=trim_last_point,
+            )
+            self.n_control_features_ = u.shape[1]
 
         # Set ensemble variables
         self.ensemble = ensemble

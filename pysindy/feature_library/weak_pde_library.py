@@ -1,3 +1,4 @@
+import warnings
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
@@ -183,7 +184,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 " grid is required, corresponding to the time base."
             )
         if num_pts_per_domain is not None:
-            raise DeprecationWarning(
+            warnings.warn(
                 "The parameter num_pts_per_domain is now deprecated. This "
                 "value will be ignored by the library."
             )
@@ -232,7 +233,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     "then H_xt should be a 4D list of the subdomain lengths."
                 )
             if any(self.H_xt <= np.zeros(len(self.H_xt))):
-                raise ValueError("Values in H_xt must be a positive float")
+                raise ValueError("Values in H_xt must be a positive float.")
             elif any(self.H_xt >= L_xt / 2.0):
                 raise ValueError(
                     "2 * H_xt in some dimension is larger than the "

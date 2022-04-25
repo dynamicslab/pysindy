@@ -18,6 +18,23 @@ class WeakPDELibrary(BaseFeatureLibrary):
     """Generate a weak formulation library with custom functions and,
        optionally, any spatial derivatives in arbitrary dimensions.
 
+       The features in the weak formulation are integrals of derivatives of input data
+       multiplied by a test function phi, which are evaluated on K subdomains
+       randomly sampled across the spatiotemporal grid. Each subdomain
+       is initial generated with a size H_xt along each axis, and is then shrunk
+       such that the left and right boundaries lie on spatiotemporal grid points.
+       The expressions are integrated by parts to remove as many derivatives from the
+       input data as possible and put the derivatives onto the test functions.
+
+       The weak integral features are calculated assuming the function f(x) to
+       integrate against derivatives of the test function dphi(x)
+       is linear between grid points provided by the data:
+       f(x)=f_i+(x-x_i)/(x_{i+1}-x_i)*(f_{i+1}-f_i)
+       Thus f(x)*dphi(x) is approximated as a piecewise polynomial.
+       The piecewise components are integrated analytically. To improve performance,
+       the complete integral is expressed as a dot product of weights against the
+       input data f_i, which enables vectorized evaulations.
+
     Parameters
     ----------
     library_functions : list of mathematical functions, optional (default None)
@@ -630,7 +647,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
         dims = np.array(self.spatiotemporal_grid.shape)
         dims[-1] = u.shape[-1]
 
-        for k in range(self.K):
+        for k in range(self.K):  # loop over domain cells
+            # calculate the integral feature by taking the dot product
+            # of the weights and functions over each axis
             u_dot_integral[k] = np.tensordot(
                 self.fulltweights[k],
                 -u[np.ix_(*self.inds_k[k])],

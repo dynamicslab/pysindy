@@ -490,7 +490,7 @@ class SINDy(BaseEstimator):
                         self.feature_library.spatiotemporal_grid = (
                             old_spatiotemporal_grid
                         )
-                        self.feature_library._set_up_grids()
+                        self.feature_library._set_up_weights()
 
             elif library_ensemble and not ensemble:
                 self.feature_library.library_ensemble = True

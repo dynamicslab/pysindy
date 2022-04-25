@@ -184,7 +184,7 @@ def drop_random_rows(
             s1[-2] = rand_inds
             new_spatiotemporal_grid = spatiotemporal_grid[tuple(s1)]
             feature_library.spatiotemporal_grid = new_spatiotemporal_grid
-            feature_library._set_up_grids()
+            feature_library._set_up_weights()
             s0[len(dims)] = rand_inds
             if multiple_trajectories:
                 x_dot_new = [

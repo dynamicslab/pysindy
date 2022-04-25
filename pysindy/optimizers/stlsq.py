@@ -9,8 +9,8 @@ from .base import BaseOptimizer
 
 
 class STLSQ(BaseOptimizer):
-    """Sequentially thresholded least squares algorithm. Defaults to doing
-    Sequentially thresholded Ridge regression.
+    """Sequentially thresholded least squares algorithm.
+    Defaults to doing Sequentially thresholded Ridge regression.
 
     Attempts to minimize the objective function
     :math:`\\|y - Xw\\|^2_2 + \\alpha \\|w\\|^2_2`
@@ -205,7 +205,7 @@ class STLSQ(BaseOptimizer):
             self.history_.append(coef)
             if self.verbose:
                 R2 = np.sum((y - np.dot(x, coef.T)) ** 2)
-                L2 = self.alpha * np.sum(coef ** 2)
+                L2 = self.alpha * np.sum(coef**2)
                 L0 = np.count_nonzero(coef)
                 row = [k, R2, L2, L0, R2 + L2]
                 print(

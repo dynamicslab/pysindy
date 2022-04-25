@@ -12,7 +12,7 @@ from .sr3 import SR3
 
 class ConstrainedSR3(SR3):
     """
-    Sparse relaxed regularized regression with linear equality constraints.
+    Sparse relaxed regularized regression with linear (in)equality constraints.
 
     Attempts to minimize the objective function
 
@@ -305,7 +305,7 @@ class ConstrainedSR3(SR3):
             R2 *= trimming_array.reshape(x.shape[0], 1)
 
         if self.thresholds is None:
-            regularization = self.reg(coef_full, self.threshold ** 2 / self.nu)
+            regularization = self.reg(coef_full, self.threshold**2 / self.nu)
             if print_ind == 0 and self.verbose:
                 row = [
                     q,
@@ -320,7 +320,7 @@ class ConstrainedSR3(SR3):
                 )
             return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
         else:
-            regularization = self.reg(coef_full, self.thresholds ** 2 / self.nu)
+            regularization = self.reg(coef_full, self.thresholds**2 / self.nu)
             if print_ind == 0 and self.verbose:
                 row = [
                     q,

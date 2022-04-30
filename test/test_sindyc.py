@@ -245,11 +245,11 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
     with pytest.raises(ValueError):
         model.fit(x, u=u, t=t)
 
-    # Should fail if either x or u is not a list
+    # Should fail if x or u is not a list
     with pytest.raises(ValueError):
         model.fit(x, u=u[0], multiple_trajectories=True)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         model.fit(x[0], u=u, multiple_trajectories=True)
 
     # x and u should be lists of the same length

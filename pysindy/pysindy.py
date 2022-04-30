@@ -21,12 +21,13 @@ from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
-from .utils import convert_u_dot_integral
 from .utils import drop_nan_rows
 from .utils import drop_random_rows
 from .utils import equations
 from .utils import validate_control_variables
 from .utils import validate_input
+
+# from .utils import convert_u_dot_integral
 
 
 class SINDy(BaseEstimator):
@@ -158,7 +159,7 @@ class SINDy(BaseEstimator):
             feature_library = PolynomialLibrary()
         self.feature_library = feature_library
         if differentiation_method is None:
-            differentiation_method = FiniteDifference()
+            differentiation_method = FiniteDifference(axis=-2)
         self.differentiation_method = differentiation_method
         if not isinstance(t_default, float) and not isinstance(t_default, int):
             raise ValueError("t_default must be a positive number")
@@ -292,17 +293,6 @@ class SINDy(BaseEstimator):
         """
         if t is None:
             t = self.t_default
-        if u is None:
-            self.n_control_features_ = 0
-        else:
-            trim_last_point = self.discrete_time and (x_dot is None)
-            u = validate_control_variables(
-                x,
-                u,
-                multiple_trajectories=multiple_trajectories,
-                trim_last_point=trim_last_point,
-            )
-            self.n_control_features_ = u.shape[1]
         if isinstance(x, list) and not multiple_trajectories:
             raise ValueError(
                 "x is a list (assumed to be a list of trajectories), but "
@@ -335,19 +325,24 @@ class SINDy(BaseEstimator):
             raise ValueError("n_models must be a positive integer")
         if (n_subset is not None) and n_subset <= 0:
             raise ValueError("n_subset must be a positive integer")
-        pde_libraries = False
-        weak_libraries = False
 
+        # Note: This block for calculating x_dot for weak and pde libs is identical
+        # to the one in score. Should we redefine the differentiation_method to cover
+        # the weak and pde library cases more generally?
+        # The validate_input should probably explicity handle the weak and pde cases...
         if isinstance(self.feature_library, WeakPDELibrary):
             self.feature_library.old_x = np.copy(x)
         if x_dot is None:
+            pde_libraries = False
+            weak_libraries = False
+
             if isinstance(self.feature_library, WeakPDELibrary):
                 if multiple_trajectories:
                     x_dot = [
-                        convert_u_dot_integral(xi, self.feature_library) for xi in x
+                        self.feature_library.convert_u_dot_integral(xi) for xi in x
                     ]
                 else:
-                    x_dot = convert_u_dot_integral(x, self.feature_library)
+                    x_dot = self.feature_library.convert_u_dot_integral(x)
             elif isinstance(self.feature_library, PDELibrary):
                 if multiple_trajectories and isinstance(t, Sequence):
                     x_dot = [
@@ -371,15 +366,15 @@ class SINDy(BaseEstimator):
                 if weak_libraries:
                     if multiple_trajectories:
                         x_dot = [
-                            convert_u_dot_integral(
-                                xi, self.feature_library.libraries_[0]
+                            self.feature_library.libraries_[0].convert_u_dot_integral(
+                                xi
                             )
                             for xi in x
                         ]
                     else:
-                        x_dot = convert_u_dot_integral(
-                            x, self.feature_library.libraries_[0]
-                        )
+                        x_dot = self.feature_library.libraries_[
+                            0
+                        ].convert_u_dot_integral(x)
                 elif pde_libraries:
                     if multiple_trajectories and isinstance(t, Sequence):
                         x_dot = [
@@ -394,7 +389,13 @@ class SINDy(BaseEstimator):
                     else:
                         x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
 
+        # save copy of x in case there are control inputs to be validated
+        x_list = x
+        x_dot_None = False  # flag for discrete time functionality
         if multiple_trajectories:
+            if self.discrete_time:
+                if x_dot is None:
+                    x_dot_None = True  # set the flag
             self.feature_library.num_trajectories = len(x)
             if isinstance(self.feature_library, GeneralizedLibrary):
                 for lib in self.feature_library.libraries_:
@@ -409,6 +410,7 @@ class SINDy(BaseEstimator):
 
             if self.discrete_time:
                 if x_dot is None:
+                    x_dot_None = True
                     x_dot = x[1:]
                     x = x[:-1]
                 else:
@@ -416,10 +418,27 @@ class SINDy(BaseEstimator):
             else:
                 if x_dot is None:
                     x_dot = self.differentiation_method(x, t)
-                elif (not isinstance(self.feature_library, WeakPDELibrary)) and (
-                    not weak_libraries
-                ):
-                    x_dot = validate_input(x_dot, t)
+
+                elif not isinstance(self.feature_library, WeakPDELibrary):
+                    weak_libraries = False
+                    if isinstance(self.feature_library, GeneralizedLibrary):
+                        for lib in self.feature_library.libraries_:
+                            if isinstance(lib, WeakPDELibrary):
+                                weak_libraries = True
+                    if not weak_libraries:
+                        x_dot = validate_input(x_dot, t)
+
+        if u is None:
+            self.n_control_features_ = 0
+        else:
+            trim_last_point = self.discrete_time and x_dot_None
+            u = validate_control_variables(
+                x_list,
+                u,
+                multiple_trajectories=multiple_trajectories,
+                trim_last_point=trim_last_point,
+            )
+            self.n_control_features_ = u.shape[1]
 
         # Set ensemble variables
         self.ensemble = ensemble
@@ -430,7 +449,13 @@ class SINDy(BaseEstimator):
             x = np.concatenate((x, u), axis=1)
 
         # Drop rows where derivative isn't known unless using weak PDE form
-        if not isinstance(self.feature_library, WeakPDELibrary):
+        # OR If this is a generalized library with weak libraries
+        weak_libraries = False
+        if isinstance(self.feature_library, GeneralizedLibrary):
+            for lib in self.feature_library.libraries_:
+                if isinstance(lib, WeakPDELibrary):
+                    weak_libraries = True
+        if not isinstance(self.feature_library, WeakPDELibrary) and not weak_libraries:
             x, x_dot = drop_nan_rows(x, x_dot)
 
         if hasattr(self.optimizer, "unbias"):
@@ -476,7 +501,7 @@ class SINDy(BaseEstimator):
                         self.feature_library.spatiotemporal_grid = (
                             old_spatiotemporal_grid
                         )
-                        self.feature_library._set_up_grids()
+                        self.feature_library._set_up_weights()
 
             elif library_ensemble and not ensemble:
                 self.feature_library.library_ensemble = True
@@ -600,16 +625,25 @@ class SINDy(BaseEstimator):
                 )
             if multiple_trajectories:
                 x_shapes = []
+                x = [validate_input(xi) for xi in x]
                 for xi in x:
                     x_shapes.append(xi.shape)
-                x = [validate_input(xi) for xi in x]
+
+                if isinstance(self.feature_library, WeakPDELibrary):
+                    for i in range(len(x)):
+                        x_shapes[i][0] = self.feature_library.K
+
+                # return self.model.predict(np.vstack(x))
                 return [
-                    self.model.predict(xi).reshape(x_shapes[i])
+                    self.model.predict(xi.reshape(x_shapes[i])).reshape(x_shapes[i])
                     for i, xi in enumerate(x)
                 ]
             else:
-                x_shape = np.shape(x)
+                x_shape = np.array(np.array(x).shape)
                 x = validate_input(x)
+                if isinstance(self.feature_library, WeakPDELibrary):
+                    x_shape = np.array(x.shape)
+                    x_shape[0] = self.feature_library.K
                 return self.model.predict(x).reshape(x_shape)
         else:
             if multiple_trajectories:
@@ -749,6 +783,13 @@ class SINDy(BaseEstimator):
         score: float
             Metric function value for the model prediction of x_dot.
         """
+        if u is None or self.n_control_features_ == 0:
+            x_dot_predict = self.predict(x, multiple_trajectories=multiple_trajectories)
+        else:
+            x_dot_predict = self.predict(
+                x, u, multiple_trajectories=multiple_trajectories
+            )
+
         if t is None:
             t = self.t_default
         if u is None or self.n_control_features_ == 0:
@@ -770,32 +811,97 @@ class SINDy(BaseEstimator):
                 trim_last_point=trim_last_point,
             )
 
+        # Note: This block for calculating x_dot for weak and pde libs is identical
+        # to the one in fit. Should we redefine the differentiation_method to cover
+        # the weak and pde library cases more generally?
+        # The validate_input should probably explicity handle the weak and pde cases...
+        if x_dot is None:
+            pde_libraries = False
+            weak_libraries = False
+
+            if isinstance(self.feature_library, WeakPDELibrary):
+                if multiple_trajectories:
+                    x_dot = [
+                        self.feature_library.convert_u_dot_integral(xi) for xi in x
+                    ]
+                else:
+                    x_dot = self.feature_library.convert_u_dot_integral(x)
+            elif isinstance(self.feature_library, PDELibrary):
+                if multiple_trajectories and isinstance(t, Sequence):
+                    x_dot = [
+                        FiniteDifference(d=1, axis=-2)._differentiate(xi, t=ti)
+                        for xi, ti in zip(x, t)
+                    ]
+                elif multiple_trajectories:
+                    x_dot = [
+                        FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
+                        for xi in x
+                    ]
+                else:
+                    x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
+
+            elif isinstance(self.feature_library, GeneralizedLibrary):
+                for lib in self.feature_library.libraries_:
+                    if isinstance(lib, WeakPDELibrary):
+                        weak_libraries = True
+                    if isinstance(lib, PDELibrary):
+                        pde_libraries = True
+                if weak_libraries:
+                    if multiple_trajectories:
+                        x_dot = [
+                            self.feature_library.libraries_[0].convert_u_dot_integral(
+                                xi
+                            )
+                            for xi in x
+                        ]
+                    else:
+                        x_dot = self.feature_library.libraries_[
+                            0
+                        ].convert_u_dot_integral(x)
+                elif pde_libraries:
+                    if multiple_trajectories and isinstance(t, Sequence):
+                        x_dot = [
+                            FiniteDifference(d=1, axis=-2)._differentiate(xi, t=ti)
+                            for xi, ti in zip(x, t)
+                        ]
+                    elif multiple_trajectories:
+                        x_dot = [
+                            FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
+                            for xi in x
+                        ]
+                    else:
+                        x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
+
         if multiple_trajectories:
+            if self.discrete_time and x_dot is None:
+                x_dot_predict = [xd[:-1] for xd in x_dot_predict]
+
             x, x_dot = self._process_multiple_trajectories(
                 x, t, x_dot, return_array=True
             )
+
+            if x_dot_predict[0].ndim == 1:
+                x_dot_predict = [xdp.reshape(-1, 1) for xdp in x_dot_predict]
+            x_dot_predict = np.vstack(x_dot_predict)
+
         else:
-            if not isinstance(self.feature_library, WeakPDELibrary):
-                x = validate_input(x, t)
+            x = validate_input(x, t)
+
             if x_dot is None:
                 if self.discrete_time:
                     x_dot = x[1:]
                     x = x[:-1]
+                    x_dot_predict = x_dot_predict[:-1]
                 else:
                     x_dot = self.differentiation_method(x, t)
 
         if x_dot.ndim == 1:
             x_dot = x_dot.reshape(-1, 1)
 
-        # Append control variables
-        if u is not None and self.n_control_features_ > 0:
-            x = np.concatenate((x, u), axis=1)
-
         # Drop rows where derivative isn't known (usually endpoints)
         if not isinstance(self.feature_library, WeakPDELibrary):
-            x, x_dot = drop_nan_rows(x, x_dot)
+            x, x_dot = drop_nan_rows(x, x_dot.reshape(x.shape))
 
-        x_dot_predict = self.model.predict(x)
         return metric(x_dot, x_dot_predict, **metric_kws)
 
     def _process_multiple_trajectories(self, x, t, x_dot, return_array=True):
@@ -874,7 +980,13 @@ class SINDy(BaseEstimator):
                 else:
                     x = [validate_input(xi, t) for xi in x]
                     if not isinstance(self.feature_library, WeakPDELibrary):
-                        x_dot = [validate_input(xd, t) for xd in x_dot]
+                        if isinstance(self.feature_library, GeneralizedLibrary):
+                            if not isinstance(
+                                self.feature_library.libraries_[0], WeakPDELibrary
+                            ):
+                                x_dot = [validate_input(xd, t) for xd in x_dot]
+                        else:
+                            x_dot = [validate_input(xd, t) for xd in x_dot]
 
         if return_array:
             return np.vstack(x), np.vstack(x_dot)

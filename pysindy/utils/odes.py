@@ -78,7 +78,7 @@ def lorenz(t, x, sigma=10, beta=2.66667, rho=28):
 
 # Sample control input for Lorenz + control
 def lorenz_u(t):
-    return np.column_stack([np.sin(2 * t) ** 2, t ** 2])
+    return np.column_stack([np.sin(2 * t) ** 2, t**2])
 
 
 # Lorenz equations with control input
@@ -471,21 +471,21 @@ def double_pendulum(
         x[2],
         x[3],
         (
-            L1 * a2 ** 2 * g * m2 ** 2 * np.sin(x[0])
-            - 2 * L1 * a2 ** 3 * x[3] ** 2 * m2 ** 2 * np.sin(x[0] - x[1])
+            L1 * a2**2 * g * m2**2 * np.sin(x[0])
+            - 2 * L1 * a2**3 * x[3] ** 2 * m2**2 * np.sin(x[0] - x[1])
             + 2 * I2 * L1 * g * m2 * np.sin(x[0])
-            + L1 * a2 ** 2 * g * m2 ** 2 * np.sin(x[0] - 2 * x[1])
+            + L1 * a2**2 * g * m2**2 * np.sin(x[0] - 2 * x[1])
             + 2 * I2 * a1 * g * m1 * np.sin(x[0])
             - (L1 * a2 * x[2] * m2) ** 2 * np.sin(2 * (x[0] - x[1]))
             - 2 * I2 * L1 * a2 * x[3] ** 2 * m2 * np.sin(x[0] - x[1])
-            + 2 * a1 * a2 ** 2 * g * m1 * m2 * np.sin(x[0])
+            + 2 * a1 * a2**2 * g * m1 * m2 * np.sin(x[0])
         )
         / (
             2 * I1 * I2
             + (L1 * a2 * m2) ** 2
-            + 2 * I2 * L1 ** 2 * m2
-            + 2 * I2 * a1 ** 2 * m1
-            + 2 * I1 * a2 ** 2 * m2
+            + 2 * I2 * L1**2 * m2
+            + 2 * I2 * a1**2 * m1
+            + 2 * I1 * a2**2 * m2
             - (L1 * a2 * m2) ** 2 * np.cos(2 * (x[0] - x[1]))
             + 2 * (a1 * a2) ** 2 * m1 * m2
         ),
@@ -494,13 +494,13 @@ def double_pendulum(
             * m2
             * (
                 2 * I1 * g * np.sin(x[1])
-                + 2 * L1 ** 3 * x[2] ** 2 * m2 * np.sin(x[0] - x[1])
-                + 2 * L1 ** 2 * g * m2 * np.sin(x[1])
+                + 2 * L1**3 * x[2] ** 2 * m2 * np.sin(x[0] - x[1])
+                + 2 * L1**2 * g * m2 * np.sin(x[1])
                 + 2 * I1 * L1 * x[2] ** 2 * np.sin(x[0] - x[1])
-                + 2 * a1 ** 2 * g * m1 * np.sin(x[1])
-                + L1 ** 2 * a2 * x[3] ** 2 * m2 * np.sin(2 * (x[0] - x[1]))
-                + 2 * L1 * a1 ** 2 * x[2] ** 2 * m1 * np.sin(x[0] - x[1])
-                - 2 * L1 ** 2 * g * m2 * np.cos(x[0] - x[1]) * np.sin(x[0])
+                + 2 * a1**2 * g * m1 * np.sin(x[1])
+                + L1**2 * a2 * x[3] ** 2 * m2 * np.sin(2 * (x[0] - x[1]))
+                + 2 * L1 * a1**2 * x[2] ** 2 * m1 * np.sin(x[0] - x[1])
+                - 2 * L1**2 * g * m2 * np.cos(x[0] - x[1]) * np.sin(x[0])
                 - 2 * L1 * a1 * g * m1 * np.cos(x[0] - x[1]) * np.sin(x[0])
             )
         )
@@ -509,11 +509,11 @@ def double_pendulum(
             * (
                 I1 * I2
                 + (L1 * a2 * m2) ** 2
-                + I2 * L1 ** 2 * m2
-                + I2 * a1 ** 2 * m1
-                + I1 * a2 ** 2 * m2
+                + I2 * L1**2 * m2
+                + I2 * a1**2 * m1
+                + I1 * a2**2 * m2
                 - (L1 * a2 * m2) ** 2 * np.cos(x[0] - x[1]) ** 2
-                + a1 ** 2 * a2 ** 2 * m1 * m2
+                + a1**2 * a2**2 * m1 * m2
             )
         ),
     ]

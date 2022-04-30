@@ -3,8 +3,6 @@ from typing import Sequence
 
 import numpy as np
 from numpy.random import choice
-from scipy.integrate import trapezoid
-from scipy.interpolate import RegularGridInterpolator
 from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
@@ -92,13 +90,18 @@ def _check_control_shape(x, u, trim_last_point):
         u = u[np.newaxis]
     if u.ndim == 1:
         u = u.reshape(-1, 1)
-    elif u.ndim != 2:
+        if len(x) != u.shape[0]:
+            raise ValueError(
+                "control variables u must have same number of rows as x. "
+                "u has {} rows and x has {} rows".format(u.shape[0], len(x))
+            )
+    if u.ndim != 2:
         u = u.reshape(u.size // u.shape[-1], u.shape[-1])
-    if len(x) != u.shape[0]:
-        raise ValueError(
-            "control variables u must have same number of rows as x. "
-            "u has {} rows and x has {} rows".format(u.shape[0], len(x))
-        )
+        if (x.size // x.shape[-1]) != u.shape[0]:
+            raise ValueError(
+                "control variables u must have same number of rows as x. "
+                "u has {} rows and x has {} rows".format(u.shape[0], x.shape[0])
+            )
     return u[:-1] if trim_last_point else u
 
 
@@ -118,6 +121,7 @@ def drop_random_rows(
     multiple_trajectories,
 ):
     num_trajectories = feature_library.num_trajectories
+
     # Can't choose random n_subset points if data is from a PDE
     # (and therefore is spatially local).
     # Need to unfold it and just choose n_subset from the temporal slices
@@ -129,7 +133,10 @@ def drop_random_rows(
             s[-2] = 0
             s[-1] = slice(None, -1)
             spatial_grid = feature_library.spatiotemporal_grid[tuple(s)]
-            temporal_grid = feature_library.grid_pts[-1]
+            s = [0] * feature_library.spatiotemporal_grid.ndim
+            s[-2] = slice(None)
+            s[-1] = -1
+            temporal_grid = feature_library.spatiotemporal_grid[tuple(s)]
             num_time = len(temporal_grid)
             dims = spatial_grid.shape[:-1]
         else:
@@ -178,17 +185,17 @@ def drop_random_rows(
             s1[-2] = rand_inds
             new_spatiotemporal_grid = spatiotemporal_grid[tuple(s1)]
             feature_library.spatiotemporal_grid = new_spatiotemporal_grid
-            feature_library._set_up_grids()
+            feature_library._set_up_weights()
             s0[len(dims)] = rand_inds
             if multiple_trajectories:
                 x_dot_new = [
-                    convert_u_dot_integral(xi[tuple(s0)], feature_library)
+                    feature_library.convert_u_dot_integral(xi[tuple(s0)])
                     for xi in feature_library.old_x
                 ]
                 x_dot_new = np.vstack(x_dot_new)
             else:
-                x_dot_new = convert_u_dot_integral(
-                    feature_library.old_x[tuple(s0)], feature_library
+                x_dot_new = feature_library.convert_u_dot_integral(
+                    feature_library.old_x[tuple(s0)]
                 )
         else:
             x_dot_shaped = np.reshape(
@@ -313,9 +320,9 @@ def get_regularization(regularization):
     elif regularization.lower() == "weighted_l1":
         return lambda x, lam: np.sum(np.abs(lam @ x))
     elif regularization.lower() == "l2":
-        return lambda x, lam: lam * np.sum(x ** 2)
+        return lambda x, lam: lam * np.sum(x**2)
     elif regularization.lower() == "weighted_l2":
-        return lambda x, lam: np.sum(lam @ x ** 2)
+        return lambda x, lam: np.sum(lam @ x**2)
     elif regularization.lower() == "cad":  # dummy function
         return lambda x, lam: 0
     else:
@@ -409,33 +416,3 @@ def supports_multiple_targets(estimator):
         return estimator._more_tags()["multioutput"]
     except (AttributeError, KeyError):
         return False
-
-
-def convert_u_dot_integral(u, weak_pde_library):
-    """
-    Takes a full set of spatiotemporal fields u(x, t) and finds the weak
-    form of u_dot using a pre-defined weak pde library.
-    """
-    K = weak_pde_library.K
-    gdim = weak_pde_library.grid_ndim
-    u_dot_integral = np.zeros((K, u.shape[-1]))
-    deriv_orders = np.zeros(gdim)
-    deriv_orders[-1] = 1
-    w_diff = -weak_pde_library._smooth_ppoly(deriv_orders)
-    for j in range(u.shape[-1]):
-        u_interp = RegularGridInterpolator(
-            tuple(weak_pde_library.grid_pts), np.take(u, j, axis=-1)
-        )
-        for k in range(K):
-            u_new = u_interp(np.take(weak_pde_library.XT, k, axis=0))
-            u_dot_integral_temp = trapezoid(
-                w_diff[k] * u_new,
-                x=weak_pde_library.xtgrid_k[k, :, 0],
-                axis=0,
-            )
-            for i in range(1, gdim):
-                u_dot_integral_temp = trapezoid(
-                    u_dot_integral_temp, x=weak_pde_library.xtgrid_k[k, :, i], axis=0
-                )
-            u_dot_integral[k, j] = u_dot_integral_temp
-    return u_dot_integral

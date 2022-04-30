@@ -33,7 +33,8 @@ from pysindy.feature_library import WeakPDELibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
-from pysindy.utils import convert_u_dot_integral
+
+# from pysindy.utils import convert_u_dot_integral
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -738,7 +739,7 @@ def test_library_ensemble_weak_pde(data_1d_random_pde):
         u, t=t, library_ensemble=True, n_models=10
     )
     assert len(model.coef_list) == 10
-    u_dot = convert_u_dot_integral(u, weak_lib)
+    u_dot = weak_lib.convert_u_dot_integral(u)
     model = SINDy(feature_library=weak_lib).fit(
         u, x_dot=u_dot, library_ensemble=True, n_models=10
     )
@@ -794,7 +795,7 @@ def test_both_ensemble_weak_pde(data_1d_random_pde):
         u, t=t, ensemble=True, library_ensemble=True, n_models=2
     )
     assert len(model.coef_list) == 4
-    u_dot = convert_u_dot_integral(u, weak_lib)
+    u_dot = weak_lib.convert_u_dot_integral(u)
     model = SINDy(feature_library=weak_lib).fit(
         u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
     )
@@ -893,7 +894,6 @@ def test_multiple_trajectories_and_ensemble(diffuse_multiple_trajectories):
         spatiotemporal_grid=XT,
         K=100,
         is_uniform=False,
-        num_pts_per_domain=30,
     )
 
     optimizer = STLSQ(threshold=0.1, alpha=1e-5, normalize_columns=False)

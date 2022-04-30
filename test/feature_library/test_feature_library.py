@@ -27,7 +27,7 @@ from pysindy.optimizers import STLSQ
 
 
 def test_form_custom_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    library_functions = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     function_names = [
         lambda s: str(s),
         lambda s: "{}^2".format(s),
@@ -42,7 +42,7 @@ def test_form_custom_library():
 
 
 def test_form_pde_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    library_functions = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     function_names = [
         lambda s: str(s),
         lambda s: "{}^2".format(s),
@@ -57,7 +57,7 @@ def test_form_pde_library():
 
 
 def test_form_sindy_pi_library():
-    library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    library_functions = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     function_names = [
         lambda s: str(s),
         lambda s: "{}^2".format(s),
@@ -86,7 +86,7 @@ def test_bad_parameters():
     with pytest.raises(ValueError):
         FourierLibrary(include_sin=False, include_cos=False)
     with pytest.raises(ValueError):
-        library_functions = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+        library_functions = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
         function_names = [lambda s: str(s), lambda s: "{}^2".format(s)]
         CustomLibrary(
             library_functions=library_functions, function_names=function_names
@@ -106,7 +106,7 @@ def test_bad_parameters():
     ],
 )
 def test_pde_library_bad_parameters(params):
-    params["library_functions"] = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    params["library_functions"] = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     with pytest.raises(ValueError):
         PDELibrary(**params)
 
@@ -141,7 +141,7 @@ def test_pde_library_bad_parameters(params):
     ],
 )
 def test_weak_pde_library_bad_parameters(params):
-    params["library_functions"] = [lambda x: x, lambda x: x ** 2, lambda x: 0 * x]
+    params["library_functions"] = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     with pytest.raises(ValueError):
         WeakPDELibrary(**params)
 
@@ -192,18 +192,18 @@ def test_generalized_library_bad_parameters(data_lorenz, params):
     "params",
     [
         dict(
-            library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x],
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
             function_names=[lambda s: str(s), lambda s: "{}^2".format(s)],
         ),
         dict(
-            x_dot_library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x],
+            x_dot_library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
             function_names=[lambda s: str(s), lambda s: "{}^2".format(s)],
         ),
-        dict(x_dot_library_functions=[lambda x: x, lambda x: x ** 2, lambda x: 0 * x]),
+        dict(x_dot_library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x]),
         dict(),
         dict(
-            library_functions=[lambda x: x, lambda x: x ** 2],
-            x_dot_library_functions=[lambda x: x, lambda x: x ** 2],
+            library_functions=[lambda x: x, lambda x: x**2],
+            x_dot_library_functions=[lambda x: x, lambda x: x**2],
             function_names=[lambda s: s, lambda s: s + s],
         ),
     ],
@@ -693,7 +693,7 @@ def test_5D_pdes(data_5d_random_pde):
 
 
 def test_1D_weak_pdes():
-    n = 4
+    n = 10
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     u = np.random.randn(n, n, 1)
@@ -707,17 +707,15 @@ def test_1D_weak_pdes():
         function_names=library_function_names,
         derivative_order=4,
         spatiotemporal_grid=spatiotemporal_grid,
-        H_xt=0.1,
+        H_xt=2,
         include_bias=True,
-        K=5,
         is_uniform=False,
-        num_pts_per_domain=20,
     )
     pde_library_helper(pde_lib, u, 1)
 
 
 def test_2D_weak_pdes():
-    n = 4
+    n = 10
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -732,17 +730,16 @@ def test_2D_weak_pdes():
         function_names=library_function_names,
         derivative_order=4,
         spatiotemporal_grid=spatiotemporal_grid,
-        H_xt=0.1,
-        K=2,
+        H_xt=4,
+        K=10,
         include_bias=True,
         is_uniform=False,
-        num_pts_per_domain=10,
     )
     pde_library_helper(pde_lib, u, 1)
 
 
 def test_3D_weak_pdes():
-    n = 4
+    n = 10
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -758,17 +755,16 @@ def test_3D_weak_pdes():
         function_names=library_function_names,
         derivative_order=4,
         spatiotemporal_grid=spatiotemporal_grid,
-        H_xt=0.1,
-        K=2,
+        H_xt=4,
+        K=10,
         include_bias=True,
         is_uniform=False,
-        num_pts_per_domain=4,
     )
     pde_library_helper(pde_lib, u, 2)
 
 
 def test_5D_weak_pdes():
-    n = 4
+    n = 5
     t = np.linspace(0, 10, n)
     v = np.linspace(0, 10, n)
     w = np.linspace(0, 10, n)
@@ -786,10 +782,10 @@ def test_5D_weak_pdes():
         function_names=library_function_names,
         derivative_order=2,
         spatiotemporal_grid=spatiotemporal_grid,
-        K=2,
+        H_xt=4,
+        K=10,
         include_bias=True,
         is_uniform=False,
-        num_pts_per_domain=4,
     )
     pde_library_helper(pde_lib, u, 2)
 
@@ -799,7 +795,7 @@ def test_sindypi_library(data_lorenz):
     x_library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     x_dot_library_functions = [lambda x: x]
 

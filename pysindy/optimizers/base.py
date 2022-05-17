@@ -6,6 +6,7 @@ import abc
 import numpy as np
 from scipy import sparse
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model._base import _preprocess_data
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
@@ -131,7 +132,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         """
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
-        x, y, X_offset, y_offset, X_scale = self._preprocess_data(
+        x, y, X_offset, y_offset, X_scale = _preprocess_data(
             x_,
             y,
             fit_intercept=self.fit_intercept,

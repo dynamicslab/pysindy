@@ -9,6 +9,8 @@ from sklearn.base import TransformerMixin
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import validate_input as utils_validate_input
+
 
 class BaseFeatureLibrary(TransformerMixin):
     """
@@ -32,6 +34,12 @@ class BaseFeatureLibrary(TransformerMixin):
         if np.any(np.asarray(ensemble_indices) < 0):
             raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.ensemble_indices = ensemble_indices
+
+    def validate_input(self, *args, **kwargs):
+        return utils_validate_input(*args, **kwargs)
+
+    def calc_trajectory(self, diff_method, x, t):
+        return diff_method(x, t=t)
 
     # Force subclasses to implement this
     @abc.abstractmethod

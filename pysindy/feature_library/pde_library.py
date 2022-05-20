@@ -163,6 +163,9 @@ class PDELibrary(BaseFeatureLibrary):
         self.multiindices = multiindices
         self.spatial_grid = spatial_grid
 
+    def calc_trajectory(self, diff_method, x, t):
+        return FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
+
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
         """Get the combinations of features to be passed to a library function."""

@@ -331,40 +331,42 @@ class SINDy(BaseEstimator):
             pde_libraries = False
             weak_libraries = False
 
-            if isinstance(self.feature_library, WeakPDELibrary):
-                x_dot = [self.feature_library.convert_u_dot_integral(xi) for xi in x]
-            elif isinstance(self.feature_library, PDELibrary):
+            if isinstance(self.feature_library, PDELibrary) or isinstance(
+                self.feature_library, WeakPDELibrary
+            ):
                 if isinstance(t, Sequence):
                     x_dot = [
-                        FiniteDifference(d=1, axis=-2)._differentiate(xi, t=ti)
+                        self.feature_library.calc_trajectory(
+                            self.differentiation_method, xi, ti
+                        )
                         for xi, ti in zip(x, t)
                     ]
                 else:
                     x_dot = [
-                        FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
+                        self.feature_library.calc_trajectory(
+                            self.differentiation_method, xi, t
+                        )
                         for xi in x
                     ]
-
             elif isinstance(self.feature_library, GeneralizedLibrary):
                 for lib in self.feature_library.libraries_:
                     if isinstance(lib, WeakPDELibrary):
                         weak_libraries = True
                     if isinstance(lib, PDELibrary):
                         pde_libraries = True
-                if weak_libraries:
-                    x_dot = [
-                        self.feature_library.libraries_[0].convert_u_dot_integral(xi)
-                        for xi in x
-                    ]
-                elif pde_libraries:
+                if pde_libraries or weak_libraries:
                     if isinstance(t, Sequence):
                         x_dot = [
-                            FiniteDifference(d=1, axis=-2)._differentiate(xi, t=ti)
+                            self.feature_library.calc_trajectory(
+                                self.differentiation_method, xi, ti
+                            )
                             for xi, ti in zip(x, t)
                         ]
                     else:
                         x_dot = [
-                            FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
+                            self.feature_library.calc_trajectory(
+                                self.differentiation_method, xi, t
+                            )
                             for xi in x
                         ]
 
@@ -769,16 +771,25 @@ class SINDy(BaseEstimator):
             weak_libraries = False
 
             if isinstance(self.feature_library, WeakPDELibrary):
-                x_dot = [self.feature_library.convert_u_dot_integral(xi) for xi in x]
+                x_dot = [
+                    self.feature_library.calc_trajectory(
+                        self.differentiation_method, xi, t
+                    )
+                    for xi in x
+                ]
             elif isinstance(self.feature_library, PDELibrary):
                 if isinstance(t, Sequence):
                     x_dot = [
-                        FiniteDifference(d=1, axis=-2)._differentiate(xi, t=ti)
+                        self.feature_library.calc_trajectory(
+                            self.differentiation_method, xi, ti
+                        )
                         for xi, ti in zip(x, t)
                     ]
                 else:
                     x_dot = [
-                        FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
+                        self.feature_library.calc_trajectory(
+                            self.differentiation_method, xi, t
+                        )
                         for xi in x
                     ]
 
@@ -790,18 +801,24 @@ class SINDy(BaseEstimator):
                         pde_libraries = True
                 if weak_libraries:
                     x_dot = [
-                        self.feature_library.libraries_[0].convert_u_dot_integral(xi)
+                        self.feature_library.libraries_[0].calc_trajectory(
+                            self.differentiation_method, xi, t
+                        )
                         for xi in x
                     ]
                 elif pde_libraries:
                     if isinstance(t, Sequence):
                         x_dot = [
-                            FiniteDifference(d=1, axis=-2)._differentiate(xi, t=ti)
+                            self.feature_library.calc_trajectory(
+                                self.differentiation_method, xi, ti
+                            )
                             for xi, ti in zip(x, t)
                         ]
                     else:
                         x_dot = [
-                            FiniteDifference(d=1, axis=-2)._differentiate(xi, t=t)
+                            self.feature_library.calc_trajectory(
+                                self.differentiation_method, xi, t
+                            )
                             for xi in x
                         ]
 
@@ -882,11 +899,19 @@ class SINDy(BaseEstimator):
                 if isinstance(t, Sequence):
                     x = [validate_input(xi, ti) for xi, ti in zip(x, t)]
                     x_dot = [
-                        self.differentiation_method(xi, ti) for xi, ti in zip(x, t)
+                        self.feature_library.calc_trajectory(
+                            self.differentiation_method, xi, ti
+                        )
+                        for xi, ti in zip(x, t)
                     ]
                 else:
                     x = [validate_input(xi, t) for xi in x]
-                    x_dot = [self.differentiation_method(xi, t) for xi in x]
+                    x_dot = [
+                        self.feature_library.calc_trajectory(
+                            self.differentiation_method, xi, t
+                        )
+                        for xi in x
+                    ]
             else:
                 if not isinstance(x_dot, Sequence):
                     raise TypeError(

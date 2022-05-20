@@ -235,6 +235,12 @@ class WeakPDELibrary(BaseFeatureLibrary):
         # Weak form checks and setup
         self._weak_form_setup()
 
+    def validate_input(self, x):
+        return x
+
+    def calc_trajectory(self, diff_method, x, t):
+        return self.convert_u_dot_integral(x)
+
     def _weak_form_setup(self):
         xt1, xt2 = self._get_spatial_endpoints()
         L_xt = xt2 - xt1

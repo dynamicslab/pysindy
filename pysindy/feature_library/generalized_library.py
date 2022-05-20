@@ -4,6 +4,7 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 from .base import BaseFeatureLibrary
+from .pde_library import PDELibrary
 from .weak_pde_library import WeakPDELibrary
 
 
@@ -107,12 +108,15 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         if len(libraries) > 0:
             self.libraries_ = libraries
             weak_libraries = False
+            pde_libraries = False
             nonweak_libraries = False
-            for lib in self.libraries_:
+            for k, lib in enumerate(self.libraries_):
                 if isinstance(lib, WeakPDELibrary):
-                    weak_libraries = True
+                    weak_libraries = k
                 else:
                     nonweak_libraries = True
+                    if isinstance(lib, PDELibrary):
+                        pde_libraries = k
             if weak_libraries and nonweak_libraries:
                 raise ValueError(
                     "At least one of the libraries is a weak form library, "
@@ -120,6 +124,13 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                     "result in a nonsensical optimization problem. Please use "
                     "all weak form libraries or no weak form libraries."
                 )
+            if weak_libraries:
+                self.validate_input = libraries[weak_libraries].validate_input
+                self.calc_trajectory = libraries[weak_libraries].calc_trajectory
+            elif pde_libraries:
+                self.validate_input = libraries[pde_libraries].validate_input
+                self.calc_trajectory = libraries[pde_libraries].calc_trajectory
+
         else:
             raise ValueError(
                 "Empty or nonsensical library list passed to this library."

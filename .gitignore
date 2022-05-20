@@ -34,3 +34,5 @@ docs/_build
 *.pyc
 
 *.sublime*
+
+.hypothesis/

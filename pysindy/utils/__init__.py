@@ -1,3 +1,4 @@
+from .base import adapt_to_multiple_trajectories
 from .base import capped_simplex_projection
 from .base import drop_nan_rows
 from .base import drop_random_rows
@@ -67,6 +68,7 @@ __all__ = [
     "supports_multiple_targets",
     "validate_control_variables",
     "validate_input",
+    "adapt_to_multiple_trajectories",
     "linear_damped_SHO",
     "cubic_damped_SHO",
     "linear_3D",

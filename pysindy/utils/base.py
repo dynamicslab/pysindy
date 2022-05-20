@@ -1,4 +1,5 @@
 from itertools import repeat
+from typing import Collection
 from typing import Sequence
 
 import numpy as np
@@ -13,6 +14,33 @@ from sklearn.utils.validation import check_array
 # to pass in None, in which case validate_input performs
 # no checks on t.
 T_DEFAULT = object()
+
+
+def adapt_to_multiple_trajectories(x, t, x_dot, u):
+    """Adapt model data not already in multiple_trajectories to that format.
+
+    Arguments:
+        x: Samples from which to make predictions.
+        t: Time step between samples or array of collection times.
+        x_dot: Pre-computed derivatives of the samples.
+        u: Control variables
+
+    Returns:
+        Tuple of updated x, t, x_dot, u
+    """
+    if isinstance(x, Sequence):
+        raise ValueError(
+            "x is a Sequence, but multiple_trajectories not set.  "
+            "Did you mean to set multiple trajectories?"
+        )
+    x = [x]
+    if isinstance(t, Collection):
+        t = [t]
+    if x_dot is not None:
+        x_dot = [x_dot]
+    if u is not None:
+        u = [u]
+    return x, t, x_dot, u
 
 
 def validate_input(x, t=T_DEFAULT):

@@ -321,50 +321,22 @@ class SINDy(BaseEstimator):
         if (n_subset is not None) and n_subset <= 0:
             raise ValueError("n_subset must be a positive integer")
 
-        # Note: This block for calculating x_dot for weak and pde libs is identical
-        # to the one in score. Should we redefine the differentiation_method to cover
-        # the weak and pde library cases more generally?
-        # The validate_input should probably explicity handle the weak and pde cases...
-        if isinstance(self.feature_library, WeakPDELibrary):
-            self.feature_library.old_x = np.copy(x)
-        if x_dot is None:
-            pde_libraries = False
-
-            if isinstance(self.feature_library, GeneralizedLibrary):
-                for lib in self.feature_library.libraries_:
-                    if isinstance(lib, WeakPDELibrary) or isinstance(lib, PDELibrary):
-                        pde_libraries = True
-            if (
-                isinstance(self.feature_library, PDELibrary)
-                or isinstance(self.feature_library, WeakPDELibrary)
-                or pde_libraries
-            ):
-                if isinstance(t, Sequence):
-                    x_dot = [
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, ti
-                        )
-                        for xi, ti in zip(x, t)
-                    ]
-                else:
-                    x_dot = [
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, t
-                        )
-                        for xi in x
-                    ]
-
-        # save copy of x in case there are control inputs to be validated
         x_list = x
         x_dot_None = False  # flag for discrete time functionality
         if self.discrete_time:
             if x_dot is None:
                 x_dot_None = True  # set the flag
+
+        # save copy of x in case there are control inputs to be validated
+        if isinstance(self.feature_library, WeakPDELibrary):
+            self.feature_library.old_x = np.copy(x)
+
         self.feature_library.num_trajectories = len(x)
         if isinstance(self.feature_library, GeneralizedLibrary):
             for lib in self.feature_library.libraries_:
                 if isinstance(lib, PDELibrary) or isinstance(lib, WeakPDELibrary):
                     lib.num_trajectories = len(x)
+
         x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
 
         if u is None:
@@ -744,39 +716,6 @@ class SINDy(BaseEstimator):
                 trim_last_point=trim_last_point,
             )
 
-        # Note: This block for calculating x_dot for weak and pde libs is identical
-        # to the one in fit. Should we redefine the differentiation_method to cover
-        # the weak and pde library cases more generally?
-        # The validate_input should probably explicity handle the weak and pde cases...
-        if isinstance(self.feature_library, WeakPDELibrary):
-            self.feature_library.old_x = np.copy(x)
-        if x_dot is None:
-            pde_libraries = False
-
-            if isinstance(self.feature_library, GeneralizedLibrary):
-                for lib in self.feature_library.libraries_:
-                    if isinstance(lib, WeakPDELibrary) or isinstance(lib, PDELibrary):
-                        pde_libraries = True
-            if (
-                isinstance(self.feature_library, PDELibrary)
-                or isinstance(self.feature_library, WeakPDELibrary)
-                or pde_libraries
-            ):
-                if isinstance(t, Sequence):
-                    x_dot = [
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, ti
-                        )
-                        for xi, ti in zip(x, t)
-                    ]
-                else:
-                    x_dot = [
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, t
-                        )
-                        for xi in x
-                    ]
-
         if self.discrete_time and x_dot is None:
             x_dot_predict = [xd[:-1] for xd in x_dot_predict]
 
@@ -837,6 +776,7 @@ class SINDy(BaseEstimator):
         """
         if not isinstance(x, Sequence):
             raise TypeError("Input x must be a list")
+
         if self.discrete_time:
             x = [validate_input(xi) for xi in x]
             if x_dot is None:
@@ -850,9 +790,42 @@ class SINDy(BaseEstimator):
                     )
                 x_dot = [validate_input(xd) for xd in x_dot]
         else:
+
+            if x_dot is None:
+                pde_libraries = False
+
+                if isinstance(self.feature_library, GeneralizedLibrary):
+                    for lib in self.feature_library.libraries_:
+                        if isinstance(lib, WeakPDELibrary) or isinstance(
+                            lib, PDELibrary
+                        ):
+                            pde_libraries = True
+                if (
+                    isinstance(self.feature_library, PDELibrary)
+                    or isinstance(self.feature_library, WeakPDELibrary)
+                    or pde_libraries
+                ):
+                    if isinstance(t, Sequence):
+                        x_dot = [
+                            self.feature_library.calc_trajectory(
+                                self.differentiation_method, xi, ti
+                            )
+                            for xi, ti in zip(x, t)
+                        ]
+                    else:
+                        x_dot = [
+                            self.feature_library.calc_trajectory(
+                                self.differentiation_method, xi, t
+                            )
+                            for xi in x
+                        ]
+
             if x_dot is None:
                 if isinstance(t, Sequence):
-                    x = [validate_input(xi, ti) for xi, ti in zip(x, t)]
+                    x = [
+                        self.feature_library.validate_input(xi, ti)
+                        for xi, ti in zip(x, t)
+                    ]
                     x_dot = [
                         self.feature_library.calc_trajectory(
                             self.differentiation_method, xi, ti
@@ -860,7 +833,7 @@ class SINDy(BaseEstimator):
                         for xi, ti in zip(x, t)
                     ]
                 else:
-                    x = [validate_input(xi, t) for xi in x]
+                    x = [self.feature_library.validate_input(xi, t) for xi in x]
                     x_dot = [
                         self.feature_library.calc_trajectory(
                             self.differentiation_method, xi, t

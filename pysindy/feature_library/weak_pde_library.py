@@ -235,7 +235,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         # Weak form checks and setup
         self._weak_form_setup()
 
-    def validate_input(self, x):
+    def validate_input(self, x, t):
         return x
 
     def calc_trajectory(self, diff_method, x, t):

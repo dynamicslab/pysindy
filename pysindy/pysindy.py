@@ -860,8 +860,10 @@ class SINDy(BaseEstimator):
             raise RuntimeError("No differentiation implemented for discrete time model")
         if not multiple_trajectories:
             x, t, _, _ = _adapt_to_multiple_trajectories(x, t, None, None)
-            multiple_trajectories
-        return self._process_multiple_trajectories(x, t, None, return_array=False)[1]
+        result = self._process_multiple_trajectories(x, t, None, return_array=False)[1]
+        if not multiple_trajectories:
+            return result[0]
+        return result
 
     def coefficients(self):
         """

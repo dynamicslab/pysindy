@@ -7,6 +7,7 @@ from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import flatten_2d_tall
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
 
@@ -167,7 +168,7 @@ class PDELibrary(BaseFeatureLibrary):
         return x
 
     def calc_trajectory(self, diff_method, x, t):
-        return FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
+        return flatten_2d_tall(FiniteDifference(d=1, axis=-2)._differentiate(x, t=t))
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):

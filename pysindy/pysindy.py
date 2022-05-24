@@ -792,49 +792,18 @@ class SINDy(BaseEstimator):
                     )
                 x_dot = [validate_input(xd) for xd in x_dot]
         else:
-
             if x_dot is None:
-                pde_libraries = False
-
-                if isinstance(self.feature_library, GeneralizedLibrary):
-                    for lib in self.feature_library.libraries_:
-                        if isinstance(lib, WeakPDELibrary) or isinstance(
-                            lib, PDELibrary
-                        ):
-                            pde_libraries = True
-                if (
-                    isinstance(self.feature_library, PDELibrary)
-                    or isinstance(self.feature_library, WeakPDELibrary)
-                    or pde_libraries
-                ):
-                    x = [
-                        self.feature_library.validate_input(xi, ti)
-                        for xi, ti in _zip_like_sequence(x, t)
-                    ]
-                    x_dot = [
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, ti
-                        )
-                        for xi, ti in _zip_like_sequence(x, t)
-                    ]
-                    if not isinstance(x_dot, Sequence):
-                        raise TypeError(
-                            "x_dot must be a list if used with x of list type "
-                            "(i.e. for multiple trajectories)"
-                        )
-                    x = [flatten_2d_tall(xi) for xi in x]
-                    x_dot = [flatten_2d_tall(xd) for xd in x_dot]
-                else:  # not PDELibrary of WeakPDELibrary
-                    x = [
-                        self.feature_library.validate_input(xi, ti)
-                        for xi, ti in _zip_like_sequence(x, t)
-                    ]
-                    x_dot = [
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, ti
-                        )
-                        for xi, ti in _zip_like_sequence(x, t)
-                    ]
+                x = [
+                    self.feature_library.validate_input(xi, ti)
+                    for xi, ti in _zip_like_sequence(x, t)
+                ]
+                x_dot = [
+                    self.feature_library.calc_trajectory(
+                        self.differentiation_method, xi, ti
+                    )
+                    for xi, ti in _zip_like_sequence(x, t)
+                ]
+                x = [flatten_2d_tall(xi) for xi in x]
             else:
                 if not isinstance(x_dot, Sequence):
                     raise TypeError(

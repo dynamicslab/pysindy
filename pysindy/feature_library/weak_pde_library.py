@@ -10,6 +10,7 @@ from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import flatten_2d_tall
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
 
@@ -239,7 +240,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         return x
 
     def calc_trajectory(self, diff_method, x, t):
-        return self.convert_u_dot_integral(x)
+        return flatten_2d_tall(self.convert_u_dot_integral(x))
 
     def _weak_form_setup(self):
         xt1, xt2 = self._get_spatial_endpoints()

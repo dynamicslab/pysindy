@@ -1,4 +1,5 @@
 import warnings
+from itertools import product
 from typing import Sequence
 
 import numpy as np
@@ -806,20 +807,16 @@ class SINDy(BaseEstimator):
                     or isinstance(self.feature_library, WeakPDELibrary)
                     or pde_libraries
                 ):
-                    if isinstance(t, Sequence):
-                        x_dot = [
-                            self.feature_library.calc_trajectory(
-                                self.differentiation_method, xi, ti
-                            )
-                            for xi, ti in zip(x, t)
-                        ]
-                    else:
-                        x_dot = [
-                            self.feature_library.calc_trajectory(
-                                self.differentiation_method, xi, t
-                            )
-                            for xi in x
-                        ]
+                    x = [
+                        self.feature_library.validate_input(xi, ti)
+                        for xi, ti in _zip_like_sequence(x, t)
+                    ]
+                    x_dot = [
+                        self.feature_library.calc_trajectory(
+                            self.differentiation_method, xi, ti
+                        )
+                        for xi, ti in _zip_like_sequence(x, t)
+                    ]
                     if not isinstance(x_dot, Sequence):
                         raise TypeError(
                             "x_dot must be a list if used with x of list type "
@@ -828,25 +825,16 @@ class SINDy(BaseEstimator):
                     x = [flatten_2d_tall(xi) for xi in x]
                     x_dot = [flatten_2d_tall(xd) for xd in x_dot]
                 else:  # not PDELibrary of WeakPDELibrary
-                    if isinstance(t, Sequence):
-                        x = [
-                            self.feature_library.validate_input(xi, ti)
-                            for xi, ti in zip(x, t)
-                        ]
-                        x_dot = [
-                            self.feature_library.calc_trajectory(
-                                self.differentiation_method, xi, ti
-                            )
-                            for xi, ti in zip(x, t)
-                        ]
-                    else:
-                        x = [self.feature_library.validate_input(xi, t) for xi in x]
-                        x_dot = [
-                            self.feature_library.calc_trajectory(
-                                self.differentiation_method, xi, t
-                            )
-                            for xi in x
-                        ]
+                    x = [
+                        self.feature_library.validate_input(xi, ti)
+                        for xi, ti in _zip_like_sequence(x, t)
+                    ]
+                    x_dot = [
+                        self.feature_library.calc_trajectory(
+                            self.differentiation_method, xi, ti
+                        )
+                        for xi, ti in _zip_like_sequence(x, t)
+                    ]
             else:
                 if not isinstance(x_dot, Sequence):
                     raise TypeError(
@@ -1105,3 +1093,11 @@ class SINDy(BaseEstimator):
         Complexity of the model measured as the number of nonzero parameters.
         """
         return self.model.steps[-1][1].complexity
+
+
+def _zip_like_sequence(x, t):
+    """Create an iterable like zip(x, t), but works if t is scalar."""
+    if isinstance(t, Sequence):
+        return zip(x, t)
+    else:
+        return product(x, [t])

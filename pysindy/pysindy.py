@@ -1,5 +1,6 @@
 import warnings
 from itertools import product
+from typing import Collection
 from typing import Sequence
 
 import numpy as np
@@ -22,7 +23,6 @@ from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
-from .utils import adapt_to_multiple_trajectories
 from .utils import drop_nan_rows
 from .utils import drop_random_rows
 from .utils import equations
@@ -298,7 +298,7 @@ class SINDy(BaseEstimator):
             t = self.t_default
 
         if not multiple_trajectories:
-            x, t, x_dot, u = adapt_to_multiple_trajectories(x, t, x_dot, u)
+            x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
             multiple_trajectories = True
 
         if (ensemble or library_ensemble) and n_models is None:
@@ -526,7 +526,7 @@ class SINDy(BaseEstimator):
             Predicted time derivatives
         """
         if not multiple_trajectories:
-            x, _, _, u = adapt_to_multiple_trajectories(x, None, None, u)
+            x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
         check_is_fitted(self, "model")
         if u is None or self.n_control_features_ == 0:
             if self.n_control_features_ > 0:
@@ -687,7 +687,7 @@ class SINDy(BaseEstimator):
         """
 
         if not multiple_trajectories:
-            x, t, x_dot, u = adapt_to_multiple_trajectories(x, t, x_dot, u)
+            x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
             multiple_trajectories = True
 
         if u is None or self.n_control_features_ == 0:
@@ -859,7 +859,7 @@ class SINDy(BaseEstimator):
         if self.discrete_time:
             raise RuntimeError("No differentiation implemented for discrete time model")
         if not multiple_trajectories:
-            x, t, _, _ = adapt_to_multiple_trajectories(x, t, None, None)
+            x, t, _, _ = _adapt_to_multiple_trajectories(x, t, None, None)
             multiple_trajectories
         return self._process_multiple_trajectories(x, t, None, return_array=False)[1]
 
@@ -1070,3 +1070,30 @@ def _zip_like_sequence(x, t):
         return zip(x, t)
     else:
         return product(x, [t])
+
+
+def _adapt_to_multiple_trajectories(x, t, x_dot, u):
+    """Adapt model data not already in multiple_trajectories to that format.
+
+    Arguments:
+        x: Samples from which to make predictions.
+        t: Time step between samples or array of collection times.
+        x_dot: Pre-computed derivatives of the samples.
+        u: Control variables
+
+    Returns:
+        Tuple of updated x, t, x_dot, u
+    """
+    if isinstance(x, Sequence):
+        raise ValueError(
+            "x is a Sequence, but multiple_trajectories not set.  "
+            "Did you mean to set multiple trajectories?"
+        )
+    x = [x]
+    if isinstance(t, Collection):
+        t = [t]
+    if x_dot is not None:
+        x_dot = [x_dot]
+    if u is not None:
+        u = [u]
+    return x, t, x_dot, u

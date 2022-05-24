@@ -3,6 +3,7 @@ from .base import capped_simplex_projection
 from .base import drop_nan_rows
 from .base import drop_random_rows
 from .base import equations
+from .base import flatten_2d_tall
 from .base import get_prox
 from .base import get_regularization
 from .base import print_model
@@ -68,6 +69,7 @@ __all__ = [
     "supports_multiple_targets",
     "validate_control_variables",
     "validate_input",
+    "flatten_2d_tall",
     "adapt_to_multiple_trajectories",
     "linear_damped_SHO",
     "cubic_damped_SHO",

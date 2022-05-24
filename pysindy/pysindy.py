@@ -25,6 +25,7 @@ from .utils import adapt_to_multiple_trajectories
 from .utils import drop_nan_rows
 from .utils import drop_random_rows
 from .utils import equations
+from .utils import flatten_2d_tall
 from .utils import validate_control_variables
 from .utils import validate_input
 
@@ -819,27 +820,33 @@ class SINDy(BaseEstimator):
                             )
                             for xi in x
                         ]
-
-            if x_dot is None:
-                if isinstance(t, Sequence):
-                    x = [
-                        self.feature_library.validate_input(xi, ti)
-                        for xi, ti in zip(x, t)
-                    ]
-                    x_dot = [
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, ti
+                    if not isinstance(x_dot, Sequence):
+                        raise TypeError(
+                            "x_dot must be a list if used with x of list type "
+                            "(i.e. for multiple trajectories)"
                         )
-                        for xi, ti in zip(x, t)
-                    ]
-                else:
-                    x = [self.feature_library.validate_input(xi, t) for xi in x]
-                    x_dot = [
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, t
-                        )
-                        for xi in x
-                    ]
+                    x = [flatten_2d_tall(xi) for xi in x]
+                    x_dot = [flatten_2d_tall(xd) for xd in x_dot]
+                else:  # not PDELibrary of WeakPDELibrary
+                    if isinstance(t, Sequence):
+                        x = [
+                            self.feature_library.validate_input(xi, ti)
+                            for xi, ti in zip(x, t)
+                        ]
+                        x_dot = [
+                            self.feature_library.calc_trajectory(
+                                self.differentiation_method, xi, ti
+                            )
+                            for xi, ti in zip(x, t)
+                        ]
+                    else:
+                        x = [self.feature_library.validate_input(xi, t) for xi in x]
+                        x_dot = [
+                            self.feature_library.calc_trajectory(
+                                self.differentiation_method, xi, t
+                            )
+                            for xi in x
+                        ]
             else:
                 if not isinstance(x_dot, Sequence):
                     raise TypeError(

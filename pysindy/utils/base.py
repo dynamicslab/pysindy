@@ -43,11 +43,27 @@ def adapt_to_multiple_trajectories(x, t, x_dot, u):
     return x, t, x_dot, u
 
 
+def flatten_2d_tall(x):
+    return x.reshape(x.size // x.shape[-1], x.shape[-1])
+
+
 def validate_input(x, t=T_DEFAULT):
+    """Forces input data to have compatible dimensions, if possible.
+
+    Args:
+        x: array of input data (measured coordinates across time)
+        t: time values for measurements.
+
+    Returns:
+        x as 2D array, with time dimension on first axis and coordiante
+        index on second axis.
+    """
     if not isinstance(x, np.ndarray):
         raise ValueError("x must be array-like")
     elif x.ndim == 1:
         x = x.reshape(-1, 1)
+    x_new = flatten_2d_tall(x)
+
     check_array(x, ensure_2d=False, allow_nd=True)
 
     if t is not T_DEFAULT:
@@ -66,10 +82,6 @@ def validate_input(x, t=T_DEFAULT):
         else:
             raise ValueError("t must be a scalar or array-like.")
 
-    if x.ndim != 2:
-        x_new = x.reshape(x.size // x.shape[-1], x.shape[-1])
-    else:
-        x_new = x
     return x_new
 
 

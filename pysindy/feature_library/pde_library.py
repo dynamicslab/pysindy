@@ -163,6 +163,9 @@ class PDELibrary(BaseFeatureLibrary):
         self.multiindices = multiindices
         self.spatial_grid = spatial_grid
 
+    def validate_input(self, x, t):
+        return x
+
     def calc_trajectory(self, diff_method, x, t):
         return FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
 

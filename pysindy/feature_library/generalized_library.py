@@ -1,3 +1,5 @@
+from typing import Type
+
 import numpy as np
 from sklearn import __version__
 from sklearn.utils import check_array
@@ -242,6 +244,23 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self.libraries_full_ = fitted_libs
 
         return self
+
+    def has_type(self, libtype: Type, exclusively=False) -> bool:
+        """Checks whether this library has a specific library type.
+
+        Parameters
+        ----------
+        libtype : A type of feature library
+        exclusively: whether to check all libraries
+
+        Returns
+        -------
+        Bool indicating whether specific library type is present
+        """
+        has_inst = map(lambda lib: isinstance(lib, libtype), self.libraries_)
+        if exclusively:
+            return all(has_inst)
+        return any(has_inst)
 
     def transform(self, x):
         """Transform data with libs provided below.

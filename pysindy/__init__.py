@@ -12,6 +12,7 @@ from . import optimizers
 from . import deeptime
 from . import utils
 from .pysindy import SINDy
+from .pysindy import AxesArray
 from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
 from .differentiation import SpectralDerivative
@@ -38,7 +39,7 @@ from .optimizers import SINDyPI
 from .optimizers import TrappingSR3
 
 
-__all__ = ["SINDy"]
+__all__ = ["SINDy", "AxesArray"]
 __all__.extend(differentiation.__all__)
 __all__.extend(feature_library.__all__)
 __all__.extend(optimizers.__all__)

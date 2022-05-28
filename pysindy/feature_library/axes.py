@@ -41,7 +41,8 @@ class AxesArray(np.ndarray):
             warnings.warn(
                 "Axes passed is missing values or incompatible with data"
                 "given.  This occurs when reshaping data rather than creating"
-                "a new AxesArray with determined axes."
+                "a new AxesArray with determined axes.",
+                type("AxesWarning", (PendingDeprecationWarning,), {}),
             )
             # raise ValueError("axes passed is incompatible with data given")
         # Since axes can be zero, cannot simply check "if axis:"

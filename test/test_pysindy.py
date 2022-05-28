@@ -582,6 +582,12 @@ def test_fit_warn(data_lorenz, params, warning):
     with pytest.warns(None) as warn_record:
         model.fit(x, t, quiet=True)
 
+    while True:
+        try:
+            warn_record.pop(PendingDeprecationWarning)
+        except AssertionError:
+            break
+
     assert len(warn_record) == 0
 
 

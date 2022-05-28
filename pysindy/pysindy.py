@@ -27,7 +27,6 @@ from .optimizers import STLSQ
 from .utils import drop_nan_rows
 from .utils import drop_random_rows
 from .utils import equations
-from .utils import flatten_2d_tall
 from .utils import validate_control_variables
 from .utils import validate_input
 from .utils import validate_no_reshape
@@ -566,7 +565,8 @@ class SINDy(BaseEstimator):
                     " not used when the model was fit"
                 )
             x_shapes = []
-            x = [validate_input(xi) for xi in x]
+            if self.discrete_time or any([len(xi.shape) == 1 for xi in x]):
+                x = [validate_input(xi) for xi in x]
             for xi in x:
                 x_shapes.append(xi.shape)
 
@@ -831,7 +831,6 @@ class SINDy(BaseEstimator):
                     )
                     for xi, ti in _zip_like_sequence(x, t)
                 ]
-                x = [flatten_2d_tall(xi) for xi in x]
             else:
                 if not isinstance(x_dot, Sequence):
                     raise TypeError(
@@ -839,18 +838,30 @@ class SINDy(BaseEstimator):
                         "(i.e. for multiple trajectories)"
                     )
                 if isinstance(t, Sequence):
-                    x = [validate_input(xi, ti) for xi, ti in zip(x, t)]
-                    x_dot = [validate_input(xd, ti) for xd, ti in zip(x_dot, t)]
+                    x = [
+                        self.feature_library.validate_input(xi, ti)
+                        for xi, ti in zip(x, t)
+                    ]
+                    x_dot = [
+                        self.feature_library.validate_input(xd, ti)
+                        for xd, ti in zip(x_dot, t)
+                    ]
                 else:
-                    x = [validate_input(xi, t) for xi in x]
+                    x = [self.feature_library.validate_input(xi, t) for xi in x]
                     if not isinstance(self.feature_library, WeakPDELibrary):
                         if isinstance(self.feature_library, GeneralizedLibrary):
                             if not isinstance(
                                 self.feature_library.libraries_[0], WeakPDELibrary
                             ):
-                                x_dot = [validate_input(xd, t) for xd in x_dot]
+                                x_dot = [
+                                    self.feature_library.validate_input(xd, t)
+                                    for xd in x_dot
+                                ]
                         else:
-                            x_dot = [validate_input(xd, t) for xd in x_dot]
+                            x_dot = [
+                                self.feature_library.validate_input(xd, t)
+                                for xd in x_dot
+                            ]
 
         return x, x_dot
 

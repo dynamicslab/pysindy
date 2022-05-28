@@ -254,7 +254,7 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
 
     # x and u should be lists of the same length
     with pytest.raises(ValueError):
-        model.fit([x[:-1]], u=u, multiple_trajectories=True)
+        model.fit(x[:-1], u=u, multiple_trajectories=True)
 
     model.fit(x, u=u, multiple_trajectories=True)
     check_is_fitted(model)

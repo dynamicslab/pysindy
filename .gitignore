@@ -1,6 +1,8 @@
 build
 dist
 *.egg-info
+commit-msg
+todo
 
 # Environments
 .env

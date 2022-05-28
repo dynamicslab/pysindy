@@ -302,6 +302,15 @@ class SINDy(BaseEstimator):
         if not multiple_trajectories:
             x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
             multiple_trajectories = True
+        elif (
+            not isinstance(x, Sequence)
+            or (not isinstance(x_dot, Sequence) and x_dot is not None)
+            or (not isinstance(u, Sequence) and u is not None)
+        ):
+            raise TypeError(
+                "If multiple trajectories set, x and if included,"
+                "x_dot and u, must be Sequences"
+            )
 
         def comprehend_and_validate(arr, t):
             arr = AxesArray(arr, self.feature_library.comprehend_axes(arr))

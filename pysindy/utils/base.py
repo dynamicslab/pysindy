@@ -69,7 +69,7 @@ def validate_no_reshape(x, t=T_DEFAULT):
         index on second axis.
     """
     if not isinstance(x, np.ndarray):
-        raise ValueError("x must be array-like")
+        raise TypeError("Input value must be array-like")
     check_array(x, ensure_2d=False, allow_nd=True)
 
     if t is not T_DEFAULT:

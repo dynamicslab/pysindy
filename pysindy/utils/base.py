@@ -91,7 +91,7 @@ def validate_no_reshape(x, t=T_DEFAULT):
 
 
 def validate_control_variables(
-    x, u, multiple_trajectories=False, trim_last_point=False, return_array=True
+    x, u, multiple_trajectories=False, trim_last_point=False
 ):
     """
     Ensure that control variables u are compatible with the data x.
@@ -110,9 +110,6 @@ def validate_control_variables(
             )
 
         u_arr = [_check_control_shape(xi, ui, trim_last_point) for xi, ui in zip(x, u)]
-
-        if return_array:
-            u_arr = np.vstack(u_arr)
 
     else:
         u_arr = _check_control_shape(x, u, trim_last_point)

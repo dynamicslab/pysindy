@@ -584,9 +584,7 @@ class SINDy(BaseEstimator):
             for xi in x:
                 x_shapes.append(xi.shape)
             x = [validate_input(xi) for xi in x]
-            u = validate_control_variables(
-                x, u, multiple_trajectories=True, return_array=False
-            )
+            u = validate_control_variables(x, u, multiple_trajectories=True)
             result = [
                 self.model.predict(np.concatenate((xi, ui), axis=1)).reshape(
                     x_shapes[i]
@@ -744,11 +742,14 @@ class SINDy(BaseEstimator):
                 multiple_trajectories=multiple_trajectories,
                 trim_last_point=trim_last_point,
             )
+            u = np.vstack(u)
 
         if self.discrete_time and x_dot is None:
             x_dot_predict = [xd[:-1] for xd in x_dot_predict]
 
-        x, x_dot = self._process_multiple_trajectories(x, t, x_dot, return_array=True)
+        x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
+        x = np.vstack(x)
+        x_dot = np.vstack(x_dot)
 
         if x_dot_predict[0].ndim == 1:
             x_dot_predict = [xdp.reshape(-1, 1) for xdp in x_dot_predict]
@@ -763,7 +764,7 @@ class SINDy(BaseEstimator):
 
         return metric(x_dot, x_dot_predict, **metric_kws)
 
-    def _process_multiple_trajectories(self, x, t, x_dot, return_array=True):
+    def _process_multiple_trajectories(self, x, t, x_dot):
         """
         Handle input data that contains multiple trajectories by doing the
         necessary validation, reshaping, and computation of derivatives.
@@ -851,10 +852,7 @@ class SINDy(BaseEstimator):
                         else:
                             x_dot = [validate_input(xd, t) for xd in x_dot]
 
-        if return_array:
-            return np.vstack(x), np.vstack(x_dot)
-        else:
-            return x, x_dot
+        return x, x_dot
 
     def differentiate(self, x, t=None, multiple_trajectories=False):
         """
@@ -887,7 +885,7 @@ class SINDy(BaseEstimator):
             raise RuntimeError("No differentiation implemented for discrete time model")
         if not multiple_trajectories:
             x, t, _, _ = _adapt_to_multiple_trajectories(x, t, None, None)
-        result = self._process_multiple_trajectories(x, t, None, return_array=False)[1]
+        result = self._process_multiple_trajectories(x, t, None)[1]
         if not multiple_trajectories:
             return result[0]
         return result

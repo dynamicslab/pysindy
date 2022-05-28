@@ -365,7 +365,8 @@ class SINDy(BaseEstimator):
                     lib.num_trajectories = len(x)
 
         x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
-
+        x = self.feature_library.concat_sample_axis(x)
+        x_dot = self.feature_library.concat_sample_axis(x_dot)
         if u is None:
             self.n_control_features_ = 0
         else:
@@ -376,6 +377,7 @@ class SINDy(BaseEstimator):
                 multiple_trajectories=multiple_trajectories,
                 trim_last_point=trim_last_point,
             )
+            u = np.vstack(u)
             self.n_control_features_ = u.shape[1]
 
         # Set ensemble variables

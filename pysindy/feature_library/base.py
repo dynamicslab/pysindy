@@ -2,6 +2,7 @@
 Base class for feature library classes.
 """
 import abc
+import warnings
 
 import numpy as np
 from sklearn import __version__
@@ -10,6 +11,7 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import validate_input as utils_validate_input
+from .axes import AxesArray
 
 
 class BaseFeatureLibrary(TransformerMixin):
@@ -35,8 +37,33 @@ class BaseFeatureLibrary(TransformerMixin):
             raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.ensemble_indices = ensemble_indices
 
-    def validate_input(self, *args, **kwargs):
-        return utils_validate_input(*args, **kwargs)
+    def comprehend_axes(self, x):
+        """Identify the meaning of axes of x.
+
+        Historically, different problem types, defined by different
+        libraries, all used their own independent.
+        """
+        axes = {}
+        if len(x.shape) == 1:
+            axes["ax_time"] = 0
+        elif len(x.shape) == 2:
+            axes["ax_time"] = 0
+            axes["ax_coord"] = 1
+        else:
+            warnings.warn("IDK how to handle this input data, losing axes labels")
+        return axes
+
+    def validate_input(self, x, *args, **kwargs):
+        # validate_no_reshape(*args, **kwargs)
+        return utils_validate_input(x, *args, **kwargs)
+
+    def correct_shape(self, x):
+        """Correct the shape of x, given what we know of the problem"""
+        if len(x.shape) == 1:
+            data = np.asarray(x).reshape((-1, 1))
+            return AxesArray(data, {"ax_time": x.ax_time, "ax_coord": 1})
+        else:
+            return x
 
     def calc_trajectory(self, diff_method, x, t):
         return diff_method(x, t=t)

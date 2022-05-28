@@ -11,11 +11,12 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import flatten_2d_tall
+from .axes import PDEShapedInputsMixin
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
 
 
-class WeakPDELibrary(BaseFeatureLibrary):
+class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
     """Generate a weak formulation library with custom functions and,
        optionally, any spatial derivatives in arbitrary dimensions.
 

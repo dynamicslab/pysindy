@@ -17,6 +17,7 @@ from .base import reorder_constraints
 from .base import supports_multiple_targets
 from .base import validate_control_variables
 from .base import validate_input
+from .base import validate_no_reshape
 from .odes import bacterial
 from .odes import burgers_galerkin
 from .odes import cubic_damped_SHO
@@ -68,6 +69,7 @@ __all__ = [
     "supports_multiple_targets",
     "validate_control_variables",
     "validate_input",
+    "validate_no_reshape",
     "flatten_2d_tall",
     "linear_damped_SHO",
     "cubic_damped_SHO",

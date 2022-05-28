@@ -16,6 +16,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
+from .feature_library import AxesArray
 from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
@@ -29,6 +30,7 @@ from .utils import equations
 from .utils import flatten_2d_tall
 from .utils import validate_control_variables
 from .utils import validate_input
+from .utils import validate_no_reshape
 
 # from .utils import convert_u_dot_integral
 
@@ -300,9 +302,20 @@ class SINDy(BaseEstimator):
         if not multiple_trajectories:
             x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
             multiple_trajectories = True
-        x = [AxesArray(xi, self.feature_library) for xi in x]
+
+        def comprehend_and_validate(arr, t):
+            arr = AxesArray(arr, self.feature_library.comprehend_axes(arr))
+            arr = self.feature_library.correct_shape(arr)
+            return validate_no_reshape(arr, t)
+
+        x = [comprehend_and_validate(xi, ti) for xi, ti in _zip_like_sequence(x, t)]
         if x_dot is not None:
-            x_dot = [AxesArray(xdoti, self.feature_library) for xdoti in x_dot]
+            x_dot = [
+                comprehend_and_validate(xdoti, ti)
+                for xdoti, ti in _zip_like_sequence(x_dot, t)
+            ]
+        if u is not None:
+            u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
 
         if (ensemble or library_ensemble) and n_models is None:
             n_models = 20
@@ -1067,113 +1080,6 @@ class SINDy(BaseEstimator):
         Complexity of the model measured as the number of nonzero parameters.
         """
         return self.model.steps[-1][1].complexity
-
-
-HANDLED_FUNCTIONS = {}
-
-
-class AxesArray(np.ndarray):
-    """A numpy-like array that keeps track of the meaning of its axes.
-
-    Paramters:
-        input_array (array-like): the data to create the array.
-        lib (BaseFeatureLibrary): This determines how the problem is set
-            up, and thus what shape of input data is expected.
-        axes (dict): Superseding the lib paramter, axes can be directly
-            passed rather than guessed based upon what lib expects.  Use
-            this to persist the meaning of the original axes when the
-            shape is modified.
-    """
-
-    def __new__(cls, input_array, lib=None, axes=None):
-        obj = np.asarray(input_array).view(cls)
-        obj.library = lib
-        if axes is None:
-            obj._comprehend_axes()
-        else:
-            obj.__dict__.update(axes)
-        return obj
-
-    def __array_finalize__(self, obj) -> None:
-        if obj is None:
-            return
-        self.ax_time = getattr(obj, "ax_time", None)
-        self.n_time = getattr(obj, "n_time", 0)
-        self.ax_coord = getattr(obj, "ax_coord", None)
-        self.n_coord = getattr(obj, "n_coord", 0)
-        self.ax_spatial = getattr(obj, "ax_spatial", [])
-        self.n_spatial_grid = getattr(obj, "n_spatial_grid", [])
-        self.library = getattr(obj, "library", None)
-
-    def _comprehend_axes(self):
-        if len(self.shape) == 1:
-            self.ax_time = 0
-            self.n_time = len
-        elif (
-            isinstance(self.library, PDELibrary)
-            or isinstance(self.library, GeneralizedLibrary)
-            and self.library.has_type(PDELibrary)
-            or isinstance(self.library, WeakPDELibrary)
-            or isinstance(self.library, GeneralizedLibrary)
-            and self.library.has_type(WeakPDELibrary)
-        ):
-            self.ax_spatial = list(range(len(self.shape)))
-            self.n_spatial_grid = list(self.shape)
-        elif len(self.shape) == 2:
-            self.ax_time = 0
-            self.n_time = self.shape[0]
-            self.ax_coord = 1
-            self.n_coord = self.shape[1]
-        else:
-            raise ValueError("IDK how to handle this input data")
-
-    def __array_ufunc__(
-        self, ufunc, method, *inputs, **kwargs
-    ):  # this method is called whenever you use a ufunc
-        f = {
-            "reduce": ufunc.reduce,
-            "accumulate": ufunc.accumulate,
-            "reduceat": ufunc.reduceat,
-            "outer": ufunc.outer,
-            "at": ufunc.at,
-            "__call__": ufunc,
-        }
-        output = AxesArray(
-            f[method](*(i.view(np.ndarray) for i in inputs), **kwargs), self.library
-        )  # convert the inputs to np.ndarray to prevent recursion, call the
-        # function, then cast it back as AxesArray
-        output.__dict__ = self.__dict__  # carry forward AxesArray
-        return output
-
-    def __array_function__(self, func, types, args, kwargs):
-        if func not in HANDLED_FUNCTIONS:
-            arr = super(AxesArray, self).__array_function__(func, types, args, kwargs)
-            if isinstance(arr, np.ndarray):
-                return AxesArray(arr, axes=self.__dict__)
-            elif arr is not None:
-                return arr
-            return
-        # Note: this allows subclasses that don't override
-        # __array_function__ to handle MyArray objects
-        if not all(issubclass(t, AxesArray) for t in types):
-            return NotImplemented
-        return HANDLED_FUNCTIONS[func](*args, **kwargs)
-
-
-def implements(numpy_function):
-    """Register an __array_function__ implementation for MyArray objects."""
-
-    def decorator(func):
-        HANDLED_FUNCTIONS[numpy_function] = func
-        return func
-
-    return decorator
-
-
-@implements(np.concatenate)
-def concatenate(arrays, axis=0, out=None):
-    parents = list(map(lambda obj: np.array(obj.data, copy=False, subok=False), arrays))
-    return AxesArray(np.concatenate(parents, axis), axes=arrays[0].__dict__)
 
 
 def _zip_like_sequence(x, t):

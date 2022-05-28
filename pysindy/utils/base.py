@@ -57,6 +57,39 @@ def validate_input(x, t=T_DEFAULT):
     return x_new
 
 
+def validate_no_reshape(x, t=T_DEFAULT):
+    """Forces input data to have compatible dimensions, if possible.
+
+    Args:
+        x: array of input data (measured coordinates across time)
+        t: time values for measurements.
+
+    Returns:
+        x as 2D array, with time dimension on first axis and coordiante
+        index on second axis.
+    """
+    if not isinstance(x, np.ndarray):
+        raise ValueError("x must be array-like")
+    check_array(x, ensure_2d=False, allow_nd=True)
+
+    if t is not T_DEFAULT:
+        if t is None:
+            raise ValueError("t must be a scalar or array-like.")
+        # Apply this check if t is a scalar
+        elif np.ndim(t) == 0 and (isinstance(t, int) or isinstance(t, float)):
+            if t <= 0:
+                raise ValueError("t must be positive")
+        # Only apply these tests if t is array-like
+        elif isinstance(t, np.ndarray):
+            if not len(t) == x.shape[-2]:
+                raise ValueError("Length of t should match x.shape[-2].")
+            if not np.all(t[:-1] < t[1:]):
+                raise ValueError("Values in t should be in strictly increasing order.")
+        else:
+            raise ValueError("t must be a scalar or array-like.")
+    return x
+
+
 def validate_control_variables(
     x, u, multiple_trajectories=False, trim_last_point=False, return_array=True
 ):

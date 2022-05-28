@@ -8,11 +8,12 @@ from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import flatten_2d_tall
+from .axes import PDEShapedInputsMixin
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
 
 
-class PDELibrary(BaseFeatureLibrary):
+class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
     """Generate a PDE library with custom functions.
 
     Parameters
@@ -168,7 +169,8 @@ class PDELibrary(BaseFeatureLibrary):
         return x
 
     def calc_trajectory(self, diff_method, x, t):
-        return flatten_2d_tall(FiniteDifference(d=1, axis=-2)._differentiate(x, t=t))
+        x_dot = FiniteDifference(d=1, axis=x.ax_time)._differentiate(x, t=t)
+        return flatten_2d_tall(x_dot)
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):

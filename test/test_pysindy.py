@@ -180,10 +180,10 @@ def test_t_default(data):
 @pytest.mark.parametrize(
     "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
 )
-def test_differentiate_returns_same_data_type(data):
+def test_differentiate_returns_compatible_data_type(data):
     x, t = data
     x_dot = SINDy().differentiate(x)
-    assert type(x) == type(x_dot)
+    assert isinstance(x_dot, type(x))
 
 
 @pytest.mark.parametrize(

@@ -310,20 +310,9 @@ class SINDy(BaseEstimator):
                 "If multiple trajectories set, x and if included,"
                 "x_dot and u, must be Sequences"
             )
-
-        def comprehend_and_validate(arr, t):
-            arr = AxesArray(arr, self.feature_library.comprehend_axes(arr))
-            arr = self.feature_library.correct_shape(arr)
-            return validate_no_reshape(arr, t)
-
-        x = [comprehend_and_validate(xi, ti) for xi, ti in _zip_like_sequence(x, t)]
-        if x_dot is not None:
-            x_dot = [
-                comprehend_and_validate(xdoti, ti)
-                for xdoti, ti in _zip_like_sequence(x_dot, t)
-            ]
-        if u is not None:
-            u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
+        x, x_dot, u = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library
+        )
 
         if (ensemble or library_ensemble) and n_models is None:
             n_models = 20
@@ -711,9 +700,15 @@ class SINDy(BaseEstimator):
             Metric function value for the model prediction of x_dot.
         """
 
+        if t is None:
+            t = self.t_default
+
         if not multiple_trajectories:
             x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
             multiple_trajectories = True
+        x, x_dot, u = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library
+        )
 
         if u is None or self.n_control_features_ == 0:
             x_dot_predict = self.predict(x, multiple_trajectories=multiple_trajectories)
@@ -722,8 +717,6 @@ class SINDy(BaseEstimator):
                 x, u, multiple_trajectories=multiple_trajectories
             )
 
-        if t is None:
-            t = self.t_default
         if u is None or self.n_control_features_ == 0:
             if self.n_control_features_ > 0:
                 raise TypeError(
@@ -896,6 +889,9 @@ class SINDy(BaseEstimator):
             raise RuntimeError("No differentiation implemented for discrete time model")
         if not multiple_trajectories:
             x, t, _, _ = _adapt_to_multiple_trajectories(x, t, None, None)
+        x, _, _ = _comprehend_and_validate_inputs(
+            x, t, None, None, self.feature_library
+        )
         result = self._process_multiple_trajectories(x, t, None)[1]
         if not multiple_trajectories:
             return result[0]
@@ -1135,3 +1131,21 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u):
     if u is not None:
         u = [u]
     return x, t, x_dot, u
+
+
+def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
+    def comprehend_and_validate(arr, t):
+        arr = AxesArray(arr, feature_library.comprehend_axes(arr))
+        arr = feature_library.correct_shape(arr)
+        return validate_no_reshape(arr, t)
+
+    x = [comprehend_and_validate(xi, ti) for xi, ti in _zip_like_sequence(x, t)]
+    if x_dot is not None:
+        x_dot = [
+            comprehend_and_validate(xdoti, ti)
+            for xdoti, ti in _zip_like_sequence(x_dot, t)
+        ]
+    if u is not None:
+        u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
+
+    return x, x_dot, u

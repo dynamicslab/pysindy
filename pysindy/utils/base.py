@@ -98,53 +98,31 @@ def validate_control_variables(
     If ``return_array`` and ``multiple_trajectories`` are True, convert u from a list
     into an array (of concatenated list entries).
     """
-    if multiple_trajectories:
-        if not isinstance(x, Sequence):
-            raise ValueError("x must be a list when multiple_trajectories is True")
-        if not isinstance(u, Sequence):
-            raise ValueError("u must be a list when multiple_trajectories is True")
-        if len(x) != len(u):
-            raise ValueError(
-                "x and u must be lists of the same length when "
-                "multiple_trajectories is True"
-            )
-
-        u_arr = [_check_control_shape(xi, ui, trim_last_point) for xi, ui in zip(x, u)]
-
-    else:
-        u_arr = _check_control_shape(x, u, trim_last_point)
-
-    return u_arr
-
-
-def _check_control_shape(x, u, trim_last_point):
-    """
-    Convert control variables u to np.array(dtype=float64) and compare
-    its shape against x. Assumes x is array-like.
-    """
-    try:
-        u = np.array(u, dtype="float64")
-    except TypeError as e:
-        raise e(
-            "control variables u could not be converted to np.ndarray(dtype=float64)"
+    if not isinstance(x, Sequence):
+        raise ValueError("x must be a list when multiple_trajectories is True")
+    if not isinstance(u, Sequence):
+        raise ValueError("u must be a list when multiple_trajectories is True")
+    if len(x) != len(u):
+        raise ValueError(
+            "x and u must be lists of the same length when "
+            "multiple_trajectories is True"
         )
-    if np.ndim(u) == 0:
-        u = u[np.newaxis]
-    if u.ndim == 1:
-        u = u.reshape(-1, 1)
-        if len(x) != u.shape[0]:
+
+    def _check_control_shape(x, u, trim_last_point):
+        """
+        Convert control variables u to np.array(dtype=float64) and compare
+        its shape against x. Assumes x is array-like.
+        """
+        if u.shape[u.ax_time] - trim_last_point != x.shape[x.ax_time]:
             raise ValueError(
                 "control variables u must have same number of rows as x. "
                 "u has {} rows and x has {} rows".format(u.shape[0], len(x))
             )
-    if u.ndim != 2:
-        u = u.reshape(u.size // u.shape[-1], u.shape[-1])
-        if (x.size // x.shape[-1]) != u.shape[0]:
-            raise ValueError(
-                "control variables u must have same number of rows as x. "
-                "u has {} rows and x has {} rows".format(u.shape[0], x.shape[0])
-            )
-    return u[:-1] if trim_last_point else u
+        return u[:-1] if trim_last_point else u
+
+    u_arr = [_check_control_shape(xi, ui, trim_last_point) for xi, ui in zip(x, u)]
+
+    return u_arr
 
 
 def drop_nan_rows(x, x_dot):

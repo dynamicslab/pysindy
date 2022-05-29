@@ -336,7 +336,6 @@ class SINDy(BaseEstimator):
         if (n_subset is not None) and n_subset <= 0:
             raise ValueError("n_subset must be a positive integer")
 
-        x_list = x
         x_dot_None = False  # flag for discrete time functionality
         if self.discrete_time:
             if x_dot is None:
@@ -353,20 +352,20 @@ class SINDy(BaseEstimator):
                     lib.num_trajectories = len(x)
 
         x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
-        x = self.feature_library.concat_sample_axis(x)
-        x_dot = self.feature_library.concat_sample_axis(x_dot)
         if u is None:
             self.n_control_features_ = 0
         else:
             trim_last_point = self.discrete_time and x_dot_None
             u = validate_control_variables(
-                x_list,
+                x,
                 u,
                 multiple_trajectories=multiple_trajectories,
                 trim_last_point=trim_last_point,
             )
-            u = np.vstack(u)
+            u = self.feature_library.concat_sample_axis(u)
             self.n_control_features_ = u.shape[1]
+        x = self.feature_library.concat_sample_axis(x)
+        x_dot = self.feature_library.concat_sample_axis(x_dot)
 
         # Set ensemble variables
         self.ensemble = ensemble
@@ -542,6 +541,8 @@ class SINDy(BaseEstimator):
         """
         if not multiple_trajectories:
             x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
+        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
+
         check_is_fitted(self, "model")
         if u is None or self.n_control_features_ == 0:
             if self.n_control_features_ > 0:
@@ -553,32 +554,26 @@ class SINDy(BaseEstimator):
                     "Control variables u were ignored because control variables were"
                     " not used when the model was fit"
                 )
-            x_shapes = []
-            if self.discrete_time or any([len(xi.shape) == 1 for xi in x]):
+            if self.discrete_time:
                 x = [validate_input(xi) for xi in x]
-            for xi in x:
-                x_shapes.append(xi.shape)
 
             if isinstance(self.feature_library, WeakPDELibrary):
+                x_shapes = []
+                for xi in x:
+                    x_shapes.append(xi.shape)
                 for i in range(len(x)):
                     x_shapes[i][0] = self.feature_library.K
-
-            # return self.model.predict(np.vstack(x))
-            result = [
-                self.model.predict(xi.reshape(x_shapes[i])).reshape(x_shapes[i])
-                for i, xi in enumerate(x)
-            ]
+                result = [
+                    self.model.predict(xi.reshape(x_shapes[i])).reshape(x_shapes[i])
+                    for i, xi in enumerate(x)
+                ]
+            else:
+                result = [self.model.predict(xi) for i, xi in enumerate(x)]
         else:
-            x_shapes = []
-            for xi in x:
-                x_shapes.append(xi.shape)
-            x = [validate_input(xi) for xi in x]
-            u = validate_control_variables(x, u, multiple_trajectories=True)
+            u = validate_control_variables(x, u)
             result = [
-                self.model.predict(np.concatenate((xi, ui), axis=1)).reshape(
-                    x_shapes[i]
-                )
-                for i, (xi, ui) in enumerate(zip(x, u))
+                self.model.predict(np.concatenate((xi, ui), axis=xi.ax_coord))
+                for xi, ui in zip(x, u)
             ]
         if not multiple_trajectories:
             return result[0]
@@ -710,13 +705,16 @@ class SINDy(BaseEstimator):
             x, t, x_dot, u, self.feature_library
         )
 
-        if u is None or self.n_control_features_ == 0:
-            x_dot_predict = self.predict(x, multiple_trajectories=multiple_trajectories)
-        else:
-            x_dot_predict = self.predict(
-                x, u, multiple_trajectories=multiple_trajectories
-            )
+        x_dot_predict = self.predict(x, u, multiple_trajectories=multiple_trajectories)
 
+        if self.discrete_time and x_dot is None:
+            x_dot_predict = [xd[:-1] for xd in x_dot_predict]
+        x_dot_None = False  # flag for discrete time functionality
+        if self.discrete_time:
+            if x_dot is None:
+                x_dot_None = True  # set the flag
+
+        x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         if u is None or self.n_control_features_ == 0:
             if self.n_control_features_ > 0:
                 raise TypeError(
@@ -728,21 +726,16 @@ class SINDy(BaseEstimator):
                     " not used when the model was fit"
                 )
         else:
-            trim_last_point = self.discrete_time and (x_dot is None)
+            trim_last_point = self.discrete_time and x_dot_None
             u = validate_control_variables(
                 x,
                 u,
                 multiple_trajectories=multiple_trajectories,
                 trim_last_point=trim_last_point,
             )
-            u = np.vstack(u)
-
-        if self.discrete_time and x_dot is None:
-            x_dot_predict = [xd[:-1] for xd in x_dot_predict]
-
-        x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
-        x = np.vstack(x)
-        x_dot = np.vstack(x_dot)
+            u = self.feature_library.concat_sample_axis(u)
+        x = self.feature_library.concat_sample_axis(x)
+        x_dot = self.feature_library.concat_sample_axis(x_dot)
 
         if x_dot_predict[0].ndim == 1:
             x_dot_predict = [xdp.reshape(-1, 1) for xdp in x_dot_predict]

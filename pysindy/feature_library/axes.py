@@ -47,7 +47,6 @@ class AxesArray(np.ndarray):
                 "a new AxesArray with determined axes.",
                 type("AxesWarning", (PendingDeprecationWarning,), {}),
             )
-            # raise ValueError("axes passed is incompatible with data given")
         # Since axes can be zero, cannot simply check "if axis:"
         else:
             if new_dict["ax_time"] is not None:
@@ -84,11 +83,16 @@ class AxesArray(np.ndarray):
             "at": ufunc.at,
             "__call__": ufunc,
         }
-        output = AxesArray(
-            f[method](*(i.view(np.ndarray) for i in inputs), **kwargs), self.__dict__
-        )  # convert the inputs to np.ndarray to prevent recursion, call the
-        # function, then cast it back as AxesArray
-        output.__dict__ = self.__dict__  # carry forward AxesArray
+        args = []
+        for input_ in inputs:
+            if isinstance(input_, AxesArray):
+                args.append(input_.view(np.ndarray))
+            else:
+                args.append(input_)
+        output = AxesArray(f[method](*args, **kwargs), self.__dict__)
+        # # convert the inputs to np.ndarray to prevent recursion, call the
+        # # function, then cast it back as AxesArray
+        # output.__dict__ = self.__dict__  # carry forward AxesArray
         return output
 
     def __array_function__(self, func, types, args, kwargs):
@@ -117,9 +121,16 @@ def implements(numpy_function):
 
 
 @implements(np.concatenate)
-def concatenate(arrays, axis=0, out=None):
-    parents = list(map(lambda obj: np.array(obj.data, copy=False, subok=False), arrays))
-    return AxesArray(np.concatenate(parents, axis), axes=arrays[0].__dict__)
+def concatenate(arrays, axis=0):
+    parents = [np.asarray(obj) for obj in arrays]
+    ax_list = [obj.__dict__ for obj in arrays if isinstance(obj, AxesArray)]
+    for ax1, ax2 in zip(ax_list[:-1], ax_list[1:]):
+        if ax1 != ax2:
+            warnings.warn(
+                "Concatenating >1 AxesArray with incompatible axes",
+                PendingDeprecationWarning,
+            )
+    return AxesArray(np.concatenate(parents, axis), axes=ax_list[0])
 
 
 class DefaultShapedInputsMixin:

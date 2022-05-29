@@ -739,10 +739,6 @@ class SINDy(BaseEstimator):
         x_dot = self.feature_library.concat_sample_axis(x_dot)
         x_dot_predict = self.feature_library.concat_sample_axis(x_dot_predict)
 
-        # if x_dot_predict[0].ndim == 1:
-        #     x_dot_predict = [xdp.reshape(-1, 1) for xdp in x_dot_predict]
-        # x_dot_predict = np.vstack(x_dot_predict)
-
         if x_dot.ndim == 1:
             x_dot = x_dot.reshape(-1, 1)
 

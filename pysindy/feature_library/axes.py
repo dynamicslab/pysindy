@@ -170,6 +170,3 @@ class PDEShapedInputsMixin:
         axes["ax_time"] = len(x.shape) - 2
         axes["ax_spatial"] = list(range(len(x.shape) - 2))
         return axes
-
-    # def concat_sample_axis(self, x: AxesArray):
-    #     raise NotImplementedError

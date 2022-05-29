@@ -7,7 +7,6 @@ from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-from ..utils import flatten_2d_tall
 from .axes import PDEShapedInputsMixin
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
@@ -169,8 +168,7 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         return x
 
     def calc_trajectory(self, diff_method, x, t):
-        x_dot = FiniteDifference(d=1, axis=x.ax_time)._differentiate(x, t=t)
-        return flatten_2d_tall(x_dot)
+        return FiniteDifference(d=1, axis=x.ax_time)._differentiate(x, t=t)
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):

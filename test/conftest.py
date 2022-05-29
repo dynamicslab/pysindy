@@ -208,7 +208,7 @@ def data_2d_resolved_pde():
 @pytest.fixture
 def data_derivative_1d():
     x = 2 * np.linspace(1, 100, 100)
-    x_dot = 2 * np.ones(100).reshape(-1, 1)
+    x_dot = 2 * np.ones(100)
     return x, x_dot
 
 
@@ -216,7 +216,7 @@ def data_derivative_1d():
 def data_derivative_quasiperiodic_1d():
     t = np.arange(1000) * 2 * np.pi / 1000
     x = 2 * np.sin(t)
-    x_dot = 2 * np.cos(t).reshape(-1, 1)
+    x_dot = 2 * np.cos(t)
     return t, x, x_dot
 
 

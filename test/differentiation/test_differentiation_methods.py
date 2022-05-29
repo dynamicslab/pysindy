@@ -252,7 +252,7 @@ def test_wrapper_equivalence_with_dxdt(data, derivative_kws):
 
     if np.ndim(x) == 1:
         np.testing.assert_allclose(
-            dxdt(x.reshape(-1, 1), t, axis=0, **derivative_kws),
+            dxdt(x, t, axis=0, **derivative_kws),
             SINDyDerivative(**derivative_kws)(x, t),
         )
     else:

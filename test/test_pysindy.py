@@ -539,9 +539,6 @@ def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_t
     with pytest.raises(TypeError):
         model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
 
-    # Test an option that doesn't get tested elsewhere
-    model._process_multiple_trajectories(x, t, x, return_array=False)
-
     x = data_discrete_time
     model = SINDy(discrete_time=True)
     with pytest.raises(TypeError):

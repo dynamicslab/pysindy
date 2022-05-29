@@ -42,8 +42,8 @@ class AxesArray(np.ndarray):
         )
         if expected_dims != len(obj.shape):
             warnings.warn(
-                "Axes passed is missing values or incompatible with data"
-                "given.  This occurs when reshaping data rather than creating"
+                "Axes passed is missing values or incompatible with data "
+                "given.  This occurs when reshaping data rather than creating "
                 "a new AxesArray with determined axes.",
                 type("AxesWarning", (PendingDeprecationWarning,), {}),
             )

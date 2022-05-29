@@ -575,6 +575,7 @@ class SINDy(BaseEstimator):
                 self.model.predict(np.concatenate((xi, ui), axis=xi.ax_coord))
                 for xi, ui in zip(x, u)
             ]
+        result = [AxesArray(res, xi.__dict__) for res, xi in zip(result, x)]
         if not multiple_trajectories:
             return result[0]
         return result
@@ -736,10 +737,11 @@ class SINDy(BaseEstimator):
             u = self.feature_library.concat_sample_axis(u)
         x = self.feature_library.concat_sample_axis(x)
         x_dot = self.feature_library.concat_sample_axis(x_dot)
+        x_dot_predict = self.feature_library.concat_sample_axis(x_dot_predict)
 
-        if x_dot_predict[0].ndim == 1:
-            x_dot_predict = [xdp.reshape(-1, 1) for xdp in x_dot_predict]
-        x_dot_predict = np.vstack(x_dot_predict)
+        # if x_dot_predict[0].ndim == 1:
+        #     x_dot_predict = [xdp.reshape(-1, 1) for xdp in x_dot_predict]
+        # x_dot_predict = np.vstack(x_dot_predict)
 
         if x_dot.ndim == 1:
             x_dot = x_dot.reshape(-1, 1)

@@ -123,7 +123,6 @@ def test_pde_library_bad_parameters(params):
             spatiotemporal_grid=np.asarray(np.meshgrid(range(10), range(10))).T,
             H_xt=-1,
         ),
-        dict(spatiotemporal_grid=range(10), H_xt=11),
         dict(
             spatiotemporal_grid=np.transpose(
                 np.asarray(np.meshgrid(range(10), range(10), range(10), indexing="ij")),

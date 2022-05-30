@@ -2,6 +2,7 @@ import warnings
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
+from typing import List
 
 import numpy as np
 from scipy.special import binom
@@ -10,7 +11,7 @@ from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-from ..utils import flatten_2d_tall
+from .axes import AxesArray
 from .axes import PDEShapedInputsMixin
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
@@ -205,23 +206,27 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         if num_pts_per_domain is not None:
             warnings.warn(
                 "The parameter num_pts_per_domain is now deprecated. This "
-                "value will be ignored by the library."
+                "value will be ignored by the library.",
+                DeprecationWarning,
             )
 
         # list of integrals
         indices = ()
-        if np.array(spatiotemporal_grid).ndim == 1:
-            spatiotemporal_grid = np.reshape(
-                spatiotemporal_grid, (len(spatiotemporal_grid), 1)
-            )
-        dims = spatiotemporal_grid.shape[:-1]
+        # For array-like grids
+        if not isinstance(spatiotemporal_grid, np.ndarray):
+            spatiotemporal_grid = np.array(spatiotemporal_grid)
+            if spatiotemporal_grid.ndim == 1:
+                spatiotemporal_grid = np.reshape(spatiotemporal_grid, (-1, 1))
+        axes = self.comprehend_axes(spatiotemporal_grid)
+        spatiotemporal_grid = AxesArray(spatiotemporal_grid, axes)
+        dims = tuple([spatiotemporal_grid.n_time] + spatiotemporal_grid.n_spatial)
         self.grid_dims = dims
         self.grid_ndim = len(dims)
 
-        # if want to include temporal terms -> range(len(dims))
-        for i in range(len(dims) - 1):
-            indices = indices + (range(derivative_order + 1),)
+        # if want to include temporal terms -> add another repeat to tuple
+        indices = len(spatiotemporal_grid.ax_spatial) * (range(derivative_order + 1),)
 
+        # Calculate indices of coordinates involved in mixed partial derivatives
         multiindices = []
         for ind in iproduct(*indices):
             current = np.array(ind)
@@ -241,7 +246,10 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         return x
 
     def calc_trajectory(self, diff_method, x, t):
-        return flatten_2d_tall(self.convert_u_dot_integral(x))
+        return self.convert_u_dot_integral(x)
+
+    def concat_sample_axis(self, x_list: List[AxesArray]):
+        return super().concat_sample_axis(x_list)
 
     def _weak_form_setup(self):
         xt1, xt2 = self._get_spatial_endpoints()
@@ -299,36 +307,38 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
 
         # Sample the random domain centers
         xt1, xt2 = self._get_spatial_endpoints()
-        domain_centers = np.zeros((self.K, self.grid_ndim))
-        for i in range(self.grid_ndim):
-            domain_centers[:, i] = np.random.uniform(
-                xt1[i] + self.H_xt[i], xt2[i] - self.H_xt[i], size=self.K
-            )
+        umin = xt1 + self.H_xt
+        urange = xt2 - xt1 - 2 * self.H_xt
+        domain_centers = np.random.uniform(size=(self.K, self.grid_ndim))
+        domain_centers = domain_centers * urange + umin
+        domain_centers = AxesArray(domain_centers, {"ax_sample": 0, "ax_coord": 1})
 
         # Indices for space-time points that lie in the domain cells
         self.inds_k = []
         k = 0
         while k < self.K:
             inds = []
-            for i in range(self.grid_ndim):
+            for st_axis in range(self.grid_ndim):
                 s = [0] * (self.grid_ndim + 1)
-                s[i] = slice(None)
-                s[-1] = i
+                s[st_axis] = slice(None)
+                s[-1] = st_axis
                 newinds = np.intersect1d(
                     np.where(
                         self.spatiotemporal_grid[tuple(s)]
-                        >= domain_centers[k][i] - self.H_xt[i]
+                        >= domain_centers[k][st_axis] - self.H_xt[st_axis]
                     ),
                     np.where(
                         self.spatiotemporal_grid[tuple(s)]
-                        <= domain_centers[k][i] + self.H_xt[i]
+                        <= domain_centers[k][st_axis] + self.H_xt[st_axis]
                     ),
                 )
                 # If less than two indices along any axis, resample
                 if len(newinds) < 2:
-                    for i in range(self.grid_ndim):
-                        domain_centers[k, i] = np.random.uniform(
-                            xt1[i] + self.H_xt[i], xt2[i] - self.H_xt[i], size=1
+                    for st_axis in range(self.grid_ndim):
+                        domain_centers[k, st_axis] = np.random.uniform(
+                            xt1[st_axis] + self.H_xt[st_axis],
+                            xt2[st_axis] - self.H_xt[st_axis],
+                            size=1,
                         )
                     include = False
                     break
@@ -362,7 +372,7 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         # Shapes of the grid restricted to each cell
         shapes_k = np.array(
             [
-                [len(self.inds_k[k][i]) for i in range(self.grid_ndim)]
+                [len(self.inds_k[k][st_axis]) for st_axis in range(self.grid_ndim)]
                 for k in range(self.K)
             ]
         )
@@ -383,57 +393,63 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         grids = []  # the rescaled coordinates for each domain
         lefts = []  # the spatiotemporal indices at the left of each domain
         rights = []  # the spatiotemporal indices at the right of each domain
-        for i in range(self.grid_ndim):
+        for st_axis in range(self.grid_ndim):
             s = [0] * (self.grid_ndim + 1)
-            s[-1] = i
-            s[i] = slice(None)
+            s[-1] = st_axis
+            s[st_axis] = slice(None)
             # stacked coordinates for axis i over all domains
             grids = grids + [np.hstack([xtilde_k[k][tuple(s)] for k in range(self.K)])]
             # stacked indices for right-most point for axis i over all domains
-            rights = rights + [np.cumsum(shapes_k[:, i]) - 1]
+            rights = rights + [np.cumsum(shapes_k[:, st_axis]) - 1]
             # stacked indices for left-most point for axis i over all domains
-            lefts = lefts + [np.concatenate([[0], np.cumsum(shapes_k[:, i])[:-1]])]
+            lefts = lefts + [
+                np.concatenate([[0], np.cumsum(shapes_k[:, st_axis])[:-1]])
+            ]
 
         # Weights for the time integrals along each axis
         tweights = []
         deriv = np.zeros(self.grid_ndim)
         deriv[-1] = 1
-        for i in range(self.grid_ndim):
+        for st_axis in range(self.grid_ndim):
             # weights for interior points
-            tweights = tweights + [self._linear_weights(grids[i], deriv[i], self.p)]
+            tweights = tweights + [
+                self._linear_weights(grids[st_axis], deriv[st_axis], self.p)
+            ]
             # correct the values for the left-most points
-            tweights[i][lefts[i]] = self._left_weights(
-                grids[i][lefts[i]],
-                grids[i][lefts[i] + 1],
-                deriv[i],
+            tweights[st_axis][lefts[st_axis]] = self._left_weights(
+                grids[st_axis][lefts[st_axis]],
+                grids[st_axis][lefts[st_axis] + 1],
+                deriv[st_axis],
                 self.p,
             )
             # correct the values for the right-most points
-            tweights[i][rights[i]] = self._right_weights(
-                grids[i][rights[i] - 1],
-                grids[i][rights[i]],
-                deriv[i],
+            tweights[st_axis][rights[st_axis]] = self._right_weights(
+                grids[st_axis][rights[st_axis] - 1],
+                grids[st_axis][rights[st_axis]],
+                deriv[st_axis],
                 self.p,
             )
 
         # Weights for pure derivative terms along each axis
         weights0 = []
         deriv = np.zeros(self.grid_ndim)
-        for i in range(self.grid_ndim):
+        for st_axis in range(self.grid_ndim):
             # weights for interior points
-            weights0 = weights0 + [self._linear_weights(grids[i], deriv[i], self.p)]
+            weights0 = weights0 + [
+                self._linear_weights(grids[st_axis], deriv[st_axis], self.p)
+            ]
             # correct the values for the left-most points
-            weights0[i][lefts[i]] = self._left_weights(
-                grids[i][lefts[i]],
-                grids[i][lefts[i] + 1],
-                deriv[i],
+            weights0[st_axis][lefts[st_axis]] = self._left_weights(
+                grids[st_axis][lefts[st_axis]],
+                grids[st_axis][lefts[st_axis] + 1],
+                deriv[st_axis],
                 self.p,
             )
             # correct the values for the right-most points
-            weights0[i][rights[i]] = self._right_weights(
-                grids[i][rights[i] - 1],
-                grids[i][rights[i]],
-                deriv[i],
+            weights0[st_axis][rights[st_axis]] = self._right_weights(
+                grids[st_axis][rights[st_axis] - 1],
+                grids[st_axis][rights[st_axis]],
+                deriv[st_axis],
                 self.p,
             )
 
@@ -442,21 +458,23 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         for j in range(self.num_derivatives):
             weights2 = []
             deriv = np.concatenate([self.multiindices[j], [0]])
-            for i in range(self.grid_ndim):
+            for st_axis in range(self.grid_ndim):
                 # weights for interior points
-                weights2 = weights2 + [self._linear_weights(grids[i], deriv[i], self.p)]
+                weights2 = weights2 + [
+                    self._linear_weights(grids[st_axis], deriv[st_axis], self.p)
+                ]
                 # correct the values for the left-most points
-                weights2[i][lefts[i]] = self._left_weights(
-                    grids[i][lefts[i]],
-                    grids[i][lefts[i] + 1],
-                    deriv[i],
+                weights2[st_axis][lefts[st_axis]] = self._left_weights(
+                    grids[st_axis][lefts[st_axis]],
+                    grids[st_axis][lefts[st_axis] + 1],
+                    deriv[st_axis],
                     self.p,
                 )
                 # correct the values for the right-most points
-                weights2[i][rights[i]] = self._right_weights(
-                    grids[i][rights[i] - 1],
-                    grids[i][rights[i]],
-                    deriv[i],
+                weights2[st_axis][rights[st_axis]] = self._right_weights(
+                    grids[st_axis][rights[st_axis] - 1],
+                    grids[st_axis][rights[st_axis]],
+                    deriv[st_axis],
                     self.p,
                 )
             weights1 = weights1 + [weights2]
@@ -468,14 +486,14 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         for k in range(self.K):
 
             ret = np.ones(shapes_k[k])
-            for i in range(self.grid_ndim):
+            for st_axis in range(self.grid_ndim):
                 s = [0] * (self.grid_ndim + 1)
-                s[i] = slice(None, None, None)
-                s[-1] = i
+                s[st_axis] = slice(None, None, None)
+                s[-1] = st_axis
                 dims = np.ones(self.grid_ndim, dtype=int)
-                dims[i] = shapes_k[k][i]
+                dims[st_axis] = shapes_k[k][st_axis]
                 ret = ret * np.reshape(
-                    tweights[i][lefts[i][k] : rights[i][k] + 1], dims
+                    tweights[st_axis][lefts[st_axis][k] : rights[st_axis][k] + 1], dims
                 )
 
             self.fulltweights = self.fulltweights + [
@@ -487,14 +505,14 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         for k in range(self.K):
 
             ret = np.ones(shapes_k[k])
-            for i in range(self.grid_ndim):
+            for st_axis in range(self.grid_ndim):
                 s = [0] * (self.grid_ndim + 1)
-                s[i] = slice(None, None, None)
-                s[-1] = i
+                s[st_axis] = slice(None, None, None)
+                s[-1] = st_axis
                 dims = np.ones(self.grid_ndim, dtype=int)
-                dims[i] = shapes_k[k][i]
+                dims[st_axis] = shapes_k[k][st_axis]
                 ret = ret * np.reshape(
-                    weights0[i][lefts[i][k] : rights[i][k] + 1], dims
+                    weights0[st_axis][lefts[st_axis][k] : rights[st_axis][k] + 1], dims
                 )
 
             self.fullweights0 = self.fullweights0 + [ret * np.product(H_xt_k[k])]
@@ -507,14 +525,16 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
                 deriv = np.concatenate([self.multiindices[j], [0]])
 
                 ret = np.ones(shapes_k[k])
-                for i in range(self.grid_ndim):
+                for st_axis in range(self.grid_ndim):
                     s = [0] * (self.grid_ndim + 1)
-                    s[i] = slice(None, None, None)
-                    s[-1] = i
+                    s[st_axis] = slice(None, None, None)
+                    s[-1] = st_axis
                     dims = np.ones(self.grid_ndim, dtype=int)
-                    dims[i] = shapes_k[k][i]
+                    dims[st_axis] = shapes_k[k][st_axis]
                     ret = ret * np.reshape(
-                        weights1[j][i][lefts[i][k] : rights[i][k] + 1],
+                        weights1[j][st_axis][
+                            lefts[st_axis][k] : rights[st_axis][k] + 1
+                        ],
                         dims,
                     )
 
@@ -581,7 +601,7 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
 
     def _linear_weights(self, x, d, p):
         """
-        One-dimensioal weights for integration against the dth derivative
+        One-dimensional weights for integration against the dth derivative
         of the polynomial test function (1-x**2)**p. This is derived
         assuming the function to integrate is linear between grid points:
         f(x)=f_i+(x-x_i)/(x_{i+1}-x_i)*(f_{i+1}-f_i)
@@ -645,15 +665,20 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         Takes a full set of spatiotemporal fields u(x, t) and finds the weak
         form of u_dot.
         """
+        # in case called by user directly on numpy array.
+        if not isinstance(u, AxesArray):
+            axes = self.comprehend_axes(u)
+            u = AxesArray(u, axes)
         K = self.K
         gdim = self.grid_ndim
-        u_dot_integral = np.zeros((K, u.shape[-1]))
+        axes = {"ax_sample": 0, "ax_coord": 1}
+        u_dot_integral = AxesArray(np.zeros((K, u.n_coord)), axes)
         deriv_orders = np.zeros(gdim)
         deriv_orders[-1] = 1
 
         # Extract the input features on indices in each domain cell
         dims = np.array(self.spatiotemporal_grid.shape)
-        dims[-1] = u.shape[-1]
+        dims[-1] = u.shape[u.ax_coord]
 
         for k in range(self.K):  # loop over domain cells
             # calculate the integral feature by taking the dot product

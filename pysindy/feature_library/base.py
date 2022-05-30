@@ -47,7 +47,7 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
         if len(x.shape) == 1:
             data = np.asarray(x).reshape((-1, 1))
             return AxesArray(data, {"ax_time": 0, "ax_coord": 1})
-        elif len(x.shape) > 2:
+        elif len(x.shape) > 2 and type(self) is BaseFeatureLibrary:
             warnings.warn(
                 "Data shapes with more than 2 axes are "
                 "deprecated for the default problem.  We assume that time "

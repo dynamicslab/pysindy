@@ -343,7 +343,7 @@ class SINDy(BaseEstimator):
 
         # save copy of x in case there are control inputs to be validated
         if isinstance(self.feature_library, WeakPDELibrary):
-            self.feature_library.old_x = np.copy(x)
+            self.feature_library.old_x = x.copy()
 
         self.feature_library.num_trajectories = len(x)
         if isinstance(self.feature_library, GeneralizedLibrary):

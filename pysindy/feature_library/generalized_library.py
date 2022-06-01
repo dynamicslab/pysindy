@@ -228,13 +228,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             for i in range(num_tensor_prods):
                 lib_inds = np.ravel(np.where(self.tensor_array_[i]))
                 library_subset = np.asarray(fitted_libs)[lib_inds]
-                library_full = library_subset[0]
-                n_output_features = library_subset[0].n_output_features_
-                for j in range(1, len(library_subset)):
-                    library_full = library_full * library_subset[j]
-                    n_output_features = (
-                        n_output_features * library_subset[j].n_output_features_
-                    )
+                library_full = np.prod(library_subset)
                 library_full._set_inputs_per_library(
                     self.inputs_per_library_[lib_inds, :]
                 )

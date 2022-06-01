@@ -8,6 +8,7 @@ from .pde_library import PDELibrary
 from .polynomial_library import PolynomialLibrary
 from .sindy_pi_library import SINDyPILibrary
 from .weak_pde_library import WeakPDELibrary
+from .parameterized_library import ParameterizedLibrary
 
 __all__ = [
     "ConcatLibrary",
@@ -20,4 +21,5 @@ __all__ = [
     "PDELibrary",
     "WeakPDELibrary",
     "SINDyPILibrary",
+    "ParameterizedLibrary",
 ]

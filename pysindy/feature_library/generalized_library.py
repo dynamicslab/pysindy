@@ -38,6 +38,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         subsets of the input variables. Note that this must be specified for
         all the individual feature libraries.
 
+    exclude_libraries : list of ints, optional (default [])
+
     library_ensemble : boolean, optional (default False)
         Whether or not to use library bagging (regress on subset of the
         candidate terms in the library).
@@ -98,6 +100,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         libraries: list,
         tensor_array=None,
         inputs_per_library=None,
+        exclude_libraries=[],
         library_ensemble=False,
         ensemble_indices=[0],
     ):
@@ -164,7 +167,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self.tensor_array_ = tensor_array
         self.inputs_per_library_ = inputs_per_library
         self.libraries_full_ = self.libraries_
-
+        self.exclude_libs_ = exclude_libraries
     def fit(self, x, y=None):
         """
         Compute number of output features.
@@ -225,7 +228,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 fitted_libs.append(library_full)
 
         # Calculate the sum of output features
-        self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
+        # self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
+        # exclude libraries in exclude_libs_ 
+        self.n_output_features_ = sum([fitted_libs[i].n_output_features_ for i in np.setdiff1d(np.arange(len(fitted_libs)), self.exclude_libs_)])
 
         # Save fitted libs
         self.libraries_full_ = fitted_libs
@@ -267,21 +272,22 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         current_feat = 0
         for i, lib in enumerate(self.libraries_full_):
+            if not i in self.exclude_libs_:
 
-            # retrieve num output features from lib
-            lib_n_output_features = lib.n_output_features_
+                # retrieve num output features from lib
+                lib_n_output_features = lib.n_output_features_
 
-            start_feature_index = current_feat
-            end_feature_index = start_feature_index + lib_n_output_features
+                start_feature_index = current_feat
+                end_feature_index = start_feature_index + lib_n_output_features
 
-            if i < self.inputs_per_library_.shape[0]:
-                xp[:, start_feature_index:end_feature_index] = lib.transform(
-                    x[:, np.unique(self.inputs_per_library_[i, :])]
-                )
-            else:
-                xp[:, start_feature_index:end_feature_index] = lib.transform(x)
+                if i < self.inputs_per_library_.shape[0]:
+                    xp[:, start_feature_index:end_feature_index] = lib.transform(
+                        x[:, np.unique(self.inputs_per_library_[i, :])]
+                    )
+                else:
+                    xp[:, start_feature_index:end_feature_index] = lib.transform(x)
 
-            current_feat += lib_n_output_features
+                current_feat += lib_n_output_features
 
         # If library bagging, return xp missing the terms at ensemble_indices
         return self._ensemble(xp)
@@ -301,23 +307,24 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         """
         feature_names = list()
         for i, lib in enumerate(self.libraries_full_):
-            if i < self.inputs_per_library_.shape[0]:
-                if input_features is None:
-                    input_features_i = [
-                        "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
-                    ]
+            if not i in self.exclude_libs_:
+                if i < self.inputs_per_library_.shape[0]:
+                    if input_features is None:
+                        input_features_i = [
+                            "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
+                        ]
+                    else:
+                        input_features_i = np.asarray(input_features)[
+                            np.unique(self.inputs_per_library_[i, :])
+                        ].tolist()
                 else:
-                    input_features_i = np.asarray(input_features)[
-                        np.unique(self.inputs_per_library_[i, :])
-                    ].tolist()
-            else:
-                # Tensor libraries need all the inputs and then internally
-                # handle the subsampling of the input variables
-                if input_features is None:
-                    input_features_i = [
-                        "x%d" % k for k in range(self.inputs_per_library_.shape[1])
-                    ]
-                else:
-                    input_features_i = input_features
-            feature_names += lib.get_feature_names(input_features_i)
+                    # Tensor libraries need all the inputs and then internally
+                    # handle the subsampling of the input variables
+                    if input_features is None:
+                        input_features_i = [
+                            "x%d" % k for k in range(self.inputs_per_library_.shape[1])
+                        ]
+                    else:
+                        input_features_i = input_features
+                feature_names += lib.get_feature_names(input_features_i)
         return feature_names

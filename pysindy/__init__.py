@@ -27,6 +27,7 @@ from .feature_library import PolynomialLibrary
 from .feature_library import PDELibrary
 from .feature_library import WeakPDELibrary
 from .feature_library import SINDyPILibrary
+from .feature_library import ParameterizedLibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import FROLS

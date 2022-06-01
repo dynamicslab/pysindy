@@ -7,6 +7,7 @@ from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from .axes import AxesArray
 from .axes import PDEShapedInputsMixin
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
@@ -139,24 +140,26 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
             )
 
         if spatial_grid is None:
-            spatial_grid = np.array([])
+            spatial_grid = AxesArray(np.array([]), {})
 
         # list of derivatives
         indices = ()
         if np.array(spatial_grid).ndim == 1:
             spatial_grid = np.reshape(spatial_grid, (len(spatial_grid), 1))
+        axes = {
+            "ax_coord": len(spatial_grid.shape) - 1,
+            "ax_spatial": list(range(len(spatial_grid.shape) - 1)),
+        }
+        spatial_grid = AxesArray(spatial_grid, axes)
         dims = spatial_grid.shape[:-1]
         self.grid_dims = dims
         self.grid_ndim = len(dims)
 
-        for i in range(len(dims)):
-            indices = indices + (range(derivative_order + 1),)
+        indices = len(spatial_grid.ax_spatial) * (range(derivative_order + 1),)
 
-        multiindices = []
-        for ind in iproduct(*indices):
-            current = np.array(ind)
-            if np.sum(ind) > 0 and np.sum(ind) <= derivative_order:
-                multiindices.append(current)
+        multiindices = [
+            ind for ind in iproduct(*indices) if np.sum(ind) <= derivative_order
+        ]
         multiindices = np.array(multiindices)
         num_derivatives = len(multiindices)
 
@@ -268,7 +271,6 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         else:
             self.n_input_features_ = n_features
 
-        n_output_features = 0
         # Count the number of non-derivative terms
         n_output_features = 0
         for f in self.functions:

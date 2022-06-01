@@ -227,11 +227,9 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         indices = len(spatiotemporal_grid.ax_spatial) * (range(derivative_order + 1),)
 
         # Calculate indices of coordinates involved in mixed partial derivatives
-        multiindices = []
-        for ind in iproduct(*indices):
-            current = np.array(ind)
-            if np.sum(ind) > 0 and np.sum(ind) <= derivative_order:
-                multiindices.append(current)
+        multiindices = [
+            ind for ind in iproduct(*indices) if np.sum(ind) <= derivative_order
+        ]
         multiindices = np.array(multiindices)
         num_derivatives = len(multiindices)
 

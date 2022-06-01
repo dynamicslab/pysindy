@@ -11,8 +11,8 @@ from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-from .axes import AxesArray
-from .axes import PDEShapedInputsMixin
+from ..utils import AxesArray
+from ..utils import PDEShapedInputsMixin
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
 

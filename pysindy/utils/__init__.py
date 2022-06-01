@@ -1,3 +1,6 @@
+from .axes import AxesArray
+from .axes import DefaultShapedInputsMixin
+from .axes import PDEShapedInputsMixin
 from .base import capped_simplex_projection
 from .base import drop_nan_rows
 from .base import drop_random_rows
@@ -51,6 +54,9 @@ from .odes import yeast
 # from .base import linear_weights
 
 __all__ = [
+    "AxesArray",
+    "DefaultShapedInputsMixin",
+    "PDEShapedInputsMixin",
     "capped_simplex_projection",
     "drop_nan_rows",
     "drop_random_rows",

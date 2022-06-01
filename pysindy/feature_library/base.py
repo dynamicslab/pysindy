@@ -10,9 +10,9 @@ from sklearn.base import TransformerMixin
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import AxesArray
+from ..utils import DefaultShapedInputsMixin
 from ..utils import validate_no_reshape
-from .axes import AxesArray
-from .axes import DefaultShapedInputsMixin
 
 
 class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):

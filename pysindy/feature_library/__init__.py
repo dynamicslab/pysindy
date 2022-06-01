@@ -1,4 +1,3 @@
-from .axes import AxesArray
 from .base import ConcatLibrary
 from .base import TensoredLibrary
 from .custom_library import CustomLibrary
@@ -21,5 +20,4 @@ __all__ = [
     "PDELibrary",
     "WeakPDELibrary",
     "SINDyPILibrary",
-    "AxesArray",
 ]

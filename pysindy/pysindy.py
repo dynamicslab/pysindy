@@ -16,7 +16,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
-from .feature_library import AxesArray
 from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
@@ -24,6 +23,7 @@ from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
+from .utils import AxesArray
 from .utils import drop_nan_rows
 from .utils import drop_random_rows
 from .utils import equations
@@ -1125,6 +1125,8 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u):
 
 
 def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
+    """Validate input types, reshape arrays, and label axes"""
+
     def comprehend_and_validate(arr, t):
         arr = AxesArray(arr, feature_library.comprehend_axes(arr))
         arr = feature_library.correct_shape(arr)

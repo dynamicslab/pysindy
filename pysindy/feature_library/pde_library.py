@@ -158,7 +158,9 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         indices = len(spatial_grid.ax_spatial) * (range(derivative_order + 1),)
 
         multiindices = [
-            ind for ind in iproduct(*indices) if np.sum(ind) <= derivative_order
+            ind
+            for ind in iproduct(*indices)
+            if (np.sum(ind) <= derivative_order and np.sum(ind) > 0)
         ]
         multiindices = np.array(multiindices)
         num_derivatives = len(multiindices)

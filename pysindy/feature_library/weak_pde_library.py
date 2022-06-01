@@ -228,7 +228,9 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
 
         # Calculate indices of coordinates involved in mixed partial derivatives
         multiindices = [
-            ind for ind in iproduct(*indices) if np.sum(ind) <= derivative_order
+            ind
+            for ind in iproduct(*indices)
+            if np.sum(ind) <= derivative_order and np.sum(ind) > 0
         ]
         multiindices = np.array(multiindices)
         num_derivatives = len(multiindices)

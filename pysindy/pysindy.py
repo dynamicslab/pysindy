@@ -24,7 +24,7 @@ from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
 from .utils import AxesArray
-from .utils import drop_nan_rows
+from .utils import drop_nan_samples
 from .utils import drop_random_rows
 from .utils import equations
 from .utils import validate_control_variables
@@ -383,7 +383,7 @@ class SINDy(BaseEstimator):
                 if isinstance(lib, WeakPDELibrary):
                     weak_libraries = True
         if not isinstance(self.feature_library, WeakPDELibrary) and not weak_libraries:
-            x, x_dot = drop_nan_rows(x, x_dot)
+            x, x_dot = drop_nan_samples(x, x_dot)
 
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
@@ -744,7 +744,7 @@ class SINDy(BaseEstimator):
 
         # Drop rows where derivative isn't known (usually endpoints)
         if not isinstance(self.feature_library, WeakPDELibrary):
-            x, x_dot = drop_nan_rows(x, x_dot.reshape(x.shape))
+            x, x_dot = drop_nan_samples(x, x_dot.reshape(x.shape))
 
         return metric(x_dot, x_dot_predict, **metric_kws)
 

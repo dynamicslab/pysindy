@@ -125,10 +125,18 @@ def validate_control_variables(
     return u_arr
 
 
-def drop_nan_rows(x, x_dot):
-    x = x[~np.isnan(x_dot).any(axis=1)]
-    x_dot = x_dot[~np.isnan(x_dot).any(axis=1)]
-    return x, x_dot
+def drop_nan_samples(x, y):
+    """Drops samples from x and y where there is either has a nan value"""
+    x_non_sample_axes = tuple(ax for ax in range(x.ndim) if ax != x.ax_sample)
+    y_non_sample_axes = tuple(ax for ax in range(y.ndim) if ax != y.ax_sample)
+    x_good_samples = (~np.isnan(x)).any(axis=x_non_sample_axes)
+    y_good_samples = (~np.isnan(y)).any(axis=y_non_sample_axes)
+    good_sample_ind = np.nonzero(x_good_samples & y_good_samples)[0]
+    x = x.take(good_sample_ind, axis=x.ax_sample)
+    y = y.take(good_sample_ind, axis=y.ax_sample)
+    if np.isnan(np.asarray(x)).any() or np.isnan(np.asarray(y)).any():
+        raise ValueError("You done goofed.")
+    return x, y
 
 
 def drop_random_rows(

@@ -2,7 +2,7 @@ from .axes import AxesArray
 from .axes import DefaultShapedInputsMixin
 from .axes import PDEShapedInputsMixin
 from .base import capped_simplex_projection
-from .base import drop_nan_rows
+from .base import drop_nan_samples
 from .base import drop_random_rows
 from .base import equations
 from .base import flatten_2d_tall
@@ -58,7 +58,7 @@ __all__ = [
     "DefaultShapedInputsMixin",
     "PDEShapedInputsMixin",
     "capped_simplex_projection",
-    "drop_nan_rows",
+    "drop_nan_samples",
     "drop_random_rows",
     "equations",
     "get_prox",

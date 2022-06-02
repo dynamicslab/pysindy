@@ -181,3 +181,14 @@ class PDEShapedInputsMixin:
         axes["ax_time"] = len(x.shape) - 2
         axes["ax_spatial"] = list(range(len(x.shape) - 2))
         return axes
+
+
+def ax_time_to_ax_sample(x: AxesArray) -> AxesArray:
+    """Relabel the time axis as a sample axis"""
+    if x.__dict__["ax_time"] is None:
+        return x
+    new_axes = x.__dict__
+    ax_sample = new_axes["ax_time"]
+    new_axes["ax_sample"] = ax_sample
+    new_axes["ax_time"] = None
+    return AxesArray(np.asarray(x), new_axes)

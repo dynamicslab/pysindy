@@ -113,7 +113,7 @@ def validate_control_variables(
         Convert control variables u to np.array(dtype=float64) and compare
         its shape against x. Assumes x is array-like.
         """
-        if u.shape[u.ax_time] - trim_last_point != x.shape[x.ax_time]:
+        if u.shape[u.ax_sample] - trim_last_point != x.shape[x.ax_sample]:
             raise ValueError(
                 "control variables u must have same number of rows as x. "
                 "u has {} rows and x has {} rows".format(u.shape[0], len(x))
@@ -134,8 +134,6 @@ def drop_nan_samples(x, y):
     good_sample_ind = np.nonzero(x_good_samples & y_good_samples)[0]
     x = x.take(good_sample_ind, axis=x.ax_sample)
     y = y.take(good_sample_ind, axis=y.ax_sample)
-    if np.isnan(np.asarray(x)).any() or np.isnan(np.asarray(y)).any():
-        raise ValueError("You done goofed.")
     return x, y
 
 

@@ -1,3 +1,4 @@
+from .axes import ax_time_to_ax_sample
 from .axes import AxesArray
 from .axes import DefaultShapedInputsMixin
 from .axes import PDEShapedInputsMixin
@@ -57,6 +58,7 @@ __all__ = [
     "AxesArray",
     "DefaultShapedInputsMixin",
     "PDEShapedInputsMixin",
+    "ax_time_to_ax_sample",
     "capped_simplex_projection",
     "drop_nan_samples",
     "drop_random_rows",

@@ -2,7 +2,6 @@ import warnings
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
-from typing import List
 
 import numpy as np
 from scipy.special import binom
@@ -247,9 +246,6 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
 
     def calc_trajectory(self, diff_method, x, t):
         return self.convert_u_dot_integral(x)
-
-    def concat_sample_axis(self, x_list: List[AxesArray]):
-        return super().concat_sample_axis(x_list)
 
     def _weak_form_setup(self):
         xt1, xt2 = self._get_spatial_endpoints()

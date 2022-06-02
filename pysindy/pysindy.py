@@ -23,6 +23,7 @@ from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
+from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
 from .utils import drop_nan_samples
 from .utils import drop_random_rows
@@ -356,24 +357,21 @@ class SINDy(BaseEstimator):
             self.n_control_features_ = 0
         else:
             trim_last_point = self.discrete_time and x_dot_None
+            u = [ax_time_to_ax_sample(ui) for ui in u]
             u = validate_control_variables(
                 x,
                 u,
                 multiple_trajectories=multiple_trajectories,
                 trim_last_point=trim_last_point,
             )
-            u = self.feature_library.concat_sample_axis(u)
-            self.n_control_features_ = u.shape[1]
-        x = self.feature_library.concat_sample_axis(x)
-        x_dot = self.feature_library.concat_sample_axis(x_dot)
 
         # Set ensemble variables
         self.ensemble = ensemble
         self.library_ensemble = library_ensemble
 
         # Append control variables
-        if self.n_control_features_ > 0:
-            x = np.concatenate((x, u), axis=1)
+        if u is not None:
+            x = [np.concatenate((xi, ui), axis=1) for xi, ui in zip(x, u)]
 
         # Drop rows where derivative isn't known unless using weak PDE form
         # OR If this is a generalized library with weak libraries
@@ -383,8 +381,15 @@ class SINDy(BaseEstimator):
                 if isinstance(lib, WeakPDELibrary):
                     weak_libraries = True
         if not isinstance(self.feature_library, WeakPDELibrary) and not weak_libraries:
-            x, x_dot = drop_nan_samples(x, x_dot)
+            x, x_dot = zip(
+                *[drop_nan_samples(xi, xdoti) for xi, xdoti in zip(x, x_dot)]
+            )
 
+        if u is not None:
+            u = self.feature_library.concat_sample_axis(u)
+            self.n_control_features_ = u.shape[u.ax_coord]
+        x = self.feature_library.concat_sample_axis(x)
+        x_dot = self.feature_library.concat_sample_axis(x_dot)
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
 
@@ -542,7 +547,7 @@ class SINDy(BaseEstimator):
         if not multiple_trajectories:
             x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
         x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
-
+        x = [ax_time_to_ax_sample(xi) for xi in x]
         check_is_fitted(self, "model")
         if u is None or self.n_control_features_ == 0:
             if self.n_control_features_ > 0:
@@ -570,6 +575,7 @@ class SINDy(BaseEstimator):
             else:
                 result = [self.model.predict(xi) for i, xi in enumerate(x)]
         else:
+            u = [ax_time_to_ax_sample(ui) for ui in u]
             u = validate_control_variables(x, u)
             result = [
                 self.model.predict(np.concatenate((xi, ui), axis=xi.ax_coord))
@@ -705,7 +711,6 @@ class SINDy(BaseEstimator):
         x, x_dot, u = _comprehend_and_validate_inputs(
             x, t, x_dot, u, self.feature_library
         )
-
         x_dot_predict = self.predict(x, u, multiple_trajectories=multiple_trajectories)
 
         if self.discrete_time and x_dot is None:
@@ -728,6 +733,7 @@ class SINDy(BaseEstimator):
                 )
         else:
             trim_last_point = self.discrete_time and x_dot_None
+            u = [ax_time_to_ax_sample(ui) for ui in u]
             u = validate_control_variables(
                 x,
                 u,
@@ -735,17 +741,18 @@ class SINDy(BaseEstimator):
                 trim_last_point=trim_last_point,
             )
             u = self.feature_library.concat_sample_axis(u)
-        x = self.feature_library.concat_sample_axis(x)
-        x_dot = self.feature_library.concat_sample_axis(x_dot)
-        x_dot_predict = self.feature_library.concat_sample_axis(x_dot_predict)
-
-        if x_dot.ndim == 1:
-            x_dot = x_dot.reshape(-1, 1)
 
         # Drop rows where derivative isn't known (usually endpoints)
         if not isinstance(self.feature_library, WeakPDELibrary):
-            x, x_dot = drop_nan_samples(x, x_dot.reshape(x.shape))
+            x, x_dot = zip(
+                *[drop_nan_samples(xi, xdoti) for xi, xdoti in zip(x, x_dot)]
+            )
 
+        x = self.feature_library.concat_sample_axis(x)
+        x_dot = self.feature_library.concat_sample_axis(x_dot)
+        x_dot_predict = self.feature_library.concat_sample_axis(x_dot_predict)
+        if x_dot.ndim == 1:
+            x_dot = x_dot.reshape(-1, 1)
         return metric(x_dot, x_dot_predict, **metric_kws)
 
     def _process_multiple_trajectories(self, x, t, x_dot):
@@ -846,7 +853,8 @@ class SINDy(BaseEstimator):
                                 self.feature_library.validate_input(xd, t)
                                 for xd in x_dot
                             ]
-
+        x = [ax_time_to_ax_sample(xi) for xi in x]
+        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
         return x, x_dot
 
     def differentiate(self, x, t=None, multiple_trajectories=False):

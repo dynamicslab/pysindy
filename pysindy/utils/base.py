@@ -155,14 +155,9 @@ def drop_random_rows(
         if pde_library_flag == "WeakPDE":
             # Weak form needs uniform, ascending grid, so cannot replace
             replace = False
-            s = [slice(None, None)] * feature_library.spatiotemporal_grid.ndim
-            s[-2] = 0
-            s[-1] = slice(None, -1)
-            spatial_grid = feature_library.spatiotemporal_grid[tuple(s)]
-            s = [0] * feature_library.spatiotemporal_grid.ndim
-            s[-2] = slice(None)
-            s[-1] = -1
-            temporal_grid = feature_library.spatiotemporal_grid[tuple(s)]
+            spatial_grid = feature_library.spatiotemporal_grid[..., 0, :-1]
+            s = (*((0,) * (spatial_grid.ndim - 1)), slice(None), -1)
+            temporal_grid = feature_library.spatiotemporal_grid[s]
             num_time = len(temporal_grid)
             dims = spatial_grid.shape[:-1]
         else:

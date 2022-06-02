@@ -409,13 +409,16 @@ class SINDy(BaseEstimator):
             if isinstance(self.feature_library, WeakPDELibrary):
                 if self.feature_library.spatiotemporal_grid is not None:
                     pde_library_flag = "WeakPDE"
-
-            if ensemble and not library_ensemble:
-                self.coef_list = []
-                # save the grid
-                if pde_library_flag == "WeakPDE":
                     old_spatiotemporal_grid = self.feature_library.spatiotemporal_grid
-                for i in range(n_models):
+            if not ensemble and not library_ensemble:
+                n_models = 1
+            self.coef_list = []
+            for i in range(n_models):
+                if library_ensemble:
+                    self.feature_library.library_ensemble = True
+                    (self.feature_library).fit(x)
+                    n_output_features = self.feature_library.n_output_features_
+                if ensemble:
                     x_ensemble, x_dot_ensemble = drop_random_rows(
                         x,
                         x_dot,
@@ -425,22 +428,17 @@ class SINDy(BaseEstimator):
                         pde_library_flag,
                         multiple_trajectories,
                     )
+
+                if ensemble and not library_ensemble:
                     self.model.fit(x_ensemble, x_dot_ensemble)
                     self.coef_list.append(self.model.steps[-1][1].coef_)
-
                     # reset the grid
                     if pde_library_flag == "WeakPDE":
                         self.feature_library.spatiotemporal_grid = (
                             old_spatiotemporal_grid
                         )
                         self.feature_library._set_up_weights()
-
-            elif library_ensemble and not ensemble:
-                self.feature_library.library_ensemble = True
-                (self.feature_library).fit(x)
-                n_output_features = self.feature_library.n_output_features_
-                self.coef_list = []
-                for i in range(n_models):
+                elif library_ensemble and not ensemble:
                     self.feature_library.ensemble_indices = np.sort(
                         np.random.choice(
                             range(n_output_features),
@@ -458,21 +456,7 @@ class SINDy(BaseEstimator):
                             axis=-1,
                         )
                     self.coef_list.append(coef_partial)
-            elif ensemble and library_ensemble:
-                self.feature_library.library_ensemble = True
-                (self.feature_library).fit(x)
-                n_output_features = self.feature_library.n_output_features_
-                self.coef_list = []
-                for i in range(n_models):
-                    x_ensemble, x_dot_ensemble = drop_random_rows(
-                        x,
-                        x_dot,
-                        n_subset,
-                        replace,
-                        self.feature_library,
-                        pde_library_flag,
-                        multiple_trajectories,
-                    )
+                elif ensemble and library_ensemble:
                     for j in range(n_models):
                         self.feature_library.ensemble_indices = np.sort(
                             np.random.choice(
@@ -491,8 +475,8 @@ class SINDy(BaseEstimator):
                                 axis=-1,
                             )
                         self.coef_list.append(coef_partial)
-            else:
-                self.model.fit(x, x_dot)
+                else:
+                    self.model.fit(x, x_dot)
 
         # Get average coefficients if ensembling was used
         if ensemble or library_ensemble:

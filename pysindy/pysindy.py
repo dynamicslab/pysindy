@@ -721,17 +721,7 @@ class SINDy(BaseEstimator):
                 x_dot_None = True  # set the flag
 
         x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
-        if u is None or self.n_control_features_ == 0:
-            if self.n_control_features_ > 0:
-                raise TypeError(
-                    "Model was fit using control variables, so u is required"
-                )
-            elif u is not None:
-                warnings.warn(
-                    "Control variables u were ignored because control variables were"
-                    " not used when the model was fit"
-                )
-        else:
+        if u is not None:
             trim_last_point = self.discrete_time and x_dot_None
             u = [ax_time_to_ax_sample(ui) for ui in u]
             u = validate_control_variables(

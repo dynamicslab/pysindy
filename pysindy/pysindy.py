@@ -23,6 +23,7 @@ from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
+from .utils import ax_spatial_to_ax_sample
 from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
 from .utils import concat_sample_axis
@@ -412,6 +413,10 @@ class SINDy(BaseEstimator):
                     pde_library_flag = "WeakPDE"
                     old_spatiotemporal_grid = self.feature_library.spatiotemporal_grid
             self.coef_list = []
+            x = [ax_spatial_to_ax_sample(arr) for arr in x]
+            x = np.concatenate(x, axis=x[0].ax_sample)
+            x_dot = [ax_spatial_to_ax_sample(arr) for arr in x_dot]
+            x_dot = np.concatenate(x_dot, axis=x_dot[0].ax_sample)
             for i in range(n_models if ensemble or library_ensemble else 1):
                 if ensemble:
                     x_ensemble, x_dot_ensemble = drop_random_rows(
@@ -673,9 +678,13 @@ class SINDy(BaseEstimator):
                 *[drop_nan_samples(xi, xdoti) for xi, xdoti in zip(x, x_dot)]
             )
 
-        x = concat_sample_axis(x)
         x_dot = concat_sample_axis(x_dot)
+        x_dot = [ax_spatial_to_ax_sample(arr) for arr in x_dot]
+        x_dot = np.concatenate(x_dot, axis=x_dot[0].ax_sample)
+
         x_dot_predict = concat_sample_axis(x_dot_predict)
+        x_dot_predict = [ax_spatial_to_ax_sample(arr) for arr in x_dot_predict]
+        x_dot_predict = np.concatenate(x_dot_predict, axis=x_dot_predict[0].ax_sample)
         if x_dot.ndim == 1:
             x_dot = x_dot.reshape(-1, 1)
         return metric(x_dot, x_dot_predict, **metric_kws)

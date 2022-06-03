@@ -175,14 +175,10 @@ def drop_random_rows(
             n_subset = num_time
         rand_inds = np.sort(choice(range(num_time), n_subset, replace=replace))
 
-        if len(dims) > 0:
-            x_shaped = np.reshape(
-                x, np.concatenate([dims, [num_time * num_trajectories], [n_features]])
-            )
-        else:
-            x_shaped = np.reshape(
-                x, np.concatenate([[num_time * num_trajectories], [n_features]])
-            )
+        x_shaped = np.reshape(
+            x, np.concatenate([dims, [num_time * num_trajectories], [n_features]])
+        )
+
         s0 = [slice(dim) for dim in x_shaped.shape]
 
         rand_inds_total = []
@@ -190,15 +186,10 @@ def drop_random_rows(
             rand_inds_total.append(rand_inds + num_time * i)
         s0[len(dims)] = rand_inds_total
 
-        if len(dims) > 0:
-            x_new = np.reshape(
-                x_shaped[tuple(s0)],
-                (np.product(dims) * n_subset * num_trajectories, x.shape[1]),
-            )
-        else:
-            x_new = np.reshape(
-                x_shaped[tuple(s0)], (n_subset * num_trajectories, x.shape[1])
-            )
+        x_new = np.reshape(
+            x_shaped[tuple(s0)],
+            (np.product(dims) * n_subset * num_trajectories, x.shape[1]),
+        )
 
         if pde_library_flag == "WeakPDE":
             spatiotemporal_grid = feature_library.spatiotemporal_grid

@@ -358,13 +358,15 @@ class SINDy(BaseEstimator):
             self.n_control_features_ = 0
         else:
             trim_last_point = self.discrete_time and x_dot_None
-            u = [ax_time_to_ax_sample(ui) for ui in u]
             u = validate_control_variables(
                 x,
                 u,
                 multiple_trajectories=multiple_trajectories,
                 trim_last_point=trim_last_point,
             )
+            u = [ax_time_to_ax_sample(ui) for ui in u]
+        x = [ax_time_to_ax_sample(xi) for xi in x]
+        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
 
         # Set ensemble variables
         self.ensemble = ensemble
@@ -512,7 +514,6 @@ class SINDy(BaseEstimator):
         if not multiple_trajectories:
             x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
         x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
-        x = [ax_time_to_ax_sample(xi) for xi in x]
         check_is_fitted(self, "model")
         if self.n_control_features_ > 0 and u is None:
             raise TypeError("Model was fit using control variables, so u is required")
@@ -525,10 +526,10 @@ class SINDy(BaseEstimator):
         if self.discrete_time:
             x = [validate_input(xi) for xi in x]
         if u is not None:
-            u = [ax_time_to_ax_sample(ui) for ui in u]
             u = validate_control_variables(x, u)
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
         result = [AxesArray(self.model.predict(xi), xi.__dict__) for xi in x]
+        # Kept for backwards compatability.
         if not multiple_trajectories:
             return result[0]
         return result
@@ -662,22 +663,11 @@ class SINDy(BaseEstimator):
 
         if self.discrete_time and x_dot is None:
             x_dot_predict = [xd[:-1] for xd in x_dot_predict]
-        x_dot_None = False  # flag for discrete time functionality
-        if self.discrete_time:
-            if x_dot is None:
-                x_dot_None = True  # set the flag
 
         x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
-        if u is not None:
-            trim_last_point = self.discrete_time and x_dot_None
-            u = [ax_time_to_ax_sample(ui) for ui in u]
-            u = validate_control_variables(
-                x,
-                u,
-                multiple_trajectories=multiple_trajectories,
-                trim_last_point=trim_last_point,
-            )
-            u = concat_sample_axis(u)
+        x = [ax_time_to_ax_sample(xi) for xi in x]
+        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
+        x_dot_predict = [ax_time_to_ax_sample(xdip) for xdip in x_dot_predict]
 
         # Drop rows where derivative isn't known (usually endpoints)
         if not isinstance(self.feature_library, WeakPDELibrary):
@@ -790,8 +780,6 @@ class SINDy(BaseEstimator):
                                 self.feature_library.validate_input(xd, t)
                                 for xd in x_dot
                             ]
-        x = [ax_time_to_ax_sample(xi) for xi in x]
-        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
         return x, x_dot
 
     def differentiate(self, x, t=None, multiple_trajectories=False):

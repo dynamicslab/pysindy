@@ -113,7 +113,7 @@ def validate_control_variables(
         Convert control variables u to np.array(dtype=float64) and compare
         its shape against x. Assumes x is array-like.
         """
-        if u.shape[u.ax_sample] - trim_last_point != x.shape[x.ax_sample]:
+        if u.shape[u.ax_time] - trim_last_point != x.shape[x.ax_time]:
             raise ValueError(
                 "control variables u must have same number of rows as x. "
                 "u has {} rows and x has {} rows".format(u.shape[0], len(x))

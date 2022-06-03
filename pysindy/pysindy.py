@@ -365,6 +365,7 @@ class SINDy(BaseEstimator):
                 trim_last_point=trim_last_point,
             )
             u = [ax_time_to_ax_sample(ui) for ui in u]
+            self.n_control_features_ = u[0].shape[u[0].ax_coord]
         x = [ax_time_to_ax_sample(xi) for xi in x]
         x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
 
@@ -388,9 +389,6 @@ class SINDy(BaseEstimator):
                 *[drop_nan_samples(xi, xdoti) for xi, xdoti in zip(x, x_dot)]
             )
 
-        if u is not None:
-            u = concat_sample_axis(u)
-            self.n_control_features_ = u.shape[u.ax_coord]
         x = concat_sample_axis(x)
         x_dot = concat_sample_axis(x_dot)
         if hasattr(self.optimizer, "unbias"):

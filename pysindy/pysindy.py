@@ -372,7 +372,7 @@ class SINDy(BaseEstimator):
 
         # Append control variables
         if u is not None:
-            x = [np.concatenate((xi, ui), axis=1) for xi, ui in zip(x, u)]
+            x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
         # Drop rows where derivative isn't known unless using weak PDE form
         # OR If this is a generalized library with weak libraries
@@ -514,39 +514,21 @@ class SINDy(BaseEstimator):
         x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
         x = [ax_time_to_ax_sample(xi) for xi in x]
         check_is_fitted(self, "model")
-        if u is None or self.n_control_features_ == 0:
-            if self.n_control_features_ > 0:
-                raise TypeError(
-                    "Model was fit using control variables, so u is required"
-                )
-            elif u is not None:
-                warnings.warn(
-                    "Control variables u were ignored because control variables were"
-                    " not used when the model was fit"
-                )
-            if self.discrete_time:
-                x = [validate_input(xi) for xi in x]
-
-            if isinstance(self.feature_library, WeakPDELibrary):
-                x_shapes = []
-                for xi in x:
-                    x_shapes.append(xi.shape)
-                for i in range(len(x)):
-                    x_shapes[i][0] = self.feature_library.K
-                result = [
-                    self.model.predict(xi.reshape(x_shapes[i])).reshape(x_shapes[i])
-                    for i, xi in enumerate(x)
-                ]
-            else:
-                result = [self.model.predict(xi) for i, xi in enumerate(x)]
-        else:
+        if self.n_control_features_ > 0 and u is None:
+            raise TypeError("Model was fit using control variables, so u is required")
+        if self.n_control_features_ == 0 and u is not None:
+            warnings.warn(
+                "Control variables u were ignored because control variables were"
+                " not used when the model was fit"
+            )
+            u = None
+        if self.discrete_time:
+            x = [validate_input(xi) for xi in x]
+        if u is not None:
             u = [ax_time_to_ax_sample(ui) for ui in u]
             u = validate_control_variables(x, u)
-            result = [
-                self.model.predict(np.concatenate((xi, ui), axis=xi.ax_coord))
-                for xi, ui in zip(x, u)
-            ]
-        result = [AxesArray(res, xi.__dict__) for res, xi in zip(result, x)]
+            x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
+        result = [AxesArray(self.model.predict(xi), xi.__dict__) for xi in x]
         if not multiple_trajectories:
             return result[0]
         return result

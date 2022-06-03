@@ -183,13 +183,27 @@ def concat_sample_axis(x_list: List[AxesArray]):
     """Concatenate all trajectories and axes used to create samples."""
     new_arrs = []
     for x in x_list:
-        sample_axes = (
-            ([x.ax_time] if x.ax_time is not None else [])
-            + ([x.ax_sample] if x.ax_sample is not None else [])
-            + x.ax_spatial
+        sample_axes = ([x.ax_time] if x.ax_time is not None else []) + (
+            [x.ax_sample] if x.ax_sample is not None else []
         )
-        new_axes = {"ax_sample": 0, "ax_coord": 1}
+        new_axes = {
+            "ax_spatial": x.ax_spatial,
+            "ax_sample": len(x.ax_spatial),
+            "ax_coord": len(x.ax_spatial) + 1,
+        }
+        dims_spatial = tuple(x.shape[i] for i in x.ax_spatial)
         n_samples = np.prod([x.shape[ax] for ax in sample_axes])
-        arr = AxesArray(x.reshape((n_samples, x.shape[x.ax_coord])), new_axes)
+        arr = AxesArray(
+            x.reshape((*dims_spatial, n_samples, x.shape[x.ax_coord])), new_axes
+        )
         new_arrs.append(arr)
-    return np.concatenate(new_arrs)
+    new_arrs = [ax_spatial_to_ax_sample(arr) for arr in new_arrs]
+    return np.concatenate(new_arrs, axis=new_arrs[0].ax_sample)
+
+
+def ax_spatial_to_ax_sample(x: AxesArray) -> AxesArray:
+    """Treat the spatial axis of x as another set of samples"""
+    sample_axes = ([x.ax_sample] if x.ax_sample is not None else []) + x.ax_spatial
+    new_axes = {"ax_sample": 0, "ax_coord": 1}
+    n_samples = np.prod([x.shape[ax] for ax in sample_axes])
+    return AxesArray(x.reshape((n_samples, x.shape[x.ax_coord])), new_axes)

@@ -1020,3 +1020,11 @@ def test_optimizers_verbose_cvxpy(data_lorenz, optimizer):
     model = optimizer(verbose_cvxpy=True)
     model.fit(x, x_dot)
     check_is_fitted(model)
+
+
+def test_frols_error_linear_dependence():
+    opt = FROLS(normalize_columns=True)
+    x = np.array([[1.0, 1.0]])
+    y = np.array([[1.0, 1.0]])
+    with pytest.raises(ValueError):
+        opt.fit(x, y)

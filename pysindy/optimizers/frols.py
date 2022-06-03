@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from sklearn.linear_model import ridge_regression
 
@@ -104,7 +106,14 @@ class FROLS(BaseOptimizer):
         self.verbose = verbose
 
     def _normed_cov(self, a, b):
-        return np.vdot(a, b) / np.vdot(a, a)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=RuntimeWarning)
+            try:
+                return np.vdot(a, b) / np.vdot(a, a)
+            except RuntimeWarning:
+                raise ValueError(
+                    "Trying to orthogonalize linearly dependent columns created NaNs"
+                )
 
     def _select_function(self, x, y, sigma, skip=[]):
         n_features = x.shape[1]

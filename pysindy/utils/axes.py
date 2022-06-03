@@ -156,21 +156,6 @@ class DefaultShapedInputsMixin:
             warnings.warn("IDK how to handle this input data, losing axes labels")
         return axes
 
-    def concat_sample_axis(self, x_list: List[AxesArray]):
-        """Concatenate all trajectories and axes used to create samples."""
-        new_arrs = []
-        for x in x_list:
-            sample_axes = (
-                ([x.ax_time] if x.ax_time is not None else [])
-                + ([x.ax_sample] if x.ax_sample is not None else [])
-                + x.ax_spatial
-            )
-            new_axes = {"ax_sample": 0, "ax_coord": 1}
-            n_samples = np.prod([x.shape[ax] for ax in sample_axes])
-            arr = AxesArray(x.reshape((n_samples, x.shape[x.ax_coord])), new_axes)
-            new_arrs.append(arr)
-        return np.concatenate(new_arrs)
-
 
 class PDEShapedInputsMixin:
     def comprehend_axes(self, x):
@@ -192,3 +177,19 @@ def ax_time_to_ax_sample(x: AxesArray) -> AxesArray:
     new_axes["ax_sample"] = ax_sample
     new_axes["ax_time"] = None
     return AxesArray(np.asarray(x), new_axes)
+
+
+def concat_sample_axis(x_list: List[AxesArray]):
+    """Concatenate all trajectories and axes used to create samples."""
+    new_arrs = []
+    for x in x_list:
+        sample_axes = (
+            ([x.ax_time] if x.ax_time is not None else [])
+            + ([x.ax_sample] if x.ax_sample is not None else [])
+            + x.ax_spatial
+        )
+        new_axes = {"ax_sample": 0, "ax_coord": 1}
+        n_samples = np.prod([x.shape[ax] for ax in sample_axes])
+        arr = AxesArray(x.reshape((n_samples, x.shape[x.ax_coord])), new_axes)
+        new_arrs.append(arr)
+    return np.concatenate(new_arrs)

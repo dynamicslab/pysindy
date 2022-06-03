@@ -1,5 +1,6 @@
 from .axes import ax_time_to_ax_sample
 from .axes import AxesArray
+from .axes import concat_sample_axis
 from .axes import DefaultShapedInputsMixin
 from .axes import PDEShapedInputsMixin
 from .base import capped_simplex_projection
@@ -59,6 +60,7 @@ __all__ = [
     "DefaultShapedInputsMixin",
     "PDEShapedInputsMixin",
     "ax_time_to_ax_sample",
+    "concat_sample_axis",
     "capped_simplex_projection",
     "drop_nan_samples",
     "drop_random_rows",

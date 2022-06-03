@@ -25,6 +25,7 @@ from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
 from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
+from .utils import concat_sample_axis
 from .utils import drop_nan_samples
 from .utils import drop_random_rows
 from .utils import equations
@@ -386,10 +387,10 @@ class SINDy(BaseEstimator):
             )
 
         if u is not None:
-            u = self.feature_library.concat_sample_axis(u)
+            u = concat_sample_axis(u)
             self.n_control_features_ = u.shape[u.ax_coord]
-        x = self.feature_library.concat_sample_axis(x)
-        x_dot = self.feature_library.concat_sample_axis(x_dot)
+        x = concat_sample_axis(x)
+        x_dot = concat_sample_axis(x_dot)
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
 
@@ -427,7 +428,7 @@ class SINDy(BaseEstimator):
 
                 if library_ensemble:
                     self.feature_library.library_ensemble = True
-                    (self.feature_library).fit(x)
+                    self.feature_library.fit(x)
                     n_output_features = self.feature_library.n_output_features_
                     for _ in range(n_models if ensemble else 1):
                         self.feature_library.ensemble_indices = np.sort(
@@ -694,7 +695,7 @@ class SINDy(BaseEstimator):
                 multiple_trajectories=multiple_trajectories,
                 trim_last_point=trim_last_point,
             )
-            u = self.feature_library.concat_sample_axis(u)
+            u = concat_sample_axis(u)
 
         # Drop rows where derivative isn't known (usually endpoints)
         if not isinstance(self.feature_library, WeakPDELibrary):
@@ -702,9 +703,9 @@ class SINDy(BaseEstimator):
                 *[drop_nan_samples(xi, xdoti) for xi, xdoti in zip(x, x_dot)]
             )
 
-        x = self.feature_library.concat_sample_axis(x)
-        x_dot = self.feature_library.concat_sample_axis(x_dot)
-        x_dot_predict = self.feature_library.concat_sample_axis(x_dot_predict)
+        x = concat_sample_axis(x)
+        x_dot = concat_sample_axis(x_dot)
+        x_dot_predict = concat_sample_axis(x_dot_predict)
         if x_dot.ndim == 1:
             x_dot = x_dot.reshape(-1, 1)
         return metric(x_dot, x_dot_predict, **metric_kws)

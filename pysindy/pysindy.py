@@ -26,7 +26,6 @@ from .optimizers import STLSQ
 from .utils import ax_spatial_to_ax_sample
 from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
-from .utils import concat_sample_axis
 from .utils import drop_nan_samples
 from .utils import drop_random_rows
 from .utils import equations
@@ -365,10 +364,7 @@ class SINDy(BaseEstimator):
                 multiple_trajectories=multiple_trajectories,
                 trim_last_point=trim_last_point,
             )
-            u = [ax_time_to_ax_sample(ui) for ui in u]
             self.n_control_features_ = u[0].shape[u[0].ax_coord]
-        x = [ax_time_to_ax_sample(xi) for xi in x]
-        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
 
         # Set ensemble variables
         self.ensemble = ensemble
@@ -385,13 +381,14 @@ class SINDy(BaseEstimator):
             for lib in self.feature_library.libraries_:
                 if isinstance(lib, WeakPDELibrary):
                     weak_libraries = True
+
+        x = [ax_time_to_ax_sample(xi) for xi in x]
+        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
         if not isinstance(self.feature_library, WeakPDELibrary) and not weak_libraries:
             x, x_dot = zip(
                 *[drop_nan_samples(xi, xdoti) for xi, xdoti in zip(x, x_dot)]
             )
 
-        x = concat_sample_axis(x)
-        x_dot = concat_sample_axis(x_dot)
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
 
@@ -673,16 +670,16 @@ class SINDy(BaseEstimator):
         x_dot_predict = [ax_time_to_ax_sample(xdip) for xdip in x_dot_predict]
 
         # Drop rows where derivative isn't known (usually endpoints)
+        # Is this necessary?  If the next line drops any samples, x_dot_predict
+        # is wrong shape.  That doesn't happen in any tests, i think?
         if not isinstance(self.feature_library, WeakPDELibrary):
             x, x_dot = zip(
                 *[drop_nan_samples(xi, xdoti) for xi, xdoti in zip(x, x_dot)]
             )
 
-        x_dot = concat_sample_axis(x_dot)
         x_dot = [ax_spatial_to_ax_sample(arr) for arr in x_dot]
         x_dot = np.concatenate(x_dot, axis=x_dot[0].ax_sample)
 
-        x_dot_predict = concat_sample_axis(x_dot_predict)
         x_dot_predict = [ax_spatial_to_ax_sample(arr) for arr in x_dot_predict]
         x_dot_predict = np.concatenate(x_dot_predict, axis=x_dot_predict[0].ax_sample)
         if x_dot.ndim == 1:

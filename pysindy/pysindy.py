@@ -316,13 +316,6 @@ class SINDy(BaseEstimator):
             x, t, x_dot, u, self.feature_library
         )
 
-        if (ensemble or library_ensemble) and n_models is None:
-            n_models = 20
-        if ensemble and n_subset is None:
-            if x[0].ndim == 1:
-                n_subset = x[0].shape[0]
-            else:
-                n_subset = x[0].shape[-2]
         if (
             ensemble
             and isinstance(self.feature_library, WeakPDELibrary)
@@ -344,9 +337,6 @@ class SINDy(BaseEstimator):
                 x_dot_None = True  # set the flag
 
         # save copy of x in case there are control inputs to be validated
-        if isinstance(self.feature_library, WeakPDELibrary):
-            self.feature_library.old_x = x.copy()
-
         self.feature_library.num_trajectories = len(x)
         if isinstance(self.feature_library, GeneralizedLibrary):
             for lib in self.feature_library.libraries_:
@@ -369,6 +359,14 @@ class SINDy(BaseEstimator):
         # Set ensemble variables
         self.ensemble = ensemble
         self.library_ensemble = library_ensemble
+        if (ensemble or library_ensemble) and n_models is None:
+            n_models = 20
+        if ensemble and n_subset is None:
+            if x[0].ndim == 1:
+                raise ValueError("This shouldn't happen anymore")
+                n_subset = x[0].shape[0]
+            else:
+                n_subset = x[0].shape[x[0].ax_time]
 
         # Append control variables
         if u is not None:
@@ -410,27 +408,36 @@ class SINDy(BaseEstimator):
                     pde_library_flag = "WeakPDE"
                     old_spatiotemporal_grid = self.feature_library.spatiotemporal_grid
             self.coef_list = []
-            x = [ax_spatial_to_ax_sample(arr) for arr in x]
-            x = np.concatenate(x, axis=x[0].ax_sample)
-            x_dot = [ax_spatial_to_ax_sample(arr) for arr in x_dot]
-            x_dot = np.concatenate(x_dot, axis=x_dot[0].ax_sample)
             for i in range(n_models if ensemble or library_ensemble else 1):
                 if ensemble:
-                    x_ensemble, x_dot_ensemble = drop_random_rows(
-                        x,
-                        x_dot,
-                        n_subset,
-                        replace,
-                        self.feature_library,
-                        pde_library_flag,
-                        multiple_trajectories,
+                    # n_subset_per_trajectory = n_subset // len(x)
+                    x_ensemble, x_dot_ensemble = zip(
+                        *[
+                            drop_random_rows(
+                                xi,
+                                xdoti,
+                                n_subset,
+                                replace,
+                                self.feature_library,
+                                pde_library_flag,
+                            )
+                            for xi, xdoti in zip(x, x_dot)
+                        ]
                     )
                 else:
                     x_ensemble, x_dot_ensemble = x, x_dot
 
+                x_ensemble = [ax_spatial_to_ax_sample(arr) for arr in x_ensemble]
+                x_ensemble = np.concatenate(x_ensemble, axis=x_ensemble[0].ax_sample)
+                x_dot_ensemble = [
+                    ax_spatial_to_ax_sample(arr) for arr in x_dot_ensemble
+                ]
+                x_dot_ensemble = np.concatenate(
+                    x_dot_ensemble, axis=x_dot_ensemble[0].ax_sample
+                )
                 if library_ensemble:
                     self.feature_library.library_ensemble = True
-                    self.feature_library.fit(x)
+                    self.feature_library.fit(x_ensemble)
                     n_output_features = self.feature_library.n_output_features_
                     for _ in range(n_models if ensemble else 1):
                         self.feature_library.ensemble_indices = np.sort(

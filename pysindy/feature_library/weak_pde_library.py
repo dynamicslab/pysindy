@@ -136,6 +136,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
         is the product of the number of library functions and the number of
         input features.
 
+    implicit_terms : boolean
+        Flag to indicate if SINDy-PI (temporal derivatives) is being used
+        for the right-hand side of the SINDy fit.
+
     Examples
     --------
     >>> import numpy as np
@@ -168,6 +172,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         ensemble_indices=[0],
         periodic=False,
         num_pts_per_domain=None,
+        implicit_terms=False,
     ):
         super(WeakPDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -176,6 +181,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.derivative_order = derivative_order
         self.function_names = function_names
         self.interaction_only = interaction_only
+        self.implicit_terms = implicit_terms
         self.include_bias = include_bias
         self.include_interaction = include_interaction
         self.is_uniform = is_uniform
@@ -217,7 +223,11 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.grid_ndim = len(dims)
 
         # if want to include temporal terms -> range(len(dims))
-        for i in range(len(dims) - 1):
+        if self.implicit_terms:
+            self.ind_range = len(dims)
+        else:
+            self.ind_range = len(dims) - 1
+        for i in range(self.ind_range):
             indices = indices + (range(derivative_order + 1),)
 
         multiindices = []
@@ -707,9 +717,15 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
             def derivative_string(multiindex):
                 ret = ""
-                for axis in range(self.grid_ndim - 1):
+                for axis in range(self.ind_range):
+                    if (axis == self.ind_range - 1) and (
+                        self.ind_range == self.grid_ndim
+                    ):
+                        str_deriv = "t"
+                    else:
+                        str_deriv = str(axis + 1)
                     for i in range(multiindex[axis]):
-                        ret = ret + str(axis + 1)
+                        ret = ret + str_deriv
                 return ret
 
             # Include integral terms
@@ -926,8 +942,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     x_derivs[0] = x_shaped
                     self.dx_k_j = []
                     self.dfx_k_j = []
+
                     for j in range(self.num_derivatives):
-                        for axis in range(self.grid_ndim - 1):
+                        for axis in range(self.ind_range):
                             s = [0] * (self.grid_ndim + 1)
                             s[axis] = slice(None, None, None)
                             s[-1] = axis
@@ -979,7 +996,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         # Derivative orders for mixed derivatives product rule
                         derivs = np.concatenate(
                             [
-                                [np.zeros(self.grid_ndim - 1, dtype=int)],
+                                [np.zeros(self.ind_range, dtype=int)],
                                 self.multiindices,
                             ],
                             axis=0,

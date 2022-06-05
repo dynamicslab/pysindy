@@ -12,7 +12,6 @@ from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import GeneralizedLibrary
 from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
-from pysindy.feature_library import SINDyPILibrary
 from pysindy.utils.odes import logistic_map
 from pysindy.utils.odes import logistic_map_control
 from pysindy.utils.odes import logistic_map_multicontrol
@@ -333,20 +332,19 @@ def data_sindypi_library():
         lambda x: x**2,
         lambda x, y: x * y,
     ]
-    x_dot_library_functions = [lambda x: x]
     function_names = [
         lambda s: str(s),
         lambda s: str(s) + "^2",
         lambda s, t: str(s) + " " + str(t),
-        lambda s: str(s),
     ]
     t = np.linspace(0, 5, 500)
 
-    return SINDyPILibrary(
+    return PDELibrary(
         library_functions=library_functions,
-        x_dot_library_functions=x_dot_library_functions,
         function_names=function_names,
-        t=t,
+        temporal_grid=t,
+        implicit_terms=True,
+        derivative_order=1,
     )
 
 

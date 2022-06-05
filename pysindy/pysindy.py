@@ -17,9 +17,9 @@ from .differentiation import FiniteDifference
 from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
-from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
+from .optimizers import SINDyPI
 from .optimizers import STLSQ
 from .utils import drop_nan_rows
 from .utils import drop_random_rows
@@ -644,7 +644,7 @@ class SINDy(BaseEstimator):
                 if isinstance(self.feature_library, WeakPDELibrary):
                     x_shape = np.array(x.shape)
                     x_shape[0] = self.feature_library.K
-                return self.model.predict(x).reshape(x_shape)
+                return self.model.predict(x)  # .reshape(x_shape)
         else:
             if multiple_trajectories:
                 x_shapes = []
@@ -708,7 +708,7 @@ class SINDy(BaseEstimator):
             Precision to be used when printing out model coefficients.
         """
         eqns = self.equations(precision)
-        if isinstance(self.feature_library, SINDyPILibrary):
+        if isinstance(self.optimizer, SINDyPI):
             feature_names = self.get_feature_names()
         else:
             feature_names = self.feature_names
@@ -717,7 +717,7 @@ class SINDy(BaseEstimator):
                 names = "(" + feature_names[i] + ")"
                 print(names + "[k+1] = " + eqn)
             elif lhs is None:
-                if not isinstance(self.feature_library, SINDyPILibrary):
+                if not isinstance(self.optimizer, SINDyPI):
                     names = "(" + feature_names[i] + ")"
                     print(names + "' = " + eqn)
                 else:

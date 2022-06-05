@@ -328,7 +328,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         self.libraries_ = libraries
         self.inputs_per_library_ = inputs_per_library
         for lib in self.libraries_:
-            if hasattr(lib, "spatiotemporal_grid"):
+            if hasattr(lib, "H_xt"):
                 if lib.spatiotemporal_grid is not None:
                     self.n_samples = lib.K
                     self.spatiotemporal_grid = lib.spatiotemporal_grid
@@ -430,7 +430,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         n_samples = x.shape[0]
         for lib in self.libraries_:
             check_is_fitted(lib)
-            if hasattr(lib, "spatiotemporal_grid"):
+            if hasattr(lib, "H_xt"):
                 if lib.spatiotemporal_grid is not None:  # check if weak form
                     n_samples = self.n_samples
 

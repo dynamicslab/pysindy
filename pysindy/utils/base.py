@@ -2,7 +2,6 @@ from itertools import repeat
 from typing import Sequence
 
 import numpy as np
-from numpy.random import choice
 from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
@@ -135,35 +134,6 @@ def drop_nan_samples(x, y):
     x = x.take(good_sample_ind, axis=x.ax_sample)
     y = y.take(good_sample_ind, axis=y.ax_sample)
     return x, y
-
-
-def drop_random_rows(
-    x,
-    x_dot,
-    n_subset,
-    replace,
-    feature_library,
-    pde_library_flag,
-):
-    n_samples = x.shape[x.ax_sample]
-    if n_subset is None or n_subset > n_samples:
-        n_subset = n_samples
-    if pde_library_flag == "WeakPDE":
-        # Weak form needs uniform, ascending grid, so cannot replace
-        replace = False
-    rand_inds = np.sort(choice(range(n_samples), n_subset, replace=replace))
-    x_new = np.take(x, rand_inds, axis=x.ax_sample)
-
-    # if pde_library_flag == "WeakPDE":
-    #     spatiotemporal_grid = feature_library.spatiotemporal_grid
-    #     new_spatiotemporal_grid = spatiotemporal_grid[..., rand_inds, :]
-    #     feature_library.spatiotemporal_grid = new_spatiotemporal_grid
-    #     feature_library._set_up_weights()
-    #     x_dot_new = feature_library.convert_u_dot_integral(x_new)
-    # else:
-    x_dot_new = np.take(x_dot, rand_inds, axis=x_dot.ax_sample)
-
-    return x_new, x_dot_new
 
 
 def reorder_constraints(c, n_features, output_order="row"):

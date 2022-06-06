@@ -27,7 +27,6 @@ from .utils import ax_spatial_to_ax_sample
 from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
 from .utils import drop_nan_samples
-from .utils import drop_random_rows
 from .utils import equations
 from .utils import validate_control_variables
 from .utils import validate_input
@@ -297,6 +296,13 @@ class SINDy(BaseEstimator):
         -------
         self: a fitted :class:`SINDy` instance
         """
+
+        if ensemble or library_ensemble:
+            warnings.warn(
+                "Ensembling arguments are deprecated.  Use the EnsembleOptimizer "
+                "class instead",
+                DeprecationWarning,
+            )
         if t is None:
             t = self.t_default
 
@@ -359,8 +365,6 @@ class SINDy(BaseEstimator):
         # Set ensemble variables
         self.ensemble = ensemble
         self.library_ensemble = library_ensemble
-        if (ensemble or library_ensemble) and n_models is None:
-            n_models = 20
         if ensemble and n_subset is None:
             if x[0].ndim == 1:
                 raise ValueError("This shouldn't happen anymore")
@@ -399,81 +403,7 @@ class SINDy(BaseEstimator):
             warnings.filterwarnings(action, category=ConvergenceWarning)
             warnings.filterwarnings(action, category=LinAlgWarning)
             warnings.filterwarnings(action, category=UserWarning)
-            pde_library_flag = None
-            if isinstance(self.feature_library, PDELibrary):
-                if self.feature_library.spatial_grid is not None:
-                    pde_library_flag = "PDE"
-            if isinstance(self.feature_library, WeakPDELibrary):
-                if self.feature_library.spatiotemporal_grid is not None:
-                    pde_library_flag = "WeakPDE"
-                    old_spatiotemporal_grid = self.feature_library.spatiotemporal_grid
-            self.coef_list = []
-            for i in range(n_models if ensemble or library_ensemble else 1):
-                if ensemble:
-                    # n_subset_per_trajectory = n_subset // len(x)
-                    x_ensemble, x_dot_ensemble = zip(
-                        *[
-                            drop_random_rows(
-                                xi,
-                                xdoti,
-                                n_subset,
-                                replace,
-                                self.feature_library,
-                                pde_library_flag,
-                            )
-                            for xi, xdoti in zip(x, x_dot)
-                        ]
-                    )
-                else:
-                    x_ensemble, x_dot_ensemble = x, x_dot
-
-                x_ensemble = [ax_spatial_to_ax_sample(arr) for arr in x_ensemble]
-                x_ensemble = np.concatenate(x_ensemble, axis=x_ensemble[0].ax_sample)
-                x_dot_ensemble = [
-                    ax_spatial_to_ax_sample(arr) for arr in x_dot_ensemble
-                ]
-                x_dot_ensemble = np.concatenate(
-                    x_dot_ensemble, axis=x_dot_ensemble[0].ax_sample
-                )
-                if library_ensemble:
-                    self.feature_library.library_ensemble = True
-                    self.feature_library.fit(x_ensemble)
-                    n_output_features = self.feature_library.n_output_features_
-                    for _ in range(n_models if ensemble else 1):
-                        self.feature_library.ensemble_indices = np.sort(
-                            np.random.choice(
-                                range(n_output_features),
-                                n_candidates_to_drop,
-                                replace=False,
-                            )
-                        )
-                        self.model.fit(x_ensemble, x_dot_ensemble)
-                        coef_partial = self.model.steps[-1][1].coef_
-                        for k in range(n_candidates_to_drop):
-                            coef_partial = np.insert(
-                                coef_partial,
-                                self.feature_library.ensemble_indices[k],
-                                0,
-                                axis=-1,
-                            )
-                        self.coef_list.append(coef_partial)
-                else:
-                    self.model.fit(x_ensemble, x_dot_ensemble)
-                if ensemble and not library_ensemble:
-                    self.coef_list.append(self.model.steps[-1][1].coef_)
-                    # reset the grid
-                    if pde_library_flag == "WeakPDE":
-                        self.feature_library.spatiotemporal_grid = (
-                            old_spatiotemporal_grid
-                        )
-                        self.feature_library._set_up_weights()
-
-        # Get average coefficients if ensembling was used
-        if ensemble or library_ensemble:
-            if ensemble_aggregator is None:
-                self.model.coef_ = np.median(self.coef_list, axis=0)
-            else:
-                self.model_coef_ = ensemble_aggregator(self.coef_list)
+            self.model.fit(x, x_dot)
 
         # New version of sklearn changes attribute name
         if float(__version__[:3]) >= 1.0:

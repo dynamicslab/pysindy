@@ -33,6 +33,12 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
     """
 
     def __init__(self, library_ensemble=None, ensemble_indices=[0]):
+        if library_ensemble is not None:
+            warnings.warn(
+                "Library ensembling is no longer performed by feature libraries.  Use "
+                "EnsemblingOptimizer to fit an ensemble model.",
+                DeprecationWarning,
+            )
         self.library_ensemble = library_ensemble
         if np.any(np.asarray(ensemble_indices) < 0):
             raise ValueError("Library ensemble indices must be 0 or positive integers.")
@@ -120,6 +126,12 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
         If library bagging, return xp without
         the terms at ensemble_indices
         """
+        warnings.warn(
+            "Library ensembling is no longer performed by feature libraries.  Use "
+            "EnsemblingOptimizer to fit an ensemble model.",
+            DeprecationWarning,
+        )
+
         if self.library_ensemble:
             if self.n_output_features_ <= len(self.ensemble_indices):
                 raise ValueError(

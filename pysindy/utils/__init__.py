@@ -1,11 +1,11 @@
-from .axes import ax_spatial_to_ax_sample
 from .axes import ax_time_to_ax_sample
 from .axes import AxesArray
+from .axes import concat_sample_axis
 from .axes import DefaultShapedInputsMixin
 from .axes import PDEShapedInputsMixin
+from .axes import SampleConcatter
 from .base import capped_simplex_projection
 from .base import drop_nan_samples
-from .base import drop_random_rows
 from .base import equations
 from .base import flatten_2d_tall
 from .base import get_prox
@@ -59,11 +59,11 @@ __all__ = [
     "AxesArray",
     "DefaultShapedInputsMixin",
     "PDEShapedInputsMixin",
+    "SampleConcatter",
     "ax_time_to_ax_sample",
-    "ax_spatial_to_ax_sample",
+    "concat_sample_axis",
     "capped_simplex_projection",
     "drop_nan_samples",
-    "drop_random_rows",
     "equations",
     "get_prox",
     "get_regularization",

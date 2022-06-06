@@ -23,11 +23,12 @@ from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
-from .utils import ax_spatial_to_ax_sample
 from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
+from .utils import concat_sample_axis
 from .utils import drop_nan_samples
 from .utils import equations
+from .utils import SampleConcatter
 from .utils import validate_control_variables
 from .utils import validate_input
 from .utils import validate_no_reshape
@@ -395,7 +396,12 @@ class SINDy(BaseEstimator):
             unbias = self.optimizer.unbias
 
         optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
-        steps = [("features", self.feature_library), ("model", optimizer)]
+        steps = [
+            ("features", self.feature_library),
+            ("shaping", SampleConcatter),
+            ("model", optimizer),
+        ]
+        x_dot = concat_sample_axis(x_dot)
         self.model = Pipeline(steps)
 
         action = "ignore" if quiet else "default"
@@ -465,7 +471,11 @@ class SINDy(BaseEstimator):
         if u is not None:
             u = validate_control_variables(x, u)
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
-        result = [AxesArray(self.model.predict(xi), xi.__dict__) for xi in x]
+        result = [self.model.predict(xi) for xi in x]
+        result = [
+            self.feature_library.reshape_samples_to_spatial_grid(pred)
+            for pred in result
+        ]
         # Kept for backwards compatability.
         if not multiple_trajectories:
             return result[0]
@@ -614,11 +624,8 @@ class SINDy(BaseEstimator):
                 *[drop_nan_samples(xi, xdoti) for xi, xdoti in zip(x, x_dot)]
             )
 
-        x_dot = [ax_spatial_to_ax_sample(arr) for arr in x_dot]
-        x_dot = np.concatenate(x_dot, axis=x_dot[0].ax_sample)
-
-        x_dot_predict = [ax_spatial_to_ax_sample(arr) for arr in x_dot_predict]
-        x_dot_predict = np.concatenate(x_dot_predict, axis=x_dot_predict[0].ax_sample)
+        x_dot = concat_sample_axis(x_dot)
+        x_dot_predict = concat_sample_axis(x_dot_predict)
         if x_dot.ndim == 1:
             x_dot = x_dot.reshape(-1, 1)
         return metric(x_dot, x_dot_predict, **metric_kws)

@@ -2,6 +2,7 @@ import warnings
 from typing import List
 
 import numpy as np
+from sklearn.base import TransformerMixin
 
 HANDLED_FUNCTIONS = {}
 
@@ -179,6 +180,13 @@ def ax_time_to_ax_sample(x: AxesArray) -> AxesArray:
     return AxesArray(np.asarray(x), new_axes)
 
 
+class SampleConcatter(TransformerMixin):
+    pass
+
+    def transform(self, x_list):
+        return concat_sample_axis(x_list)
+
+
 def concat_sample_axis(x_list: List[AxesArray]):
     """Concatenate all trajectories and axes used to create samples."""
     new_arrs = []
@@ -198,11 +206,3 @@ def concat_sample_axis(x_list: List[AxesArray]):
         )
         new_arrs.append(arr)
     return new_arrs
-
-
-def ax_spatial_to_ax_sample(x: AxesArray) -> AxesArray:
-    """Treat the spatial axis of x as another set of samples"""
-    sample_axes = ([x.ax_sample] if x.ax_sample is not None else []) + x.ax_spatial
-    new_axes = {"ax_sample": 0, "ax_coord": 1}
-    n_samples = np.prod([x.shape[ax] for ax in sample_axes])
-    return AxesArray(x.reshape((n_samples, x.shape[x.ax_coord])), new_axes)

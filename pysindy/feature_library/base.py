@@ -46,7 +46,21 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
 
     def validate_input(self, x, *args, **kwargs):
         return validate_no_reshape(x, *args, **kwargs)
-        # return utils_validate_input(x, *args, **kwargs)
+
+    def reshape_samples_to_spatial_grid(self, x: np.ndarray) -> AxesArray:
+        """Adapt predictions to fitted spatial grid."""
+        if not hasattr(self, "spatial_grid"):
+            return AxesArray(x, {"ax_sample": 0, "ax_coord": 1})
+        shape = self.spatial_grid.shape
+        x = np.reshape(x, (*shape, -1, x.shape[1]))
+        return AxesArray(
+            x,
+            {
+                "ax_spatial": list(range(len(shape))),
+                "ax_sample": len(shape),
+                "ax_coord": len(shape) + 1,
+            },
+        )
 
     def correct_shape(self, x: AxesArray):
         """Correct the shape of x, given what we know of the problem"""

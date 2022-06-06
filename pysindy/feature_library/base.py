@@ -224,6 +224,8 @@ class ConcatLibrary(BaseFeatureLibrary):
         for lib in self.libraries_:
             check_is_fitted(lib)
         n_samples = x.shape[0]
+        if hasattr(self.libraries_[0], "spatiotemporal_grid"):
+            n_samples = self.libraries_[0].num_trajectories * self.libraries_[0].K
 
         # preallocate matrix
         xp = np.zeros((n_samples, self.n_output_features_))
@@ -432,7 +434,7 @@ class TensoredLibrary(BaseFeatureLibrary):
             check_is_fitted(lib)
             if hasattr(lib, "spatiotemporal_grid"):
                 if lib.spatiotemporal_grid is not None:  # check if weak form
-                    n_samples = self.n_samples
+                    n_samples = self.libraries_[0].num_trajectories * self.n_samples
 
         # preallocate matrix
         xp = np.zeros((n_samples, self.n_output_features_))

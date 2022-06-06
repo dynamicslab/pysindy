@@ -15,9 +15,11 @@ from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
 from .feature_library import GeneralizedLibrary
+from .feature_library import ParameterizedLibrary
 from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
 from .feature_library import SINDyPILibrary
+from .feature_library import TensoredLibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
@@ -26,8 +28,6 @@ from .utils import drop_random_rows
 from .utils import equations
 from .utils import validate_control_variables
 from .utils import validate_input
-
-# from .utils import convert_u_dot_integral
 
 
 class SINDy(BaseEstimator):
@@ -357,24 +357,36 @@ class SINDy(BaseEstimator):
                 else:
                     x_dot = FiniteDifference(d=1, axis=-2)._differentiate(x, t=t)
 
-            elif isinstance(self.feature_library, GeneralizedLibrary):
+            elif hasattr(self.feature_library, "libraries_"):
                 for lib in self.feature_library.libraries_:
                     if isinstance(lib, WeakPDELibrary):
                         weak_libraries = True
                     if isinstance(lib, PDELibrary):
                         pde_libraries = True
                 if weak_libraries:
+                    constants_final = np.ones(self.feature_library.libraries_[0].K)
+                    if isinstance(
+                        self.feature_library, ParameterizedLibrary
+                    ) or isinstance(self.feature_library, TensoredLibrary):
+                        for k in range(self.feature_library.libraries_[0].K):
+                            constants_final[k] = np.sum(
+                                self.feature_library.libraries_[0].fullweights0[k]
+                            )
                     if multiple_trajectories:
+
                         x_dot = [
                             self.feature_library.libraries_[0].convert_u_dot_integral(
                                 xi
                             )
+                            * constants_final[:, np.newaxis]
                             for xi in x
                         ]
                     else:
-                        x_dot = self.feature_library.libraries_[
-                            0
-                        ].convert_u_dot_integral(x)
+                        x_dot = (
+                            self.feature_library.libraries_[0].convert_u_dot_integral(x)
+                            * constants_final[:, np.newaxis]
+                        )
+
                 elif pde_libraries:
                     if multiple_trajectories and isinstance(t, Sequence):
                         x_dot = [
@@ -397,12 +409,13 @@ class SINDy(BaseEstimator):
                 if x_dot is None:
                     x_dot_None = True  # set the flag
             self.feature_library.num_trajectories = len(x)
-            if isinstance(self.feature_library, GeneralizedLibrary):
+            if hasattr(self.feature_library, "libraries_"):
                 for lib in self.feature_library.libraries_:
                     if isinstance(lib, PDELibrary):
                         lib.num_trajectories = len(x)
                     if isinstance(lib, WeakPDELibrary):
                         lib.num_trajectories = len(x)
+
             x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         else:
             self.feature_library.num_trajectories = 1
@@ -451,7 +464,7 @@ class SINDy(BaseEstimator):
         # Drop rows where derivative isn't known unless using weak PDE form
         # OR If this is a generalized library with weak libraries
         weak_libraries = False
-        if isinstance(self.feature_library, GeneralizedLibrary):
+        if hasattr(self.feature_library, "libraries_"):
             for lib in self.feature_library.libraries_:
                 if isinstance(lib, WeakPDELibrary):
                     weak_libraries = True

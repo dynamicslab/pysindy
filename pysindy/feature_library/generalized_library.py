@@ -168,6 +168,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self.inputs_per_library_ = inputs_per_library
         self.libraries_full_ = self.libraries_
         self.exclude_libs_ = exclude_libraries
+
     def fit(self, x, y=None):
         """
         Compute number of output features.
@@ -229,8 +230,13 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         # Calculate the sum of output features
         # self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
-        # exclude libraries in exclude_libs_ 
-        self.n_output_features_ = sum([fitted_libs[i].n_output_features_ for i in np.setdiff1d(np.arange(len(fitted_libs)), self.exclude_libs_)])
+        # exclude libraries in exclude_libs_
+        self.n_output_features_ = sum(
+            [
+                fitted_libs[i].n_output_features_
+                for i in np.setdiff1d(np.arange(len(fitted_libs)), self.exclude_libs_)
+            ]
+        )
 
         # Save fitted libs
         self.libraries_full_ = fitted_libs
@@ -272,7 +278,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         current_feat = 0
         for i, lib in enumerate(self.libraries_full_):
-            if not i in self.exclude_libs_:
+            if i not in self.exclude_libs_:
 
                 # retrieve num output features from lib
                 lib_n_output_features = lib.n_output_features_
@@ -307,7 +313,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         """
         feature_names = list()
         for i, lib in enumerate(self.libraries_full_):
-            if not i in self.exclude_libs_:
+            if i not in self.exclude_libs_:
                 if i < self.inputs_per_library_.shape[0]:
                     if input_features is None:
                         input_features_i = [

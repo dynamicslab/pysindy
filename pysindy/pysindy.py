@@ -21,6 +21,7 @@ from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
 from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
+from .optimizers import EnsembleOptimizer
 from .optimizers import SINDyOptimizer
 from .optimizers import STLSQ
 from .utils import ax_time_to_ax_sample
@@ -299,9 +300,10 @@ class SINDy(BaseEstimator):
         """
 
         if ensemble or library_ensemble:
+            # DeprecationWarning are ignored by default...
             warnings.warn(
-                "Ensembling arguments are deprecated.  Use the EnsembleOptimizer "
-                "class instead",
+                "Ensembling arguments are deprecated."
+                "Use the EnsembleOptimizer class instead.",
                 DeprecationWarning,
             )
         if t is None:
@@ -395,15 +397,43 @@ class SINDy(BaseEstimator):
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
 
-        optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
+        # backwards compatibility for ensemble options
+        if ensemble and not library_ensemble:
+            n_sample_tot = np.sum([xi.n_sample for xi in x])
+            optimizer = SINDyOptimizer(
+                EnsembleOptimizer(
+                    self.optimizer, bagging=True, n_subset=int(0.6 * n_sample_tot)
+                ),
+                unbias=unbias,
+            )
+            self.coef_list = optimizer.optimizer.coef_list
+        elif not ensemble and library_ensemble:
+            optimizer = SINDyOptimizer(
+                EnsembleOptimizer(self.optimizer, library_ensemble=True), unbias=unbias
+            )
+            self.coef_list = optimizer.optimizer.coef_list
+        elif ensemble and library_ensemble:
+            n_sample_tot = np.sum([xi["n_sample"] for xi in x])
+            optimizer = SINDyOptimizer(
+                EnsembleOptimizer(
+                    self.optimizer,
+                    bagging=True,
+                    n_subset=int(0.6 * n_sample_tot),
+                    library_ensemble=True,
+                ),
+                unbias=unbias,
+            )
+            self.coef_list = optimizer.optimizer.coef_list
+        else:
+            optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
+        scatter = SampleConcatter()
         steps = [
             ("features", self.feature_library),
-            ("shaping", SampleConcatter()),
+            ("shaping", scatter),
             ("model", optimizer),
         ]
         x_dot = concat_sample_axis(x_dot)
         self.model = Pipeline(steps)
-
         action = "ignore" if quiet else "default"
         with warnings.catch_warnings():
             warnings.filterwarnings(action, category=ConvergenceWarning)

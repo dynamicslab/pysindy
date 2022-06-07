@@ -1,6 +1,7 @@
 from itertools import chain
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
+from typing import Sequence
 
 import numpy as np
 from scipy import sparse
@@ -165,7 +166,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             feature_names.append(name)
         return feature_names
 
-    def fit(self, x, y=None):
+    def fit(self, x_full, y=None):
         """
         Compute number of output features.
 
@@ -178,7 +179,13 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_features = x[0].n_coord
+        if not isinstance(x_full, Sequence):
+            x_full = [x_full]
+        x_full = [
+            self.correct_shape(AxesArray(x, self.comprehend_axes(x))) for x in x_full
+        ]
+
+        n_features = x_full[0].n_coord
         combinations = self._combinations(
             n_features,
             self.degree,

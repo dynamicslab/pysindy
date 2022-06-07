@@ -157,6 +157,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self.ind_ = np.ones(coef_shape, dtype=bool)
 
         self.Theta_ = x
+
         x_normed = np.copy(x)
         if self.normalize_columns:
             reg = 1 / np.linalg.norm(x, 2, axis=0)
@@ -173,6 +174,9 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
             self.coef_ = self.initial_guess
 
         self.history_ = [self.coef_]
+
+        x_normed = np.asarray(x_normed)
+        # x_normed=AxesArray(np.asarray(x_normed), {"ax_sample":0,"ax_coord":1})
 
         self._reduce(x_normed, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
@@ -277,6 +281,13 @@ class EnsembleOptimizer(BaseOptimizer):
         replace: bool = True,
         ensemble_aggregator: Callable = None,
     ):
+        super(EnsembleOptimizer, self).__init__(
+            max_iter=opt.max_iter,
+            normalize_columns=opt.normalize_columns,
+            fit_intercept=opt.fit_intercept,
+            initial_guess=opt.initial_guess,
+            copy_X=opt.copy_X,
+        )
         if not bagging and not library_ensemble:
             raise ValueError(
                 "If not ensembling data or library terms, use another optimizer"
@@ -297,7 +308,8 @@ class EnsembleOptimizer(BaseOptimizer):
         self.n_candidates_to_drop = n_candidates_to_drop
         self.coef_list = []
 
-    def fit(self, x: AxesArray, y: np.ndarray) -> None:
+    def _reduce(self, x: AxesArray, y: np.ndarray) -> None:
+        x = AxesArray(np.asarray(x), {"ax_sample": 0, "ax_coord": 1})
         n_samples = x.shape[x.ax_sample]
         if self.bagging and self.n_subset > n_samples and not self.replace:
             warnings.warn(
@@ -334,10 +346,10 @@ class EnsembleOptimizer(BaseOptimizer):
                         replace=False,
                     )
                 )
-                x_ensemble = x.take(keep_inds, ax=x.ax_coord)
+                x_ensemble = x.take(keep_inds, axis=x.ax_coord)
             self.opt.fit(x_ensemble, y_ensemble)
-            new_coefs = np.zeros(n_features)
-            new_coefs[keep_inds] = self.opt.coef_
+            new_coefs = np.zeros((y.shape[1], n_features))
+            new_coefs[:, keep_inds] = self.opt.coef_
             self.coef_list.append(new_coefs)
         # Get average coefficients
         if self.ensemble_aggregator is None:
@@ -355,6 +367,7 @@ def _drop_random_samples(
     n_samples = x.shape[x.ax_sample]
     rand_inds = choice(range(n_samples), n_subset, replace=replace)
     x_new = np.take(x, rand_inds, axis=x.ax_sample)
-    x_dot_new = np.take(x_dot, rand_inds, axis=x_dot.ax_sample)
+    x_dot_new = np.take(x_dot, rand_inds, axis=x.ax_sample)
+    # x_dot_new = np.take(x_dot, rand_inds, axis=x_dot.ax_sample)
 
     return x_new, x_dot_new

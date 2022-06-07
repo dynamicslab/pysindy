@@ -51,6 +51,8 @@ class SINDyOptimizer(BaseEstimator):
         self.unbias = unbias
 
     def fit(self, x_lst, y_lst):
+        # here we have assumed the zero axis is trajectories and each element is 2d!
+        # the SampleConcatter should have achieved this.
         x = np.vstack(x_lst)
         y = np.vstack(y_lst)
 

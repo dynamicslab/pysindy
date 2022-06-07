@@ -325,6 +325,7 @@ class EnsembleOptimizer(BaseOptimizer):
             else:
                 x_ensemble, y_ensemble = x, y
 
+            keep_inds = np.arange(n_features)
             if self.library_ensemble:
                 keep_inds = np.sort(
                     np.random.choice(
@@ -335,7 +336,9 @@ class EnsembleOptimizer(BaseOptimizer):
                 )
                 x_ensemble = x.take(keep_inds, ax=x.ax_coord)
             self.opt.fit(x_ensemble, y_ensemble)
-            self.coef_list.append(self.opt.coef_)
+            new_coefs = np.zeros(n_features)
+            new_coefs[keep_inds] = self.opt.coef_
+            self.coef_list.append(new_coefs)
         # Get average coefficients
         if self.ensemble_aggregator is None:
             self.coef_ = np.median(self.coef_list, axis=0)

@@ -506,7 +506,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
         for k in range(self.K):
             weights2 = []
             for j in range(self.num_derivatives):
-                deriv = np.concatenate([self.multiindices[j], [0]])
+                if not self.implicit_terms:
+                    deriv = np.concatenate([self.multiindices[j], [0]])
+                else:
+                    deriv = self.multiindices[j]
 
                 ret = np.ones(shapes_k[k])
                 for i in range(self.grid_ndim):

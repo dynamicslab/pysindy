@@ -398,7 +398,7 @@ class SINDy(BaseEstimator):
         optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
         steps = [
             ("features", self.feature_library),
-            ("shaping", SampleConcatter),
+            ("shaping", SampleConcatter()),
             ("model", optimizer),
         ]
         x_dot = concat_sample_axis(x_dot)
@@ -457,6 +457,8 @@ class SINDy(BaseEstimator):
         if not multiple_trajectories:
             x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
         x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
+        x = [ax_time_to_ax_sample(xi) for xi in x]
+
         check_is_fitted(self, "model")
         if self.n_control_features_ > 0 and u is None:
             raise TypeError("Model was fit using control variables, so u is required")
@@ -471,7 +473,8 @@ class SINDy(BaseEstimator):
         if u is not None:
             u = validate_control_variables(x, u)
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
-        result = [self.model.predict(xi) for xi in x]
+        # result = [self.model.predict(xi) for xi in x]
+        result = self.model.predict(x)
         result = [
             self.feature_library.reshape_samples_to_spatial_grid(pred)
             for pred in result
@@ -606,6 +609,7 @@ class SINDy(BaseEstimator):
         x, x_dot, u = _comprehend_and_validate_inputs(
             x, t, x_dot, u, self.feature_library
         )
+
         x_dot_predict = self.predict(x, u, multiple_trajectories=multiple_trajectories)
 
         if self.discrete_time and x_dot is None:
@@ -624,8 +628,8 @@ class SINDy(BaseEstimator):
                 *[drop_nan_samples(xi, xdoti) for xi, xdoti in zip(x, x_dot)]
             )
 
-        x_dot = concat_sample_axis(x_dot)
-        x_dot_predict = concat_sample_axis(x_dot_predict)
+        x_dot = np.vstack(concat_sample_axis(x_dot))
+        x_dot_predict = np.vstack(concat_sample_axis(x_dot_predict))
         if x_dot.ndim == 1:
             x_dot = x_dot.reshape(-1, 1)
         return metric(x_dot, x_dot_predict, **metric_kws)

@@ -181,7 +181,11 @@ def ax_time_to_ax_sample(x: AxesArray) -> AxesArray:
 
 
 class SampleConcatter(TransformerMixin):
-    pass
+    def __init__(self):
+        pass
+
+    def fit(self, x_list, y_list):
+        return self
 
     def transform(self, x_list):
         return concat_sample_axis(x_list)

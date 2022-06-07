@@ -237,6 +237,7 @@ class WeakPDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         self.num_derivatives = num_derivatives
         self.multiindices = multiindices
         self.spatiotemporal_grid = spatiotemporal_grid
+        self.spatial_grid = spatiotemporal_grid[..., 0, :-1]
 
         # Weak form checks and setup
         self._weak_form_setup()

@@ -285,12 +285,12 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                     xp = sparse.hstack(columns, dtype=x.dtype).tocsc()
                 else:
                     xp = np.empty(
-                        (n_samples, self.n_output_features_),
+                        (*x.shape[:-1], self.n_output_features_),
                         dtype=x.dtype,
                         order=self.order,
                     )
                     for i, comb in enumerate(combinations):
-                        xp[:, i] = x[:, comb].prod(1)
+                        xp[..., i] = x[..., comb].prod(-1)
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
 
         return xp_full

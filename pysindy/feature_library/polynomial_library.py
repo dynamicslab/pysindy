@@ -179,11 +179,6 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         -------
         self : instance
         """
-        if not isinstance(x_full, Sequence):
-            x_full = [x_full]
-        x_full = [
-            self.correct_shape(AxesArray(x, self.comprehend_axes(x))) for x in x_full
-        ]
 
         n_features = x_full[0].n_coord
         combinations = self._combinations(
@@ -289,6 +284,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                     )
                     for i, comb in enumerate(combinations):
                         xp[:, i] = x[:, comb].prod(1)
+                        
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
 
         return xp_full

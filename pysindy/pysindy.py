@@ -426,10 +426,9 @@ class SINDy(BaseEstimator):
             self.coef_list = optimizer.optimizer.coef_list
         else:
             optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
-        scatter = SampleConcatter()
         steps = [
             ("features", self.feature_library),
-            ("shaping", scatter),
+            ("shaping", SampleConcatter()),
             ("model", optimizer),
         ]
         x_dot = concat_sample_axis(x_dot)

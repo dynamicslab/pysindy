@@ -3,6 +3,7 @@ from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import AxesArray
 from .base import BaseFeatureLibrary
 
 
@@ -106,7 +107,7 @@ class FourierLibrary(BaseFeatureLibrary):
                     feature_names.append("cos(" + str(i + 1) + " " + feature + ")")
         return feature_names
 
-    def fit(self, x, y=None):
+    def fit(self, x_full, y=None):
         """
         Compute number of output features.
 
@@ -119,7 +120,7 @@ class FourierLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_samples, n_features = check_array(x).shape
+        n_features = x_full[0].n_coord
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
         else:
@@ -130,7 +131,7 @@ class FourierLibrary(BaseFeatureLibrary):
             self.n_output_features_ = n_features * self.n_frequencies
         return self
 
-    def transform(self, x):
+    def transform(self, x_full):
         """Transform data to Fourier features
 
         Parameters
@@ -146,27 +147,29 @@ class FourierLibrary(BaseFeatureLibrary):
         """
         check_is_fitted(self)
 
-        x = check_array(x)
+        xp_full = []
+        for x in x_full:
+            n_samples = x.n_sample
+            n_features = x.n_coord
 
-        n_samples, n_features = x.shape
+            if float(__version__[:3]) >= 1.0:
+                n_input_features = self.n_features_in_
+            else:
+                n_input_features = self.n_input_features_
+            if n_features != n_input_features:
+                raise ValueError("x shape does not match training shape")
 
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
-        if n_features != n_input_features:
-            raise ValueError("x shape does not match training shape")
+            xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
+            idx = 0
+            for i in range(self.n_frequencies):
+                for j in range(n_input_features):
+                    if self.include_sin:
+                        xp[:, idx] = np.sin((i + 1) * x[:, j])
+                        idx += 1
+                    if self.include_cos:
+                        xp[:, idx] = np.cos((i + 1) * x[:, j])
+                        idx += 1
 
-        xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
-        idx = 0
-        for i in range(self.n_frequencies):
-            for j in range(n_input_features):
-                if self.include_sin:
-                    xp[:, idx] = np.sin((i + 1) * x[:, j])
-                    idx += 1
-                if self.include_cos:
-                    xp[:, idx] = np.cos((i + 1) * x[:, j])
-                    idx += 1
+            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
 
-        # If library bagging, return xp missing the terms at ensemble_indices
-        return self._ensemble(xp)
+        return xp_full

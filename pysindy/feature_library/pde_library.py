@@ -7,13 +7,11 @@ from sklearn import __version__
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-from ..utils import AxesArray
-from ..utils import PDEShapedInputsMixin
 from .base import BaseFeatureLibrary
 from pysindy.differentiation import FiniteDifference
 
 
-class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
+class PDELibrary(BaseFeatureLibrary):
     """Generate a PDE library with custom functions.
 
     Parameters
@@ -28,6 +26,9 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
 
     spatial_grid : np.ndarray, optional (default None)
         The spatial grid for computing derivatives
+
+    temporal_grid : np.ndarray, optional (default None)
+        The temporal grid if using SINDy-PI with PDEs.
 
     function_names : list of functions, optional (default None)
         List of functions used to generate feature names for each library
@@ -90,6 +91,10 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         is the product of the number of library functions and the number of
         input features.
 
+    implicit_terms : boolean
+        Flag to indicate if SINDy-PI (temporal derivatives) is being used
+        for the right-hand side of the SINDy fit.
+
     Examples
     --------
     >>> import numpy as np
@@ -101,6 +106,7 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         library_functions=[],
         derivative_order=0,
         spatial_grid=None,
+        temporal_grid=None,
         interaction_only=True,
         function_names=None,
         include_bias=False,
@@ -109,6 +115,7 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         library_ensemble=False,
         ensemble_indices=[0],
         periodic=False,
+        implicit_terms=False,
     ):
         super(PDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -117,6 +124,7 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         self.derivative_order = derivative_order
         self.function_names = function_names
         self.interaction_only = interaction_only
+        self.implicit_terms = implicit_terms
         self.include_bias = include_bias
         self.include_interaction = include_interaction
         self.is_uniform = is_uniform
@@ -132,48 +140,66 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
             raise ValueError("The derivative order must be >0")
 
         if (spatial_grid is not None and derivative_order == 0) or (
-            spatial_grid is None and derivative_order != 0
+            spatial_grid is None and derivative_order != 0 and temporal_grid is None
         ):
             raise ValueError(
                 "Spatial grid and the derivative order must be "
-                "defined at the same time"
+                "defined at the same time if temporal_grid is not being used."
             )
 
-        if spatial_grid is None:
-            spatial_grid = AxesArray(np.array([]), {})
+        if temporal_grid is None and implicit_terms:
+            raise ValueError(
+                "temporal_grid parameter must be specified if implicit_terms "
+                " = True (i.e. if you are using SINDy-PI for PDEs)."
+            )
+        elif not implicit_terms and temporal_grid is not None:
+            raise ValueError(
+                "temporal_grid parameter is specified only if implicit_terms "
+                " = True (i.e. if you are using SINDy-PI for PDEs)."
+            )
+        if temporal_grid is not None and temporal_grid.ndim != 1:
+            raise ValueError("temporal_grid parameter must be 1D numpy array.")
+        if temporal_grid is not None or spatial_grid is not None:
+            if spatial_grid is None:
+                spatiotemporal_grid = temporal_grid
+                spatial_grid = np.array([])
+            elif temporal_grid is None:
+                spatiotemporal_grid = spatial_grid
+            else:
+                spatiotemporal_grid = np.hstack((spatial_grid, temporal_grid))
+        else:
+            spatiotemporal_grid = np.array([])
+            spatial_grid = np.array([])
+
+        if np.array(spatial_grid).ndim == 1:
+            spatial_grid = np.reshape(spatial_grid, (len(spatial_grid), 1))
+        self.spatial_grid = spatial_grid
 
         # list of derivatives
         indices = ()
-        if np.array(spatial_grid).ndim == 1:
-            spatial_grid = np.reshape(spatial_grid, (len(spatial_grid), 1))
-        axes = {
-            "ax_coord": len(spatial_grid.shape) - 1,
-            "ax_spatial": list(range(len(spatial_grid.shape) - 1)),
-        }
-        spatial_grid = AxesArray(spatial_grid, axes)
-        dims = spatial_grid.shape[:-1]
-        self.grid_dims = dims
-        self.grid_ndim = len(dims)
+        if np.array(spatiotemporal_grid).ndim == 1:
+            spatiotemporal_grid = np.reshape(
+                spatiotemporal_grid, (len(spatiotemporal_grid), 1)
+            )
+        self.grid_dims = spatiotemporal_grid.shape[:-1]
+        self.spatial_grid_dims = self.spatial_grid.shape[:-1]
+        self.grid_ndim = len(spatiotemporal_grid.shape[:-1])
+        self.spatial_grid_ndim = len(self.spatial_grid_dims)
 
-        indices = len(spatial_grid.ax_spatial) * (range(derivative_order + 1),)
+        for i in range(self.grid_ndim):
+            indices = indices + (range(derivative_order + 1),)
 
-        multiindices = [
-            ind
-            for ind in iproduct(*indices)
-            if (np.sum(ind) <= derivative_order and np.sum(ind) > 0)
-        ]
+        multiindices = []
+        for ind in iproduct(*indices):
+            current = np.array(ind)
+            if np.sum(ind) > 0 and np.sum(ind) <= derivative_order:
+                multiindices.append(current)
         multiindices = np.array(multiindices)
         num_derivatives = len(multiindices)
 
         self.num_derivatives = num_derivatives
         self.multiindices = multiindices
-        self.spatial_grid = spatial_grid
-
-    def validate_input(self, x, t):
-        return x
-
-    def calc_trajectory(self, diff_method, x, t):
-        return FiniteDifference(d=1, axis=x.ax_time)._differentiate(x, t=t)
+        self.spatiotemporal_grid = spatiotemporal_grid
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
@@ -226,9 +252,13 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
 
         def derivative_string(multiindex):
             ret = ""
-            for axis in range(len(self.spatial_grid.shape[:-1])):
+            for axis in range(self.grid_ndim):
+                if (axis == self.grid_ndim - 1) and self.implicit_terms:
+                    str_deriv = "t"
+                else:
+                    str_deriv = str(axis + 1)
                 for i in range(multiindex[axis]):
-                    ret = ret + str(axis + 1)
+                    ret = ret + str_deriv
             return ret
 
         # Include derivative terms
@@ -273,6 +303,7 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
         else:
             self.n_input_features_ = n_features
 
+        n_output_features = 0
         # Count the number of non-derivative terms
         n_output_features = 0
         for f in self.functions:
@@ -327,8 +358,8 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
             if n_features != self.n_input_features_:
                 raise ValueError("x shape does not match training shape")
 
-        if np.product(self.grid_dims) > 0:
-            num_time = n_samples // np.product(self.grid_dims)
+        if np.product(self.spatial_grid_dims) > 0:
+            num_time = n_samples // np.product(self.spatial_grid_dims)
         else:
             num_time = n_samples
 
@@ -339,7 +370,11 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
             x_full = np.reshape(
                 x,
                 np.concatenate(
-                    [[self.num_trajectories], self.grid_dims, [num_time, n_features]]
+                    [
+                        [self.num_trajectories],
+                        self.spatial_grid_dims,
+                        [num_time, n_features],
+                    ]
                 ),
             )
         else:
@@ -358,22 +393,28 @@ class PDELibrary(PDEShapedInputsMixin, BaseFeatureLibrary):
                 (n_samples, n_features * self.num_derivatives), dtype=x.dtype
             )
             library_idx = 0
-
             for multiindex in self.multiindices:
-                derivs = np.reshape(
-                    x, np.concatenate([self.grid_dims, [num_time], [n_features]])
-                )
+                if np.product(self.spatial_grid_dims) > 0:
+                    derivs = np.reshape(
+                        x,
+                        np.concatenate(
+                            [self.spatial_grid_dims, [num_time], [n_features]]
+                        ),
+                    )
+                else:
+                    derivs = np.reshape(x, np.concatenate([[num_time], [n_features]]))
                 for axis in range(self.grid_ndim):
                     if multiindex[axis] > 0:
-                        s = [0 for dim in self.spatial_grid.shape]
+                        s = [0 for dim in self.spatiotemporal_grid.shape]
                         s[axis] = slice(self.grid_dims[axis])
                         s[-1] = axis
+
                         derivs = FiniteDifference(
                             d=multiindex[axis],
                             axis=axis,
                             is_uniform=self.is_uniform,
                             periodic=self.periodic,
-                        )._differentiate(derivs, self.spatial_grid[tuple(s)])
+                        )._differentiate(derivs, self.spatiotemporal_grid[tuple(s)])
                 library_derivatives[
                     :, library_idx : library_idx + n_features
                 ] = np.reshape(derivs, (n_samples, n_features))

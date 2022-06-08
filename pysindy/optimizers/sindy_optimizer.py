@@ -50,12 +50,7 @@ class SINDyOptimizer(BaseEstimator):
         self.optimizer = optimizer
         self.unbias = unbias
 
-    def fit(self, x_lst, y_lst):
-        # here we have assumed the zero axis is trajectories and each element is 2d!
-        # the SampleConcatter should have achieved this.
-        x = np.vstack(x_lst)
-        y = np.vstack(y_lst)
-
+    def fit(self, x, y):
         if len(y.shape) > 1 and y.shape[1] > 1:
             if not supports_multiple_targets(self.optimizer):
                 self.optimizer = _MultiTargetLinearRegressor(self.optimizer)
@@ -89,8 +84,11 @@ class SINDyOptimizer(BaseEstimator):
             self.optimizer.coef_ = coef
 
     def predict(self, x):
-        prediction = [self.optimizer.predict(xi) for xi in x]
-        return prediction
+        prediction = self.optimizer.predict(x)
+        if prediction.ndim == 1:
+            return prediction[:, np.newaxis]
+        else:
+            return prediction
 
     @property
     def coef_(self):

@@ -196,7 +196,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_features = x_full[0].n_coord
+        n_features = x_full[0].shape[x_full[0].ax_coord]
 
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
@@ -218,9 +218,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 )
 
         # First fit all libraries separately below, with subset of the inputs
-        #Slicing an AxesArray does not update the attributes n_coord, n_time, or n_sample
         fitted_libs = [
-            lib.fit([AxesArray(x[:, np.unique(self.inputs_per_library_[i, :])],self.comprehend_axes(x[:, np.unique(self.inputs_per_library_[i, :])])) for x in x_full], y)
+            lib.fit([x[:, np.unique(self.inputs_per_library_[i, :])] for x in x_full], y)
             for i, lib in enumerate(self.libraries_)
         ]
 
@@ -281,8 +280,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            n_samples = x.n_sample
-            n_features = x.n_coord
+            n_samples = x.shape[x.ax_sample]
+            n_features = x.shape[x.ax_coord]
 
             if isinstance(self.libraries_[0], WeakPDELibrary):
                 n_samples = self.libraries_[0].K * self.libraries_[0].num_trajectories
@@ -299,7 +298,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
             current_feat = 0
             for i, lib in enumerate(self.libraries_full_):
-                print(i, self.inputs_per_library_[i, :])
                 # retrieve num output features from lib
                 lib_n_output_features = lib.n_output_features_
 
@@ -308,7 +306,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
                 if i < self.inputs_per_library_.shape[0]:
                     xp[:, start_feature_index:end_feature_index] = lib.transform(
-                        [AxesArray(x[:, np.unique(self.inputs_per_library_[i, :])], self.comprehend_axes(x[:, np.unique(self.inputs_per_library_[i, :])]))]
+                        [x[:, np.unique(self.inputs_per_library_[i, :])]]
                     )[0]
                 else:
                     xp[:, start_feature_index:end_feature_index] = lib.transform([x])[0]

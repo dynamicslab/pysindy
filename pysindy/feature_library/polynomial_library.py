@@ -181,7 +181,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         self : instance
         """
 
-        n_features = x_full[0].n_coord
+        n_features = x_full[0].shape[x_full[0].ax_coord]
         combinations = self._combinations(
             n_features,
             self.degree,
@@ -227,8 +227,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            n_samples = x.n_sample
-            n_features = x.n_coord
+            n_samples = x.shape[x.ax_sample]
+            n_features = x.shape[x.ax_coord]
             if float(__version__[:3]) >= 1.0:
                 if n_features != self.n_features_in_:
                     raise ValueError("x shape does not match training shape")

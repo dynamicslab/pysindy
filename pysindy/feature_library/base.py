@@ -245,7 +245,7 @@ class ConcatLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_features = x_full[0].n_coord
+        n_features = x_full[0].shape[x_full[0].ax_coord]
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
         else:
@@ -441,7 +441,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_features = x_full[0].n_coord
+        n_features = x_full[0].shape[x_full[0].ax_coord]
 
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
@@ -489,15 +489,15 @@ class TensoredLibrary(BaseFeatureLibrary):
         """
         check_is_fitted(self)
 
-        n_samples=x_full[0].n_sample
-        for lib in self.libraries_:
-            check_is_fitted(lib)
-            if hasattr(lib, "H_xt"):
-                if lib.spatiotemporal_grid is not None:  # check if weak form
-                    n_samples = self.n_samples
-
         xp_full = []
         for x in x_full:
+            n_samples = x.shape[x[0].ax_sample]
+            for lib in self.libraries_:
+                check_is_fitted(lib)
+                if hasattr(lib, "H_xt"):
+                    if lib.spatiotemporal_grid is not None:  # check if weak form
+                        n_samples = self.n_samples
+
             # preallocate matrix
             xp = np.zeros((n_samples, self.n_output_features_))
 

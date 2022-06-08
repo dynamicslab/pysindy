@@ -399,7 +399,7 @@ class SINDy(BaseEstimator):
 
         # backwards compatibility for ensemble options
         if ensemble and not library_ensemble:
-            n_sample_tot = np.sum([xi.n_sample for xi in x])
+            n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
             optimizer = SINDyOptimizer(
                 EnsembleOptimizer(
                     self.optimizer, bagging=True, n_subset=int(0.6 * n_sample_tot)

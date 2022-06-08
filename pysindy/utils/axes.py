@@ -209,4 +209,4 @@ def concat_sample_axis(x_list: List[AxesArray]):
             x.reshape((*dims_spatial, n_samples, x.shape[x.ax_coord])), new_axes
         )
         new_arrs.append(arr)
-    return new_arrs
+    return np.concatenate(new_arrs, axis=new_arrs[0].ax_sample)

@@ -126,6 +126,6 @@ class IdentityLibrary(BaseFeatureLibrary):
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp_full = xp_full + [x.copy()]
 
         return xp_full

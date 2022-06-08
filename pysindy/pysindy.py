@@ -19,10 +19,10 @@ from .differentiation import FiniteDifference
 from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
-from .feature_library import SINDyPILibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import EnsembleOptimizer
 from .optimizers import SINDyOptimizer
+from .optimizers import SINDyPI
 from .optimizers import STLSQ
 from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
@@ -552,7 +552,7 @@ class SINDy(BaseEstimator):
             Precision to be used when printing out model coefficients.
         """
         eqns = self.equations(precision)
-        if isinstance(self.feature_library, SINDyPILibrary):
+        if isinstance(self.optimizer, SINDyPI):
             feature_names = self.get_feature_names()
         else:
             feature_names = self.feature_names
@@ -561,7 +561,7 @@ class SINDy(BaseEstimator):
                 names = "(" + feature_names[i] + ")"
                 print(names + "[k+1] = " + eqn)
             elif lhs is None:
-                if not isinstance(self.feature_library, SINDyPILibrary):
+                if not isinstance(self.optimizer, SINDyPI):
                     names = "(" + feature_names[i] + ")"
                     print(names + "' = " + eqn)
                 else:

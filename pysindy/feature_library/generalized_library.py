@@ -9,6 +9,8 @@ from .base import BaseFeatureLibrary
 from .pde_library import PDELibrary
 from .weak_pde_library import WeakPDELibrary
 
+from ..utils import AxesArray
+
 
 class GeneralizedLibrary(BaseFeatureLibrary):
     """Put multiple libraries into one library. All settings
@@ -181,7 +183,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self.inputs_per_library_ = inputs_per_library
         self.libraries_full_ = self.libraries_
 
-    def fit(self, x, y=None):
+    def fit(self, x_full, y=None):
         """
         Compute number of output features.
 
@@ -194,7 +196,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        _, n_features = check_array(x).shape
+        n_features = x_full[0].n_coord
 
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
@@ -216,8 +218,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 )
 
         # First fit all libraries separately below, with subset of the inputs
+        #Slicing an AxesArray does not update the attributes n_coord, n_time, or n_sample
         fitted_libs = [
-            lib.fit(x[:, np.unique(self.inputs_per_library_[i, :])], y)
+            lib.fit([AxesArray(x[:, np.unique(self.inputs_per_library_[i, :])],self.comprehend_axes(x[:, np.unique(self.inputs_per_library_[i, :])])) for x in x_full], y)
             for i, lib in enumerate(self.libraries_)
         ]
 
@@ -231,7 +234,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 library_full._set_inputs_per_library(
                     self.inputs_per_library_[lib_inds, :]
                 )
-                library_full.fit(x, y)
+                library_full.fit(x_full, y)
                 fitted_libs.append(library_full)
 
         # Calculate the sum of output features
@@ -259,7 +262,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             return all(has_inst)
         return any(has_inst)
 
-    def transform(self, x):
+    def transform(self, x_full):
         """Transform data with libs provided below.
 
         Parameters
@@ -274,44 +277,47 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             generated from applying the custom functions to the inputs.
 
         """
-        for lib in self.libraries_full_:
-            check_is_fitted(lib)
+        check_is_fitted(self)
 
-        n_samples, n_features = x.shape
+        xp_full = []
+        for x in x_full:
+            n_samples = x.n_sample
+            n_features = x.n_coord
 
-        if isinstance(self.libraries_[0], WeakPDELibrary):
-            n_samples = self.libraries_[0].K * self.libraries_[0].num_trajectories
+            if isinstance(self.libraries_[0], WeakPDELibrary):
+                n_samples = self.libraries_[0].K * self.libraries_[0].num_trajectories
 
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
-        if n_features != n_input_features:
-            raise ValueError("x shape does not match training shape")
-
-        # preallocate matrix
-        xp = np.zeros((n_samples, self.n_output_features_))
-
-        current_feat = 0
-        for i, lib in enumerate(self.libraries_full_):
-
-            # retrieve num output features from lib
-            lib_n_output_features = lib.n_output_features_
-
-            start_feature_index = current_feat
-            end_feature_index = start_feature_index + lib_n_output_features
-
-            if i < self.inputs_per_library_.shape[0]:
-                xp[:, start_feature_index:end_feature_index] = lib.transform(
-                    x[:, np.unique(self.inputs_per_library_[i, :])]
-                )
+            if float(__version__[:3]) >= 1.0:
+                n_input_features = self.n_features_in_
             else:
-                xp[:, start_feature_index:end_feature_index] = lib.transform(x)
+                n_input_features = self.n_input_features_
+            if n_features != n_input_features:
+                raise ValueError("x shape does not match training shape")
 
-            current_feat += lib_n_output_features
+            # preallocate matrix
+            xp = np.zeros((n_samples, self.n_output_features_))
 
-        # If library bagging, return xp missing the terms at ensemble_indices
-        return self._ensemble(xp)
+            current_feat = 0
+            for i, lib in enumerate(self.libraries_full_):
+                print(i, self.inputs_per_library_[i, :])
+                # retrieve num output features from lib
+                lib_n_output_features = lib.n_output_features_
+
+                start_feature_index = current_feat
+                end_feature_index = start_feature_index + lib_n_output_features
+
+                if i < self.inputs_per_library_.shape[0]:
+                    xp[:, start_feature_index:end_feature_index] = lib.transform(
+                        [AxesArray(x[:, np.unique(self.inputs_per_library_[i, :])], self.comprehend_axes(x[:, np.unique(self.inputs_per_library_[i, :])]))]
+                    )[0]
+                else:
+                    xp[:, start_feature_index:end_feature_index] = lib.transform([x])[0]
+
+                current_feat += lib_n_output_features
+
+            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+
+        return xp_full
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.

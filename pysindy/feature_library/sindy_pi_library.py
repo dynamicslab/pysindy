@@ -1,3 +1,4 @@
+import warnings
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
@@ -14,7 +15,11 @@ from pysindy.differentiation import FiniteDifference
 
 
 class SINDyPILibrary(BaseFeatureLibrary):
-    """Generate a library with custom functions. The Library takes custom
+    """
+    WARNING: This library is deprecated in PySINDy versions > 1.7. Please
+    use the PDE or WeakPDE libraries instead.
+
+    Generate a library with custom functions. The Library takes custom
     libraries for X and Xdot respectively, and then tensor-products them
     together. For a 3D system, a library of constant and linear terms in x_dot,
     i.e. [1, x_dot0, ..., x_dot3], is good
@@ -151,6 +156,11 @@ class SINDyPILibrary(BaseFeatureLibrary):
         self.x_functions = library_functions
         self.x_dot_functions = x_dot_library_functions
         self.function_names = function_names
+
+        warnings.warn(
+            "This library is deprecated in PySINDy versions > 1.7. Please "
+            "use the PDE or WeakPDE libraries instead. "
+        )
         if library_functions is None and x_dot_library_functions is None:
             raise ValueError(
                 "At least one function library, either for x or x_dot, " "is required."

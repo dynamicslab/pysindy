@@ -286,7 +286,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                     )
                     for i, comb in enumerate(combinations):
                         xp[:, i] = x[:, comb].prod(1)
-                        
+
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
 
         return xp_full

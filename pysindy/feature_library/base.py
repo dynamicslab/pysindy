@@ -3,6 +3,8 @@ Base class for feature library classes.
 """
 import abc
 import warnings
+from functools import wraps
+from typing import Sequence
 
 import numpy as np
 from sklearn import __version__
@@ -560,3 +562,14 @@ class TensoredLibrary(BaseFeatureLibrary):
                     lib_i_feat_names, lib_j_feat_names
                 )
         return feature_names
+
+
+def x_sequence_or_item(foo):
+    @wraps(foo)
+    def func(self, x):
+        if isinstance(x, Sequence):
+            return foo(self, x)
+        else:
+            return foo(self, [x])[0]
+
+    return func

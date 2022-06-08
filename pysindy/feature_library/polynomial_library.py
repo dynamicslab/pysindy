@@ -12,6 +12,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
 
 
 class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
@@ -200,6 +201,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         self.n_output_features_ = sum(1 for _ in combinations)
         return self
 
+    @x_sequence_or_item
     def transform(self, x_full):
         """Transform data to polynomial features.
 

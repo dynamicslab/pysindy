@@ -5,7 +5,6 @@ from numpy import empty
 from numpy import ones
 from numpy import shape
 from sklearn import __version__
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray

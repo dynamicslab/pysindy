@@ -1,8 +1,6 @@
 from sklearn import __version__
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-from ..utils import AxesArray
 from .base import BaseFeatureLibrary
 
 
@@ -116,7 +114,6 @@ class IdentityLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            n_samples = x.shape[x.ax_sample]
             n_features = x.shape[x.ax_coord]
 
             if float(__version__[:3]) >= 1.0:

@@ -1,7 +1,6 @@
 from itertools import chain
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
-from typing import Sequence
 
 import numpy as np
 from scipy import sparse

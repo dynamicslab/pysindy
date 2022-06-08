@@ -2,14 +2,12 @@ from typing import Type
 
 import numpy as np
 from sklearn import __version__
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import AxesArray
 from .base import BaseFeatureLibrary
 from .pde_library import PDELibrary
 from .weak_pde_library import WeakPDELibrary
-
-from ..utils import AxesArray
 
 
 class GeneralizedLibrary(BaseFeatureLibrary):
@@ -219,7 +217,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         # First fit all libraries separately below, with subset of the inputs
         fitted_libs = [
-            lib.fit([x[:, np.unique(self.inputs_per_library_[i, :])] for x in x_full], y)
+            lib.fit(
+                [x[:, np.unique(self.inputs_per_library_[i, :])] for x in x_full], y
+            )
             for i, lib in enumerate(self.libraries_)
         ]
 

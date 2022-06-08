@@ -9,7 +9,6 @@ from typing import Sequence
 import numpy as np
 from sklearn import __version__
 from sklearn.base import TransformerMixin
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -457,7 +456,9 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         # First fit all libs provided below
         fitted_libs = [
-            lib.fit([x[:, np.unique(self.inputs_per_library_[i, :])] for x in x_full], y)
+            lib.fit(
+                [x[:, np.unique(self.inputs_per_library_[i, :])] for x in x_full], y
+            )
             for i, lib in enumerate(self.libraries_)
         ]
 
@@ -508,11 +509,15 @@ class TensoredLibrary(BaseFeatureLibrary):
                 if self.inputs_per_library_ is None:
                     xp_i = lib_i.transform([x])[0]
                 else:
-                    xp_i = lib_i.transform([x[:, np.unique(self.inputs_per_library_[i, :])]])[0]
+                    xp_i = lib_i.transform(
+                        [x[:, np.unique(self.inputs_per_library_[i, :])]]
+                    )[0]
                 for j in range(i + 1, len(self.libraries_)):
                     lib_j = self.libraries_[j]
                     lib_j_n_output_features = lib_j.n_output_features_
-                    xp_j = lib_j.transform([x[:, np.unique(self.inputs_per_library_[j, :])]])[0]
+                    xp_j = lib_j.transform(
+                        [x[:, np.unique(self.inputs_per_library_[j, :])]]
+                    )[0]
 
                     start_feature_index = current_feat
                     end_feature_index = (

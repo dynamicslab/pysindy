@@ -4,7 +4,6 @@ Unit tests for optimizers.
 import numpy as np
 import pytest
 from numpy.linalg import norm
-from scipy.integrate import solve_ivp
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
@@ -17,17 +16,19 @@ from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
-from pysindy.feature_library import SINDyPILibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import FROLS
 from pysindy.optimizers import SINDyOptimizer
-from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import SR3
 from pysindy.optimizers import SSR
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
-from pysindy.utils.odes import enzyme
+
+# from scipy.integrate import solve_ivp
+# from pysindy.feature_library import SINDyPILibrary
+# from pysindy.optimizers import SINDyPI
+# from pysindy.utils.odes import enzyme
 
 # For reproducibility
 np.random.seed(100)
@@ -228,95 +229,95 @@ def test_trapping_bad_parameters(params):
         TrappingSR3(**params)
 
 
-@pytest.mark.parametrize(
-    "params",
-    [
-        dict(tol=0),
-        dict(max_iter=-1),
-        dict(thresholder="l0"),
-        dict(threshold=-1),
-        dict(thresholds=1),
-        dict(thresholder="weighted_l1"),
-        dict(model_subset=0),
-        dict(model_subset=[50]),
-        dict(model_subset=[0, 0.5, 1]),
-    ],
-)
-def test_sindypi_bad_parameters(data_lorenz, params):
-    x, t = data_lorenz
-    with pytest.raises(ValueError):
-        opt = SINDyPI(**params)
-        model = SINDy(optimizer=opt)
-        model.fit(x, t=t)
+# @pytest.mark.parametrize(
+#     "params",
+#     [
+#         dict(tol=0),
+#         dict(max_iter=-1),
+#         dict(thresholder="l0"),
+#         dict(threshold=-1),
+#         dict(thresholds=1),
+#         dict(thresholder="weighted_l1"),
+#         dict(model_subset=0),
+#         dict(model_subset=[50]),
+#         dict(model_subset=[0, 0.5, 1]),
+#     ],
+# )
+# def test_sindypi_bad_parameters(data_lorenz, params):
+#     x, t = data_lorenz
+#     with pytest.raises(ValueError):
+#         opt = SINDyPI(**params)
+#         model = SINDy(optimizer=opt)
+#         model.fit(x, t=t)
 
 
-@pytest.mark.parametrize(
-    "params",
-    [
-        dict(tol=1e-3),
-        dict(thresholder="l1"),
-        dict(thresholder="weighted_l1", thresholds=np.zeros((10, 10))),
-        dict(thresholder="l2"),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((10, 10))),
-        dict(model_subset=[5]),
-    ],
-)
-def test_sindypi_fit(params):
-    dt = 0.01
-    T = 5
-    t = np.arange(0, T + dt, dt)
-    x0_train = [0.55]
-    x_train = solve_ivp(enzyme, (t[0], t[-1]), x0_train, t_eval=t).y.T
-
-    # initialize a quartic polynomial library for x
-    x_library_functions = [
-        lambda x: x,
-        lambda x, y: x * y,
-        lambda x: x**2,
-        lambda x, y, z: x * y * z,
-        lambda x, y: x * y**2,
-        lambda x: x**3,
-        lambda x, y, z, w: x * y * z * w,
-        lambda x, y, z: x * y * z**2,
-        lambda x, y: x * y**3,
-        lambda x: x**4,
-    ]
-    # initialize a linear polynomial library for x_dot
-    x_dot_library_functions = [lambda x: x]
-
-    # library function names includes both the x_library_functions
-    # and x_dot_library_functions names
-    library_function_names = [
-        lambda x: x,
-        lambda x, y: x + y,
-        lambda x: x + x,
-        lambda x, y, z: x + y + z,
-        lambda x, y: x + y + y,
-        lambda x: x + x + x,
-        lambda x, y, z, w: x + y + z + w,
-        lambda x, y, z: x + y + z + z,
-        lambda x, y: x + y + y + y,
-        lambda x: x + x + x + x,
-        lambda x: x,
-    ]
-
-    # Need to pass time base to the library so can build the x_dot library from x
-    sindy_library = SINDyPILibrary(
-        library_functions=x_library_functions,
-        x_dot_library_functions=x_dot_library_functions,
-        t=t[1:-1],
-        function_names=library_function_names,
-        include_bias=True,
-    )
-
-    opt = SINDyPI(**params)
-    model = SINDy(
-        optimizer=opt,
-        feature_library=sindy_library,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
-    )
-    model.fit(x_train, t=t)
-    assert np.shape(opt.coef_) == (10, 10)
+# @pytest.mark.parametrize(
+#     "params",
+#     [
+#         dict(tol=1e-3),
+#         dict(thresholder="l1"),
+#         dict(thresholder="weighted_l1", thresholds=np.zeros((10, 10))),
+#         dict(thresholder="l2"),
+#         dict(thresholder="weighted_l2", thresholds=np.zeros((10, 10))),
+#         dict(model_subset=[5]),
+#     ],
+# )
+# def test_sindypi_fit(params):
+#     dt = 0.01
+#     T = 5
+#     t = np.arange(0, T + dt, dt)
+#     x0_train = [0.55]
+#     x_train = solve_ivp(enzyme, (t[0], t[-1]), x0_train, t_eval=t).y.T
+#
+#     # initialize a quartic polynomial library for x
+#     x_library_functions = [
+#         lambda x: x,
+#         lambda x, y: x * y,
+#         lambda x: x**2,
+#         lambda x, y, z: x * y * z,
+#         lambda x, y: x * y**2,
+#         lambda x: x**3,
+#         lambda x, y, z, w: x * y * z * w,
+#         lambda x, y, z: x * y * z**2,
+#         lambda x, y: x * y**3,
+#         lambda x: x**4,
+#     ]
+#     # initialize a linear polynomial library for x_dot
+#     x_dot_library_functions = [lambda x: x]
+#
+#     # library function names includes both the x_library_functions
+#     # and x_dot_library_functions names
+#     library_function_names = [
+#         lambda x: x,
+#         lambda x, y: x + y,
+#         lambda x: x + x,
+#         lambda x, y, z: x + y + z,
+#         lambda x, y: x + y + y,
+#         lambda x: x + x + x,
+#         lambda x, y, z, w: x + y + z + w,
+#         lambda x, y, z: x + y + z + z,
+#         lambda x, y: x + y + y + y,
+#         lambda x: x + x + x + x,
+#         lambda x: x,
+#     ]
+#
+#     # Need to pass time base to the library so can build the x_dot library from x
+#     sindy_library = SINDyPILibrary(
+#         library_functions=x_library_functions,
+#         x_dot_library_functions=x_dot_library_functions,
+#         t=t[1:-1],
+#         function_names=library_function_names,
+#         include_bias=True,
+#     )
+#
+#     opt = SINDyPI(**params)
+#     model = SINDy(
+#         optimizer=opt,
+#         feature_library=sindy_library,
+#         differentiation_method=FiniteDifference(drop_endpoints=True),
+#     )
+#     model.fit(x_train, t=t)
+#     assert np.shape(opt.coef_) == (10, 10)
 
 
 @pytest.mark.parametrize(
@@ -1009,7 +1010,7 @@ def test_optimizers_verbose(data_lorenz, optimizer):
 @pytest.mark.parametrize(
     "optimizer",
     [
-        SINDyPI,
+        # SINDyPI,
         ConstrainedSR3,
         TrappingSR3,
     ],

@@ -9,6 +9,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
 
 
 class CustomLibrary(BaseFeatureLibrary):
@@ -151,6 +152,7 @@ class CustomLibrary(BaseFeatureLibrary):
                 )
         return feature_names
 
+    @x_sequence_or_item
     def fit(self, x_full, y=None):
         """Compute number of output features.
 
@@ -186,6 +188,7 @@ class CustomLibrary(BaseFeatureLibrary):
             )
         return self
 
+    @x_sequence_or_item
     def transform(self, x_full):
         """Transform data to custom features
 
@@ -204,7 +207,6 @@ class CustomLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            n_samples = x.shape[x.ax_sample]
             n_features = x.shape[x.ax_coord]
 
             if float(__version__[:3]) >= 1.0:
@@ -215,16 +217,16 @@ class CustomLibrary(BaseFeatureLibrary):
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 
-            xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
+            xp = empty((*x.shape[:-1], self.n_output_features_), dtype=x.dtype)
             library_idx = 0
             if self.include_bias:
-                xp[:, library_idx] = ones(n_samples)
+                xp[..., library_idx] = ones(x.shape[:-1])
                 library_idx += 1
             for f in self.functions:
                 for c in self._combinations(
                     n_input_features, f.__code__.co_argcount, self.interaction_only
                 ):
-                    xp[:, library_idx] = f(*[x[:, j] for j in c])
+                    xp[..., library_idx] = f(*[x[..., j] for j in c])
                     library_idx += 1
 
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]

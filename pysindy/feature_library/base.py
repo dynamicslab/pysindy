@@ -7,6 +7,7 @@ from functools import wraps
 from typing import Sequence
 
 import numpy as np
+from scipy import sparse
 from sklearn import __version__
 from sklearn.base import TransformerMixin
 from sklearn.utils.validation import check_is_fitted
@@ -14,6 +15,8 @@ from sklearn.utils.validation import check_is_fitted
 from ..utils import AxesArray
 from ..utils import DefaultShapedInputsMixin
 from ..utils import validate_no_reshape
+from ..utils import wrap_axes
+from ..utils.axes import ax_time_to_ax_sample
 
 
 class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
@@ -155,7 +158,7 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
                 )
             inds = range(self.n_output_features_)
             inds = np.delete(inds, self.ensemble_indices)
-            return xp[:, inds]
+            return xp[..., inds]
         else:
             return xp
 
@@ -172,6 +175,34 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
     def size(self):
         check_is_fitted(self)
         return self.n_output_features_
+
+
+def x_sequence_or_item(wrapped_func):
+    """Allow a feature library's method to handle list or item inputs."""
+
+    @wraps(wrapped_func)
+    def func(self, x, *args, **kwargs):
+        if isinstance(x, Sequence):
+            return wrapped_func(self, x, *args, **kwargs)
+        else:
+            if not sparse.issparse(x):
+                x = AxesArray(x, self.comprehend_axes(x))
+                x = ax_time_to_ax_sample(x)
+                reconstructor = np.array
+            else:  # sparse arrays
+                reconstructor = type(x)
+                axes = self.comprehend_axes(x)
+                wrap_axes(axes)(x)
+                # Can't use x = ax_time_to_ax_sample(x) b/c that creates
+                # an AxesArray
+                x.ax_sample = x.ax_time
+                x.ax_time = None
+            result = wrapped_func(self, [x], *args, **kwargs)
+            if isinstance(result, Sequence):  # e.g. transform() returns x
+                return reconstructor(result[0])
+            return result  # e.g. fit() returns self
+
+    return func
 
 
 class ConcatLibrary(BaseFeatureLibrary):
@@ -231,6 +262,7 @@ class ConcatLibrary(BaseFeatureLibrary):
         )
         self.libraries_ = libraries
 
+    @x_sequence_or_item
     def fit(self, x_full, y=None):
         """
         Compute number of output features.
@@ -261,6 +293,7 @@ class ConcatLibrary(BaseFeatureLibrary):
 
         return self
 
+    @x_sequence_or_item
     def transform(self, x_full):
         """Transform data with libs provided below.
 
@@ -281,10 +314,10 @@ class ConcatLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            n_samples = x.n_sample
-
             # preallocate matrix
-            xp = np.zeros((n_samples, self.n_output_features_))
+            shape = np.array(x.shape)
+            shape[-1] = self.n_output_features_
+            xp = np.zeros(shape)
 
             current_feat = 0
             for lib in self.libraries_:
@@ -295,7 +328,7 @@ class ConcatLibrary(BaseFeatureLibrary):
                 start_feature_index = current_feat
                 end_feature_index = start_feature_index + lib_n_output_features
 
-                xp[:, start_feature_index:end_feature_index] = lib.transform([x])[0]
+                xp[..., start_feature_index:end_feature_index] = lib.transform([x])[0]
 
                 current_feat += lib_n_output_features
 
@@ -400,9 +433,11 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         lib_full : All combinations of the numerical library terms.
         """
+        shape = np.array(lib_i.shape)
+        shape[-1] = lib_i.shape[-1] * lib_j.shape[-1]
         lib_full = np.reshape(
-            lib_i[:, :, np.newaxis] * lib_j[:, np.newaxis, :],
-            (lib_i.shape[0], lib_i.shape[-1] * lib_j.shape[-1]),
+            lib_i[..., :, np.newaxis] * lib_j[..., np.newaxis, :],
+            shape,
         )
 
         return lib_full
@@ -427,6 +462,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         """
         self.inputs_per_library_ = inputs_per_library
 
+    @x_sequence_or_item
     def fit(self, x_full, y=None):
         """
         Compute number of output features.
@@ -457,7 +493,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         # First fit all libs provided below
         fitted_libs = [
             lib.fit(
-                [x[:, np.unique(self.inputs_per_library_[i, :])] for x in x_full], y
+                [x[..., np.unique(self.inputs_per_library_[i, :])] for x in x_full], y
             )
             for i, lib in enumerate(self.libraries_)
         ]
@@ -473,6 +509,7 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         return self
 
+    @x_sequence_or_item
     def transform(self, x_full):
         """Transform data with libs provided below.
 
@@ -492,15 +529,10 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            n_samples = x.shape[x[0].ax_sample]
-            for lib in self.libraries_:
-                check_is_fitted(lib)
-                if hasattr(lib, "H_xt"):
-                    if lib.spatiotemporal_grid is not None:  # check if weak form
-                        n_samples = self.n_samples
-
             # preallocate matrix
-            xp = np.zeros((n_samples, self.n_output_features_))
+            shape = np.array(x.shape)
+            shape[-1] = self.n_output_features_
+            xp = np.zeros(shape)
 
             current_feat = 0
             for i in range(len(self.libraries_)):
@@ -510,13 +542,13 @@ class TensoredLibrary(BaseFeatureLibrary):
                     xp_i = lib_i.transform([x])[0]
                 else:
                     xp_i = lib_i.transform(
-                        [x[:, np.unique(self.inputs_per_library_[i, :])]]
+                        [x[..., np.unique(self.inputs_per_library_[i, :])]]
                     )[0]
                 for j in range(i + 1, len(self.libraries_)):
                     lib_j = self.libraries_[j]
                     lib_j_n_output_features = lib_j.n_output_features_
                     xp_j = lib_j.transform(
-                        [x[:, np.unique(self.inputs_per_library_[j, :])]]
+                        [x[..., np.unique(self.inputs_per_library_[j, :])]]
                     )[0]
 
                     start_feature_index = current_feat
@@ -525,7 +557,7 @@ class TensoredLibrary(BaseFeatureLibrary):
                         + lib_i_n_output_features * lib_j_n_output_features
                     )
 
-                    xp[:, start_feature_index:end_feature_index] = self._combinations(
+                    xp[..., start_feature_index:end_feature_index] = self._combinations(
                         xp_i, xp_j
                     )
 
@@ -575,14 +607,3 @@ class TensoredLibrary(BaseFeatureLibrary):
                     lib_i_feat_names, lib_j_feat_names
                 )
         return feature_names
-
-
-def x_sequence_or_item(foo):
-    @wraps(foo)
-    def func(self, x):
-        if isinstance(x, Sequence):
-            return foo(self, x)
-        else:
-            return foo(self, [x])[0]
-
-    return func

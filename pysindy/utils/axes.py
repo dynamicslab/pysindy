@@ -90,11 +90,13 @@ class AxesArray(np.ndarray):
                 args.append(input_.view(np.ndarray))
             else:
                 args.append(input_)
-        output = AxesArray(f[method](*args, **kwargs), self.__dict__)
         # # convert the inputs to np.ndarray to prevent recursion, call the
         # # function, then cast it back as AxesArray
-        # output.__dict__ = self.__dict__  # carry forward AxesArray
-        return output
+        output = f[method](*args, **kwargs)
+        if isinstance(output, np.ndarray):
+            return AxesArray(output, self.__dict__)
+        else:
+            return output
 
     def __array_function__(self, func, types, args, kwargs):
         if func not in HANDLED_FUNCTIONS:
@@ -154,7 +156,7 @@ class DefaultShapedInputsMixin:
             axes["ax_coord"] = len(x.shape) - 1
         if len(x.shape) > 2:
             axes["ax_spatial"] = list(range(1, len(x.shape) - 1))
-            warnings.warn("IDK how to handle this input data, losing axes labels")
+            # warnings.warn("IDK how to handle this input data, losing axes labels")
         return axes
 
 
@@ -205,3 +207,20 @@ def concat_sample_axis(x_list: List[AxesArray]):
         arr = AxesArray(x.reshape((n_samples, x.shape[x.ax_coord])), new_axes)
         new_arrs.append(arr)
     return np.concatenate(new_arrs, axis=new_arrs[0].ax_sample)
+
+
+def wrap_axes(axes: dict):
+    """Decorator factory to add axes to object (usually, a sparse matrix)
+
+    Note that unlike the AxesArray class, functions expecting an object
+    will not preserve the axes properties.
+    """
+
+    def wrap_w_axes(obj):
+        for key in ["ax_spatial", "ax_time", "ax_sample", "ax_coord"]:
+            try:
+                obj.__setattr__(key, axes[key])
+            except KeyError:
+                pass
+
+    return wrap_w_axes

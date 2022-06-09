@@ -4,10 +4,11 @@ from itertools import product as iproduct
 
 import numpy as np
 from sklearn import __version__
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import AxesArray
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
 from pysindy.differentiation import FiniteDifference
 
 
@@ -285,7 +286,8 @@ class PDELibrary(BaseFeatureLibrary):
                             )
         return feature_names
 
-    def fit(self, x, y=None):
+    @x_sequence_or_item
+    def fit(self, x_full, y=None):
         """Compute number of output features.
 
         Parameters
@@ -297,7 +299,8 @@ class PDELibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_samples, n_features = check_array(x).shape
+        n_features = x_full[0].shape[x_full[0].ax_coord]
+
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
         else:
@@ -329,7 +332,8 @@ class PDELibrary(BaseFeatureLibrary):
 
         return self
 
-    def transform(self, x):
+    @x_sequence_or_item
+    def transform(self, x_full):
         """Transform data to pde features
 
         Parameters
@@ -346,69 +350,34 @@ class PDELibrary(BaseFeatureLibrary):
         """
         check_is_fitted(self)
 
-        x = check_array(x)
+        xp_full = []
+        for x in x_full:
+            n_features = x.shape[x.ax_coord]
 
-        n_samples_full, n_features = x.shape
-        n_samples = n_samples_full // self.num_trajectories
+            if float(__version__[:3]) >= 1.0:
+                if n_features != self.n_features_in_:
+                    raise ValueError("x shape does not match training shape")
+            else:
+                if n_features != self.n_input_features_:
+                    raise ValueError("x shape does not match training shape")
 
-        if float(__version__[:3]) >= 1.0:
-            if n_features != self.n_features_in_:
-                raise ValueError("x shape does not match training shape")
-        else:
-            if n_features != self.n_input_features_:
-                raise ValueError("x shape does not match training shape")
-
-        if np.product(self.spatial_grid_dims) > 0:
-            num_time = n_samples // np.product(self.spatial_grid_dims)
-        else:
-            num_time = n_samples
-
-        xp_full = np.empty(
-            (self.num_trajectories, n_samples, self.n_output_features_), dtype=x.dtype
-        )
-        if len(self.spatial_grid) > 0:
-            x_full = np.reshape(
-                x,
-                np.concatenate(
-                    [
-                        [self.num_trajectories],
-                        self.spatial_grid_dims,
-                        [num_time, n_features],
-                    ]
-                ),
-            )
-        else:
-            x_full = np.reshape(
-                x,
-                np.concatenate([[self.num_trajectories], [num_time, n_features]]),
-            )
-
-        # Loop over each trajectory
-        for trajectory_ind in range(self.num_trajectories):
-            x = np.reshape(x_full[trajectory_ind], (n_samples, n_features))
-            xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
+            shape = np.array(x.shape)
+            shape[-1] = self.n_output_features_
+            xp = np.empty(shape, dtype=x.dtype)
 
             # derivative terms
-            library_derivatives = np.empty(
-                (n_samples, n_features * self.num_derivatives), dtype=x.dtype
-            )
+            shape[-1] = n_features * self.num_derivatives
+            library_derivatives = np.empty(shape, dtype=x.dtype)
             library_idx = 0
             for multiindex in self.multiindices:
-                if np.product(self.spatial_grid_dims) > 0:
-                    derivs = np.reshape(
-                        x,
-                        np.concatenate(
-                            [self.spatial_grid_dims, [num_time], [n_features]]
-                        ),
-                    )
-                else:
-                    derivs = np.reshape(x, np.concatenate([[num_time], [n_features]]))
+                derivs = x.copy()
                 for axis in range(self.grid_ndim):
                     if multiindex[axis] > 0:
                         s = [0 for dim in self.spatiotemporal_grid.shape]
                         s[axis] = slice(self.grid_dims[axis])
                         s[-1] = axis
 
+                        print(axis, multiindex[axis], derivs.shape)
                         derivs = FiniteDifference(
                             d=multiindex[axis],
                             axis=axis,
@@ -416,8 +385,8 @@ class PDELibrary(BaseFeatureLibrary):
                             periodic=self.periodic,
                         )._differentiate(derivs, self.spatiotemporal_grid[tuple(s)])
                 library_derivatives[
-                    :, library_idx : library_idx + n_features
-                ] = np.reshape(derivs, (n_samples, n_features))
+                    ..., library_idx : library_idx + n_features
+                ] = derivs
                 library_idx += n_features
 
             # library function terms
@@ -428,48 +397,46 @@ class PDELibrary(BaseFeatureLibrary):
                 ):
                     n_library_terms += 1
 
-            library_functions = np.empty((n_samples, n_library_terms), dtype=x.dtype)
+            shape[-1] = n_library_terms
+            library_functions = np.empty(shape, dtype=x.dtype)
             library_idx = 0
             for f in self.functions:
                 for c in self._combinations(
                     n_features, f.__code__.co_argcount, self.interaction_only
                 ):
-                    library_functions[:, library_idx] = np.reshape(
-                        f(*[x[:, j] for j in c]), (n_samples)
-                    )
+                    library_functions[..., library_idx] = f(*[x[..., j] for j in c])
                     library_idx += 1
 
             library_idx = 0
 
             # constant term
             if self.include_bias:
-                xp[:, library_idx] = np.ones(n_samples, dtype=x.dtype)
+                shape[-1] = 1
+                xp[..., library_idx] = np.ones(shape[:-1], dtype=x.dtype)
                 library_idx += 1
 
             # library function terms
-            xp[:, library_idx : library_idx + n_library_terms] = library_functions
+            xp[..., library_idx : library_idx + n_library_terms] = library_functions
             library_idx += n_library_terms
 
             # pure derivative terms
             xp[
-                :, library_idx : library_idx + self.num_derivatives * n_features
+                ..., library_idx : library_idx + self.num_derivatives * n_features
             ] = library_derivatives
             library_idx += self.num_derivatives * n_features
 
             # mixed function derivative terms
+            shape[-1] = n_library_terms * self.num_derivatives * n_features
             if self.include_interaction:
                 xp[
-                    :,
+                    ...,
                     library_idx : library_idx
                     + n_library_terms * self.num_derivatives * n_features,
                 ] = np.reshape(
-                    library_functions[:, :, np.newaxis]
-                    * library_derivatives[:, np.newaxis, :],
-                    (n_samples, n_library_terms * self.num_derivatives * n_features),
+                    library_functions[..., :, np.newaxis]
+                    * library_derivatives[..., np.newaxis, :],
+                    shape,
                 )
                 library_idx += n_library_terms * self.num_derivatives * n_features
-            xp_full[trajectory_ind] = xp
-
-        return self._ensemble(
-            np.reshape(xp_full, (n_samples_full, self.n_output_features_))
-        )
+            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+        return xp_full

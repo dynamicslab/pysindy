@@ -4,6 +4,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
 
 
 class FourierLibrary(BaseFeatureLibrary):
@@ -106,6 +107,7 @@ class FourierLibrary(BaseFeatureLibrary):
                     feature_names.append("cos(" + str(i + 1) + " " + feature + ")")
         return feature_names
 
+    @x_sequence_or_item
     def fit(self, x_full, y=None):
         """
         Compute number of output features.
@@ -130,6 +132,7 @@ class FourierLibrary(BaseFeatureLibrary):
             self.n_output_features_ = n_features * self.n_frequencies
         return self
 
+    @x_sequence_or_item
     def transform(self, x_full):
         """Transform data to Fourier features
 
@@ -148,8 +151,9 @@ class FourierLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            n_samples = x.shape[x.ax_sample]
+            # n_samples = x.shape[x.ax_sample]
             n_features = x.shape[x.ax_coord]
+            shape = np.array(x.shape)
 
             if float(__version__[:3]) >= 1.0:
                 n_input_features = self.n_features_in_
@@ -158,15 +162,16 @@ class FourierLibrary(BaseFeatureLibrary):
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 
-            xp = np.empty((n_samples, self.n_output_features_), dtype=x.dtype)
+            shape[-1] = self.n_output_features_
+            xp = np.empty(shape, dtype=x.dtype)
             idx = 0
             for i in range(self.n_frequencies):
                 for j in range(n_input_features):
                     if self.include_sin:
-                        xp[:, idx] = np.sin((i + 1) * x[:, j])
+                        xp[..., idx] = np.sin((i + 1) * x[..., j])
                         idx += 1
                     if self.include_cos:
-                        xp[:, idx] = np.cos((i + 1) * x[:, j])
+                        xp[..., idx] = np.cos((i + 1) * x[..., j])
                         idx += 1
 
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]

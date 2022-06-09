@@ -17,7 +17,6 @@ from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
 from .feature_library import GeneralizedLibrary
-from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
 from .feature_library import WeakPDELibrary
 from .optimizers import EnsembleOptimizer
@@ -33,6 +32,8 @@ from .utils import SampleConcatter
 from .utils import validate_control_variables
 from .utils import validate_input
 from .utils import validate_no_reshape
+
+# from .feature_library import PDELibrary
 
 # from .utils import convert_u_dot_integral
 
@@ -346,11 +347,11 @@ class SINDy(BaseEstimator):
                 x_dot_None = True  # set the flag
 
         # save copy of x in case there are control inputs to be validated
-        self.feature_library.num_trajectories = len(x)
-        if isinstance(self.feature_library, GeneralizedLibrary):
-            for lib in self.feature_library.libraries_:
-                if isinstance(lib, PDELibrary) or isinstance(lib, WeakPDELibrary):
-                    lib.num_trajectories = len(x)
+        # self.feature_library.num_trajectories = len(x)
+        # if isinstance(self.feature_library, GeneralizedLibrary):
+        #     for lib in self.feature_library.libraries_:
+        #         if isinstance(lib, PDELibrary) or isinstance(lib, WeakPDELibrary):
+        #             lib.num_trajectories = len(x)
 
         x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         if u is None:
@@ -399,26 +400,39 @@ class SINDy(BaseEstimator):
 
         # backwards compatibility for ensemble options
         if ensemble and not library_ensemble:
-            n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
+            if n_subset is None:
+                n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
+                n_subset = int(0.6 * n_sample_tot)
             optimizer = SINDyOptimizer(
                 EnsembleOptimizer(
-                    self.optimizer, bagging=True, n_subset=int(0.6 * n_sample_tot)
+                    self.optimizer,
+                    bagging=True,
+                    n_subset=n_subset,
+                    n_models=n_models,
                 ),
                 unbias=unbias,
             )
             self.coef_list = optimizer.optimizer.coef_list
         elif not ensemble and library_ensemble:
             optimizer = SINDyOptimizer(
-                EnsembleOptimizer(self.optimizer, library_ensemble=True), unbias=unbias
+                EnsembleOptimizer(
+                    self.optimizer,
+                    library_ensemble=True,
+                    n_models=n_models,
+                ),
+                unbias=unbias,
             )
             self.coef_list = optimizer.optimizer.coef_list
         elif ensemble and library_ensemble:
-            n_sample_tot = np.sum([xi["n_sample"] for xi in x])
+            if n_subset is None:
+                n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
+                n_subset = int(0.6 * n_sample_tot)
             optimizer = SINDyOptimizer(
                 EnsembleOptimizer(
                     self.optimizer,
                     bagging=True,
-                    n_subset=int(0.6 * n_sample_tot),
+                    n_subset=n_subset,
+                    n_models=n_models,
                     library_ensemble=True,
                 ),
                 unbias=unbias,

@@ -2,6 +2,7 @@ from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
 
 
 class IdentityLibrary(BaseFeatureLibrary):
@@ -76,6 +77,7 @@ class IdentityLibrary(BaseFeatureLibrary):
                 raise ValueError("input features list is not the right length")
         return ["x%d" % i for i in range(n_input_features)]
 
+    @x_sequence_or_item
     def fit(self, x_full, y=None):
         """
         Compute number of output features.
@@ -97,6 +99,7 @@ class IdentityLibrary(BaseFeatureLibrary):
         self.n_output_features_ = n_features
         return self
 
+    @x_sequence_or_item
     def transform(self, x_full):
         """Perform identity transformation (return a copy of the input).
 

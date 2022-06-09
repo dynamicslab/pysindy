@@ -235,7 +235,7 @@ def test_simulate(data):
         PolynomialLibrary(degree=3),
         FourierLibrary(n_frequencies=3),
         pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_sindypi_library"),
+        # pytest.lazy_fixture("data_sindypi_library"),
         PolynomialLibrary() + FourierLibrary(),
     ],
 )

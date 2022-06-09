@@ -521,6 +521,7 @@ class SINDy(BaseEstimator):
             self.feature_library.reshape_samples_to_spatial_grid(pred)
             for pred in result
         ]
+
         # Kept for backwards compatability.
         if not multiple_trajectories:
             return result[0]

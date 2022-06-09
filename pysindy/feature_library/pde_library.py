@@ -377,7 +377,6 @@ class PDELibrary(BaseFeatureLibrary):
                         s[axis] = slice(self.grid_dims[axis])
                         s[-1] = axis
 
-                        print(axis, multiindex[axis], derivs.shape)
                         derivs = FiniteDifference(
                             d=multiindex[axis],
                             axis=axis,

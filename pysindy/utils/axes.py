@@ -90,11 +90,13 @@ class AxesArray(np.ndarray):
                 args.append(input_.view(np.ndarray))
             else:
                 args.append(input_)
-        output = AxesArray(f[method](*args, **kwargs), self.__dict__)
         # # convert the inputs to np.ndarray to prevent recursion, call the
         # # function, then cast it back as AxesArray
-        # output.__dict__ = self.__dict__  # carry forward AxesArray
-        return output
+        output = f[method](*args, **kwargs)
+        if isinstance(output, np.ndarray):
+            return AxesArray(output, self.__dict__)
+        else:
+            return output
 
     def __array_function__(self, func, types, args, kwargs):
         if func not in HANDLED_FUNCTIONS:

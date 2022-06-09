@@ -4,6 +4,7 @@ Unit tests for optimizers.
 import numpy as np
 import pytest
 from numpy.linalg import norm
+from scipy.integrate import solve_ivp
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
@@ -16,18 +17,16 @@ from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
+from pysindy.feature_library import SINDyPILibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import FROLS
 from pysindy.optimizers import SINDyOptimizer
+from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import SR3
 from pysindy.optimizers import SSR
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
-
-from scipy.integrate import solve_ivp
-from pysindy.feature_library import SINDyPILibrary
-from pysindy.optimizers import SINDyPI
 from pysindy.utils.odes import enzyme
 
 # For reproducibility

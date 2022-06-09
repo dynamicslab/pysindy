@@ -56,7 +56,7 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
         if not hasattr(self, "spatial_grid"):
             return AxesArray(x, {"ax_sample": 0, "ax_coord": 1})
         shape = self.spatial_grid.shape[:-1]
-        x = np.reshape(x, (*shape, x.shape[-1]))
+        x = np.reshape(x, (*shape, -1, x.shape[-1]))
         return AxesArray(
             x,
             {

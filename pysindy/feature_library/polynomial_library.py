@@ -1,7 +1,6 @@
 from itertools import chain
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
-from typing import Sequence
 
 import numpy as np
 from scipy import sparse
@@ -11,6 +10,7 @@ from sklearn.preprocessing._csr_polynomial_expansion import _csr_polynomial_expa
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
+from ..utils import wrap_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
 
@@ -167,6 +167,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             feature_names.append(name)
         return feature_names
 
+    @x_sequence_or_item
     def fit(self, x_full, y=None):
         """
         Compute number of output features.
@@ -180,13 +181,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         -------
         self : instance
         """
-        if not isinstance(x_full, Sequence):
-            x_full = [x_full]
-        x_full = [
-            self.correct_shape(AxesArray(x, self.comprehend_axes(x))) for x in x_full
-        ]
-
-        n_features = x_full[0].n_coord
+        n_features = x_full[0].shape[x_full[0].ax_coord]
         combinations = self._combinations(
             n_features,
             self.degree,
@@ -232,8 +227,18 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            n_samples = x.n_sample
-            n_features = x.n_coord
+            if sparse.issparse(x) and x.format not in ["csr", "csc"]:
+                # create new with correct sparse
+                axes = self.comprehend_axes(x)
+                x = x.asformat("csr")
+                wrap_axes(axes)(x)
+                # Can't use x = ax_time_to_ax_sample(x) b/c that creates
+                # an AxesArray
+                x.ax_sample = x.ax_time
+                x.ax_time = None
+
+            n_samples = x.shape[x.ax_sample]
+            n_features = x.shape[x.ax_coord]
             if float(__version__[:3]) >= 1.0:
                 if n_features != self.n_features_in_:
                     raise ValueError("x shape does not match training shape")
@@ -243,7 +248,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
             if sparse.isspmatrix_csr(x):
                 if self.degree > 3:
-                    return self.transform(x.tocsc()).tocsr()
+                    return sparse.csr_matrix(self.transform(x.tocsc()))
                 to_stack = []
                 if self.include_bias:
                     to_stack.append(np.ones(shape=(n_samples, 1), dtype=x.dtype))
@@ -262,7 +267,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                     to_stack.append(xp_next)
                 xp = sparse.hstack(to_stack, format="csr")
             elif sparse.isspmatrix_csc(x) and self.degree < 4:
-                return self.transform(x.tocsr()).tocsc()
+                return sparse.csc_matrix(self.transform(x.tocsr()))
             else:
                 combinations = self._combinations(
                     n_features,
@@ -284,13 +289,16 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                             columns.append(bias)
                     xp = sparse.hstack(columns, dtype=x.dtype).tocsc()
                 else:
-                    xp = np.empty(
-                        (*x.shape[:-1], self.n_output_features_),
-                        dtype=x.dtype,
-                        order=self.order,
+                    xp = AxesArray(
+                        np.empty(
+                            (*x.shape[:-1], self.n_output_features_),
+                            dtype=x.dtype,
+                            order=self.order,
+                        ),
+                        x.__dict__,
                     )
                     for i, comb in enumerate(combinations):
                         xp[..., i] = x[..., comb].prod(-1)
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp_full = xp_full + [xp]
 
         return xp_full

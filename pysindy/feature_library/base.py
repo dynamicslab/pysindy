@@ -7,6 +7,7 @@ from functools import wraps
 from typing import Sequence
 
 import numpy as np
+from scipy import sparse
 from sklearn import __version__
 from sklearn.base import TransformerMixin
 from sklearn.utils import check_array
@@ -15,6 +16,8 @@ from sklearn.utils.validation import check_is_fitted
 from ..utils import AxesArray
 from ..utils import DefaultShapedInputsMixin
 from ..utils import validate_no_reshape
+from ..utils import wrap_axes
+from ..utils.axes import ax_time_to_ax_sample
 
 
 class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
@@ -564,12 +567,29 @@ class TensoredLibrary(BaseFeatureLibrary):
         return feature_names
 
 
-def x_sequence_or_item(foo):
-    @wraps(foo)
-    def func(self, x):
+def x_sequence_or_item(wrapped_func):
+    """Allow a feature library's method to handle list or item inputs."""
+
+    @wraps(wrapped_func)
+    def func(self, x, *args, **kwargs):
         if isinstance(x, Sequence):
-            return foo(self, x)
+            return wrapped_func(self, x, *args, **kwargs)
         else:
-            return foo(self, [x])[0]
+            if not sparse.issparse(x):
+                x = AxesArray(x, self.comprehend_axes(x))
+                x = ax_time_to_ax_sample(x)
+                reconstructor = np.array
+            else:  # sparse arrays
+                reconstructor = type(x)
+                axes = self.comprehend_axes(x)
+                wrap_axes(axes)(x)
+                # Can't use x = ax_time_to_ax_sample(x) b/c that creates
+                # an AxesArray
+                x.ax_sample = x.ax_time
+                x.ax_time = None
+            result = wrapped_func(self, [x], *args, **kwargs)
+            if isinstance(result, Sequence):  # e.g. transform() returns x
+                return reconstructor(result[0])
+            return result  # e.g. fit() returns self
 
     return func

@@ -4,6 +4,7 @@ from .axes import concat_sample_axis
 from .axes import DefaultShapedInputsMixin
 from .axes import PDEShapedInputsMixin
 from .axes import SampleConcatter
+from .axes import wrap_axes
 from .base import capped_simplex_projection
 from .base import drop_nan_samples
 from .base import equations
@@ -62,6 +63,7 @@ __all__ = [
     "SampleConcatter",
     "ax_time_to_ax_sample",
     "concat_sample_axis",
+    "wrap_axes",
     "capped_simplex_projection",
     "drop_nan_samples",
     "equations",

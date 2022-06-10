@@ -127,5 +127,6 @@ class IdentityLibrary(BaseFeatureLibrary):
                 raise ValueError("x shape does not match training shape")
 
             xp_full = xp_full + [x.copy()]
-
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
         return xp_full

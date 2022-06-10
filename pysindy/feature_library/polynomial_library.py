@@ -300,5 +300,6 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                     for i, comb in enumerate(combinations):
                         xp[..., i] = x[..., comb].prod(-1)
             xp_full = xp_full + [xp]
-
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
         return xp_full

@@ -438,7 +438,8 @@ def test_library_ensemble(data_lorenz, library):
     xp = library.transform(x)
     assert n_output_features == xp.shape[1] + 1
     library.ensemble_indices = [0, 1]
-    xp = library.transform(x)
+    with pytest.warns(UserWarning):
+        xp = library.transform(x)
     assert n_output_features == xp.shape[1] + 2
     library.ensemble_indices = np.zeros(1000, dtype=int).tolist()
     with pytest.raises(ValueError):

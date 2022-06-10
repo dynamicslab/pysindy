@@ -427,4 +427,6 @@ class SINDyPILibrary(BaseFeatureLibrary):
                                 ) * f_dot(*[x_dot[:, comb] for comb in f_dot_combs])
                                 library_idx += 1
             xp_full = xp_full + [AxesArray(xp, x.__dict__)]
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
         return xp_full

@@ -230,5 +230,6 @@ class CustomLibrary(BaseFeatureLibrary):
                     library_idx += 1
 
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
-
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
         return xp_full

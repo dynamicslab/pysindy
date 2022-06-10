@@ -147,7 +147,7 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
         warnings.warn(
             "Library ensembling is no longer performed by feature libraries.  Use "
             "EnsemblingOptimizer to fit an ensemble model.",
-            DeprecationWarning,
+            UserWarning,
         )
 
         if self.library_ensemble:
@@ -158,7 +158,7 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
                 )
             inds = range(self.n_output_features_)
             inds = np.delete(inds, self.ensemble_indices)
-            return xp[..., inds]
+            return [x[..., inds] for x in xp]
         else:
             return xp
 
@@ -333,7 +333,8 @@ class ConcatLibrary(BaseFeatureLibrary):
                 current_feat += lib_n_output_features
 
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
-
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def get_feature_names(self, input_features=None):
@@ -564,7 +565,8 @@ class TensoredLibrary(BaseFeatureLibrary):
                     current_feat += lib_i_n_output_features * lib_j_n_output_features
 
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
-
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def get_feature_names(self, input_features=None):

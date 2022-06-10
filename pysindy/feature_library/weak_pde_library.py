@@ -1075,7 +1075,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     library_idx += n_library_terms * self.num_derivatives * n_features
 
             xp_full = xp_full + [AxesArray(xp, {"ax_sample": 0, "ax_coord": 1})]
-
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def calc_trajectory(self, diff_method, x, t):

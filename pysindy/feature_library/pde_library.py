@@ -438,4 +438,6 @@ class PDELibrary(BaseFeatureLibrary):
                 )
                 library_idx += n_library_terms * self.num_derivatives * n_features
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
         return xp_full

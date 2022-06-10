@@ -305,7 +305,7 @@ class SINDy(BaseEstimator):
             warnings.warn(
                 "Ensembling arguments are deprecated."
                 "Use the EnsembleOptimizer class instead.",
-                DeprecationWarning,
+                UserWarning,
             )
         if t is None:
             t = self.t_default
@@ -399,6 +399,8 @@ class SINDy(BaseEstimator):
             unbias = self.optimizer.unbias
 
         # backwards compatibility for ensemble options
+        if library_ensemble:
+            self.feature_library.library_ensemble = False
         if ensemble and not library_ensemble:
             if n_subset is None:
                 n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])

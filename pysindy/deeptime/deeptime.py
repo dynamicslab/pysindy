@@ -100,7 +100,7 @@ class SINDyEstimator(SINDy):
         super(SINDyEstimator, self).fit(x, **kwargs)
         self._model = SINDyModel(
             feature_library=self.model.steps[0][1],
-            optimizer=self.model.steps[1][1],
+            optimizer=self.model.steps[-1][1],
             feature_names=self.feature_names,
             t_default=self.t_default,
             discrete_time=self.discrete_time,

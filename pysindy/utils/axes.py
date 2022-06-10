@@ -189,6 +189,9 @@ class SampleConcatter(TransformerMixin):
     def fit(self, x_list, y_list):
         return self
 
+    def __sklearn_is_fitted__(self):
+        return True
+
     def transform(self, x_list):
         return concat_sample_axis(x_list)
 

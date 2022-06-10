@@ -311,6 +311,8 @@ class EnsembleOptimizer(BaseOptimizer):
     def _reduce(self, x: AxesArray, y: np.ndarray) -> None:
         x = AxesArray(np.asarray(x), {"ax_sample": 0, "ax_coord": 1})
         n_samples = x.shape[x.ax_sample]
+        if self.bagging and self.n_subset is None:
+            self.n_subset = int(0.6 * n_samples)
         if self.bagging and self.n_subset > n_samples and not self.replace:
             warnings.warn(
                 "n_subset is larger than sample count without replacement; cannot bag."
@@ -346,7 +348,7 @@ class EnsembleOptimizer(BaseOptimizer):
                         replace=False,
                     )
                 )
-                x_ensemble = x.take(keep_inds, axis=x.ax_coord)
+                x_ensemble = x_ensemble.take(keep_inds, axis=x.ax_coord)
             self.opt.fit(x_ensemble, y_ensemble)
             new_coefs = np.zeros((y.shape[1], n_features))
             new_coefs[:, keep_inds] = self.opt.coef_

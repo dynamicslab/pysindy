@@ -299,6 +299,12 @@ class EnsembleOptimizer(BaseOptimizer):
                 "n_candidates_to_drop must be a positive integer if ensembling library"
             )
         self.opt = opt
+        if n_models is None or n_models == 0:
+            warnings.warn(
+                "n_models must be a positive integer.  Explicitly initialized to zero"
+                " or None, defaulting to 20."
+            )
+            n_models = 20
         self.n_models = n_models
         self.n_subset = n_subset
         self.bagging = bagging

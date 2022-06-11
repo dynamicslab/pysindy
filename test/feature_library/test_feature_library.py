@@ -300,7 +300,6 @@ def test_output_shape(data_lorenz, library, shape):
         # pytest.lazy_fixture("data_pde_library"),
         # we should not use this library for lorenz data,
         # since spatiotemporal grid determines derivative order
-        (pytest.lazy_fixture("data_sindypi_library"), 39),
         pytest.lazy_fixture("data_sindypi_library"),
     ],
 )

@@ -148,34 +148,42 @@ def test_weak_pde_library_bad_parameters(params):
 @pytest.mark.parametrize(
     "params",
     [
-        # dict(libraries=[]),
-        dict(libraries=[PolynomialLibrary, WeakPDELibrary]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 0]]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 1]]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[1, -1]]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[2, 1]]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[1, 1]),
+        dict(libraries=[]),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[1, 1, 1]]
+            libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[[0, 0]]
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[[0, 1]]
+        ),
+        dict(
+            libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[[1, -1]]
+        ),
+        dict(
+            libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[[2, 1]]
+        ),
+        dict(libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[1, 1]),
+        dict(
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
+            tensor_array=[[1, 1, 1]],
+        ),
+        dict(
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([[0, 1], [0, 100]]),
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([0, 0]),
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([[0, 1]]),
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([[0, 1, 2], [0, 1, 2], [0, 1, 2]]),
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([[0, 1, 2], [0, 1, -1]]),
         ),
     ],

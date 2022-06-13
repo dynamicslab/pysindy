@@ -271,7 +271,6 @@ class EnsembleOptimizer(BaseOptimizer):
     ):
         super(EnsembleOptimizer, self).__init__(
             max_iter=opt.max_iter,
-            normalize_columns=opt.normalize_columns,
             fit_intercept=opt.fit_intercept,
             initial_guess=opt.initial_guess,
             copy_X=opt.copy_X,

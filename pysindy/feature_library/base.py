@@ -55,7 +55,8 @@ class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
         """Adapt predictions to fitted spatial grid."""
         if not hasattr(self, "spatial_grid"):
             return AxesArray(x, {"ax_sample": 0, "ax_coord": 1})
-        shape = self.spatial_grid.shape[:-1]
+        # PDELibrary can have a zero spatial dimension for SINDyPI.
+        shape = [dim for dim in self.spatial_grid.shape[:-1] if dim != 0]
         x = np.reshape(x, (*shape, -1, x.shape[-1]))
         return AxesArray(
             x,

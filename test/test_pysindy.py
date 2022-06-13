@@ -698,7 +698,7 @@ def test_ensemble_weak_pdes(data_1d_random_pde):
     )
     assert len(model.coef_list) == 2
     model = SINDy(feature_library=weak_lib).fit(
-        u, x_dot=u_dot, ensemble=True, n_models=2, n_subset=len(t) // 2
+        u, x_dot=u_dot[:, 0, :], ensemble=True, n_models=2, n_subset=len(t) // 2
     )
     assert len(model.coef_list) == 2
 

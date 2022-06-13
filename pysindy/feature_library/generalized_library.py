@@ -299,28 +299,20 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
             # preallocate matrix
             shape[-1] = self.n_output_features_
-            xp = np.zeros(shape)
+            xps = []
 
-            current_feat = 0
             for i, lib in enumerate(self.libraries_full_):
-                # retrieve num output features from lib
-                lib_n_output_features = lib.n_output_features_
-
-                start_feature_index = current_feat
-                end_feature_index = start_feature_index + lib_n_output_features
-
                 if i < self.inputs_per_library_.shape[0]:
-                    xp[..., start_feature_index:end_feature_index] = lib.transform(
-                        [x[..., np.unique(self.inputs_per_library_[i, :])]]
-                    )[0]
+                    xps.append(
+                        lib.transform(
+                            [x[..., np.unique(self.inputs_per_library_[i, :])]]
+                        )[0]
+                    )
                 else:
-                    xp[..., start_feature_index:end_feature_index] = lib.transform([x])[
-                        0
-                    ]
+                    xps.append(lib.transform([x])[0])
 
-                current_feat += lib_n_output_features
-
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp = AxesArray(np.concatenate(xps, axis=xps[0].ax_coord), xps[0].__dict__)
+            xp_full = xp_full + [xp]
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

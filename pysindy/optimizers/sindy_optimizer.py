@@ -2,8 +2,8 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
 
-from ..utils.base import supports_multiple_targets
-from .base import _MultiTargetLinearRegressor
+from ..utils import AxesArray
+from ..utils import drop_nan_samples
 
 COEF_THRESHOLD = 1e-14
 
@@ -51,9 +51,11 @@ class SINDyOptimizer(BaseEstimator):
         self.unbias = unbias
 
     def fit(self, x, y):
-        if len(y.shape) > 1 and y.shape[1] > 1:
-            if not supports_multiple_targets(self.optimizer):
-                self.optimizer = _MultiTargetLinearRegressor(self.optimizer)
+
+        x, y = drop_nan_samples(
+            AxesArray(x, {"ax_sample": 0, "ax_coord": 1}),
+            AxesArray(y, {"ax_sample": 0, "ax_coord": 1}),
+        )
 
         self.optimizer.fit(x, y)
         if not hasattr(self.optimizer, "coef_"):

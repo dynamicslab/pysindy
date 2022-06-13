@@ -369,7 +369,7 @@ def data_ode_library():
 
 @pytest.fixture
 def data_pde_library():
-    spatial_grid = np.linspace(0, 10)
+    spatial_grid = np.linspace(0, 10, 500)
     library_functions = [
         lambda x: x,
         lambda x: x**2,

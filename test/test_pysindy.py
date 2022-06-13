@@ -694,13 +694,13 @@ def test_ensemble_weak_pdes(data_1d_random_pde):
         is_uniform=False,
     )
     model = SINDy(feature_library=weak_lib).fit(
-        u, t=t, ensemble=True, n_models=10, n_subset=len(t) // 2
+        u, t=t, ensemble=True, n_models=2, n_subset=len(t) // 2
     )
-    assert len(model.coef_list) == 10
+    assert len(model.coef_list) == 2
     model = SINDy(feature_library=weak_lib).fit(
-        u, x_dot=u_dot, ensemble=True, n_models=10, n_subset=len(t) // 2
+        u, x_dot=u_dot, ensemble=True, n_models=2, n_subset=len(t) // 2
     )
-    assert len(model.coef_list) == 10
+    assert len(model.coef_list) == 2
 
 
 def test_library_ensemble(data_lorenz):
@@ -765,7 +765,7 @@ def test_both_ensemble(data_lorenz):
     model = SINDy(feature_library=library).fit(
         x, t=t, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
 
 
 def test_both_ensemble_pde(data_1d_random_pde):
@@ -783,11 +783,11 @@ def test_both_ensemble_pde(data_1d_random_pde):
     model = SINDy(feature_library=pde_lib).fit(
         u, t=t, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
     model = SINDy(feature_library=pde_lib).fit(
         u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
 
 
 def test_both_ensemble_weak_pde(data_1d_random_pde):
@@ -807,12 +807,12 @@ def test_both_ensemble_weak_pde(data_1d_random_pde):
     model = SINDy(feature_library=weak_lib).fit(
         u, t=t, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
     u_dot = weak_lib.convert_u_dot_integral(u)
     model = SINDy(feature_library=weak_lib).fit(
         u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
 
 
 @pytest.mark.parametrize(

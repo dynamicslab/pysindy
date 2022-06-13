@@ -123,7 +123,6 @@ def test_pde_library_bad_parameters(params):
             spatiotemporal_grid=np.asarray(np.meshgrid(range(10), range(10))).T,
             H_xt=-1,
         ),
-        dict(spatiotemporal_grid=range(10), H_xt=11),
         dict(
             spatiotemporal_grid=np.transpose(
                 np.asarray(np.meshgrid(range(10), range(10), range(10), indexing="ij")),
@@ -150,33 +149,41 @@ def test_weak_pde_library_bad_parameters(params):
     "params",
     [
         dict(libraries=[]),
-        dict(libraries=[PolynomialLibrary, WeakPDELibrary]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 0]]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[0, 1]]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[1, -1]]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[2, 1]]),
-        dict(libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[1, 1]),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary], tensor_array=[[1, 1, 1]]
+            libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[[0, 0]]
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[[0, 1]]
+        ),
+        dict(
+            libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[[1, -1]]
+        ),
+        dict(
+            libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[[2, 1]]
+        ),
+        dict(libraries=[PolynomialLibrary(), PolynomialLibrary()], tensor_array=[1, 1]),
+        dict(
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
+            tensor_array=[[1, 1, 1]],
+        ),
+        dict(
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([[0, 1], [0, 100]]),
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([0, 0]),
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([[0, 1]]),
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([[0, 1, 2], [0, 1, 2], [0, 1, 2]]),
         ),
         dict(
-            libraries=[PolynomialLibrary, PolynomialLibrary],
+            libraries=[PolynomialLibrary(), PolynomialLibrary()],
             inputs_per_library=np.array([[0, 1, 2], [0, 1, -1]]),
         ),
     ],
@@ -225,7 +232,9 @@ def test_sindypi_library_bad_params(params):
         pytest.lazy_fixture("data_custom_library_bias"),
         pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
-        pytest.lazy_fixture("data_pde_library"),
+        # pytest.lazy_fixture("data_pde_library"),
+        # we should not use this library for lorenz data,
+        # since spatiotemporal grid determines derivative order
         pytest.lazy_fixture("data_sindypi_library"),
     ],
 )
@@ -270,7 +279,9 @@ def test_change_in_data_shape(data_lorenz, library):
         (pytest.lazy_fixture("data_custom_library"), 12),
         (pytest.lazy_fixture("data_generalized_library"), 76),
         (pytest.lazy_fixture("data_ode_library"), 9),
-        (pytest.lazy_fixture("data_pde_library"), 129),
+        # (pytest.lazy_fixture("data_pde_library"), 129),
+        # we should not use this library for lorenz data,
+        # since spatiotemporal grid determines derivative order
         (pytest.lazy_fixture("data_sindypi_library"), 39),
     ],
 )
@@ -294,7 +305,9 @@ def test_output_shape(data_lorenz, library, shape):
         pytest.lazy_fixture("data_custom_library_bias"),
         pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
-        pytest.lazy_fixture("data_pde_library"),
+        # pytest.lazy_fixture("data_pde_library"),
+        # we should not use this library for lorenz data,
+        # since spatiotemporal grid determines derivative order
         pytest.lazy_fixture("data_sindypi_library"),
     ],
 )
@@ -432,7 +445,8 @@ def test_library_ensemble(data_lorenz, library):
     xp = library.transform(x)
     assert n_output_features == xp.shape[1] + 1
     library.ensemble_indices = [0, 1]
-    xp = library.transform(x)
+    with pytest.warns(UserWarning):
+        xp = library.transform(x)
     assert n_output_features == xp.shape[1] + 2
     library.ensemble_indices = np.zeros(1000, dtype=int).tolist()
     with pytest.raises(ValueError):
@@ -808,7 +822,7 @@ def test_sindypi_library(data_lorenz):
     sindy_library = SINDyPILibrary(
         library_functions=x_library_functions,
         x_dot_library_functions=x_dot_library_functions,
-        t=t[1:-1],
+        t=t,
         function_names=library_function_names,
         include_bias=True,
     )

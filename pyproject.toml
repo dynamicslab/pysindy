@@ -12,8 +12,11 @@ exclude = '''
     \.git
   | \.mypy_cache
   | \.venv
+  | .vscode
+  | version.py
   | build
   | dist
+  | env
 )/
 '''
 

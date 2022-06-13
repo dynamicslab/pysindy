@@ -173,8 +173,18 @@ def test_t_default(data):
     np.testing.assert_allclose(model.coefficients(), model_t_default.coefficients())
     np.testing.assert_almost_equal(model.score(x, t=dt), model_t_default.score(x))
     np.testing.assert_almost_equal(
-        model.differentiate(x, t=dt), model_t_default.differentiate(x)
+        np.asarray(model.differentiate(x, t=dt)),
+        np.asarray(model_t_default.differentiate(x)),
     )
+
+
+@pytest.mark.parametrize(
+    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
+)
+def test_differentiate_returns_compatible_data_type(data):
+    x, t = data
+    x_dot = SINDy().differentiate(x)
+    assert isinstance(x_dot, type(x))
 
 
 @pytest.mark.parametrize(
@@ -529,9 +539,6 @@ def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_t
     with pytest.raises(TypeError):
         model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
 
-    # Test an option that doesn't get tested elsewhere
-    model._process_multiple_trajectories(x, t, x, return_array=False)
-
     x = data_discrete_time
     model = SINDy(discrete_time=True)
     with pytest.raises(TypeError):
@@ -572,6 +579,12 @@ def test_fit_warn(data_lorenz, params, warning):
 
     with pytest.warns(None) as warn_record:
         model.fit(x, t, quiet=True)
+
+    while True:
+        try:
+            warn_record.pop(PendingDeprecationWarning)
+        except AssertionError:
+            break
 
     assert len(warn_record) == 0
 
@@ -681,13 +694,13 @@ def test_ensemble_weak_pdes(data_1d_random_pde):
         is_uniform=False,
     )
     model = SINDy(feature_library=weak_lib).fit(
-        u, t=t, ensemble=True, n_models=10, n_subset=len(t) // 2
+        u, t=t, ensemble=True, n_models=2, n_subset=len(t) // 2
     )
-    assert len(model.coef_list) == 10
+    assert len(model.coef_list) == 2
     model = SINDy(feature_library=weak_lib).fit(
-        u, x_dot=u_dot, ensemble=True, n_models=10, n_subset=len(t) // 2
+        u, x_dot=u_dot[:, 0, :], ensemble=True, n_models=2, n_subset=len(t) // 2
     )
-    assert len(model.coef_list) == 10
+    assert len(model.coef_list) == 2
 
 
 def test_library_ensemble(data_lorenz):
@@ -752,7 +765,7 @@ def test_both_ensemble(data_lorenz):
     model = SINDy(feature_library=library).fit(
         x, t=t, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
 
 
 def test_both_ensemble_pde(data_1d_random_pde):
@@ -770,11 +783,11 @@ def test_both_ensemble_pde(data_1d_random_pde):
     model = SINDy(feature_library=pde_lib).fit(
         u, t=t, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
     model = SINDy(feature_library=pde_lib).fit(
         u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
 
 
 def test_both_ensemble_weak_pde(data_1d_random_pde):
@@ -794,12 +807,12 @@ def test_both_ensemble_weak_pde(data_1d_random_pde):
     model = SINDy(feature_library=weak_lib).fit(
         u, t=t, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
     u_dot = weak_lib.convert_u_dot_integral(u)
     model = SINDy(feature_library=weak_lib).fit(
         u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
     )
-    assert len(model.coef_list) == 4
+    assert len(model.coef_list) == 2
 
 
 @pytest.mark.parametrize(
@@ -834,26 +847,30 @@ def test_bad_ensemble_params(data_lorenz, params):
         SINDy(feature_library=library, optimizer=optimizer).fit(x, t, **params)
 
 
-def test_bad_ensemble_weakform():
-    x = np.linspace(0, 100, 100)
-    x_dot = np.zeros(100)
-    X = np.linspace(0, 10)
-    t = np.linspace(0, 10)
-    X, T = np.meshgrid(x, t)
-    XT = np.asarray([X, T]).T
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=2,
-        spatiotemporal_grid=XT,
-        is_uniform=True,
-    )
-
-    model = SINDy(feature_library=pde_lib)
-    with pytest.raises(ValueError):
-        model.fit(x=x, x_dot=x_dot, ensemble=True)
+# Ensembling the weak form should be fine...
+# but this test provides bad input.
+# the shape of x should be (*spatiotemporal_grid.shape[:-1],num_features)
+# def test_bad_ensemble_weakform():
+#     x = np.linspace(0, 100, 100)
+#     x_dot = np.zeros(100)
+#     X = np.linspace(0, 10)
+#     t = np.linspace(0, 10)
+#     X, T = np.meshgrid(x, t)
+#     XT = np.asarray([X, T]).T
+#     library_functions = [lambda x: x, lambda x: x * x]
+#     library_function_names = [lambda x: x, lambda x: x + x]
+#     pde_lib = WeakPDELibrary(
+#         library_functions=library_functions,
+#         function_names=library_function_names,
+#         derivative_order=2,
+#         spatiotemporal_grid=XT,
+#         is_uniform=True,
+#     )
+#
+#     model = SINDy(feature_library=pde_lib)
+#     u=np.zeros((*XT.shape[:-1],1))
+#     # with pytest.raises(ValueError):
+#     model.fit(x=u, x_dot=x_dot, ensemble=True)
 
 
 def test_data_shapes():

@@ -5,10 +5,11 @@ from numpy import empty
 from numpy import ones
 from numpy import shape
 from sklearn import __version__
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import AxesArray
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
 
 
 class CustomLibrary(BaseFeatureLibrary):
@@ -151,7 +152,8 @@ class CustomLibrary(BaseFeatureLibrary):
                 )
         return feature_names
 
-    def fit(self, x, y=None):
+    @x_sequence_or_item
+    def fit(self, x_full, y=None):
         """Compute number of output features.
 
         Parameters
@@ -163,7 +165,7 @@ class CustomLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_samples, n_features = check_array(x).shape
+        n_features = x_full[0].shape[x_full[0].ax_coord]
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
         else:
@@ -186,7 +188,8 @@ class CustomLibrary(BaseFeatureLibrary):
             )
         return self
 
-    def transform(self, x):
+    @x_sequence_or_item
+    def transform(self, x_full):
         """Transform data to custom features
 
         Parameters
@@ -202,29 +205,31 @@ class CustomLibrary(BaseFeatureLibrary):
         """
         check_is_fitted(self)
 
-        x = check_array(x)
+        xp_full = []
+        for x in x_full:
+            n_features = x.shape[x.ax_coord]
 
-        n_samples, n_features = x.shape
+            if float(__version__[:3]) >= 1.0:
+                n_input_features = self.n_features_in_
+            else:
+                n_input_features = self.n_input_features_
 
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
+            if n_features != n_input_features:
+                raise ValueError("x shape does not match training shape")
 
-        if n_features != n_input_features:
-            raise ValueError("x shape does not match training shape")
-
-        xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
-        library_idx = 0
-        if self.include_bias:
-            xp[:, library_idx] = ones(n_samples)
-            library_idx += 1
-        for f in self.functions:
-            for c in self._combinations(
-                n_input_features, f.__code__.co_argcount, self.interaction_only
-            ):
-                xp[:, library_idx] = f(*[x[:, j] for j in c])
+            xp = empty((*x.shape[:-1], self.n_output_features_), dtype=x.dtype)
+            library_idx = 0
+            if self.include_bias:
+                xp[..., library_idx] = ones(x.shape[:-1])
                 library_idx += 1
+            for f in self.functions:
+                for c in self._combinations(
+                    n_input_features, f.__code__.co_argcount, self.interaction_only
+                ):
+                    xp[..., library_idx] = f(*[x[..., j] for j in c])
+                    library_idx += 1
 
-        # If library bagging, return xp missing the terms at ensemble_indices
-        return self._ensemble(xp)
+            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
+        return xp_full

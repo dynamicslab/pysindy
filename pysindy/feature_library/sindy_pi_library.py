@@ -11,6 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
 from pysindy.differentiation import FiniteDifference
 
 
@@ -275,6 +276,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
         return feature_names
 
+    @x_sequence_or_item
     def fit(self, x_full, y=None):
         """Compute number of output features.
 
@@ -346,6 +348,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
             self.n_output_features_ += 1
         return self
 
+    @x_sequence_or_item
     def transform(self, x_full):
         """Transform data to custom features
 

@@ -11,7 +11,6 @@ from numpy.random import choice
 from scipy import sparse
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model._base import _preprocess_data
-from sklearn.multioutput import MultiOutputRegressor
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
@@ -176,7 +175,6 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self.history_ = [self.coef_]
 
         x_normed = np.asarray(x_normed)
-        # x_normed=AxesArray(np.asarray(x_normed), {"ax_sample":0,"ax_coord":1})
 
         self._reduce(x_normed, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
@@ -191,16 +189,6 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
-
-
-class _MultiTargetLinearRegressor(MultiOutputRegressor, ComplexityMixin):
-    @property
-    def coef_(self):
-        return np.vstack([est.coef_ for est in self.estimators_])
-
-    @property
-    def intercept_(self):
-        return np.array([est.intercept_ for est in self.estimators_])
 
 
 class EnsembleOptimizer(BaseOptimizer):
@@ -283,7 +271,6 @@ class EnsembleOptimizer(BaseOptimizer):
     ):
         super(EnsembleOptimizer, self).__init__(
             max_iter=opt.max_iter,
-            normalize_columns=opt.normalize_columns,
             fit_intercept=opt.fit_intercept,
             initial_guess=opt.initial_guess,
             copy_X=opt.copy_X,

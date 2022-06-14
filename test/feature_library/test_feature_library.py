@@ -822,7 +822,7 @@ def test_sindypi_library(data_lorenz):
     sindy_library = SINDyPILibrary(
         library_functions=x_library_functions,
         x_dot_library_functions=x_dot_library_functions,
-        t=t[1:-1],
+        t=t,
         function_names=library_function_names,
         include_bias=True,
     )

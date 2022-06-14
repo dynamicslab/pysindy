@@ -847,28 +847,6 @@ def test_bad_ensemble_params(data_lorenz, params):
         SINDy(feature_library=library, optimizer=optimizer).fit(x, t, **params)
 
 
-def test_bad_ensemble_weakform():
-    x = np.linspace(0, 100, 100)
-    x_dot = np.zeros(100)
-    X = np.linspace(0, 10)
-    t = np.linspace(0, 10)
-    X, T = np.meshgrid(x, t)
-    XT = np.asarray([X, T]).T
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=2,
-        spatiotemporal_grid=XT,
-        is_uniform=True,
-    )
-
-    model = SINDy(feature_library=pde_lib)
-    with pytest.raises(ValueError):
-        model.fit(x=x, x_dot=x_dot, ensemble=True)
-
-
 def test_data_shapes():
     model = SINDy()
     n = 10

@@ -30,6 +30,8 @@ from .utils import SampleConcatter
 from .utils import validate_control_variables
 from .utils import validate_input
 from .utils import validate_no_reshape
+from .utils import comprehend_and_validate_inputs
+from .utils import zip_like_sequence
 
 
 class SINDy(BaseEstimator):
@@ -316,7 +318,7 @@ class SINDy(BaseEstimator):
                 "If multiple trajectories set, x and if included,"
                 "x_dot and u, must be Sequences"
             )
-        x, x_dot, u = _comprehend_and_validate_inputs(
+        x, x_dot, u = comprehend_and_validate_inputs(
             x, t, x_dot, u, self.feature_library
         )
 
@@ -466,7 +468,7 @@ class SINDy(BaseEstimator):
         """
         if not multiple_trajectories:
             x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
-        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
+        x, _, u = comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
 
         check_is_fitted(self, "model")
         if self.n_control_features_ > 0 and u is None:
@@ -616,7 +618,7 @@ class SINDy(BaseEstimator):
         if not multiple_trajectories:
             x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
             multiple_trajectories = True
-        x, x_dot, u = _comprehend_and_validate_inputs(
+        x, x_dot, u = comprehend_and_validate_inputs(
             x, t, x_dot, u, self.feature_library
         )
 
@@ -702,13 +704,13 @@ class SINDy(BaseEstimator):
             if x_dot is None:
                 x = [
                     self.feature_library.validate_input(xi, ti)
-                    for xi, ti in _zip_like_sequence(x, t)
+                    for xi, ti in zip_like_sequence(x, t)
                 ]
                 x_dot = [
                     self.feature_library.calc_trajectory(
                         self.differentiation_method, xi, ti
                     )
-                    for xi, ti in _zip_like_sequence(x, t)
+                    for xi, ti in zip_like_sequence(x, t)
                 ]
             else:
                 if not isinstance(x_dot, Sequence):
@@ -761,7 +763,7 @@ class SINDy(BaseEstimator):
             raise RuntimeError("No differentiation implemented for discrete time model")
         if not multiple_trajectories:
             x, t, _, _ = _adapt_to_multiple_trajectories(x, t, None, None)
-        x, _, _ = _comprehend_and_validate_inputs(
+        x, _, _ = comprehend_and_validate_inputs(
             x, t, None, None, self.feature_library
         )
         result = self._process_multiple_trajectories(x, t, None)[1]
@@ -970,14 +972,6 @@ class SINDy(BaseEstimator):
         return self.model.steps[-1][1].complexity
 
 
-def _zip_like_sequence(x, t):
-    """Create an iterable like zip(x, t), but works if t is scalar."""
-    if isinstance(t, Sequence):
-        return zip(x, t)
-    else:
-        return product(x, [t])
-
-
 def _adapt_to_multiple_trajectories(x, t, x_dot, u):
     """Adapt model data not already in multiple_trajectories to that format.
 
@@ -1003,23 +997,3 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u):
     if u is not None:
         u = [u]
     return x, t, x_dot, u
-
-
-def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
-    """Validate input types, reshape arrays, and label axes"""
-
-    def comprehend_and_validate(arr, t):
-        arr = AxesArray(arr, feature_library.comprehend_axes(arr))
-        arr = feature_library.correct_shape(arr)
-        return validate_no_reshape(arr, t)
-
-    x = [comprehend_and_validate(xi, ti) for xi, ti in _zip_like_sequence(x, t)]
-    if x_dot is not None:
-        x_dot = [
-            comprehend_and_validate(xdoti, ti)
-            for xdoti, ti in _zip_like_sequence(x_dot, t)
-        ]
-    if u is not None:
-        u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
-
-    return x, x_dot, u

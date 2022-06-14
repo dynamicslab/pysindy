@@ -2,15 +2,24 @@
 Base class for feature library classes.
 """
 import abc
+import warnings
+from functools import wraps
+from typing import Sequence
 
 import numpy as np
+from scipy import sparse
 from sklearn import __version__
 from sklearn.base import TransformerMixin
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import AxesArray
+from ..utils import DefaultShapedInputsMixin
+from ..utils import validate_no_reshape
+from ..utils import wrap_axes
+from ..utils.axes import ax_time_to_ax_sample
 
-class BaseFeatureLibrary(TransformerMixin):
+
+class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
     """
     Base class for feature libraries.
 
@@ -28,10 +37,55 @@ class BaseFeatureLibrary(TransformerMixin):
     """
 
     def __init__(self, library_ensemble=None, ensemble_indices=[0]):
+        if library_ensemble is not None:
+            warnings.warn(
+                "Library ensembling is no longer performed by feature libraries.  Use "
+                "EnsemblingOptimizer to fit an ensemble model.",
+                DeprecationWarning,
+            )
         self.library_ensemble = library_ensemble
         if np.any(np.asarray(ensemble_indices) < 0):
             raise ValueError("Library ensemble indices must be 0 or positive integers.")
         self.ensemble_indices = ensemble_indices
+
+    def validate_input(self, x, *args, **kwargs):
+        return validate_no_reshape(x, *args, **kwargs)
+
+    def reshape_samples_to_spatial_grid(self, x: np.ndarray) -> AxesArray:
+        """Adapt predictions to fitted spatial grid."""
+        if not hasattr(self, "spatial_grid"):
+            return AxesArray(x, {"ax_sample": 0, "ax_coord": 1})
+        # PDELibrary can have a zero spatial dimension for SINDyPI.
+        shape = [dim for dim in self.spatial_grid.shape[:-1] if dim != 0]
+        x = np.reshape(x, (*shape, -1, x.shape[-1]))
+        return AxesArray(
+            x,
+            {
+                "ax_spatial": list(range(len(shape))),
+                "ax_sample": len(shape),
+                "ax_coord": len(shape) + 1,
+            },
+        )
+
+    def correct_shape(self, x: AxesArray):
+        """Correct the shape of x, given what we know of the problem"""
+        if len(x.shape) == 1:
+            data = np.asarray(x).reshape((-1, 1))
+            return AxesArray(data, {"ax_time": 0, "ax_coord": 1})
+        elif len(x.shape) > 2 and type(self) is BaseFeatureLibrary:
+            warnings.warn(
+                "Data shapes with more than 2 axes are "
+                "deprecated for the default problem.  We assume that time "
+                "axis comes first, then coordinate axis, then all other "
+                "axes continue the time axis.",
+                DeprecationWarning,
+            )
+        return x
+
+    def calc_trajectory(self, diff_method, x, t):
+        axes = x.__dict__
+        x_dot = diff_method(x, t=t)
+        return AxesArray(x_dot, axes)
 
     # Force subclasses to implement this
     @abc.abstractmethod
@@ -91,6 +145,12 @@ class BaseFeatureLibrary(TransformerMixin):
         If library bagging, return xp without
         the terms at ensemble_indices
         """
+        warnings.warn(
+            "Library ensembling is no longer performed by feature libraries.  Use "
+            "EnsemblingOptimizer to fit an ensemble model.",
+            UserWarning,
+        )
+
         if self.library_ensemble:
             if self.n_output_features_ <= len(self.ensemble_indices):
                 raise ValueError(
@@ -99,7 +159,7 @@ class BaseFeatureLibrary(TransformerMixin):
                 )
             inds = range(self.n_output_features_)
             inds = np.delete(inds, self.ensemble_indices)
-            return xp[:, inds]
+            return [x[..., inds] for x in xp]
         else:
             return xp
 
@@ -116,6 +176,34 @@ class BaseFeatureLibrary(TransformerMixin):
     def size(self):
         check_is_fitted(self)
         return self.n_output_features_
+
+
+def x_sequence_or_item(wrapped_func):
+    """Allow a feature library's method to handle list or item inputs."""
+
+    @wraps(wrapped_func)
+    def func(self, x, *args, **kwargs):
+        if isinstance(x, Sequence):
+            return wrapped_func(self, x, *args, **kwargs)
+        else:
+            if not sparse.issparse(x):
+                x = AxesArray(x, self.comprehend_axes(x))
+                x = ax_time_to_ax_sample(x)
+                reconstructor = np.array
+            else:  # sparse arrays
+                reconstructor = type(x)
+                axes = self.comprehend_axes(x)
+                wrap_axes(axes)(x)
+                # Can't use x = ax_time_to_ax_sample(x) b/c that creates
+                # an AxesArray
+                x.ax_sample = x.ax_time
+                x.ax_time = None
+            result = wrapped_func(self, [x], *args, **kwargs)
+            if isinstance(result, Sequence):  # e.g. transform() returns x
+                return reconstructor(result[0])
+            return result  # e.g. fit() returns self
+
+    return func
 
 
 class ConcatLibrary(BaseFeatureLibrary):
@@ -175,7 +263,8 @@ class ConcatLibrary(BaseFeatureLibrary):
         )
         self.libraries_ = libraries
 
-    def fit(self, x, y=None):
+    @x_sequence_or_item
+    def fit(self, x_full, y=None):
         """
         Compute number of output features.
 
@@ -188,15 +277,14 @@ class ConcatLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        _, n_features = check_array(x).shape
-
+        n_features = x_full[0].shape[x_full[0].ax_coord]
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
         else:
             self.n_input_features_ = n_features
 
         # First fit all libs provided below
-        fitted_libs = [lib.fit(x, y) for lib in self.libraries_]
+        fitted_libs = [lib.fit(x_full, y) for lib in self.libraries_]
 
         # Calculate the sum of output features
         self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
@@ -206,7 +294,8 @@ class ConcatLibrary(BaseFeatureLibrary):
 
         return self
 
-    def transform(self, x):
+    @x_sequence_or_item
+    def transform(self, x_full):
         """Transform data with libs provided below.
 
         Parameters
@@ -223,28 +312,31 @@ class ConcatLibrary(BaseFeatureLibrary):
         """
         for lib in self.libraries_:
             check_is_fitted(lib)
-        n_samples = x.shape[0]
-        if hasattr(self.libraries_[0], "spatiotemporal_grid"):
-            n_samples = self.libraries_[0].num_trajectories * self.libraries_[0].K
 
-        # preallocate matrix
-        xp = np.zeros((n_samples, self.n_output_features_))
+        xp_full = []
+        for x in x_full:
+            # preallocate matrix
+            shape = np.array(x.shape)
+            shape[-1] = self.n_output_features_
+            xp = np.zeros(shape)
 
-        current_feat = 0
-        for lib in self.libraries_:
+            current_feat = 0
+            for lib in self.libraries_:
 
-            # retrieve num features from lib
-            lib_n_output_features = lib.n_output_features_
+                # retrieve num features from lib
+                lib_n_output_features = lib.n_output_features_
 
-            start_feature_index = current_feat
-            end_feature_index = start_feature_index + lib_n_output_features
+                start_feature_index = current_feat
+                end_feature_index = start_feature_index + lib_n_output_features
 
-            xp[:, start_feature_index:end_feature_index] = lib.transform(x)
+                xp[..., start_feature_index:end_feature_index] = lib.transform([x])[0]
 
-            current_feat += lib_n_output_features
+                current_feat += lib_n_output_features
 
-        # If library bagging, return xp missing the terms at ensemble_indices
-        return self._ensemble(xp)
+            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
+        return xp_full
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.
@@ -330,7 +422,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         self.libraries_ = libraries
         self.inputs_per_library_ = inputs_per_library
         for lib in self.libraries_:
-            if hasattr(lib, "spatiotemporal_grid"):
+            if hasattr(lib, "H_xt"):
                 if lib.spatiotemporal_grid is not None:
                     self.n_samples = lib.K
                     self.spatiotemporal_grid = lib.spatiotemporal_grid
@@ -343,9 +435,11 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         lib_full : All combinations of the numerical library terms.
         """
+        shape = np.array(lib_i.shape)
+        shape[-1] = lib_i.shape[-1] * lib_j.shape[-1]
         lib_full = np.reshape(
-            lib_i[:, :, np.newaxis] * lib_j[:, np.newaxis, :],
-            (lib_i.shape[0], lib_i.shape[-1] * lib_j.shape[-1]),
+            lib_i[..., :, np.newaxis] * lib_j[..., np.newaxis, :],
+            shape,
         )
 
         return lib_full
@@ -370,7 +464,8 @@ class TensoredLibrary(BaseFeatureLibrary):
         """
         self.inputs_per_library_ = inputs_per_library
 
-    def fit(self, x, y=None):
+    @x_sequence_or_item
+    def fit(self, x_full, y=None):
         """
         Compute number of output features.
 
@@ -383,7 +478,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        _, n_features = check_array(x).shape
+        n_features = x_full[0].shape[x_full[0].ax_coord]
 
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
@@ -399,7 +494,9 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         # First fit all libs provided below
         fitted_libs = [
-            lib.fit(x[:, np.unique(self.inputs_per_library_[i, :])], y)
+            lib.fit(
+                [x[..., np.unique(self.inputs_per_library_[i, :])] for x in x_full], y
+            )
             for i, lib in enumerate(self.libraries_)
         ]
 
@@ -414,7 +511,8 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         return self
 
-    def transform(self, x):
+    @x_sequence_or_item
+    def transform(self, x_full):
         """Transform data with libs provided below.
 
         Parameters
@@ -429,43 +527,48 @@ class TensoredLibrary(BaseFeatureLibrary):
             generated from applying the custom functions to the inputs.
 
         """
-        n_samples = x.shape[0]
-        for lib in self.libraries_:
-            check_is_fitted(lib)
-            if hasattr(lib, "spatiotemporal_grid"):
-                if lib.spatiotemporal_grid is not None:  # check if weak form
-                    n_samples = self.libraries_[0].num_trajectories * self.n_samples
+        check_is_fitted(self)
 
-        # preallocate matrix
-        xp = np.zeros((n_samples, self.n_output_features_))
+        xp_full = []
+        for x in x_full:
+            # preallocate matrix
+            shape = np.array(x.shape)
+            shape[-1] = self.n_output_features_
+            xp = np.zeros(shape)
 
-        current_feat = 0
-        for i in range(len(self.libraries_)):
-            lib_i = self.libraries_[i]
-            lib_i_n_output_features = lib_i.n_output_features_
-            if self.inputs_per_library_ is None:
-                xp_i = lib_i.transform(x)
-            else:
-                xp_i = lib_i.transform(x[:, np.unique(self.inputs_per_library_[i, :])])
-            for j in range(i + 1, len(self.libraries_)):
-                lib_j = self.libraries_[j]
-                lib_j_n_output_features = lib_j.n_output_features_
-                xp_j = lib_j.transform(x[:, np.unique(self.inputs_per_library_[j, :])])
+            current_feat = 0
+            for i in range(len(self.libraries_)):
+                lib_i = self.libraries_[i]
+                lib_i_n_output_features = lib_i.n_output_features_
+                if self.inputs_per_library_ is None:
+                    xp_i = lib_i.transform([x])[0]
+                else:
+                    xp_i = lib_i.transform(
+                        [x[..., np.unique(self.inputs_per_library_[i, :])]]
+                    )[0]
+                for j in range(i + 1, len(self.libraries_)):
+                    lib_j = self.libraries_[j]
+                    lib_j_n_output_features = lib_j.n_output_features_
+                    xp_j = lib_j.transform(
+                        [x[..., np.unique(self.inputs_per_library_[j, :])]]
+                    )[0]
 
-                start_feature_index = current_feat
-                end_feature_index = (
-                    start_feature_index
-                    + lib_i_n_output_features * lib_j_n_output_features
-                )
+                    start_feature_index = current_feat
+                    end_feature_index = (
+                        start_feature_index
+                        + lib_i_n_output_features * lib_j_n_output_features
+                    )
 
-                xp[:, start_feature_index:end_feature_index] = self._combinations(
-                    xp_i, xp_j
-                )
+                    xp[..., start_feature_index:end_feature_index] = self._combinations(
+                        xp_i, xp_j
+                    )
 
-                current_feat += lib_i_n_output_features * lib_j_n_output_features
+                    current_feat += lib_i_n_output_features * lib_j_n_output_features
 
-        # If library bagging, return xp missing the terms at ensemble_indices
-        return self._ensemble(xp)
+            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
+        return xp_full
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.

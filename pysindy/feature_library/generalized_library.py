@@ -1,9 +1,13 @@
+from typing import Type
+
 import numpy as np
 from sklearn import __version__
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import AxesArray
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
+from .pde_library import PDELibrary
 from .weak_pde_library import WeakPDELibrary
 
 
@@ -37,8 +41,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         used to generate a large number of libraries, each using their own
         subsets of the input variables. Note that this must be specified for
         all the individual feature libraries.
-
-    exclude_libraries : list of ints, optional (default [])
 
     library_ensemble : boolean, optional (default False)
         Whether or not to use library bagging (regress on subset of the
@@ -100,9 +102,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         libraries: list,
         tensor_array=None,
         inputs_per_library=None,
-        exclude_libraries=[],
         library_ensemble=False,
         ensemble_indices=[0],
+        exclude_libraries=[],
     ):
         super(GeneralizedLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -110,12 +112,15 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         if len(libraries) > 0:
             self.libraries_ = libraries
             weak_libraries = False
+            pde_libraries = False
             nonweak_libraries = False
-            for lib in self.libraries_:
+            for k, lib in enumerate(self.libraries_):
                 if isinstance(lib, WeakPDELibrary):
-                    weak_libraries = True
+                    weak_libraries = k
                 else:
                     nonweak_libraries = True
+                    if isinstance(lib, PDELibrary):
+                        pde_libraries = k
             if weak_libraries and nonweak_libraries:
                 raise ValueError(
                     "At least one of the libraries is a weak form library, "
@@ -123,6 +128,16 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                     "result in a nonsensical optimization problem. Please use "
                     "all weak form libraries or no weak form libraries."
                 )
+            if weak_libraries:
+                self.validate_input = libraries[weak_libraries].validate_input
+                self.calc_trajectory = libraries[weak_libraries].calc_trajectory
+                self.comprehend_axes = libraries[weak_libraries].comprehend_axes
+                self.spatiotemporal_grid = libraries[weak_libraries].spatiotemporal_grid
+            elif pde_libraries:
+                self.validate_input = libraries[pde_libraries].validate_input
+                self.calc_trajectory = libraries[pde_libraries].calc_trajectory
+                self.comprehend_axes = libraries[pde_libraries].comprehend_axes
+                self.spatial_grid = libraries[pde_libraries].spatial_grid
         else:
             raise ValueError(
                 "Empty or nonsensical library list passed to this library."
@@ -169,7 +184,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self.libraries_full_ = self.libraries_
         self.exclude_libs_ = exclude_libraries
 
-    def fit(self, x, y=None):
+    @x_sequence_or_item
+    def fit(self, x_full, y=None):
         """
         Compute number of output features.
 
@@ -182,7 +198,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        _, n_features = check_array(x).shape
+        n_features = x_full[0].shape[x_full[0].ax_coord]
 
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
@@ -205,7 +221,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         # First fit all libraries separately below, with subset of the inputs
         fitted_libs = [
-            lib.fit(x[:, np.unique(self.inputs_per_library_[i, :])], y)
+            lib.fit(
+                [x[..., np.unique(self.inputs_per_library_[i, :])] for x in x_full], y
+            )
             for i, lib in enumerate(self.libraries_)
         ]
 
@@ -215,22 +233,14 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             for i in range(num_tensor_prods):
                 lib_inds = np.ravel(np.where(self.tensor_array_[i]))
                 library_subset = np.asarray(fitted_libs)[lib_inds]
-                library_full = library_subset[0]
-                n_output_features = library_subset[0].n_output_features_
-                for j in range(1, len(library_subset)):
-                    library_full = library_full * library_subset[j]
-                    n_output_features = (
-                        n_output_features * library_subset[j].n_output_features_
-                    )
+                library_full = np.prod(library_subset)
                 library_full._set_inputs_per_library(
                     self.inputs_per_library_[lib_inds, :]
                 )
-                library_full.fit(x, y)
+                library_full.fit(x_full, y)
                 fitted_libs.append(library_full)
 
         # Calculate the sum of output features
-        # self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
-        # exclude libraries in exclude_libs_
         self.n_output_features_ = sum(
             [
                 fitted_libs[i].n_output_features_
@@ -243,7 +253,25 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         return self
 
-    def transform(self, x):
+    def has_type(self, libtype: Type, exclusively=False) -> bool:
+        """Checks whether this library has a specific library type.
+
+        Parameters
+        ----------
+        libtype : A type of feature library
+        exclusively: whether to check all libraries
+
+        Returns
+        -------
+        Bool indicating whether specific library type is present
+        """
+        has_inst = map(lambda lib: isinstance(lib, libtype), self.libraries_)
+        if exclusively:
+            return all(has_inst)
+        return any(has_inst)
+
+    @x_sequence_or_item
+    def transform(self, x_full):
         """Transform data with libs provided below.
 
         Parameters
@@ -258,45 +286,44 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             generated from applying the custom functions to the inputs.
 
         """
-        for lib in self.libraries_full_:
-            check_is_fitted(lib)
+        check_is_fitted(self, attributes=["n_features_in_"])
 
-        n_samples, n_features = x.shape
+        xp_full = []
+        for x in x_full:
+            # n_samples = x.shape[x.ax_sample]
+            n_features = x.shape[x.ax_coord]
+            shape = np.array(x.shape)
 
-        if isinstance(self.libraries_[0], WeakPDELibrary):
-            n_samples = self.libraries_[0].K * self.libraries_[0].num_trajectories
+            # if isinstance(self.libraries_[0], WeakPDELibrary):
+            #     n_samples = self.libraries_[0].K * self.libraries_[0].num_trajectories
 
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
-        if n_features != n_input_features:
-            raise ValueError("x shape does not match training shape")
+            if float(__version__[:3]) >= 1.0:
+                n_input_features = self.n_features_in_
+            else:
+                n_input_features = self.n_input_features_
+            if n_features != n_input_features:
+                raise ValueError("x shape does not match training shape")
 
-        # preallocate matrix
-        xp = np.zeros((n_samples, self.n_output_features_))
+            # preallocate matrix
+            shape[-1] = self.n_output_features_
+            xps = []
 
-        current_feat = 0
-        for i, lib in enumerate(self.libraries_full_):
-            if i not in self.exclude_libs_:
-
-                # retrieve num output features from lib
-                lib_n_output_features = lib.n_output_features_
-
-                start_feature_index = current_feat
-                end_feature_index = start_feature_index + lib_n_output_features
-
+            for i, lib in enumerate(self.libraries_full_):
                 if i < self.inputs_per_library_.shape[0]:
-                    xp[:, start_feature_index:end_feature_index] = lib.transform(
-                        x[:, np.unique(self.inputs_per_library_[i, :])]
-                    )
+                    if i not in self.exclude_libs_:
+                        xps.append(
+                            lib.transform(
+                                [x[..., np.unique(self.inputs_per_library_[i, :])]]
+                            )[0]
+                        )
                 else:
-                    xp[:, start_feature_index:end_feature_index] = lib.transform(x)
+                    xps.append(lib.transform([x])[0])
 
-                current_feat += lib_n_output_features
-
-        # If library bagging, return xp missing the terms at ensemble_indices
-        return self._ensemble(xp)
+            xp = AxesArray(np.concatenate(xps, axis=xps[0].ax_coord), xps[0].__dict__)
+            xp_full = xp_full + [xp]
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
+        return xp_full
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.
@@ -334,3 +361,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                         input_features_i = input_features
                 feature_names += lib.get_feature_names(input_features_i)
         return feature_names
+
+    def calc_trajectory(self, diff_method, x, t):
+        return self.libraries_[0].calc_trajectory(diff_method, x, t)

@@ -24,6 +24,8 @@ from .base import supports_multiple_targets
 from .base import validate_control_variables
 from .base import validate_input
 from .base import validate_no_reshape
+from .base import comprehend_and_validate_inputs
+from .base import zip_like_sequence
 from .odes import bacterial
 from .odes import burgers_galerkin
 from .odes import cubic_damped_SHO
@@ -61,6 +63,8 @@ __all__ = [
     "DefaultShapedInputsMixin",
     "PDEShapedInputsMixin",
     "SampleConcatter",
+    "comprehend_and_validate_inputs",
+    "zip_like_sequence",
     "ax_time_to_ax_sample",
     "concat_sample_axis",
     "wrap_axes",

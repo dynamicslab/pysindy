@@ -2,9 +2,12 @@ from itertools import repeat
 from typing import Sequence
 
 import numpy as np
+from itertools import product
 from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
+from .axes import AxesArray
+
 
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default
@@ -337,3 +340,29 @@ def supports_multiple_targets(estimator):
         return estimator._more_tags()["multioutput"]
     except (AttributeError, KeyError):
         return False
+
+def comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
+    """Validate input types, reshape arrays, and label axes"""
+
+    def comprehend_and_validate(arr, t):
+        arr = AxesArray(arr, feature_library.comprehend_axes(arr))
+        arr = feature_library.correct_shape(arr)
+        return validate_no_reshape(arr, t)
+
+    x = [comprehend_and_validate(xi, ti) for xi, ti in zip_like_sequence(x, t)]
+    if x_dot is not None:
+        x_dot = [
+            comprehend_and_validate(xdoti, ti)
+            for xdoti, ti in zip_like_sequence(x_dot, t)
+        ]
+    if u is not None:
+        u = [comprehend_and_validate(ui, ti) for ui, ti in zip_like_sequence(u, t)]
+
+    return x, x_dot, u
+
+def zip_like_sequence(x, t):
+    """Create an iterable like zip(x, t), but works if t is scalar."""
+    if isinstance(t, Sequence):
+        return zip(x, t)
+    else:
+        return product(x, [t])

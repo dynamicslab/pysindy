@@ -284,7 +284,7 @@ class ConcatLibrary(BaseFeatureLibrary):
             self.n_input_features_ = n_features
 
         # First fit all libs provided below
-        fitted_libs = [lib.fit(x_full, y) for lib in self.libraries_]
+        fitted_libs = [lib.fit(x_full) for lib in self.libraries_]
 
         # Calculate the sum of output features
         self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
@@ -315,25 +315,12 @@ class ConcatLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            # preallocate matrix
-            shape = np.array(x.shape)
-            shape[-1] = self.n_output_features_
-            xp = np.zeros(shape)
+            xp = self.libraries_[0].transform([x])[0]
+            for i in range(1,len(self.libraries_)):
+                xp_i = self.libraries_[i].transform([x])[0]
+                xp=np.concatenate([xp,xp_i],axis=xp_i.ax_coord)
 
-            current_feat = 0
-            for lib in self.libraries_:
-
-                # retrieve num features from lib
-                lib_n_output_features = lib.n_output_features_
-
-                start_feature_index = current_feat
-                end_feature_index = start_feature_index + lib_n_output_features
-
-                xp[..., start_feature_index:end_feature_index] = lib.transform([x])[0]
-
-                current_feat += lib_n_output_features
-
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(np.array(xp)))]
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full
@@ -421,11 +408,6 @@ class TensoredLibrary(BaseFeatureLibrary):
         )
         self.libraries_ = libraries
         self.inputs_per_library_ = inputs_per_library
-        for lib in self.libraries_:
-            if hasattr(lib, "H_xt"):
-                if lib.spatiotemporal_grid is not None:
-                    self.n_samples = lib.K
-                    self.spatiotemporal_grid = lib.spatiotemporal_grid
 
     def _combinations(self, lib_i, lib_j):
         """
@@ -435,6 +417,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         lib_full : All combinations of the numerical library terms.
         """
+        #the shape here should be fixed with ax_coord....
         shape = np.array(lib_i.shape)
         shape[-1] = lib_i.shape[-1] * lib_j.shape[-1]
         lib_full = np.reshape(
@@ -531,41 +514,28 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            # preallocate matrix
-            shape = np.array(x.shape)
-            shape[-1] = self.n_output_features_
-            xp = np.zeros(shape)
-
+            xp=[]
             current_feat = 0
             for i in range(len(self.libraries_)):
                 lib_i = self.libraries_[i]
-                lib_i_n_output_features = lib_i.n_output_features_
                 if self.inputs_per_library_ is None:
                     xp_i = lib_i.transform([x])[0]
                 else:
                     xp_i = lib_i.transform(
                         [x[..., np.unique(self.inputs_per_library_[i, :])]]
                     )[0]
+
                 for j in range(i + 1, len(self.libraries_)):
                     lib_j = self.libraries_[j]
-                    lib_j_n_output_features = lib_j.n_output_features_
                     xp_j = lib_j.transform(
                         [x[..., np.unique(self.inputs_per_library_[j, :])]]
                     )[0]
 
-                    start_feature_index = current_feat
-                    end_feature_index = (
-                        start_feature_index
-                        + lib_i_n_output_features * lib_j_n_output_features
-                    )
+                    for xp_ij in self._combinations(xp_i, xp_j):
+                        xp.append(xp_ij)
 
-                    xp[..., start_feature_index:end_feature_index] = self._combinations(
-                        xp_i, xp_j
-                    )
 
-                    current_feat += lib_i_n_output_features * lib_j_n_output_features
-
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(np.array(xp)))]
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

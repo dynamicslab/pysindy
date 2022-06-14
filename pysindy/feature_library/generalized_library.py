@@ -130,12 +130,10 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 )
             if weak_libraries:
                 self.validate_input = libraries[weak_libraries].validate_input
-                self.calc_trajectory = libraries[weak_libraries].calc_trajectory
                 self.comprehend_axes = libraries[weak_libraries].comprehend_axes
                 self.spatiotemporal_grid = libraries[weak_libraries].spatiotemporal_grid
             elif pde_libraries:
                 self.validate_input = libraries[pde_libraries].validate_input
-                self.calc_trajectory = libraries[pde_libraries].calc_trajectory
                 self.comprehend_axes = libraries[pde_libraries].comprehend_axes
                 self.spatial_grid = libraries[pde_libraries].spatial_grid
         else:
@@ -290,12 +288,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            # n_samples = x.shape[x.ax_sample]
             n_features = x.shape[x.ax_coord]
-            shape = np.array(x.shape)
-
-            # if isinstance(self.libraries_[0], WeakPDELibrary):
-            #     n_samples = self.libraries_[0].K * self.libraries_[0].num_trajectories
 
             if float(__version__[:3]) >= 1.0:
                 n_input_features = self.n_features_in_
@@ -304,10 +297,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 
-            # preallocate matrix
-            shape[-1] = self.n_output_features_
             xps = []
-
             for i, lib in enumerate(self.libraries_full_):
                 if i < self.inputs_per_library_.shape[0]:
                     if i not in self.exclude_libs_:
@@ -361,6 +351,3 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                         input_features_i = input_features
                 feature_names += lib.get_feature_names(input_features_i)
         return feature_names
-
-    def calc_trajectory(self, diff_method, x, t):
-        return self.libraries_[0].calc_trajectory(diff_method, x, t)

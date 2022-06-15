@@ -85,10 +85,16 @@ def test_improper_shape_input(data_1d):
 
 def test_nan_derivatives(data_lorenz):
     x, t = data_lorenz
+    model0 = SINDy(differentiation_method=FiniteDifference(drop_endpoints=False))
+    model0.fit(x, t)
 
     model = SINDy(differentiation_method=FiniteDifference(drop_endpoints=True))
     model.fit(x, t)
     check_is_fitted(model)
+
+    result = model.score(x, t=t)
+    expected = model0.score(x, t=t)
+    np.testing.assert_allclose(result, expected, rtol=1e-4)
 
 
 @pytest.mark.parametrize(

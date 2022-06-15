@@ -344,6 +344,9 @@ class ConcatLibrary(BaseFeatureLibrary):
             feature_names += lib_feat_names
         return feature_names
 
+    def calc_trajectory(self, diff_method, x, t):
+        return self.libraries_[0].calc_trajectory(diff_method, x, t)
+
 
 class TensoredLibrary(BaseFeatureLibrary):
     """Tensor multiple libraries together into one library. All settings
@@ -580,3 +583,6 @@ class TensoredLibrary(BaseFeatureLibrary):
                     lib_i_feat_names, lib_j_feat_names
                 )
         return feature_names
+
+    def calc_trajectory(self, diff_method, x, t):
+        return self.libraries_[0].calc_trajectory(diff_method, x, t)

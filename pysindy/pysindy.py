@@ -676,51 +676,17 @@ class SINDy(BaseEstimator):
             will be an np.ndarray of concatenated trajectories.
             If False, x_out will be a list.
         """
-        if not isinstance(x, Sequence):
-            raise TypeError("Input x must be a list")
-
-        if self.discrete_time:
-            x = [validate_input(xi) for xi in x]
-            if x_dot is None:
+        if x_dot is None:
+            if self.discrete_time:
                 x_dot = [xi[1:] for xi in x]
                 x = [xi[:-1] for xi in x]
             else:
-                if not isinstance(x_dot, Sequence):
-                    raise TypeError(
-                        "x_dot must be a list if used with x of list type "
-                        "(i.e. for multiple trajectories)"
-                    )
-                x_dot = [validate_input(xd) for xd in x_dot]
-        else:
-            if x_dot is None:
-                x = [
-                    self.feature_library.validate_input(xi, ti)
-                    for xi, ti in _zip_like_sequence(x, t)
-                ]
                 x_dot = [
                     self.feature_library.calc_trajectory(
                         self.differentiation_method, xi, ti
                     )
                     for xi, ti in _zip_like_sequence(x, t)
                 ]
-            else:
-                if not isinstance(x_dot, Sequence):
-                    raise TypeError(
-                        "x_dot must be a list if used with x of list type "
-                        "(i.e. for multiple trajectories)"
-                    )
-                if isinstance(t, Sequence):
-                    x = [
-                        self.feature_library.validate_input(xi, ti)
-                        for xi, ti in zip(x, t)
-                    ]
-                    x_dot = [
-                        self.feature_library.validate_input(xd, ti)
-                        for xd, ti in zip(x_dot, t)
-                    ]
-                else:
-                    x = [self.feature_library.validate_input(xi, t) for xi in x]
-                    x_dot = [self.feature_library.validate_input(xd, t) for xd in x_dot]
         return x, x_dot
 
     def differentiate(self, x, t=None, multiple_trajectories=False):

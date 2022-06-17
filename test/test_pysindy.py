@@ -581,21 +581,6 @@ def test_complexity(data_lorenz):
     assert model.complexity < 10
 
 
-def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_time):
-    x, t = data_multiple_trajctories
-
-    model = SINDy()
-    with pytest.raises(TypeError):
-        model._process_multiple_trajectories(np.array(x, dtype=object), t, x)
-    with pytest.raises(TypeError):
-        model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
-
-    x = data_discrete_time
-    model = SINDy(discrete_time=True)
-    with pytest.raises(TypeError):
-        model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
-
-
 def test_simulate_errors(data_lorenz):
     x, t = data_lorenz
     model = SINDy()

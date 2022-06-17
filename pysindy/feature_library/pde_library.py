@@ -117,6 +117,7 @@ class PDELibrary(BaseFeatureLibrary):
         ensemble_indices=[0],
         periodic=False,
         implicit_terms=False,
+        multiindices=None,
     ):
         super(PDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -158,6 +159,9 @@ class PDELibrary(BaseFeatureLibrary):
                 "temporal_grid parameter is specified only if implicit_terms "
                 " = True (i.e. if you are using SINDy-PI for PDEs)."
             )
+        if spatial_grid is not None and spatial_grid.ndim == 1:
+            spatial_grid = spatial_grid[:, np.newaxis]
+
         if temporal_grid is not None and temporal_grid.ndim != 1:
             raise ValueError("temporal_grid parameter must be 1D numpy array.")
         if temporal_grid is not None or spatial_grid is not None:
@@ -165,15 +169,26 @@ class PDELibrary(BaseFeatureLibrary):
                 spatiotemporal_grid = temporal_grid
                 spatial_grid = np.array([])
             elif temporal_grid is None:
-                spatiotemporal_grid = spatial_grid
+                spatiotemporal_grid = spatial_grid[
+                    ..., np.newaxis, :
+                ]  # append a fake time axis
             else:
-                spatiotemporal_grid = np.hstack((spatial_grid, temporal_grid))
+                spatiotemporal_grid = np.zeros(
+                    (
+                        *spatial_grid.shape[:-1],
+                        len(temporal_grid),
+                        spatial_grid.shape[-1] + 1,
+                    )
+                )
+                for ax in range(spatial_grid.ndim - 1):
+                    spatiotemporal_grid[..., ax] = spatial_grid[..., ax][
+                        ..., np.newaxis
+                    ]
+                spatiotemporal_grid[..., -1] = temporal_grid
         else:
             spatiotemporal_grid = np.array([])
             spatial_grid = np.array([])
 
-        if np.array(spatial_grid).ndim == 1:
-            spatial_grid = np.reshape(spatial_grid, (len(spatial_grid), 1))
         self.spatial_grid = spatial_grid
 
         # list of derivatives
@@ -187,15 +202,22 @@ class PDELibrary(BaseFeatureLibrary):
         self.grid_ndim = len(spatiotemporal_grid.shape[:-1])
         self.spatial_grid_ndim = len(self.spatial_grid_dims)
 
-        for i in range(self.grid_ndim):
+        # if want to include temporal terms -> range(len(dims))
+        if self.implicit_terms:
+            self.ind_range = spatiotemporal_grid.ndim - 1
+        else:
+            self.ind_range = spatiotemporal_grid.ndim - 2
+
+        for i in range(self.ind_range):
             indices = indices + (range(derivative_order + 1),)
 
-        multiindices = []
-        for ind in iproduct(*indices):
-            current = np.array(ind)
-            if np.sum(ind) > 0 and np.sum(ind) <= derivative_order:
-                multiindices.append(current)
-        multiindices = np.array(multiindices)
+        if multiindices is None:
+            multiindices = []
+            for ind in iproduct(*indices):
+                current = np.array(ind)
+                if np.sum(ind) > 0 and np.sum(ind) <= self.derivative_order:
+                    multiindices.append(current)
+            multiindices = np.array(multiindices)
         num_derivatives = len(multiindices)
 
         self.num_derivatives = num_derivatives
@@ -253,7 +275,7 @@ class PDELibrary(BaseFeatureLibrary):
 
         def derivative_string(multiindex):
             ret = ""
-            for axis in range(self.grid_ndim):
+            for axis in range(self.ind_range):
                 if (axis == self.grid_ndim - 1) and self.implicit_terms:
                     str_deriv = "t"
                 else:
@@ -371,7 +393,7 @@ class PDELibrary(BaseFeatureLibrary):
             library_idx = 0
             for multiindex in self.multiindices:
                 derivs = x.copy()
-                for axis in range(self.grid_ndim):
+                for axis in range(self.ind_range):
                     if multiindex[axis] > 0:
                         s = [0 for dim in self.spatiotemporal_grid.shape]
                         s[axis] = slice(self.grid_dims[axis])
@@ -432,8 +454,8 @@ class PDELibrary(BaseFeatureLibrary):
                     library_idx : library_idx
                     + n_library_terms * self.num_derivatives * n_features,
                 ] = np.reshape(
-                    library_functions[..., :, np.newaxis]
-                    * library_derivatives[..., np.newaxis, :],
+                    library_functions[..., np.newaxis, :]
+                    * library_derivatives[..., :, np.newaxis],
                     shape,
                 )
                 library_idx += n_library_terms * self.num_derivatives * n_features

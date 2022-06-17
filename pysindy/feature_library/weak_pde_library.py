@@ -174,6 +174,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         periodic=False,
         num_pts_per_domain=None,
         implicit_terms=False,
+        multiindices=None,
     ):
         super(WeakPDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -228,16 +229,20 @@ class WeakPDELibrary(BaseFeatureLibrary):
             self.ind_range = len(dims)
         else:
             self.ind_range = len(dims) - 1
+
         for i in range(self.ind_range):
             indices = indices + (range(derivative_order + 1),)
 
-        multiindices = []
-        for ind in iproduct(*indices):
-            current = np.array(ind)
-            if np.sum(ind) > 0 and np.sum(ind) <= derivative_order:
-                multiindices.append(current)
-        multiindices = np.array(multiindices)
+        if multiindices is None:
+            multiindices = []
+            for ind in iproduct(*indices):
+                current = np.array(ind)
+                if np.sum(ind) > 0 and np.sum(ind) <= derivative_order:
+                    multiindices.append(current)
+            multiindices = np.array(multiindices)
         num_derivatives = len(multiindices)
+        if num_derivatives > 0:
+            self.derivative_order = np.max(multiindices)
 
         self.num_derivatives = num_derivatives
         self.multiindices = multiindices

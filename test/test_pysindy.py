@@ -92,7 +92,9 @@ def test_nan_derivatives(data_lorenz):
     model.fit(x, t)
     check_is_fitted(model)
 
-    np.testing.assert_allclose(model.score(x, t=t), model0.score(x, t=t), rtol=1e-4)
+    result = model.score(x, t=t)
+    expected = model0.score(x, t=t)
+    np.testing.assert_allclose(result, expected, rtol=1e-4)
 
 
 @pytest.mark.parametrize(
@@ -299,6 +301,51 @@ def test_score(data):
     assert model.score(x, x_dot=x) <= 1
 
     assert model.score(x, t, x_dot=x) <= 1
+
+
+def test_score_pde(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatial_grid=x,
+        include_bias=True,
+        is_uniform=True,
+    )
+    model = SINDy(feature_library=pde_lib).fit(
+        u,
+        t,
+    )
+
+    assert model.score(u) <= 1
+
+    assert model.score(u, t) <= 1
+
+    assert model.score(u, x_dot=u) <= 1
+
+    assert model.score(u, t, x_dot=u) <= 1
+
+    X, T = np.meshgrid(x, t)
+    XT = np.array([X, T]).T
+    weak_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatiotemporal_grid=XT,
+        include_bias=True,
+        is_uniform=False,
+    )
+    model = SINDy(feature_library=weak_lib).fit(
+        u,
+        t=t,
+    )
+
+    assert model.score(u) <= 1
+
+    assert model.score(u, t) <= 1
 
 
 def test_fit_multiple_trajectores(data_multiple_trajctories):

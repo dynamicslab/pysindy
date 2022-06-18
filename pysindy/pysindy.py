@@ -674,12 +674,14 @@ class SINDy(BaseEstimator):
                 x_dot = [xi[1:] for xi in x]
                 x = [xi[:-1] for xi in x]
             else:
-                x_dot = [
-                    self.feature_library.calc_trajectory(
-                        self.differentiation_method, xi, ti
-                    )
-                    for xi, ti in _zip_like_sequence(x, t)
-                ]
+                x, x_dot = zip(
+                    *[
+                        self.feature_library.calc_trajectory(
+                            self.differentiation_method, xi, ti
+                        )
+                        for xi, ti in _zip_like_sequence(x, t)
+                    ]
+                )
         return x, x_dot
 
     def differentiate(self, x, t=None, multiple_trajectories=False):

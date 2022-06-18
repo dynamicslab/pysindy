@@ -12,6 +12,10 @@ class BaseDifferentiation(BaseEstimator):
 
     Simply forces differentiation methods to implement a
     ``_differentiate`` function.
+
+    Attributes:
+        smoothed_x: Methods that smooth x before differentiating save
+            that value here.  Methods that do not simply save x here.
     """
 
     def __init__(self):

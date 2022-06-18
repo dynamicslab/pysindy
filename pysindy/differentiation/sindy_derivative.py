@@ -3,7 +3,7 @@ Wrapper classes for differentiation methods from the :doc:`derivative:index` pac
 
 Some default values used here may differ from those used in :doc:`derivative:index`.
 """
-from derivative import dxdt
+from derivative import methods
 from numpy import arange
 
 from .base import BaseDifferentiation
@@ -70,4 +70,12 @@ class SINDyDerivative(BaseDifferentiation):
                 raise ValueError("t must be a positive constant or an array")
             t = arange(x.shape[0]) * t
 
-        return dxdt(x, t, axis=0, **self.kwargs)
+        differentiator = methods[self.kwargs["kind"]](
+            **{k: v for k, v in self.kwargs.items() if k != "kind"}
+        )
+        x_dot = differentiator.d(x, t, axis=0)
+        try:
+            self.smoothed_x_ = differentiator.smoothed_x_
+        except AttributeError:
+            self.smoothed_x_ = x
+        return x_dot

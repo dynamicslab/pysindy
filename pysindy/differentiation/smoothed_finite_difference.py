@@ -57,4 +57,5 @@ class SmoothedFiniteDifference(FiniteDifference):
     def _differentiate(self, x, t):
         """Apply finite difference method after smoothing."""
         x = self.smoother(x, **self.smoother_kws)
+        self.smoothed_x_ = x
         return super(SmoothedFiniteDifference, self)._differentiate(x, t)

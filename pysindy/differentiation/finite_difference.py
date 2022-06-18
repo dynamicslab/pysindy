@@ -282,4 +282,5 @@ class FiniteDifference(BaseDifferentiation):
                     ]
                 )
             x_dot[tuple(s)] = boundary
+        self.smoothed_x_ = x
         return x_dot

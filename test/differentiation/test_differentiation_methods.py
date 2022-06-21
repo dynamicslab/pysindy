@@ -262,6 +262,13 @@ def test_wrapper_equivalence_with_dxdt(data, derivative_kws):
         )
 
 
+def test_sindy_derivative_kwarg_update():
+    method = SINDyDerivative(kind="spectral", foo=2)
+    method.set_params(kwargs={"kind": "spline", "foo": 1})
+    assert method.kwargs["kind"] == "spline"
+    assert method.kwargs["foo"] == 1
+
+
 @pytest.mark.parametrize(
     "data, derivative_kws",
     [

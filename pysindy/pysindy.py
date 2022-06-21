@@ -632,17 +632,10 @@ class SINDy(BaseEstimator):
         x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
         x_dot_predict = [ax_time_to_ax_sample(xdip) for xdip in x_dot_predict]
 
-        x_dot, x_dot_predict = zip(
-            *[
-                drop_nan_samples(xdoti, xdotpi)
-                for xdoti, xdotpi in zip(x_dot, x_dot_predict)
-            ]
-        )
-
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)
-        if x_dot.ndim == 1:
-            x_dot = x_dot.reshape(-1, 1)
+
+        x_dot, x_dot_predict = drop_nan_samples(x_dot,  x_dot_predict)
         return metric(x_dot, x_dot_predict, **metric_kws)
 
     def _process_multiple_trajectories(self, x, t, x_dot):

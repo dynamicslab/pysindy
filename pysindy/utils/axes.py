@@ -7,7 +7,7 @@ from sklearn.base import TransformerMixin
 HANDLED_FUNCTIONS = {}
 
 
-class AxesArray(np.ndarray):
+class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
     """A numpy-like array that keeps track of the meaning of its axes.
 
     Paramters:
@@ -74,29 +74,38 @@ class AxesArray(np.ndarray):
         self.n_spatial = getattr(obj, "n_spatial", [])
 
     def __array_ufunc__(
-        self, ufunc, method, *inputs, **kwargs
+        self, ufunc, method, *inputs, out=None, **kwargs
     ):  # this method is called whenever you use a ufunc
-        f = {
-            "reduce": ufunc.reduce,
-            "accumulate": ufunc.accumulate,
-            "reduceat": ufunc.reduceat,
-            "outer": ufunc.outer,
-            "at": ufunc.at,
-            "__call__": ufunc,
-        }
         args = []
         for input_ in inputs:
             if isinstance(input_, AxesArray):
                 args.append(input_.view(np.ndarray))
             else:
                 args.append(input_)
-        # # convert the inputs to np.ndarray to prevent recursion, call the
-        # # function, then cast it back as AxesArray
-        output = f[method](*args, **kwargs)
-        if isinstance(output, np.ndarray):
-            return AxesArray(output, self.__dict__)
+
+        outputs = out
+        if outputs:
+            out_args = []
+            for output in outputs:
+                if isinstance(output, AxesArray):
+                    out_args.append(output.view(np.ndarray))
+                else:
+                    out_args.append(output)
+            kwargs["out"] = tuple(out_args)
         else:
-            return output
+            outputs = (None,) * ufunc.nout
+        results = super().__array_ufunc__(ufunc, method, *args, **kwargs)
+        if results is NotImplemented:
+            return NotImplemented
+        if method == "at":
+            return
+        if ufunc.nout == 1:
+            results = (results,)
+        results = tuple(
+            (AxesArray(np.asarray(result), self.__dict__) if output is None else output)
+            for result, output in zip(results, outputs)
+        )
+        return results[0] if len(results) == 1 else results
 
     def __array_function__(self, func, types, args, kwargs):
         if func not in HANDLED_FUNCTIONS:

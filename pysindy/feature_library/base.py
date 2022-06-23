@@ -284,7 +284,7 @@ class ConcatLibrary(BaseFeatureLibrary):
             self.n_input_features_ = n_features
 
         # First fit all libs provided below
-        fitted_libs = [lib.fit(x_full) for lib in self.libraries_]
+        fitted_libs = [lib.fit(x_full, y) for lib in self.libraries_]
 
         # Calculate the sum of output features
         self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])

@@ -316,9 +316,9 @@ class ConcatLibrary(BaseFeatureLibrary):
         xp_full = []
         for x in x_full:
             xp = self.libraries_[0].transform([x])[0]
-            for i in range(1,len(self.libraries_)):
+            for i in range(1, len(self.libraries_)):
                 xp_i = self.libraries_[i].transform([x])[0]
-                xp=np.concatenate([xp,xp_i],axis=xp_i.ax_coord)
+                xp = np.concatenate([xp, xp_i], axis=xp_i.ax_coord)
 
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(np.array(xp)))]
         if self.library_ensemble:
@@ -420,7 +420,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         lib_full : All combinations of the numerical library terms.
         """
-        #the shape here should be fixed with ax_coord....
+        # the shape here should be fixed with ax_coord....
         shape = np.array(lib_i.shape)
         shape[-1] = lib_i.shape[-1] * lib_j.shape[-1]
         lib_full = np.reshape(
@@ -517,8 +517,7 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            xp=[]
-            current_feat = 0
+            xp = []
             for i in range(len(self.libraries_)):
                 lib_i = self.libraries_[i]
                 if self.inputs_per_library_ is None:
@@ -536,7 +535,6 @@ class TensoredLibrary(BaseFeatureLibrary):
 
                     for xp_ij in self._combinations(xp_i, xp_j):
                         xp.append(xp_ij)
-
 
             xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(np.array(xp)))]
         if self.library_ensemble:

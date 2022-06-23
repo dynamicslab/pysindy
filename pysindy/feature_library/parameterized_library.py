@@ -54,13 +54,14 @@ class ParameterizedLibrary(GeneralizedLibrary):
         )
 
     def calc_trajectory(self, diff_method, x, t):
-        #if tensoring weak libraries, add the correction
-        if hasattr(self.libraries_[0],"K"):
+        # if tensoring weak libraries, add the correction
+        if hasattr(self.libraries_[0], "K"):
             constants_final = np.ones(self.libraries_[0].K)
             for k in range(self.libraries_[0].K):
-                constants_final[k] = np.sum(
-                    self.libraries_[0].fullweights0[k]
-                )
-            return self.libraries_[0].calc_trajectory(diff_method, x, t)*constants_final[:,np.newaxis]
+                constants_final[k] = np.sum(self.libraries_[0].fullweights0[k])
+            return (
+                self.libraries_[0].calc_trajectory(diff_method, x, t)
+                * constants_final[:, np.newaxis]
+            )
         else:
             return self.libraries_[0].calc_trajectory(diff_method, x, t)

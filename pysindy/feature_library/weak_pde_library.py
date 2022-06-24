@@ -165,16 +165,16 @@ class WeakPDELibrary(BaseFeatureLibrary):
         interaction_only=True,
         include_bias=False,
         include_interaction=True,
-        is_uniform=False,
         K=100,
         H_xt=None,
         p=4,
         library_ensemble=False,
         ensemble_indices=[0],
-        periodic=False,
         num_pts_per_domain=None,
         implicit_terms=False,
         multiindices=None,
+        differentiation_method=FiniteDifference,
+        diff_kwargs={},
     ):
         super(WeakPDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -186,12 +186,12 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.implicit_terms = implicit_terms
         self.include_bias = include_bias
         self.include_interaction = include_interaction
-        self.is_uniform = is_uniform
         self.K = K
         self.H_xt = H_xt
         self.p = p
-        self.periodic = periodic
         self.num_trajectories = 1
+        self.differentiation_method=differentiation_method
+        self.diff_kwargs=diff_kwargs
 
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
@@ -959,20 +959,20 @@ class WeakPDELibrary(BaseFeatureLibrary):
                             if self.multiindices[j][axis] > 0 and self.multiindices[j][
                                 axis
                             ] <= (self.derivative_order // 2):
-                                funcs_derivs[j + 1] = FiniteDifference(
+                                funcs_derivs[j + 1] = self.differentiation_method(
                                     d=self.multiindices[j][axis],
                                     axis=axis,
-                                    is_uniform=self.is_uniform,
+                                    **self.diff_kwargs,
                                 )._differentiate(
                                     funcs, self.spatiotemporal_grid[tuple(s)]
                                 )
                             if self.multiindices[j][axis] > 0 and self.multiindices[j][
                                 axis
                             ] <= (self.derivative_order - (self.derivative_order // 2)):
-                                x_derivs[j + 1] = FiniteDifference(
+                                x_derivs[j + 1] = self.differentiation_method(
                                     d=self.multiindices[j][axis],
                                     axis=axis,
-                                    is_uniform=self.is_uniform,
+                                    **self.diff_kwargs,
                                 )._differentiate(x, self.spatiotemporal_grid[tuple(s)])
 
                     # Extract the function and feature derivatives on the domains

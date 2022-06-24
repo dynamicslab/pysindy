@@ -112,12 +112,12 @@ class PDELibrary(BaseFeatureLibrary):
         function_names=None,
         include_bias=False,
         include_interaction=True,
-        is_uniform=False,
         library_ensemble=False,
         ensemble_indices=[0],
-        periodic=False,
         implicit_terms=False,
         multiindices=None,
+        differentiation_method=FiniteDifference,
+        diff_kwargs={},
     ):
         super(PDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -129,9 +129,9 @@ class PDELibrary(BaseFeatureLibrary):
         self.implicit_terms = implicit_terms
         self.include_bias = include_bias
         self.include_interaction = include_interaction
-        self.is_uniform = is_uniform
-        self.periodic = periodic
         self.num_trajectories = 1
+        self.differentiation_method=differentiation_method
+        self.diff_kwargs=diff_kwargs
 
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(
@@ -399,11 +399,10 @@ class PDELibrary(BaseFeatureLibrary):
                         s[axis] = slice(self.grid_dims[axis])
                         s[-1] = axis
 
-                        derivs = FiniteDifference(
+                        derivs = self.differentiation_method(
                             d=multiindex[axis],
                             axis=axis,
-                            is_uniform=self.is_uniform,
-                            periodic=self.periodic,
+                            **self.diff_kwargs,
                         )._differentiate(derivs, self.spatiotemporal_grid[tuple(s)])
                 library_derivatives[
                     ..., library_idx : library_idx + n_features

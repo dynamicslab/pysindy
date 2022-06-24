@@ -85,10 +85,16 @@ def test_improper_shape_input(data_1d):
 
 def test_nan_derivatives(data_lorenz):
     x, t = data_lorenz
+    model0 = SINDy(differentiation_method=FiniteDifference(drop_endpoints=False))
+    model0.fit(x, t)
 
     model = SINDy(differentiation_method=FiniteDifference(drop_endpoints=True))
     model.fit(x, t)
     check_is_fitted(model)
+
+    result = model.score(x, t=t)
+    expected = model0.score(x, t=t)
+    np.testing.assert_allclose(result, expected, rtol=1e-4)
 
 
 @pytest.mark.parametrize(
@@ -295,6 +301,51 @@ def test_score(data):
     assert model.score(x, x_dot=x) <= 1
 
     assert model.score(x, t, x_dot=x) <= 1
+
+
+def test_score_pde(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    library_functions = [lambda x: x, lambda x: x * x]
+    library_function_names = [lambda x: x, lambda x: x + x]
+    pde_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatial_grid=x,
+        include_bias=True,
+        is_uniform=True,
+    )
+    model = SINDy(feature_library=pde_lib).fit(
+        u,
+        t,
+    )
+
+    assert model.score(u) <= 1
+
+    assert model.score(u, t) <= 1
+
+    assert model.score(u, x_dot=u) <= 1
+
+    assert model.score(u, t, x_dot=u) <= 1
+
+    X, T = np.meshgrid(x, t)
+    XT = np.array([X, T]).T
+    weak_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=4,
+        spatiotemporal_grid=XT,
+        include_bias=True,
+        is_uniform=False,
+    )
+    model = SINDy(feature_library=weak_lib).fit(
+        u,
+        t=t,
+    )
+
+    assert model.score(u) <= 1
+
+    assert model.score(u, t) <= 1
 
 
 def test_fit_multiple_trajectores(data_multiple_trajctories):
@@ -845,32 +896,6 @@ def test_bad_ensemble_params(data_lorenz, params):
     )
     with pytest.raises(ValueError):
         SINDy(feature_library=library, optimizer=optimizer).fit(x, t, **params)
-
-
-# Ensembling the weak form should be fine...
-# but this test provides bad input.
-# the shape of x should be (*spatiotemporal_grid.shape[:-1],num_features)
-# def test_bad_ensemble_weakform():
-#     x = np.linspace(0, 100, 100)
-#     x_dot = np.zeros(100)
-#     X = np.linspace(0, 10)
-#     t = np.linspace(0, 10)
-#     X, T = np.meshgrid(x, t)
-#     XT = np.asarray([X, T]).T
-#     library_functions = [lambda x: x, lambda x: x * x]
-#     library_function_names = [lambda x: x, lambda x: x + x]
-#     pde_lib = WeakPDELibrary(
-#         library_functions=library_functions,
-#         function_names=library_function_names,
-#         derivative_order=2,
-#         spatiotemporal_grid=XT,
-#         is_uniform=True,
-#     )
-#
-#     model = SINDy(feature_library=pde_lib)
-#     u=np.zeros((*XT.shape[:-1],1))
-#     # with pytest.raises(ValueError):
-#     model.fit(x=u, x_dot=x_dot, ensemble=True)
 
 
 def test_data_shapes():

@@ -229,6 +229,12 @@ def test_trapping_bad_parameters(params):
         TrappingSR3(**params)
 
 
+def test_trapping_objective_print():
+    opt = TrappingSR3(max_iter=2, verbose=True)
+    arr = np.ones(1)
+    opt._objective(arr, arr, arr, arr, arr, 1)
+
+
 @pytest.mark.parametrize(
     "params",
     [

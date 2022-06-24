@@ -130,12 +130,12 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 )
             if weak_libraries:
                 self.validate_input = libraries[weak_libraries].validate_input
-                self.calc_trajectory = libraries[weak_libraries].calc_trajectory
+                # self.calc_trajectory = libraries[weak_libraries].calc_trajectory
                 self.comprehend_axes = libraries[weak_libraries].comprehend_axes
                 self.spatiotemporal_grid = libraries[weak_libraries].spatiotemporal_grid
             elif pde_libraries:
                 self.validate_input = libraries[pde_libraries].validate_input
-                self.calc_trajectory = libraries[pde_libraries].calc_trajectory
+                # self.calc_trajectory = libraries[pde_libraries].calc_trajectory
                 self.comprehend_axes = libraries[pde_libraries].comprehend_axes
                 self.spatial_grid = libraries[pde_libraries].spatial_grid
         else:
@@ -353,3 +353,5 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                         input_features_i = input_features
                 feature_names += lib.get_feature_names(input_features_i)
         return feature_names
+    def calc_trajectory(self, diff_method, x, t):
+            return self.libraries_[0].calc_trajectory(diff_method, x, t)

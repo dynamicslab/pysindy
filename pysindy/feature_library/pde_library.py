@@ -130,8 +130,8 @@ class PDELibrary(BaseFeatureLibrary):
         self.include_bias = include_bias
         self.include_interaction = include_interaction
         self.num_trajectories = 1
-        self.differentiation_method=differentiation_method
-        self.diff_kwargs=diff_kwargs
+        self.differentiation_method = differentiation_method
+        self.diff_kwargs = diff_kwargs
 
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(

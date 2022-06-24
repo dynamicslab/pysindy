@@ -190,8 +190,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.H_xt = H_xt
         self.p = p
         self.num_trajectories = 1
-        self.differentiation_method=differentiation_method
-        self.diff_kwargs=diff_kwargs
+        self.differentiation_method = differentiation_method
+        self.diff_kwargs = diff_kwargs
 
         if function_names and (len(library_functions) != len(function_names)):
             raise ValueError(

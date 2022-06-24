@@ -574,7 +574,6 @@ def test_generalized_library_pde(data_1d_random_pde):
         derivative_order=2,
         spatial_grid=x,
         include_bias=True,
-        is_uniform=True,
     )
 
     # First try without tensor libraries and subset of the input variables
@@ -604,7 +603,6 @@ def test_generalized_library_weak_pde(data_1d_random_pde):
         derivative_order=2,
         spatiotemporal_grid=XT,
         include_bias=True,
-        is_uniform=True,
     )
     library_functions = [lambda x: x * x * x]
     library_function_names = [lambda x: x + x + x]
@@ -613,7 +611,6 @@ def test_generalized_library_weak_pde(data_1d_random_pde):
         function_names=library_function_names,
         derivative_order=0,
         spatiotemporal_grid=XT,
-        is_uniform=True,
     )
 
     # First try without tensor libraries and subset of the input variables
@@ -656,7 +653,6 @@ def test_1D_pdes(data_1d_random_pde):
         derivative_order=4,
         spatial_grid=spatial_grid,
         include_bias=True,
-        is_uniform=True,
     )
     pde_library_helper(pde_lib, u, 1)
 
@@ -671,7 +667,6 @@ def test_2D_pdes(data_2d_random_pde):
         derivative_order=2,
         spatial_grid=spatial_grid,
         include_bias=True,
-        is_uniform=True,
     )
     pde_library_helper(pde_lib, u, 2)
 
@@ -686,7 +681,6 @@ def test_3D_pdes(data_3d_random_pde):
         derivative_order=2,
         spatial_grid=spatial_grid,
         include_bias=True,
-        is_uniform=True,
     )
     pde_library_helper(pde_lib, u, 2)
 
@@ -701,7 +695,6 @@ def test_5D_pdes(data_5d_random_pde):
         derivative_order=2,
         spatial_grid=spatial_grid,
         include_bias=True,
-        is_uniform=True,
     )
     pde_library_helper(pde_lib, u, 2)
 
@@ -723,7 +716,6 @@ def test_1D_weak_pdes():
         spatiotemporal_grid=spatiotemporal_grid,
         H_xt=2,
         include_bias=True,
-        is_uniform=False,
     )
     pde_library_helper(pde_lib, u, 1)
 
@@ -747,7 +739,6 @@ def test_2D_weak_pdes():
         H_xt=4,
         K=10,
         include_bias=True,
-        is_uniform=False,
     )
     pde_library_helper(pde_lib, u, 1)
 
@@ -772,7 +763,6 @@ def test_3D_weak_pdes():
         H_xt=4,
         K=10,
         include_bias=True,
-        is_uniform=False,
     )
     pde_library_helper(pde_lib, u, 2)
 
@@ -799,7 +789,6 @@ def test_5D_weak_pdes():
         H_xt=4,
         K=10,
         include_bias=True,
-        is_uniform=False,
     )
     pde_library_helper(pde_lib, u, 2)
 

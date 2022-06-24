@@ -991,7 +991,6 @@ def test_legacy_ensemble_pdes(optimizer):
         derivative_order=3,
         spatial_grid=x,
         include_bias=True,
-        is_uniform=True,
     )
     opt = optimizer(normalize_columns=True)
     model = SINDy(optimizer=opt, feature_library=pde_lib)

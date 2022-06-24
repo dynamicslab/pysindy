@@ -353,5 +353,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                         input_features_i = input_features
                 feature_names += lib.get_feature_names(input_features_i)
         return feature_names
+
     def calc_trajectory(self, diff_method, x, t):
-            return self.libraries_[0].calc_trajectory(diff_method, x, t)
+        return self.libraries_[0].calc_trajectory(diff_method, x, t)

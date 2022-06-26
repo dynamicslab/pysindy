@@ -20,6 +20,7 @@ from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import SINDyPILibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import FROLS
+from pysindy.optimizers import MIOSR
 from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import SR3
@@ -96,6 +97,7 @@ def data(request):
         Lasso(fit_intercept=False),
         ElasticNet(fit_intercept=False),
         DummyLinearModel(),
+        MIOSR(),
     ],
 )
 def test_fit(data_derivative_1d, optimizer):
@@ -115,7 +117,7 @@ def test_fit(data_derivative_1d, optimizer):
 
 @pytest.mark.parametrize(
     "optimizer",
-    [STLSQ(), SSR(), SSR(criteria="model_residual"), FROLS(), SR3()],
+    [STLSQ(), SSR(), SSR(criteria="model_residual"), FROLS(), SR3(), MIOSR()],
 )
 def test_not_fitted(optimizer):
     with pytest.raises(NotFittedError):
@@ -155,6 +157,7 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
 def test_sample_weight_optimizers(data_lorenz, optimizer):
@@ -177,7 +180,7 @@ def test_sample_weight_optimizers(data_lorenz, optimizer):
     check_is_fitted(model)
 
 
-@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3])
+@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3, MIOSR])
 @pytest.mark.parametrize("params", [dict(threshold=-1), dict(max_iter=0)])
 def test_general_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
@@ -900,6 +903,7 @@ def test_inequality_constraints_reqs():
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
 def test_normalize_columns(data_derivative_1d, optimizer):
@@ -925,6 +929,7 @@ def test_normalize_columns(data_derivative_1d, optimizer):
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
 def test_ensemble_odes(data_lorenz, optimizer):
@@ -944,6 +949,7 @@ def test_ensemble_odes(data_lorenz, optimizer):
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
 def test_ensemble_pdes(optimizer):
@@ -993,6 +999,7 @@ def test_ssr_criteria(data_lorenz):
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
 def test_optimizers_verbose(data_lorenz, optimizer):

@@ -179,8 +179,7 @@ def test_t_default(data):
     np.testing.assert_allclose(model.coefficients(), model_t_default.coefficients())
     np.testing.assert_almost_equal(model.score(x, t=dt), model_t_default.score(x))
     np.testing.assert_almost_equal(
-        np.asarray(model.differentiate(x, t=dt)),
-        np.asarray(model_t_default.differentiate(x)),
+        model.differentiate(x, t=dt), model_t_default.differentiate(x)
     )
 
 

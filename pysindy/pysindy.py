@@ -23,6 +23,7 @@ from .optimizers import SINDyPI
 from .optimizers import STLSQ
 from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
+from .utils import comprehend_axes
 from .utils import concat_sample_axis
 from .utils import drop_nan_samples
 from .utils import equations
@@ -991,7 +992,7 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
     """Validate input types, reshape arrays, and label axes"""
 
     def comprehend_and_validate(arr, t):
-        arr = AxesArray(arr, feature_library.comprehend_axes(arr))
+        arr = AxesArray(arr, comprehend_axes(arr))
         arr = feature_library.correct_shape(arr)
         return validate_no_reshape(arr, t)
 

@@ -10,6 +10,7 @@ from sklearn.preprocessing._csr_polynomial_expansion import _csr_polynomial_expa
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
+from ..utils import comprehend_axes
 from ..utils import wrap_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
@@ -229,7 +230,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         for x in x_full:
             if sparse.issparse(x) and x.format not in ["csr", "csc"]:
                 # create new with correct sparse
-                axes = self.comprehend_axes(x)
+                axes = comprehend_axes(x)
                 x = x.asformat("csr")
                 wrap_axes(axes, x)
                 # Can't use x = ax_time_to_ax_sample(x) b/c that creates

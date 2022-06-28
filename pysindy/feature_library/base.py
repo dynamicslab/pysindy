@@ -13,13 +13,13 @@ from sklearn.base import TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
-from ..utils import DefaultShapedInputsMixin
+from ..utils import comprehend_axes
 from ..utils import validate_no_reshape
 from ..utils import wrap_axes
 from ..utils.axes import ax_time_to_ax_sample
 
 
-class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
+class BaseFeatureLibrary(TransformerMixin):
     """
     Base class for feature libraries.
 
@@ -187,12 +187,12 @@ def x_sequence_or_item(wrapped_func):
             return wrapped_func(self, x, *args, **kwargs)
         else:
             if not sparse.issparse(x):
-                x = AxesArray(x, self.comprehend_axes(x))
+                x = AxesArray(x, comprehend_axes(x))
                 x = ax_time_to_ax_sample(x)
                 reconstructor = np.array
             else:  # sparse arrays
                 reconstructor = type(x)
-                axes = self.comprehend_axes(x)
+                axes = comprehend_axes(x)
                 wrap_axes(axes, x)
                 # Can't use x = ax_time_to_ax_sample(x) b/c that creates
                 # an AxesArray
@@ -333,7 +333,7 @@ class ConcatLibrary(BaseFeatureLibrary):
 
                 current_feat += lib_n_output_features
 
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp_full = xp_full + [AxesArray(xp, comprehend_axes(xp))]
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full
@@ -565,7 +565,7 @@ class TensoredLibrary(BaseFeatureLibrary):
 
                     current_feat += lib_i_n_output_features * lib_j_n_output_features
 
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp_full = xp_full + [AxesArray(xp, comprehend_axes(xp))]
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

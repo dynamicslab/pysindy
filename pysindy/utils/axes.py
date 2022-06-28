@@ -144,39 +144,12 @@ def concatenate(arrays, axis=0):
     return AxesArray(np.concatenate(parents, axis), axes=ax_list[0])
 
 
-class DefaultShapedInputsMixin:
-    """Identify the meaning of axes of x.
-
-    Historically, different problem types, defined by different
-    libraries, all used their own independent reshaping functions
-    nested across a lot of conditionals based upon the feature
-    library type.
-
-    Now libraries can add the appropriate mixin to inherit the
-    explicit reshaing functions for their problem type.
-    """
-
-    def comprehend_axes(self, x):
-        "Determine appropriate axes meanings for x"
-        axes = {}
-        axes["ax_time"] = 0
-        if len(x.shape) >= 2:
-            axes["ax_coord"] = len(x.shape) - 1
-        if len(x.shape) > 2:
-            axes["ax_spatial"] = list(range(1, len(x.shape) - 1))
-            # warnings.warn("IDK how to handle this input data, losing axes labels")
-        return axes
-
-
-class PDEShapedInputsMixin:
-    def comprehend_axes(self, x):
-        axes = {}
-        # Todo: remove time axis convetion when differentiation is done
-        # explicitly along time axis
-        axes["ax_coord"] = len(x.shape) - 1
-        axes["ax_time"] = len(x.shape) - 2
-        axes["ax_spatial"] = list(range(len(x.shape) - 2))
-        return axes
+def comprehend_axes(x):
+    axes = {}
+    axes["ax_coord"] = len(x.shape) - 1
+    axes["ax_time"] = len(x.shape) - 2
+    axes["ax_spatial"] = list(range(len(x.shape) - 2))
+    return axes
 
 
 def ax_time_to_ax_sample(x: AxesArray) -> AxesArray:

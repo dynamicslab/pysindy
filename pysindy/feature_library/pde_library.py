@@ -7,6 +7,7 @@ from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
+from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
 from pysindy.differentiation import FiniteDifference
@@ -219,7 +220,7 @@ class PDELibrary(BaseFeatureLibrary):
         self.num_derivatives = num_derivatives
         self.multiindices = multiindices
         self.spatiotemporal_grid = AxesArray(
-            spatiotemporal_grid, self.comprehend_axes(spatiotemporal_grid)
+            spatiotemporal_grid, comprehend_axes(spatiotemporal_grid)
         )
 
     @staticmethod
@@ -462,7 +463,7 @@ class PDELibrary(BaseFeatureLibrary):
                     shape,
                 )
                 library_idx += n_library_terms * self.num_derivatives * n_features
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp_full = xp_full + [AxesArray(xp, comprehend_axes(xp))]
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

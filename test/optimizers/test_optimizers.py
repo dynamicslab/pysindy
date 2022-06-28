@@ -738,7 +738,7 @@ def test_fit_warn(data_derivative_1d, optimizer):
         optimizer.fit(x, x_dot)
 
 
-@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3])
+@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_row_format_constraints(data_linear_combination, optimizer, target_value):
     # Solution is x_dot = x.dot(np.array([[1, 1, 0], [0, 1, 1]]))
@@ -763,7 +763,7 @@ def test_row_format_constraints(data_linear_combination, optimizer, target_value
     )
 
 
-@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3])
+@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_target_format_constraints(data_linear_combination, optimizer, target_value):
     x, x_dot = data_linear_combination

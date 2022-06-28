@@ -1,33 +1,91 @@
-import time
-
 import gurobipy as gp
 import numpy as np
-from scipy.integrate import odeint
 from sklearn.utils.validation import check_is_fitted
 
-import pysindy as ps
-from pysindy.optimizers.base import BaseOptimizer
+from .base import BaseOptimizer
 
 
 class MIOSR(BaseOptimizer):
-    """
+    """Mixed-Integer Optimized Sparse Regression.
+
+    Solves the sparsity constrained regression problem to provable optimality
+    .. math::
+
+        0.5\\|y-Xw\\|^2_2 + \\lambda R(u)
+        + (0.5 / \\nu)\\|w-u\\|^2_2
+
+    .. math::
+
+        \\text{subject to } \\|w\\|_0 \\leq k
+
+    by using type-1 specially ordered sets (SOS1) to encode the support of
+    the coefficients. Can optionally add additional constraints on the
+    coefficients or access the gurobi `model` directly for advanced usage.
+    See the following reference for additional details:
+
+        Bertsimas, D. and Gurnee, W., 2022. Learning Sparse Nonlinear Dynamics
+        via Mixed-Integer Optimization. arXiv preprint arXiv:2206.00176.
+
     Parameters
     ----------
-    alpha : float, optional (default 0.05)
+    target_sparsity : int, optional (default None)
+        The maximum number of nonzero coefficients across all dimensions.
+        If set, and `group_sparsity` is not set, the model will fit all
+        dimensions jointly, potentially reducing statistical efficiency.
+
+    group_sparsity : int tuple, optional (default None)
+        Tuple of length n_targets constraining the number of nonzero
+        coefficients for each target dimension.
+
+      alpha : float, optional (default 0.01)
         Optional L2 (ridge) regularization on the weight vector.
+
+    regression_timeout : int, optional (default 30)
+        The timeout (in seconds) of the gurobi optimizer to solve and prove
+        optimality (either per dimension or jointly depending on the
+        above sparsity settings).
+
     fit_intercept : boolean, optional (default False)
         Whether to calculate the intercept for this model. If set to false, no
         intercept will be used in calculations.
-    normalize : boolean, optional (default False)
-        This parameter is ignored when fit_intercept is set to False. If True,
-        the regressors X will be normalized before regression by subtracting
-        the mean and dividing by the l2-norm.
+
+    constraint_lhs : numpy ndarray, optional (default None)
+        Shape should be (n_constraints, n_features * n_targets),
+        The left hand side matrix C of Cw <= d.
+        There should be one row per constraint.
+
+    constraint_rhs : numpy ndarray, shape (n_constraints,), optional (default None)
+        The right hand side vector d of Cw <= d.
+
+    constraint_order : string, optional (default "target")
+        The format in which the constraints ``constraint_lhs`` were passed.
+        Must be one of "target" or "feature".
+        "target" indicates that the constraints are grouped by target:
+        i.e. the first ``n_features`` columns
+        correspond to constraint coefficients on the library features
+        for the first target (variable), the next ``n_features`` columns to
+        the library features for the second target (variable), and so on.
+        "feature" indicates that the constraints are grouped by library
+        feature: the first ``n_targets`` columns correspond to the first
+        library feature, the next ``n_targets`` columns to the second library
+        feature, and so on.
+
+    normalize_columns : boolean, optional (default False)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed. Note that
+        this parameter is incompatible with the constraints!
+
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
+
     initial_guess : np.ndarray, shape (n_features) or (n_targets, n_features), \
             optional (default None)
-        Initial guess for coefficients ``coef_``.
-        If None, least-squares is used to obtain an initial guess.
+        Initial guess for coefficients ``coef_`` to warmstart the optimizer.
+
+    verbose : bool, optional (default False)
+        If True, prints out the Gurobi solver log.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -36,22 +94,21 @@ class MIOSR(BaseOptimizer):
         Array of 0s and 1s indicating which coefficients of the
         weight vector have not been masked out, i.e. the support of
         ``self.coef_``.
-    history_ : list
-        History of ``coef_``. ``history_[k]`` contains the values of
-        ``coef_`` at iteration k of sequentially thresholded least-squares.
+    model : gurobipy.model
+        The raw gurobi model being solved.
     """
 
     def __init__(
         self,
-        target_sparsity=None,
+        target_sparsity=5,
         group_sparsity=None,
+        alpha=0.01,
+        regression_timeout=10,
+        fit_intercept=False,
         constraint_lhs=None,
         constraint_rhs=None,
         constraint_order="target",
-        alpha=0.05,
-        regression_timeout=30,
         normalize_columns=False,
-        fit_intercept=False,
         copy_X=True,
         initial_guess=None,
         verbose=False,
@@ -76,18 +133,12 @@ class MIOSR(BaseOptimizer):
         self.constraint_lhs = constraint_lhs
         self.constraint_rhs = constraint_rhs
         self.constraint_order = constraint_order
-        self.lambda_2 = alpha
+        self.alpha = alpha
         self.initial_guess = initial_guess
         self.regression_timeout = regression_timeout
         self.verbose = verbose
 
-        # Regression model class variables used for model selection
-        self._model_made = False
-        self._model = None
-        self._beta_vars = None
-        self._is_zero_vars = None
-        self.solve_times = []
-        self.build_times = []
+        self.model = None
 
     def _make_model(self, X, y, k, warm_start=None):
         m = gp.Model()
@@ -107,10 +158,10 @@ class MIOSR(BaseOptimizer):
         # Group sparsity constraints
         if self.target_sparsity is not None and self.group_sparsity is not None:
             for i in range(r):
-                group_cardinality = self.group_sparsity[i]
-                print(group_cardinality)
+                dimension_sparsity = self.group_sparsity[i]
+                print(dimension_sparsity)
                 m.addConstr(
-                    iszero[i * d : (i + 1) * d].sum() == d - group_cardinality,
+                    iszero[i * d : (i + 1) * d].sum() >= d - dimension_sparsity,
                     name=f"group_sparsity{i}",
                 )
 
@@ -132,7 +183,7 @@ class MIOSR(BaseOptimizer):
                 beta[i].start = warm_start[i]
 
         Quad = np.dot(X.T, X)
-        obj = self.lambda_2 * (beta @ beta)
+        obj = self.alpha * (beta @ beta)
         for i in range(r):
             lin = np.dot(y[:, i].T, X)
             obj += beta[d * i : d * (i + 1)] @ Quad @ beta[d * i : d * (i + 1)]
@@ -144,42 +195,22 @@ class MIOSR(BaseOptimizer):
         m.params.timelimit = self.regression_timeout
         m.update()
 
-        self._model_made = True
-        self._model = m
-        self._beta_vars = beta
-        self._is_zero_vars = iszero
+        self.model = m
 
-    def _change_sparsity(self, new_k):
-        sparsity_constr = self._model.getConstrByName("sparsity")
-        sparsity_constr.rhs = self._beta_vars.shape[0] - new_k
-        self._model.update()
-        self.target_sparsity = new_k
-
-    def _change_regularizer(self, new_lambda2):
-        coef_change = new_lambda2 - self.lambda_2
-        regularizer = gp.quicksum(
-            self._beta_vars[i] ** 2 for i in range(self._beta_vars.shape[0])
-        )
-        new_obj = self._model.getObjective() + coef_change * regularizer
-        self._model.setObjective(new_obj)
-        self._model.update()
-        self.lambda_2 = new_lambda2
+        return m, beta
 
     def _regress(self, X, y, k, warm_start=None):
         """
-        Deploy and optimize the MIQP formulation of L0-Regression.
+        Deploy and optimize the MIO formulation of L0-Regression.
         """
-        model_construction_start_t = time.time()
-        self._make_model(X, y, k, warm_start)
-        self.build_times.append(time.time() - model_construction_start_t)
-        solve_start_t = time.time()
-        self._model.optimize()
-        self.solve_times.append(time.time() - solve_start_t)
-        return self._beta_vars.X
+        m, beta = self._make_model(X, y, k, warm_start)
+        m.optimize()
+        return beta.X
 
     def _reduce(self, x, y):
-        """Performs at most ``self.max_iter`` iterations of the
-        sequentially-thresholded least squares algorithm.
+        """
+        Runs MIOSR either per dimension or jointly on all dimensions.
+
         Assumes an initial guess for coefficients and support are saved in
         ``self.coef_`` and ``self.ind_``.
         """
@@ -193,6 +224,7 @@ class MIOSR(BaseOptimizer):
 
         if regress_jointly:
             coefs = self._regress(x, y, self.target_sparsity)
+            # Remove nonzero terms due to numerical error
             non_active_ixs = np.argsort(np.abs(coefs))[: -int(self.target_sparsity)]
             coefs[non_active_ixs] = 0
             self.coef_ = coefs.reshape(r, d)
@@ -214,34 +246,3 @@ class MIOSR(BaseOptimizer):
     def complexity(self):
         check_is_fitted(self)
         return np.count_nonzero(self.coef_)
-
-
-if __name__ == "__main__":
-    # Generate training data
-
-    def lorenz(x, t):
-        return [
-            10 * (x[1] - x[0]),
-            x[0] * (28 - x[2]) - x[1],
-            x[0] * x[1] - 8 / 3 * x[2],
-        ]
-
-    dt = 0.001
-    t_train = np.arange(0, 10, dt)
-    x0_train = [-8, 8, 27]
-    x_train = odeint(lorenz, x0_train, t_train)
-    x_dot_train_measured = np.array(
-        [lorenz(x_train[i], 0) for i in range(t_train.size)]
-    )
-    # Fit the model
-    poly_order = 2
-    threshold = 0.05
-    model = ps.SINDy(
-        optimizer=MIOSR(
-            group_sparsity=(2, 3, 2),
-            alpha=0.05,
-        ),
-        feature_library=ps.PolynomialLibrary(degree=poly_order),
-    )
-    model.fit(x_train, t=dt, x_dot=x_dot_train_measured, unbias=False)
-    model.print()

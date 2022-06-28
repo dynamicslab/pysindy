@@ -27,13 +27,9 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         obj = np.asarray(input_array).view(cls)
         defaults = {
             "ax_time": None,
-            "n_time": 1,
             "ax_coord": None,
-            "n_coord": 1,
             "ax_sample": None,
-            "n_sample": 1,
             "ax_spatial": [],
-            "n_spatial": [],
         }
         if axes is None:
             return obj
@@ -51,16 +47,6 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 "a new AxesArray with determined axes.",
                 type("AxesWarning", (PendingDeprecationWarning,), {}),
             )
-        # Since axes can be zero, cannot simply check "if axis:"
-        else:
-            if new_dict["ax_time"] is not None:
-                new_dict["n_time"] = obj.shape[new_dict["ax_time"]]
-            if new_dict["ax_coord"] is not None:
-                new_dict["n_coord"] = obj.shape[new_dict["ax_coord"]]
-            if new_dict["ax_sample"] is not None:
-                new_dict["n_sample"] = obj.shape[new_dict["ax_sample"]]
-            if new_dict["ax_spatial"]:
-                new_dict["n_spatial"] = [obj.shape[ax] for ax in new_dict["ax_spatial"]]
         obj.__dict__.update(new_dict)
         return obj
 
@@ -68,13 +54,25 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         if obj is None:
             return
         self.ax_time = getattr(obj, "ax_time", None)
-        self.n_time = getattr(obj, "n_time", 1)
         self.ax_coord = getattr(obj, "ax_coord", None)
-        self.n_coord = getattr(obj, "n_coord", 1)
         self.ax_sample = getattr(obj, "ax_sample", None)
-        self.n_sample = getattr(obj, "n_sample", 1)
         self.ax_spatial = getattr(obj, "ax_spatial", [])
-        self.n_spatial = getattr(obj, "n_spatial", [])
+
+    @property
+    def n_spatial(self):
+        return tuple(self.shape[ax] for ax in self.ax_spatial)
+
+    @property
+    def n_time(self):
+        return self.shape[self.ax_time] if self.ax_time is not None else 1
+
+    @property
+    def n_sample(self):
+        return self.shape[self.ax_sample] if self.ax_sample is not None else 1
+
+    @property
+    def n_coord(self):
+        return self.shape[self.ax_coord] if self.ax_coord is not None else 1
 
     def __array_ufunc__(
         self, ufunc, method, *inputs, out=None, **kwargs

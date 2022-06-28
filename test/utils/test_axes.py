@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from numpy.testing import assert_
 from numpy.testing import assert_equal
 from numpy.testing import assert_raises
@@ -113,3 +114,26 @@ def test_ufunc_override():
     a = d.copy().view(AxesArray)
     np.add.at(a, ([0, 1], [0, 2]), b)
     assert_equal(a, check)
+
+
+def test_n_elements():
+    arr = np.empty(np.arange(1, 5))
+    arr = AxesArray(arr, {"ax_spatial": [0, 1], "ax_time": 2, "ax_coord": 3})
+    assert arr.n_spatial == (1, 2)
+    assert arr.n_time == 3
+    assert arr.n_coord == 4
+    assert arr.n_sample == 1
+
+    arr2 = np.concatenate((arr, arr), axis=arr.ax_time)
+    assert arr2.n_spatial == (1, 2)
+    assert arr2.n_time == 6
+    assert arr2.n_coord == 4
+    assert arr2.n_sample == 1
+
+    arr3 = arr[..., :2, 0]
+    assert arr3.n_spatial == (1, 2)
+    assert arr3.n_time == 2
+    # No way to intercept slicing and remove ax_coord
+    with pytest.raises(IndexError):
+        assert arr3.n_coord == 1
+    assert arr3.n_sample == 1

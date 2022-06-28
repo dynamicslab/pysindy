@@ -12,10 +12,15 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
 
     Paramters:
         input_array (array-like): the data to create the array.
-        axes (dict): A dictionary of any of
+        axes (dict): A dictionary of axis labels to shape indices.
+            Allowed keys:
+                - ax_time: int
+                - ax_coord: int
+                - ax_sample: int
+                - ax_spatial: List[int]
 
     Raises:
-        ValueError if axes specification does not match shape of input_array
+        AxesWarning if axes does not match shape of input_array
     """
 
     def __new__(cls, input_array, axes):
@@ -25,8 +30,6 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             "n_time": 1,
             "ax_coord": None,
             "n_coord": 1,
-            "ax_sample": None,
-            "n_sample": 1,
             "ax_sample": None,
             "n_sample": 1,
             "ax_spatial": [],
@@ -115,8 +118,6 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             elif arr is not None:
                 return arr
             return
-        # Note: this allows subclasses that don't override
-        # __array_function__ to handle MyArray objects
         if not all(issubclass(t, AxesArray) for t in types):
             return NotImplemented
         return HANDLED_FUNCTIONS[func](*args, **kwargs)

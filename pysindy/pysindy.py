@@ -325,33 +325,20 @@ class SINDy(BaseEstimator):
         if (n_subset is not None) and n_subset <= 0:
             raise ValueError("n_subset must be a positive integer")
 
-        x_dot_None = False  # flag for discrete time functionality
-        if self.discrete_time:
-            if x_dot is None:
-                x_dot_None = True  # set the flag
-
-        x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         if u is None:
             self.n_control_features_ = 0
         else:
-            trim_last_point = self.discrete_time and x_dot_None
             u = validate_control_variables(
                 x,
                 u,
-                multiple_trajectories=multiple_trajectories,
-                trim_last_point=trim_last_point,
+                trim_last_point=(self.discrete_time and x_dot is None),
             )
             self.n_control_features_ = u[0].shape[u[0].ax_coord]
+        x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
 
         # Set ensemble variables
         self.ensemble = ensemble
         self.library_ensemble = library_ensemble
-        if ensemble and n_subset is None:
-            if x[0].ndim == 1:
-                raise ValueError("This shouldn't happen anymore")
-                n_subset = x[0].shape[0]
-            else:
-                n_subset = x[0].shape[x[0].ax_time]
 
         # Append control variables
         if u is not None:
@@ -364,6 +351,8 @@ class SINDy(BaseEstimator):
             unbias = self.optimizer.unbias
 
         # backwards compatibility for ensemble options
+        if ensemble and n_subset is None:
+            n_subset = x[0].shape[x[0].ax_sample]
         if library_ensemble:
             self.feature_library.library_ensemble = False
         if ensemble and not library_ensemble:

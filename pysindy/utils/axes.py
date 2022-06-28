@@ -220,18 +220,12 @@ def concat_sample_axis(x_list: List[AxesArray]):
     return np.concatenate(new_arrs, axis=new_arrs[0].ax_sample)
 
 
-def wrap_axes(axes: dict):
-    """Decorator factory to add axes to object (usually, a sparse matrix)
+def wrap_axes(axes: dict, obj):
+    """Add axes to object (usually, a sparse matrix)"""
 
-    Note that unlike the AxesArray class, functions expecting an object
-    will not preserve the axes properties.
-    """
-
-    def wrap_w_axes(obj):
-        for key in ["ax_spatial", "ax_time", "ax_sample", "ax_coord"]:
-            try:
-                obj.__setattr__(key, axes[key])
-            except KeyError:
-                pass
-
-    return wrap_w_axes
+    for key in ["ax_spatial", "ax_time", "ax_sample", "ax_coord"]:
+        try:
+            obj.__setattr__(key, axes[key])
+        except KeyError:
+            pass
+    return obj

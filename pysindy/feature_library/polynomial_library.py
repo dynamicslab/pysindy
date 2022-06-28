@@ -231,7 +231,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                 # create new with correct sparse
                 axes = self.comprehend_axes(x)
                 x = x.asformat("csr")
-                wrap_axes(axes)(x)
+                wrap_axes(axes, x)
                 # Can't use x = ax_time_to_ax_sample(x) b/c that creates
                 # an AxesArray
                 x.ax_sample = x.ax_time

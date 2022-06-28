@@ -193,7 +193,7 @@ def x_sequence_or_item(wrapped_func):
             else:  # sparse arrays
                 reconstructor = type(x)
                 axes = self.comprehend_axes(x)
-                wrap_axes(axes)(x)
+                wrap_axes(axes, x)
                 # Can't use x = ax_time_to_ax_sample(x) b/c that creates
                 # an AxesArray
                 x.ax_sample = x.ax_time

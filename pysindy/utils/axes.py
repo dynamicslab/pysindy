@@ -33,21 +33,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         }
         if axes is None:
             return obj
-        new_dict = {**defaults, **axes}
-        expected_dims = (
-            (new_dict["ax_time"] is not None)
-            + (new_dict["ax_coord"] is not None)
-            + (new_dict["ax_sample"] is not None)
-            + len(new_dict["ax_spatial"])
-        )
-        if expected_dims != len(obj.shape):
-            warnings.warn(
-                "Axes passed is missing values or incompatible with data "
-                "given.  This occurs when reshaping data rather than creating "
-                "a new AxesArray with determined axes.",
-                type("AxesWarning", (PendingDeprecationWarning,), {}),
-            )
-        obj.__dict__.update(new_dict)
+        obj.__dict__.update({**defaults, **axes})
         return obj
 
     def __array_finalize__(self, obj) -> None:

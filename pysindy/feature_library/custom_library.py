@@ -7,6 +7,7 @@ from numpy import shape
 from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import ax_time_to_ax_sample
 from ..utils import AxesArray
 from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
@@ -230,7 +231,8 @@ class CustomLibrary(BaseFeatureLibrary):
                     xp[..., library_idx] = f(*[x[..., j] for j in c])
                     library_idx += 1
 
-            xp_full = xp_full + [AxesArray(xp, comprehend_axes(xp))]
+            xp = ax_time_to_ax_sample(AxesArray(xp, comprehend_axes(xp)))
+            xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

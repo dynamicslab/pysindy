@@ -6,6 +6,7 @@ from ..utils import AxesArray
 from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
+from pysindy.utils.axes import ax_time_to_ax_sample
 
 
 class FourierLibrary(BaseFeatureLibrary):
@@ -174,8 +175,8 @@ class FourierLibrary(BaseFeatureLibrary):
                     if self.include_cos:
                         xp[..., idx] = np.cos((i + 1) * x[..., j])
                         idx += 1
-
-            xp_full = xp_full + [AxesArray(xp, comprehend_axes(xp))]
+            xp = ax_time_to_ax_sample(AxesArray(xp, comprehend_axes(xp)))
+            xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

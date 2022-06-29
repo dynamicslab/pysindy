@@ -6,6 +6,7 @@ import numpy as np
 from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import ax_time_to_ax_sample
 from ..utils import AxesArray
 from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
@@ -463,7 +464,8 @@ class PDELibrary(BaseFeatureLibrary):
                     shape,
                 )
                 library_idx += n_library_terms * self.num_derivatives * n_features
-            xp_full = xp_full + [AxesArray(xp, comprehend_axes(xp))]
+            xp = ax_time_to_ax_sample(AxesArray(xp, comprehend_axes(xp)))
+            xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

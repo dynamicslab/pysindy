@@ -332,8 +332,8 @@ class ConcatLibrary(BaseFeatureLibrary):
                 xp[..., start_feature_index:end_feature_index] = lib.transform([x])[0]
 
                 current_feat += lib_n_output_features
-
-            xp_full = xp_full + [AxesArray(xp, comprehend_axes(xp))]
+            xp = ax_time_to_ax_sample(AxesArray(xp, comprehend_axes(xp)))
+            xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full
@@ -565,7 +565,8 @@ class TensoredLibrary(BaseFeatureLibrary):
 
                     current_feat += lib_i_n_output_features * lib_j_n_output_features
 
-            xp_full = xp_full + [AxesArray(xp, comprehend_axes(xp))]
+            xp = ax_time_to_ax_sample(AxesArray(xp, comprehend_axes(xp)))
+            xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

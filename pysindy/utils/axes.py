@@ -1,4 +1,3 @@
-import warnings
 from typing import List
 
 import numpy as np
@@ -123,10 +122,7 @@ def concatenate(arrays, axis=0):
     ax_list = [obj.__dict__ for obj in arrays if isinstance(obj, AxesArray)]
     for ax1, ax2 in zip(ax_list[:-1], ax_list[1:]):
         if ax1 != ax2:
-            warnings.warn(
-                "Concatenating >1 AxesArray with incompatible axes",
-                PendingDeprecationWarning,
-            )
+            raise TypeError("Concatenating >1 AxesArray with incompatible axes")
     return AxesArray(np.concatenate(parents, axis), axes=ax_list[0])
 
 

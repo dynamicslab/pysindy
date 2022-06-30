@@ -706,7 +706,9 @@ class SINDy(BaseEstimator):
         else:
             base_feature_names = self.feature_names
         return equations(
-            self.model, input_features=base_feature_names, precision=precision,
+            self.model,
+            input_features=base_feature_names,
+            precision=precision,
         )
 
     def print(self, lhs=None, precision=3):

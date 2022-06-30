@@ -92,7 +92,10 @@ class FiniteDifference(BaseDifferentiation):
         pows = np.arange(self.n_stencil)[np.newaxis, :, np.newaxis]
         matrices = (
             self.stencil
-            - t[(self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2, np.newaxis,]
+            - t[
+                (self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2,
+                np.newaxis,
+            ]
         )[:, np.newaxis, :] ** pows
         b = np.zeros(self.n_stencil)
         b[self.d] = np.math.factorial(self.d)

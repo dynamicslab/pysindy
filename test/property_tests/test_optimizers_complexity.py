@@ -20,7 +20,7 @@ from pysindy.optimizers import STLSQ
     n_samples=integers(min_value=100, max_value=10000),
     n_features=integers(min_value=10, max_value=30),
     n_informative=integers(min_value=3, max_value=9),
-    random_state=integers(min_value=0, max_value=2 ** 32 - 1),
+    random_state=integers(min_value=0, max_value=2**32 - 1),
 )
 @settings(max_examples=20, deadline=None)
 def test_complexity(n_samples, n_features, n_informative, random_state):
@@ -35,7 +35,7 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
     complexities = [0] * 7
 
     seed(random_state)
-    for rs in randint(low=0, high=2 ** 32 - 1, size=n_datasets):
+    for rs in randint(low=0, high=2**32 - 1, size=n_datasets):
 
         x, y = make_regression(
             n_samples=n_samples,
@@ -79,7 +79,7 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
     n_samples=integers(min_value=100, max_value=10000),
     n_features=integers(min_value=10, max_value=30),
     n_informative=integers(min_value=3, max_value=9),
-    random_state=integers(min_value=0, max_value=2 ** 32 - 1),
+    random_state=integers(min_value=0, max_value=2**32 - 1),
 )
 @settings(max_examples=20, deadline=None)
 def test_complexity_parameter(

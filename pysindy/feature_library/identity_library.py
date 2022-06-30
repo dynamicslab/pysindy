@@ -43,7 +43,9 @@ class IdentityLibrary(BaseFeatureLibrary):
     """
 
     def __init__(
-        self, library_ensemble=False, ensemble_indices=[0],
+        self,
+        library_ensemble=False,
+        ensemble_indices=[0],
     ):
         super(IdentityLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices

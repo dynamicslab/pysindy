@@ -114,7 +114,8 @@ def test_fit(data_derivative_1d, optimizer):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [STLSQ(), SSR(), SSR(criteria="model_residual"), FROLS(), SR3()],
+    "optimizer",
+    [STLSQ(), SSR(), SSR(criteria="model_residual"), FROLS(), SR3()],
 )
 def test_not_fitted(optimizer):
     with pytest.raises(NotFittedError):
@@ -146,7 +147,15 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [STLSQ, SSR, FROLS, SR3, ConstrainedSR3, TrappingSR3,],
+    "optimizer",
+    [
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
 )
 def test_sample_weight_optimizers(data_lorenz, optimizer):
     x, t = data_lorenz
@@ -178,7 +187,12 @@ def test_general_bad_parameters(optimizer, params):
 @pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
 @pytest.mark.parametrize(
     "params",
-    [dict(nu=0), dict(tol=0), dict(trimming_fraction=-1), dict(trimming_fraction=2),],
+    [
+        dict(nu=0),
+        dict(tol=0),
+        dict(trimming_fraction=-1),
+        dict(trimming_fraction=2),
+    ],
 )
 def test_sr3_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
@@ -258,14 +272,14 @@ def test_sindypi_fit(params):
     x_library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y, z: x * y * z,
-        lambda x, y: x * y ** 2,
-        lambda x: x ** 3,
+        lambda x, y: x * y**2,
+        lambda x: x**3,
         lambda x, y, z, w: x * y * z * w,
-        lambda x, y, z: x * y * z ** 2,
-        lambda x, y: x * y ** 3,
-        lambda x: x ** 4,
+        lambda x, y, z: x * y * z**2,
+        lambda x, y: x * y**3,
+        lambda x: x**4,
     ]
     # initialize a linear polynomial library for x_dot
     x_dot_library_functions = [lambda x: x]
@@ -323,7 +337,7 @@ def test_sr3_quadratic_library(params):
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     library_function_names = [
         lambda x: str(x),
@@ -359,7 +373,7 @@ def test_constrained_sr3_quadratic_library(params):
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     library_function_names = [
         lambda x: str(x),
@@ -394,7 +408,12 @@ def test_constrained_sr3_quadratic_library(params):
 
 
 @pytest.mark.parametrize(
-    "trapping_sr3_params", [dict(), dict(accel=True), dict(relax_optim=False),],
+    "trapping_sr3_params",
+    [
+        dict(),
+        dict(accel=True),
+        dict(relax_optim=False),
+    ],
 )
 @pytest.mark.parametrize(
     "params",
@@ -457,10 +476,10 @@ def test_trapping_cubic_library():
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y, z: x * y * z,
-        lambda x, y: x ** 2 * y,
-        lambda x: x ** 3,
+        lambda x, y: x**2 * y,
+        lambda x: x**3,
     ]
     library_function_names = [
         lambda x: str(x),
@@ -822,7 +841,11 @@ def test_trapping_inequality_constraints(data_lorenz, params):
         **params,
     )
     poly_lib = PolynomialLibrary(degree=2)
-    model = SINDy(optimizer=opt, feature_library=poly_lib, feature_names=feature_names,)
+    model = SINDy(
+        optimizer=opt,
+        feature_library=poly_lib,
+        feature_names=feature_names,
+    )
     model.fit(x, t=t[1] - t[0])
     # This sometimes fails with L2 norm so just check the model is fitted
     check_is_fitted(model)
@@ -869,7 +892,15 @@ def test_inequality_constraints_reqs():
 
 
 @pytest.mark.parametrize(
-    "optimizer", [STLSQ, SSR, FROLS, SR3, ConstrainedSR3, TrappingSR3,],
+    "optimizer",
+    [
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
 )
 def test_normalize_columns(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
@@ -886,7 +917,15 @@ def test_normalize_columns(data_derivative_1d, optimizer):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [STLSQ, SSR, FROLS, SR3, ConstrainedSR3, TrappingSR3,],
+    "optimizer",
+    [
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
 )
 def test_ensemble_odes(data_lorenz, optimizer):
     x, t = data_lorenz
@@ -897,7 +936,15 @@ def test_ensemble_odes(data_lorenz, optimizer):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [STLSQ, SSR, FROLS, SR3, ConstrainedSR3, TrappingSR3,],
+    "optimizer",
+    [
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
 )
 def test_ensemble_pdes(optimizer):
     u = np.random.randn(10, 10, 2)
@@ -938,7 +985,15 @@ def test_ssr_criteria(data_lorenz):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [STLSQ, SSR, FROLS, SR3, ConstrainedSR3, TrappingSR3,],
+    "optimizer",
+    [
+        STLSQ,
+        SSR,
+        FROLS,
+        SR3,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
 )
 def test_optimizers_verbose(data_lorenz, optimizer):
     x, t = data_lorenz
@@ -950,7 +1005,12 @@ def test_optimizers_verbose(data_lorenz, optimizer):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [SINDyPI, ConstrainedSR3, TrappingSR3,],
+    "optimizer",
+    [
+        SINDyPI,
+        ConstrainedSR3,
+        TrappingSR3,
+    ],
 )
 def test_optimizers_verbose_cvxpy(data_lorenz, optimizer):
     x, t = data_lorenz

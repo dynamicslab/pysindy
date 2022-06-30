@@ -332,7 +332,7 @@ class TrappingSR3(SR3):
 
     def _set_Ptensors(self, r):
         """Make the projection tensors used for the algorithm."""
-        N = int((r ** 2 + 3 * r) / 2.0)
+        N = int((r**2 + 3 * r) / 2.0)
 
         # delta_{il}delta_{jk}
         PL_tensor = np.zeros((r, r, r, N))
@@ -556,7 +556,8 @@ class TrappingSR3(SR3):
 
         if xi.value is None:
             warnings.warn(
-                "Infeasible solve, increase/decrease eta", ConvergenceWarning,
+                "Infeasible solve, increase/decrease eta",
+                ConvergenceWarning,
             )
             return None
         coef_sparse = (xi.value).reshape(coef_prev.shape)
@@ -570,7 +571,7 @@ class TrappingSR3(SR3):
         # prox-grad for (A, m)
         # Accelerated prox gradient descent
         if self.accel:
-            tk = (1 + np.sqrt(1 + 4 * tk_previous ** 2)) / 2.0
+            tk = (1 + np.sqrt(1 + 4 * tk_previous**2)) / 2.0
             m_partial = m + (tk_previous - 1.0) / tk * (m - m_prev)
             tk_previous = tk
             mPQ = np.tensordot(m_partial, self.PQ_, axes=([0], [0]))
@@ -688,7 +689,7 @@ class TrappingSR3(SR3):
 
         n_samples, n_features = x.shape
         r = y.shape[1]
-        N = int((r ** 2 + 3 * r) / 2.0)
+        N = int((r**2 + 3 * r) / 2.0)
 
         # Define PL and PQ tensors, only relevant if the stability term in
         # trapping SINDy is turned on.

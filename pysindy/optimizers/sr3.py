@@ -249,7 +249,7 @@ class SR3(BaseOptimizer):
             assert trimming_array is not None
             R2 *= trimming_array.reshape(x.shape[0], 1)
         if self.thresholds is None:
-            regularization = self.reg(coef_full, self.threshold ** 2 / self.nu)
+            regularization = self.reg(coef_full, self.threshold**2 / self.nu)
             if print_ind == 0 and self.verbose:
                 row = [
                     q,
@@ -264,7 +264,7 @@ class SR3(BaseOptimizer):
                 )
             return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
         else:
-            regularization = self.reg(coef_full, self.thresholds ** 2 / self.nu)
+            regularization = self.reg(coef_full, self.thresholds**2 / self.nu)
             if print_ind == 0 and self.verbose:
                 row = [
                     q,

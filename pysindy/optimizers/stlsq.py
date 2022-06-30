@@ -205,7 +205,7 @@ class STLSQ(BaseOptimizer):
             self.history_.append(coef)
             if self.verbose:
                 R2 = np.sum((y - np.dot(x, coef.T)) ** 2)
-                L2 = self.alpha * np.sum(coef ** 2)
+                L2 = self.alpha * np.sum(coef**2)
                 L0 = np.count_nonzero(coef)
                 row = [k, R2, L2, L0, R2 + L2]
                 print(

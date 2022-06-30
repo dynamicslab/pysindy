@@ -230,7 +230,9 @@ class PDELibrary(BaseFeatureLibrary):
             for k in range(self.num_derivatives):
                 for i, f in enumerate(self.functions):
                     for c in self._combinations(
-                        n_features, f.__code__.co_argcount, self.interaction_only,
+                        n_features,
+                        f.__code__.co_argcount,
+                        self.interaction_only,
                     ):
                         for jj in range(n_features):
                             feature_names.append(
@@ -331,7 +333,8 @@ class PDELibrary(BaseFeatureLibrary):
             )
         else:
             x_full = np.reshape(
-                x, np.concatenate([[self.num_trajectories], [num_time, n_features]]),
+                x,
+                np.concatenate([[self.num_trajectories], [num_time, n_features]]),
             )
 
         # Loop over each trajectory

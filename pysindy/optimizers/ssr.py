@@ -217,7 +217,7 @@ class SSR(BaseOptimizer):
             self.history_.append(np.copy(coef))
             if self.verbose:
                 R2 = np.sum((y - np.dot(x, coef.T)) ** 2)
-                L2 = self.alpha * np.sum(coef ** 2)
+                L2 = self.alpha * np.sum(coef**2)
                 L0 = np.count_nonzero(coef)
                 row = [k, R2, L2, L0, l0_penalty * L0, R2 + L2 + l0_penalty * L0]
                 print(

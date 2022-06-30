@@ -160,7 +160,11 @@ def data_3d_random_pde():
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
     z = np.linspace(0, 10, n)
-    (X, Y, Z,) = np.meshgrid(x, y, z, indexing="ij")
+    (
+        X,
+        Y,
+        Z,
+    ) = np.meshgrid(x, y, z, indexing="ij")
     spatial_grid = np.asarray([X, Y, Z])
     spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
     u = np.random.randn(n, n, n, n, 2)
@@ -255,7 +259,7 @@ def data_2dspatial():
 def data_custom_library():
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x: 0 * x,
         lambda x, y: x * y,
     ]
@@ -275,7 +279,7 @@ def data_custom_library():
 def data_custom_library_bias():
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x: 0 * x,
         lambda x, y: x * y,
     ]
@@ -298,7 +302,7 @@ def data_quadratic_library():
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     function_names = [
         lambda x: str(x),
@@ -326,7 +330,7 @@ def data_generalized_library():
 def data_sindypi_library():
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y: x * y,
     ]
     x_dot_library_functions = [lambda x: x]
@@ -350,7 +354,7 @@ def data_sindypi_library():
 def data_ode_library():
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y: x * y,
     ]
     function_names = [
@@ -360,7 +364,8 @@ def data_ode_library():
     ]
 
     return PDELibrary(
-        library_functions=library_functions, function_names=function_names,
+        library_functions=library_functions,
+        function_names=function_names,
     )
 
 
@@ -369,7 +374,7 @@ def data_pde_library():
     spatial_grid = np.linspace(0, 10)
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y: x * y,
     ]
     function_names = [
@@ -436,7 +441,7 @@ def data_lorenz_c_1d():
 @pytest.fixture
 def data_lorenz_c_2d():
     def u_fun(t):
-        return np.column_stack([np.sin(2 * t), t ** 2])
+        return np.column_stack([np.sin(2 * t), t**2])
 
     t = np.linspace(0, 5, 500)
     x0 = [8, 27, -7]

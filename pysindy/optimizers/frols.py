@@ -225,7 +225,7 @@ class FROLS(BaseOptimizer):
                 if self.verbose:
                     coef = self.history_[i, k, :]
                     R2 = np.sum((y[:, k] - np.dot(x, coef).T) ** 2)
-                    L2 = self.alpha * np.sum(coef ** 2)
+                    L2 = self.alpha * np.sum(coef**2)
                     L0 = np.count_nonzero(coef)
                     row = [i, k, R2, L2, L0, l0_penalty * L0, R2 + L2 + l0_penalty * L0]
                     print(

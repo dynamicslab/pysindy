@@ -52,7 +52,7 @@ from pysindy.utils.odes import yeast
 )
 def test_odes(ode_params):
     def u_fun(t):
-        return np.column_stack([np.sin(2 * t), t ** 2])
+        return np.column_stack([np.sin(2 * t), t**2])
 
     t = np.linspace(0, 10, 100)
     x0 = np.random.rand(ode_params[1])

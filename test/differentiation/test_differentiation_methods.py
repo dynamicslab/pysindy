@@ -138,17 +138,23 @@ def test_centered_difference_hot(data_derivative_2d):
     for d in range(1, 2):
         forward_difference = FiniteDifference(order=1, d=d)._differentiate
         np.testing.assert_allclose(
-            forward_difference(x, t=dt), forward_difference(x, t=t), atol=atol,
+            forward_difference(x, t=dt),
+            forward_difference(x, t=t),
+            atol=atol,
         )
     for d in range(1, 6):
         centered_difference = FiniteDifference(order=2, d=d)._differentiate
         np.testing.assert_allclose(
-            centered_difference(x, t=dt), centered_difference(x, t=t), atol=atol,
+            centered_difference(x, t=dt),
+            centered_difference(x, t=t),
+            atol=atol,
         )
     for d in range(1, 6):
         spectral_deriv = SpectralDerivative(d=d)._differentiate
         np.testing.assert_allclose(
-            spectral_deriv(x, t=dt), spectral_deriv(x, t=t), atol=atol,
+            spectral_deriv(x, t=dt),
+            spectral_deriv(x, t=t),
+            atol=atol,
         )
 
 
@@ -320,17 +326,23 @@ def test_centered_difference_hot_axis(data_2d_resolved_pde):
     for d in range(1, 2):
         forward_difference = FiniteDifference(order=1, d=d, axis=-2)._differentiate
         np.testing.assert_allclose(
-            forward_difference(x, t=dt), forward_difference(x, t=t), atol=atol,
+            forward_difference(x, t=dt),
+            forward_difference(x, t=t),
+            atol=atol,
         )
     for d in range(1, 6):
         centered_difference = FiniteDifference(order=2, d=d, axis=-2)._differentiate
         np.testing.assert_allclose(
-            centered_difference(x, t=dt), centered_difference(x, t=t), atol=atol,
+            centered_difference(x, t=dt),
+            centered_difference(x, t=t),
+            atol=atol,
         )
     for d in range(1, 6):
         spectral_deriv = SpectralDerivative(d=d, axis=-2)._differentiate
         np.testing.assert_allclose(
-            spectral_deriv(x, t=dt), spectral_deriv(x, t=t), atol=atol,
+            spectral_deriv(x, t=dt),
+            spectral_deriv(x, t=t),
+            atol=atol,
         )
 
 
@@ -354,8 +366,12 @@ def test_centered_difference_noaxis_vs_axis(data_2d_resolved_pde):
                     order=2, d=d
                 )._differentiate(x[i, j, :, :], t=t)
         np.testing.assert_allclose(
-            centered_difference(x, t=dt), slow_differences, atol=atol,
+            centered_difference(x, t=dt),
+            slow_differences,
+            atol=atol,
         )
         np.testing.assert_allclose(
-            centered_difference(x, t=t), slow_differences_t, atol=atol,
+            centered_difference(x, t=t),
+            slow_differences_t,
+            atol=atol,
         )

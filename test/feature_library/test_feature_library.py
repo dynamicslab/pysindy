@@ -440,12 +440,7 @@ def test_library_ensemble(data_lorenz, library):
 
 
 @pytest.mark.parametrize(
-    "library",
-    [
-        IdentityLibrary,
-        PolynomialLibrary,
-        FourierLibrary,
-    ],
+    "library", [IdentityLibrary, PolynomialLibrary, FourierLibrary,],
 )
 def test_bad_library_ensemble(library):
     with pytest.raises(ValueError):
@@ -461,9 +456,7 @@ def test_generalized_library(data_lorenz):
         lambda x: 1.0 / x,
         lambda x, y: np.sin(x + y),
     ]
-    custom_library = CustomLibrary(
-        library_functions=library_functions,
-    )
+    custom_library = CustomLibrary(library_functions=library_functions,)
 
     tensor_array = [[0, 1, 1], [1, 0, 1]]
 
@@ -475,14 +468,9 @@ def test_generalized_library(data_lorenz):
     inputs_per_library[2, 2] = 0
 
     # First try without tensor libraries and subset of the input variables
-    sindy_library = GeneralizedLibrary(
-        [poly_library, fourier_library, custom_library],
-    )
+    sindy_library = GeneralizedLibrary([poly_library, fourier_library, custom_library],)
     sindy_opt = STLSQ(threshold=0.25)
-    model = SINDy(
-        optimizer=sindy_opt,
-        feature_library=sindy_library,
-    )
+    model = SINDy(optimizer=sindy_opt, feature_library=sindy_library,)
     model.fit(x, t=t)
     model.print()
     model.get_feature_names()
@@ -502,10 +490,7 @@ def test_generalized_library(data_lorenz):
     sindy_library = GeneralizedLibrary(
         [poly_library, fourier_library, custom_library], tensor_array=tensor_array
     )
-    model = SINDy(
-        optimizer=sindy_opt,
-        feature_library=sindy_library,
-    )
+    model = SINDy(optimizer=sindy_opt, feature_library=sindy_library,)
     model.fit(x, t=t)
     model.print()
     # 24 + (9 * 6) = 54 + (9 * 9) = 81
@@ -528,10 +513,7 @@ def test_generalized_library(data_lorenz):
         tensor_array=tensor_array,
         inputs_per_library=inputs_per_library,
     )
-    model = SINDy(
-        optimizer=sindy_opt,
-        feature_library=sindy_library,
-    )
+    model = SINDy(optimizer=sindy_opt, feature_library=sindy_library,)
     model.fit(x, t=t)
     assert len(model.get_feature_names()) == 29
 
@@ -564,14 +546,9 @@ def test_generalized_library_pde(data_1d_random_pde):
     )
 
     # First try without tensor libraries and subset of the input variables
-    sindy_library = GeneralizedLibrary(
-        [poly_library, fourier_library, pde_library],
-    )
+    sindy_library = GeneralizedLibrary([poly_library, fourier_library, pde_library],)
     sindy_opt = STLSQ(threshold=0.25)
-    model = SINDy(
-        optimizer=sindy_opt,
-        feature_library=sindy_library,
-    )
+    model = SINDy(optimizer=sindy_opt, feature_library=sindy_library,)
     model.fit(u, t=t)
     model.print()
     model.get_feature_names()
@@ -603,14 +580,9 @@ def test_generalized_library_weak_pde(data_1d_random_pde):
     )
 
     # First try without tensor libraries and subset of the input variables
-    sindy_library = GeneralizedLibrary(
-        [weak_library1, weak_library2],
-    )
+    sindy_library = GeneralizedLibrary([weak_library1, weak_library2],)
     sindy_opt = STLSQ(threshold=0.25)
-    model = SINDy(
-        optimizer=sindy_opt,
-        feature_library=sindy_library,
-    )
+    model = SINDy(optimizer=sindy_opt, feature_library=sindy_library,)
     model.fit(u, t=t)
     model.print()
     model.get_feature_names()

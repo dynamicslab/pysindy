@@ -165,10 +165,7 @@ class ConcatLibrary(BaseFeatureLibrary):
     """
 
     def __init__(
-        self,
-        libraries: list,
-        library_ensemble=False,
-        ensemble_indices=[0],
+        self, libraries: list, library_ensemble=False, ensemble_indices=[0],
     ):
         super(ConcatLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices

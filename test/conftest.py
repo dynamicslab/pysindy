@@ -160,11 +160,7 @@ def data_3d_random_pde():
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
     z = np.linspace(0, 10, n)
-    (
-        X,
-        Y,
-        Z,
-    ) = np.meshgrid(x, y, z, indexing="ij")
+    (X, Y, Z,) = np.meshgrid(x, y, z, indexing="ij")
     spatial_grid = np.asarray([X, Y, Z])
     spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
     u = np.random.randn(n, n, n, n, 2)
@@ -364,8 +360,7 @@ def data_ode_library():
     ]
 
     return PDELibrary(
-        library_functions=library_functions,
-        function_names=function_names,
+        library_functions=library_functions, function_names=function_names,
     )
 
 

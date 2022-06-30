@@ -186,10 +186,7 @@ class SINDyPI(SR3):
                         cp.sum_squares(x[:, i] - x @ xi)
                         + cp.norm2(self.thresholds[i, :] @ xi) ** 2
                     )
-            prob = cp.Problem(
-                cp.Minimize(cost),
-                [xi[i] == 0.0],
-            )
+            prob = cp.Problem(cp.Minimize(cost), [xi[i] == 0.0],)
             try:
                 prob.solve(
                     max_iter=self.max_iter,

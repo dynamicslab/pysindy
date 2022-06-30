@@ -429,9 +429,7 @@ def convert_u_dot_integral(u, weak_pde_library):
         for k in range(K):
             u_new = u_interp(np.take(weak_pde_library.XT, k, axis=0))
             u_dot_integral_temp = trapezoid(
-                w_diff[k] * u_new,
-                x=weak_pde_library.xtgrid_k[k, :, 0],
-                axis=0,
+                w_diff[k] * u_new, x=weak_pde_library.xtgrid_k[k, :, 0], axis=0,
             )
             for i in range(1, gdim):
                 u_dot_integral_temp = trapezoid(

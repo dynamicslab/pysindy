@@ -391,9 +391,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 for k in range(self.num_derivatives):
                     for i, f in enumerate(self.functions):
                         for c in self._combinations(
-                            n_features,
-                            f.__code__.co_argcount,
-                            self.interaction_only,
+                            n_features, f.__code__.co_argcount, self.interaction_only,
                         ):
                             for jj in range(n_features):
                                 feature_names.append(
@@ -622,9 +620,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
                 for k in range(self.K):
                     func_temp = trapezoid(
-                        complete_funcs[k],
-                        x=self.xtgrid_k[k, :, 0],
-                        axis=0,
+                        complete_funcs[k], x=self.xtgrid_k[k, :, 0], axis=0,
                     )
                     for i in range(1, self.grid_ndim):
                         func_temp = trapezoid(
@@ -742,17 +738,17 @@ class WeakPDELibrary(BaseFeatureLibrary):
                             d_pure = multiindex[axis] - d_mixed
                             for k in range(self.K):
                                 if d_mixed > 0:
-                                    derivs_mixed[k] = (
-                                        FiniteDifference(
-                                            d=d_mixed,
-                                            axis=axis,
-                                            is_uniform=self.is_uniform,
-                                            periodic=self.periodic,
-                                        )._differentiate(
-                                            derivs_mixed[k],
-                                            self.xtgrid_k[k, :, axis],
-                                        )
-                                        * (-1) ** (d_mixed % 2)
+                                    derivs_mixed[k] = FiniteDifference(
+                                        d=d_mixed,
+                                        axis=axis,
+                                        is_uniform=self.is_uniform,
+                                        periodic=self.periodic,
+                                    )._differentiate(
+                                        derivs_mixed[k], self.xtgrid_k[k, :, axis],
+                                    ) * (
+                                        -1
+                                    ) ** (
+                                        d_mixed % 2
                                     )
                                 if d_pure > 0:
                                     derivs_pure[k] = FiniteDifference(
@@ -761,8 +757,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                         is_uniform=self.is_uniform,
                                         periodic=self.periodic,
                                     )._differentiate(
-                                        derivs_pure[k],
-                                        self.xtgrid_k[k, :, axis],
+                                        derivs_pure[k], self.xtgrid_k[k, :, axis],
                                     )
                         deriv_slices[-1] = deriv_ind
                         derivs_mixed_total[tuple(deriv_slices)] = derivs_mixed
@@ -795,15 +790,11 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
                     for k in range(self.K):
                         mixed_temp = trapezoid(
-                            complete_funcs[k],
-                            x=self.xtgrid_k[k, :, 0],
-                            axis=0,
+                            complete_funcs[k], x=self.xtgrid_k[k, :, 0], axis=0,
                         )
                         for i in range(1, self.grid_ndim):
                             mixed_temp = trapezoid(
-                                mixed_temp,
-                                x=self.xtgrid_k[k, :, i],
-                                axis=0,
+                                mixed_temp, x=self.xtgrid_k[k, :, i], axis=0,
                             )
                         library_mixed_integrals[k, :] = mixed_temp
 

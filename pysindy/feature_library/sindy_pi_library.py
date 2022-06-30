@@ -219,9 +219,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
             funcs = self.x_functions
             for i, f in enumerate(funcs):
                 for c in self._combinations(
-                    n_input_features,
-                    f.__code__.co_argcount,
-                    self.interaction_only,
+                    n_input_features, f.__code__.co_argcount, self.interaction_only,
                 ):
                     feature_names.append(
                         self.function_names[i](*[input_features[j] for j in c])
@@ -232,9 +230,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
             funcs = self.x_dot_functions
             for i, f in enumerate(funcs):
                 for c in self._combinations(
-                    n_input_features,
-                    f.__code__.co_argcount,
-                    self.interaction_only,
+                    n_input_features, f.__code__.co_argcount, self.interaction_only,
                 ):
                     feature_names.append(
                         self.function_names[-1 - i](*[x_dot_features[j] for j in c])
@@ -244,9 +240,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         if self.x_dot_functions is not None and self.x_functions is not None:
             for k, f_dot in enumerate(self.x_dot_functions):
                 for f_dot_combs in self._combinations(
-                    n_input_features,
-                    f_dot.__code__.co_argcount,
-                    self.interaction_only,
+                    n_input_features, f_dot.__code__.co_argcount, self.interaction_only,
                 ):
                     for i, f in enumerate(self.x_functions):
                         for f_combs in self._combinations(
@@ -376,9 +370,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         if self.x_functions is not None:
             for i, f in enumerate(self.x_functions):
                 for c in self._combinations(
-                    n_input_features,
-                    f.__code__.co_argcount,
-                    self.interaction_only,
+                    n_input_features, f.__code__.co_argcount, self.interaction_only,
                 ):
                     xp[:, library_idx] = f(*[x[:, j] for j in c])
                     library_idx += 1
@@ -387,9 +379,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         if self.x_dot_functions is not None:
             for i, f in enumerate(self.x_dot_functions):
                 for c in self._combinations(
-                    n_input_features,
-                    f.__code__.co_argcount,
-                    self.interaction_only,
+                    n_input_features, f.__code__.co_argcount, self.interaction_only,
                 ):
                     xp[:, library_idx] = f(*[x_dot[:, j] for j in c])
                     library_idx += 1
@@ -398,9 +388,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         if self.x_dot_functions is not None and self.x_functions is not None:
             for k, f_dot in enumerate(self.x_dot_functions):
                 for f_dot_combs in self._combinations(
-                    n_input_features,
-                    f_dot.__code__.co_argcount,
-                    self.interaction_only,
+                    n_input_features, f_dot.__code__.co_argcount, self.interaction_only,
                 ):
 
                     for i, f in enumerate(self.x_functions):

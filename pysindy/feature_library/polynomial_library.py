@@ -241,12 +241,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             to_stack.append(x)
             for deg in range(2, self.degree + 1):
                 xp_next = _csr_polynomial_expansion(
-                    x.data,
-                    x.indices,
-                    x.indptr,
-                    x.shape[1],
-                    self.interaction_only,
-                    deg,
+                    x.data, x.indices, x.indptr, x.shape[1], self.interaction_only, deg,
                 )
                 if xp_next is None:
                     break

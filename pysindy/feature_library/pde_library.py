@@ -398,6 +398,7 @@ class PDELibrary(BaseFeatureLibrary):
             library_derivatives = np.empty(shape, dtype=x.dtype)
             library_idx = 0
             for multiindex in self.multiindices:
+                derivs = x
                 for axis in range(self.ind_range):
                     if multiindex[axis] > 0:
                         s = [0 for dim in self.spatiotemporal_grid.shape]
@@ -409,7 +410,7 @@ class PDELibrary(BaseFeatureLibrary):
                             axis=axis,
                             is_uniform=self.is_uniform,
                             periodic=self.periodic,
-                        )._differentiate(x, self.spatiotemporal_grid[tuple(s)])
+                        )._differentiate(derivs, self.spatiotemporal_grid[tuple(s)])
                 library_derivatives[
                     ..., library_idx : library_idx + n_features
                 ] = derivs

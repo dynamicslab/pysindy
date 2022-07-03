@@ -1,8 +1,8 @@
 from sklearn import __version__
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
 
 
 class IdentityLibrary(BaseFeatureLibrary):
@@ -77,7 +77,8 @@ class IdentityLibrary(BaseFeatureLibrary):
                 raise ValueError("input features list is not the right length")
         return ["x%d" % i for i in range(n_input_features)]
 
-    def fit(self, x, y=None):
+    @x_sequence_or_item
+    def fit(self, x_full, y=None):
         """
         Compute number of output features.
 
@@ -90,7 +91,7 @@ class IdentityLibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_samples, n_features = check_array(x).shape
+        n_features = x_full[0].shape[x_full[0].ax_coord]
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
         else:
@@ -98,7 +99,8 @@ class IdentityLibrary(BaseFeatureLibrary):
         self.n_output_features_ = n_features
         return self
 
-    def transform(self, x):
+    @x_sequence_or_item
+    def transform(self, x_full):
         """Perform identity transformation (return a copy of the input).
 
         Parameters
@@ -113,17 +115,18 @@ class IdentityLibrary(BaseFeatureLibrary):
         """
         check_is_fitted(self)
 
-        x = check_array(x)
+        xp_full = []
+        for x in x_full:
+            n_features = x.shape[x.ax_coord]
 
-        n_samples, n_features = x.shape
+            if float(__version__[:3]) >= 1.0:
+                n_input_features = self.n_features_in_
+            else:
+                n_input_features = self.n_input_features_
+            if n_features != n_input_features:
+                raise ValueError("x shape does not match training shape")
 
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
-        if n_features != n_input_features:
-            raise ValueError("x shape does not match training shape")
-
-        # If library bagging, return x missing the
-        # columns in self.ensemble_indices
-        return self._ensemble(x.copy())
+            xp_full = xp_full + [x.copy()]
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
+        return xp_full

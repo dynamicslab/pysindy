@@ -1,7 +1,12 @@
+from .axes import AxesArray
+from .axes import comprehend_axes
+from .axes import concat_sample_axis
+from .axes import SampleConcatter
+from .axes import wrap_axes
 from .base import capped_simplex_projection
-from .base import drop_nan_rows
-from .base import drop_random_rows
+from .base import drop_nan_samples
 from .base import equations
+from .base import flatten_2d_tall
 from .base import get_prox
 from .base import get_regularization
 from .base import print_model
@@ -16,6 +21,7 @@ from .base import reorder_constraints
 from .base import supports_multiple_targets
 from .base import validate_control_variables
 from .base import validate_input
+from .base import validate_no_reshape
 from .odes import bacterial
 from .odes import burgers_galerkin
 from .odes import cubic_damped_SHO
@@ -49,9 +55,13 @@ from .odes import yeast
 # from .base import linear_weights
 
 __all__ = [
+    "AxesArray",
+    "SampleConcatter",
+    "concat_sample_axis",
+    "wrap_axes",
+    "comprehend_axes",
     "capped_simplex_projection",
-    "drop_nan_rows",
-    "drop_random_rows",
+    "drop_nan_samples",
     "equations",
     "get_prox",
     "get_regularization",
@@ -67,6 +77,8 @@ __all__ = [
     "supports_multiple_targets",
     "validate_control_variables",
     "validate_input",
+    "validate_no_reshape",
+    "flatten_2d_tall",
     "linear_damped_SHO",
     "cubic_damped_SHO",
     "linear_3D",

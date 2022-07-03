@@ -1,6 +1,7 @@
 -e .
 -r requirements.txt
 pytest
+black
 pytest-cov
 pytest-lazy-fixture
 flake8-builtins-unleashed

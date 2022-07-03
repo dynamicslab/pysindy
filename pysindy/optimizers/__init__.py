@@ -1,4 +1,5 @@
 from .base import BaseOptimizer
+from .base import EnsembleOptimizer
 from .constrained_sr3 import ConstrainedSR3
 from .frols import FROLS
 from .sindy_optimizer import SINDyOptimizer
@@ -10,6 +11,7 @@ from .trapping_sr3 import TrappingSR3
 
 __all__ = [
     "BaseOptimizer",
+    "EnsembleOptimizer",
     "SINDyOptimizer",
     "SR3",
     "STLSQ",

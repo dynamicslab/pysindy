@@ -134,18 +134,6 @@ def comprehend_axes(x):
     return axes
 
 
-def ax_time_to_ax_sample(x: AxesArray) -> AxesArray:
-    """Relabel the time axis as a sample axis"""
-    if x.ax_sample is not None:
-        return x  # idempotence: f(x) = f(f(x))
-    if x.ax_time is None:
-        raise TypeError("Cannot reassign time axis if it doesn't exist.")
-    new_axes = x.__dict__
-    new_axes["ax_sample"] = new_axes["ax_time"]
-    new_axes["ax_time"] = None
-    return AxesArray(np.asarray(x), new_axes)
-
-
 class SampleConcatter(TransformerMixin):
     def __init__(self):
         pass

@@ -16,7 +16,6 @@ from ..utils import AxesArray
 from ..utils import comprehend_axes
 from ..utils import validate_no_reshape
 from ..utils import wrap_axes
-from ..utils.axes import ax_time_to_ax_sample
 
 
 class BaseFeatureLibrary(TransformerMixin):
@@ -188,16 +187,11 @@ def x_sequence_or_item(wrapped_func):
         else:
             if not sparse.issparse(x):
                 x = AxesArray(x, comprehend_axes(x))
-                x = ax_time_to_ax_sample(x)
                 reconstructor = np.array
             else:  # sparse arrays
                 reconstructor = type(x)
                 axes = comprehend_axes(x)
                 wrap_axes(axes, x)
-                # Can't use x = ax_time_to_ax_sample(x) b/c that creates
-                # an AxesArray
-                x.ax_sample = x.ax_time
-                x.ax_time = None
             result = wrapped_func(self, [x], *args, **kwargs)
             if isinstance(result, Sequence):  # e.g. transform() returns x
                 return reconstructor(result[0])
@@ -332,7 +326,7 @@ class ConcatLibrary(BaseFeatureLibrary):
                 xp[..., start_feature_index:end_feature_index] = lib.transform([x])[0]
 
                 current_feat += lib_n_output_features
-            xp = ax_time_to_ax_sample(AxesArray(xp, comprehend_axes(xp)))
+            xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
@@ -565,7 +559,7 @@ class TensoredLibrary(BaseFeatureLibrary):
 
                     current_feat += lib_i_n_output_features * lib_j_n_output_features
 
-            xp = ax_time_to_ax_sample(AxesArray(xp, comprehend_axes(xp)))
+            xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)

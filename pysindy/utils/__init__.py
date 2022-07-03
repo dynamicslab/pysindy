@@ -1,4 +1,3 @@
-from .axes import ax_time_to_ax_sample
 from .axes import AxesArray
 from .axes import comprehend_axes
 from .axes import concat_sample_axis
@@ -58,7 +57,6 @@ from .odes import yeast
 __all__ = [
     "AxesArray",
     "SampleConcatter",
-    "ax_time_to_ax_sample",
     "concat_sample_axis",
     "wrap_axes",
     "comprehend_axes",

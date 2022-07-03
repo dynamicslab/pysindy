@@ -21,7 +21,6 @@ from .optimizers import EnsembleOptimizer
 from .optimizers import SINDyOptimizer
 from .optimizers import SINDyPI
 from .optimizers import STLSQ
-from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
 from .utils import comprehend_axes
 from .utils import concat_sample_axis
@@ -345,20 +344,17 @@ class SINDy(BaseEstimator):
         if u is not None:
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
-        x = [ax_time_to_ax_sample(xi) for xi in x]
-        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
-
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
 
         # backwards compatibility for ensemble options
         if ensemble and n_subset is None:
-            n_subset = x[0].shape[x[0].ax_sample]
+            n_subset = x[0].shape[x[0].ax_time]
         if library_ensemble:
             self.feature_library.library_ensemble = False
         if ensemble and not library_ensemble:
             if n_subset is None:
-                n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
+                n_sample_tot = np.sum([xi.shape[xi.ax_time] for xi in x])
                 n_subset = int(0.6 * n_sample_tot)
             optimizer = SINDyOptimizer(
                 EnsembleOptimizer(
@@ -382,7 +378,7 @@ class SINDy(BaseEstimator):
             self.coef_list = optimizer.optimizer.coef_list
         elif ensemble and library_ensemble:
             if n_subset is None:
-                n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
+                n_sample_tot = np.sum([xi.shape[xi.ax_time] for xi in x])
                 n_subset = int(0.6 * n_sample_tot)
             optimizer = SINDyOptimizer(
                 EnsembleOptimizer(
@@ -472,7 +468,6 @@ class SINDy(BaseEstimator):
         if u is not None:
             u = validate_control_variables(x, u)
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
-        x = [ax_time_to_ax_sample(xi) for xi in x]
         result = [self.model.predict([xi]) for xi in x]
         result = [
             self.feature_library.reshape_samples_to_spatial_grid(pred)
@@ -616,9 +611,6 @@ class SINDy(BaseEstimator):
             x_dot_predict = [xd[:-1] for xd in x_dot_predict]
 
         x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
-        x = [ax_time_to_ax_sample(xi) for xi in x]
-        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
-        x_dot_predict = [ax_time_to_ax_sample(xdip) for xdip in x_dot_predict]
 
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)

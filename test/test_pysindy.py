@@ -1,8 +1,8 @@
 """
 Unit tests for SINDy class.
 
-Note: all tests should be encapsulated in functions whose
-names start with "test_"
+Note: all tests should be encapsulated in functions with
+names starting with "test_"
 
 To run all tests for this package, navigate to the top-level
 directory and execute the following command:
@@ -33,6 +33,7 @@ from pysindy.feature_library import WeakPDELibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
+
 
 def test_get_feature_names_len(data_lorenz):
     x, t = data_lorenz

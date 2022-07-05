@@ -9,6 +9,7 @@ codecov
 setuptools_scm
 setuptools_scm_git_archive
 jupyter
+jupytext
 notebook
 sphinx >= 2
 sphinxcontrib-apidoc

@@ -12,7 +12,7 @@ from .sr3 import SR3
 
 class ConstrainedSR3(SR3):
     """
-    Sparse relaxed regularized regression with linear equality constraints.
+    Sparse relaxed regularized regression with linear (in)equality constraints.
 
     Attempts to minimize the objective function
 

@@ -5,12 +5,11 @@ Some default values used here may differ from those used in :doc:`derivative:ind
 """
 from derivative import dxdt
 from numpy import arange
-from sklearn.base import BaseEstimator
 
-from ..utils.base import validate_input
+from .base import BaseDifferentiation
 
 
-class SINDyDerivative(BaseEstimator):
+class SINDyDerivative(BaseDifferentiation):
     """
     Wrapper class for differentiation classes from the :doc:`derivative:index` package.
     This class is meant to provide all the same functionality as the
@@ -52,7 +51,7 @@ class SINDyDerivative(BaseEstimator):
             # Simple optimization to gain speed (inspect is slow)
             return self
         else:
-            self.kwargs.update(params)
+            self.kwargs.update(params["kwargs"])
 
         return self
 
@@ -72,7 +71,3 @@ class SINDyDerivative(BaseEstimator):
             t = arange(x.shape[0]) * t
 
         return dxdt(x, t, axis=0, **self.kwargs)
-
-    def __call__(self, x, t=1):
-        x = validate_input(x, t=t)
-        return self._differentiate(x, t)

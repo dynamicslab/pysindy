@@ -13,7 +13,7 @@ from .sr3 import SR3
 class TrappingSR3(SR3):
     """
     Trapping variant of sparse relaxed regularized regression.
-    This optimizer can be used to identify systems with
+    This optimizer can be used to identify systems with globally
     stable (bounded) solutions.
 
     Attempts to minimize one of two related objective functions
@@ -478,18 +478,13 @@ class TrappingSR3(SR3):
 
     def _objective(self, x, y, coef_sparse, A, PW, q):
         """Objective function"""
-        if q != 0:
-            print_ind = q % (self.max_iter // 10.0)
-        else:
-            print_ind = q
-
         # Compute the errors
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
 
         # convoluted way to print every max_iter / 10 iterations
-        if print_ind == 0 and self.verbose:
+        if self.verbose and q % max(1, self.max_iter // 10) == 0:
             row = [
                 q,
                 0.5 * np.sum(R2),

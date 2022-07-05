@@ -6,6 +6,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
 from ..pysindy import SINDy
+from ..utils import SampleConcatter
 
 
 class SINDyEstimator(SINDy):
@@ -100,7 +101,7 @@ class SINDyEstimator(SINDy):
         super(SINDyEstimator, self).fit(x, **kwargs)
         self._model = SINDyModel(
             feature_library=self.model.steps[0][1],
-            optimizer=self.model.steps[1][1],
+            optimizer=self.model.steps[-1][1],
             feature_names=self.feature_names,
             t_default=self.t_default,
             discrete_time=self.discrete_time,
@@ -134,10 +135,11 @@ class SINDyModel(SINDy):
     Implementation of SINDy conforming to the API of a Deeptime
     `Model <https://deeptime-ml.github.io/api/generated/deeptime.base.Model.html>`_.
 
-    The model is represented as a Scikit-learn pipeline object with two steps:
+    The model is represented as a Scikit-learn pipeline object with three steps:
     1. Map the raw input data to nonlinear features according to the selected
     ``feature_library``
-    2. Multiply the nonlinear features with a coefficient matrix encapuslated
+    2. Reshape the data from input shape to an optimization problem
+    3. Multiply the nonlinear features with a coefficient matrix encapuslated
     in ``optimizer``.
 
     This class expects the feature library and optimizer to already be fit
@@ -208,7 +210,11 @@ class SINDyModel(SINDy):
         check_is_fitted(feature_library)
         check_is_fitted(optimizer)
 
-        steps = [("features", feature_library), ("model", optimizer)]
+        steps = [
+            ("features", feature_library),
+            ("shaping", SampleConcatter()),
+            ("model", optimizer),
+        ]
         self.model = Pipeline(steps)
 
         if float(__version__[:3]) >= 1.0:

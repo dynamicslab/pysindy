@@ -121,14 +121,14 @@ class SR3(BaseOptimizer):
     >>> from scipy.integrate import odeint
     >>> from pysindy import SINDy
     >>> from pysindy.optimizers import SR3
-    >>> lorenz = lambda z,t : [10*(z[1] - z[0]),
-    >>>                        z[0]*(28 - z[2]) - z[1],
-    >>>                        z[0]*z[1] - 8/3*z[2]]
-    >>> t = np.arange(0,2,.002)
-    >>> x = odeint(lorenz, [-8,8,27], t)
+    >>> lorenz = lambda z,t : [10 * (z[1] - z[0]),
+    >>>                        z[0] * (28 - z[2]) - z[1],
+    >>>                        z[0] * z[1] - 8 / 3 * z[2]]
+    >>> t = np.arange(0, 2, .002)
+    >>> x = odeint(lorenz, [-8, 8, 27], t)
     >>> opt = SR3(threshold=0.1, nu=1)
     >>> model = SINDy(optimizer=opt)
-    >>> model.fit(x, t=t[1]-t[0])
+    >>> model.fit(x, t=t[1] - t[0])
     >>> model.print()
     x0' = -10.004 1 + 10.004 x0
     x1' = 27.994 1 + -0.993 x0 + -1.000 1 x1

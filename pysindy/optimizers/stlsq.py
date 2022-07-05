@@ -9,8 +9,8 @@ from .base import BaseOptimizer
 
 
 class STLSQ(BaseOptimizer):
-    """Sequentially thresholded least squares algorithm. Defaults to doing
-    Sequentially thresholded Ridge regression.
+    """Sequentially thresholded least squares algorithm.
+    Defaults to doing Sequentially thresholded Ridge regression.
 
     Attempts to minimize the objective function
     :math:`\\|y - Xw\\|^2_2 + \\alpha \\|w\\|^2_2`

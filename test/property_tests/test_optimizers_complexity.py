@@ -24,9 +24,10 @@ from pysindy.optimizers import STLSQ
 )
 @settings(max_examples=20, deadline=None)
 def test_complexity(n_samples, n_features, n_informative, random_state):
-    """Behaviour test for complexity.
-
-    We assume that more regularized optimizers are less complex on the same dataset.
+    """
+    Behaviour test for complexity.
+    We assume that more regularized optimizers are
+    less complex on the same dataset.
     """
     assume(n_informative < n_features)
 

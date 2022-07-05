@@ -5,8 +5,6 @@ import abc
 
 from sklearn.base import BaseEstimator
 
-from ..utils.base import validate_input
-
 
 class BaseDifferentiation(BaseEstimator):
     """
@@ -48,5 +46,4 @@ class BaseDifferentiation(BaseEstimator):
         raise NotImplementedError
 
     def __call__(self, x, t=1):
-        x = validate_input(x)
         return self._differentiate(x, t)

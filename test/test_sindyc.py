@@ -245,16 +245,16 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
     with pytest.raises(ValueError):
         model.fit(x, u=u, t=t)
 
-    # Should fail if either x or u is not a list
-    with pytest.raises(ValueError):
+    # Should fail if x or u is not a list
+    with pytest.raises(TypeError):
         model.fit(x, u=u[0], multiple_trajectories=True)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         model.fit(x[0], u=u, multiple_trajectories=True)
 
     # x and u should be lists of the same length
     with pytest.raises(ValueError):
-        model.fit([x[:-1]], u=u, multiple_trajectories=True)
+        model.fit(x[:-1], u=u, multiple_trajectories=True)
 
     model.fit(x, u=u, multiple_trajectories=True)
     check_is_fitted(model)
@@ -456,6 +456,12 @@ def test_fit_warn(data_lorenz_c_1d, params, warning):
 
     with pytest.warns(None) as warn_record:
         model.fit(x, u=u, t=t, quiet=True)
+
+    while True:
+        try:
+            warn_record.pop(PendingDeprecationWarning)
+        except AssertionError:
+            break
 
     assert len(warn_record) == 0
 

@@ -363,6 +363,5 @@ def _drop_random_samples(
     rand_inds = choice(range(n_samples), n_subset, replace=replace)
     x_new = np.take(x, rand_inds, axis=x.ax_sample)
     x_dot_new = np.take(x_dot, rand_inds, axis=x.ax_sample)
-    # x_dot_new = np.take(x_dot, rand_inds, axis=x_dot.ax_sample)
 
     return x_new, x_dot_new

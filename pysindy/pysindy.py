@@ -21,8 +21,8 @@ from .optimizers import EnsembleOptimizer
 from .optimizers import SINDyOptimizer
 from .optimizers import SINDyPI
 from .optimizers import STLSQ
-from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
+from .utils import comprehend_axes
 from .utils import concat_sample_axis
 from .utils import drop_nan_samples
 from .utils import equations
@@ -325,50 +325,36 @@ class SINDy(BaseEstimator):
         if (n_subset is not None) and n_subset <= 0:
             raise ValueError("n_subset must be a positive integer")
 
-        x_dot_None = False  # flag for discrete time functionality
-        if self.discrete_time:
-            if x_dot is None:
-                x_dot_None = True  # set the flag
-
-        x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         if u is None:
             self.n_control_features_ = 0
         else:
-            trim_last_point = self.discrete_time and x_dot_None
             u = validate_control_variables(
                 x,
                 u,
-                multiple_trajectories=multiple_trajectories,
-                trim_last_point=trim_last_point,
+                trim_last_point=(self.discrete_time and x_dot is None),
             )
             self.n_control_features_ = u[0].shape[u[0].ax_coord]
+        x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
 
         # Set ensemble variables
         self.ensemble = ensemble
         self.library_ensemble = library_ensemble
-        if ensemble and n_subset is None:
-            if x[0].ndim == 1:
-                raise ValueError("This shouldn't happen anymore")
-                n_subset = x[0].shape[0]
-            else:
-                n_subset = x[0].shape[x[0].ax_time]
 
         # Append control variables
         if u is not None:
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
-        x = [ax_time_to_ax_sample(xi) for xi in x]
-        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
-
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
 
         # backwards compatibility for ensemble options
+        if ensemble and n_subset is None:
+            n_subset = x[0].shape[x[0].ax_time]
         if library_ensemble:
             self.feature_library.library_ensemble = False
         if ensemble and not library_ensemble:
             if n_subset is None:
-                n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
+                n_sample_tot = np.sum([xi.shape[xi.ax_time] for xi in x])
                 n_subset = int(0.6 * n_sample_tot)
             optimizer = SINDyOptimizer(
                 EnsembleOptimizer(
@@ -392,7 +378,7 @@ class SINDy(BaseEstimator):
             self.coef_list = optimizer.optimizer.coef_list
         elif ensemble and library_ensemble:
             if n_subset is None:
-                n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
+                n_sample_tot = np.sum([xi.shape[xi.ax_time] for xi in x])
                 n_subset = int(0.6 * n_sample_tot)
             optimizer = SINDyOptimizer(
                 EnsembleOptimizer(
@@ -482,7 +468,6 @@ class SINDy(BaseEstimator):
         if u is not None:
             u = validate_control_variables(x, u)
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
-        x = [ax_time_to_ax_sample(xi) for xi in x]
         result = [self.model.predict([xi]) for xi in x]
         result = [
             self.feature_library.reshape_samples_to_spatial_grid(pred)
@@ -626,9 +611,6 @@ class SINDy(BaseEstimator):
             x_dot_predict = [xd[:-1] for xd in x_dot_predict]
 
         x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
-        x = [ax_time_to_ax_sample(xi) for xi in x]
-        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
-        x_dot_predict = [ax_time_to_ax_sample(xdip) for xdip in x_dot_predict]
 
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)
@@ -961,7 +943,7 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
     """Validate input types, reshape arrays, and label axes"""
 
     def comprehend_and_validate(arr, t):
-        arr = AxesArray(arr, feature_library.comprehend_axes(arr))
+        arr = AxesArray(arr, comprehend_axes(arr))
         arr = feature_library.correct_shape(arr)
         return validate_no_reshape(arr, t)
 

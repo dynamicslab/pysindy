@@ -1,3 +1,4 @@
+import warnings
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 
@@ -6,15 +7,20 @@ from numpy import hstack
 from numpy import nan_to_num
 from numpy import ones
 from sklearn import __version__
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+from ..utils import AxesArray
 from .base import BaseFeatureLibrary
+from .base import x_sequence_or_item
 from pysindy.differentiation import FiniteDifference
 
 
 class SINDyPILibrary(BaseFeatureLibrary):
-    """Generate a library with custom functions. The Library takes custom
+    """
+    WARNING: This library is deprecated in PySINDy versions > 1.7. Please
+    use the PDE or WeakPDE libraries instead.
+
+    Generate a library with custom functions. The Library takes custom
     libraries for X and Xdot respectively, and then tensor-products them
     together. For a 3D system, a library of constant and linear terms in x_dot,
     i.e. [1, x_dot0, ..., x_dot3], is good
@@ -151,6 +157,11 @@ class SINDyPILibrary(BaseFeatureLibrary):
         self.x_functions = library_functions
         self.x_dot_functions = x_dot_library_functions
         self.function_names = function_names
+
+        warnings.warn(
+            "This library is deprecated in PySINDy versions > 1.7. Please "
+            "use the PDE or WeakPDE libraries instead. "
+        )
         if library_functions is None and x_dot_library_functions is None:
             raise ValueError(
                 "At least one function library, either for x or x_dot, " "is required."
@@ -265,7 +276,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
         return feature_names
 
-    def fit(self, x, y=None):
+    @x_sequence_or_item
+    def fit(self, x_full, y=None):
         """Compute number of output features.
 
         Parameters
@@ -277,7 +289,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_samples, n_features = check_array(x).shape
+        n_features = x_full[0].shape[x_full[0].ax_coord]
+
         if float(__version__[:3]) >= 1.0:
             self.n_features_in_ = n_features
         else:
@@ -335,7 +348,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
             self.n_output_features_ += 1
         return self
 
-    def transform(self, x):
+    @x_sequence_or_item
+    def transform(self, x_full):
         """Transform data to custom features
 
         Parameters
@@ -351,67 +365,71 @@ class SINDyPILibrary(BaseFeatureLibrary):
         """
         check_is_fitted(self)
 
-        x = check_array(x)
-        if self.x_dot_functions is not None:
-            x_dot = nan_to_num(self.differentiation_method(x, self.t))
+        xp_full = []
+        for x in x_full:
 
-        n_samples, n_features = x.shape
+            if self.x_dot_functions is not None:
+                x_dot = nan_to_num(self.differentiation_method(x, self.t))
 
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
-        if n_features != n_input_features:
-            raise ValueError("x shape does not match training shape")
+            n_samples, n_features = x.shape
 
-        xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
-        library_idx = 0
+            if float(__version__[:3]) >= 1.0:
+                n_input_features = self.n_features_in_
+            else:
+                n_input_features = self.n_input_features_
+            if n_features != n_input_features:
+                raise ValueError("x shape does not match training shape")
 
-        # Put in column of ones in the library
-        if self.include_bias:
-            xp[:, library_idx] = ones(n_samples)
-            library_idx += 1
+            xp = empty((n_samples, self.n_output_features_), dtype=x.dtype)
+            library_idx = 0
 
-        # Put in normal x library
-        if self.x_functions is not None:
-            for i, f in enumerate(self.x_functions):
-                for c in self._combinations(
-                    n_input_features,
-                    f.__code__.co_argcount,
-                    self.interaction_only,
-                ):
-                    xp[:, library_idx] = f(*[x[:, j] for j in c])
-                    library_idx += 1
+            # Put in column of ones in the library
+            if self.include_bias:
+                xp[:, library_idx] = ones(n_samples)
+                library_idx += 1
 
-        # Put in normal x_dot library
-        if self.x_dot_functions is not None:
-            for i, f in enumerate(self.x_dot_functions):
-                for c in self._combinations(
-                    n_input_features,
-                    f.__code__.co_argcount,
-                    self.interaction_only,
-                ):
-                    xp[:, library_idx] = f(*[x_dot[:, j] for j in c])
-                    library_idx += 1
+            # Put in normal x library
+            if self.x_functions is not None:
+                for i, f in enumerate(self.x_functions):
+                    for c in self._combinations(
+                        n_input_features,
+                        f.__code__.co_argcount,
+                        self.interaction_only,
+                    ):
+                        xp[:, library_idx] = f(*[x[:, j] for j in c])
+                        library_idx += 1
 
-        # Put in mixed x, x_dot terms
-        if self.x_dot_functions is not None and self.x_functions is not None:
-            for k, f_dot in enumerate(self.x_dot_functions):
-                for f_dot_combs in self._combinations(
-                    n_input_features,
-                    f_dot.__code__.co_argcount,
-                    self.interaction_only,
-                ):
+            # Put in normal x_dot library
+            if self.x_dot_functions is not None:
+                for i, f in enumerate(self.x_dot_functions):
+                    for c in self._combinations(
+                        n_input_features,
+                        f.__code__.co_argcount,
+                        self.interaction_only,
+                    ):
+                        xp[:, library_idx] = f(*[x_dot[:, j] for j in c])
+                        library_idx += 1
 
-                    for i, f in enumerate(self.x_functions):
-                        for f_combs in self._combinations(
-                            n_input_features,
-                            f.__code__.co_argcount,
-                            self.interaction_only,
-                        ):
-                            xp[:, library_idx] = f(
-                                *[x[:, comb] for comb in f_combs]
-                            ) * f_dot(*[x_dot[:, comb] for comb in f_dot_combs])
-                            library_idx += 1
+            # Put in mixed x, x_dot terms
+            if self.x_dot_functions is not None and self.x_functions is not None:
+                for k, f_dot in enumerate(self.x_dot_functions):
+                    for f_dot_combs in self._combinations(
+                        n_input_features,
+                        f_dot.__code__.co_argcount,
+                        self.interaction_only,
+                    ):
 
-        return self._ensemble(xp)
+                        for i, f in enumerate(self.x_functions):
+                            for f_combs in self._combinations(
+                                n_input_features,
+                                f.__code__.co_argcount,
+                                self.interaction_only,
+                            ):
+                                xp[:, library_idx] = f(
+                                    *[x[:, comb] for comb in f_combs]
+                                ) * f_dot(*[x_dot[:, comb] for comb in f_dot_combs])
+                                library_idx += 1
+            xp_full = xp_full + [AxesArray(xp, x.__dict__)]
+        if self.library_ensemble:
+            xp_full = self._ensemble(xp_full)
+        return xp_full

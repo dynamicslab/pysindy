@@ -1,5 +1,4 @@
 import os
-import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -18,7 +17,7 @@ argparser.add_argument("target", help="Directory containing example.py")
 
 def _create_kernel() -> str:
     """Create a IPython Kernel for the current executable."""
-    kernel_name = sys.executable.replace("/", ".").replace("\\", ".").replace(":", ".")
+    kernel_name = __name__
     app.launch_new_instance(argv=["install", "--user", "--name", kernel_name])
     return kernel_name
 

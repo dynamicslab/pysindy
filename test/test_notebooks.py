@@ -1,5 +1,7 @@
 import os
+import runpy
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 import nbformat
@@ -10,6 +12,10 @@ from nbconvert.preprocessors import ExecutePreprocessor
 # Find all example notebooks
 notebook_dir = Path(__file__).parent.parent / "examples"
 notebooks = [nb.name for nb in notebook_dir.glob("*.ipynb")]
+notebook_scripts = []
+for x in notebook_dir.iterdir():
+    if x.is_dir() and (x / "example.py").exists():
+        notebook_scripts.append(x.name)
 
 
 def _load_notebook(filename: Path) -> nbformat.NotebookNode:
@@ -26,12 +32,28 @@ def _create_kernel() -> str:
     return kernel_name
 
 
+@contextmanager
+def _cwd(directory):
+    """Modify working directory and sys.path temporarily"""
+    cwd = Path.cwd()
+    os.chdir(directory)
+    sys.path.insert(0, str(directory))
+    yield
+    sys.path.pop(0)
+    os.chdir(cwd)
+
+
+@pytest.mark.parametrize("directory", notebook_scripts)
+def test_notebook_script(directory: Path):
+    # Run in native directory with modified sys.path for imports to work
+    with _cwd(notebook_dir / directory):
+        runpy.run_path(notebook_dir / directory / "example.py", run_name="testing")
+
+
 @pytest.mark.parametrize("filename", notebooks)
 @pytest.mark.slow
 def test_notebook(filename):
     nb = _load_notebook(notebook_dir / filename)
-    # Need to run in notebook directory to find data via relative path
-    os.chdir(notebook_dir)
-    # Run the notebook
-    ExecutePreprocessor(timeout=-1, kernel=_create_kernel).preprocess(nb)
-    os.chdir(Path(__file__).parent)
+    # Run in native directory to find data via relative path
+    with _cwd(notebook_dir):
+        ExecutePreprocessor(timeout=-1, kernel=_create_kernel).preprocess(nb)

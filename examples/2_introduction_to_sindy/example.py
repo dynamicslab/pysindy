@@ -106,10 +106,16 @@
 # Using the initial conditions $x_0 = 3$ and $y_0 = \tfrac{1}{2}$, we construct the data matrix $X$.
 # %%
 import numpy as np
-from example_data import gen_data1
-from example_data import gen_data2
 
 import pysindy as ps
+
+if __name__ != "testing":
+    from example_data import gen_data1
+    from example_data import gen_data2
+else:
+    from mock_data import gen_data1
+    from mock_data import gen_data2
+
 
 # %%
 t, x, y = gen_data1()

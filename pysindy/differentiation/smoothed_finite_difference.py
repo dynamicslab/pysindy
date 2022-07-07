@@ -18,6 +18,9 @@ class SmoothedFiniteDifference(FiniteDifference):
     smoother_kws: dict, optional (default :code:`{}`)
         Arguments passed to smoother when it is invoked.
 
+    save_smooth: bool
+        Whether to save the smoothed coordinate values or not.
+
     **kwargs: kwargs
         Addtional parameters passed to the :meth:`pysindy.FiniteDifference.__init__`
         function.
@@ -42,10 +45,13 @@ class SmoothedFiniteDifference(FiniteDifference):
            [ 5.39752150e-01, -8.41980082e-01]])
     """
 
-    def __init__(self, smoother=savgol_filter, smoother_kws={}, **kwargs):
+    def __init__(
+        self, smoother=savgol_filter, smoother_kws={}, save_smooth=True, **kwargs
+    ):
         super(SmoothedFiniteDifference, self).__init__(**kwargs)
         self.smoother = smoother
         self.smoother_kws = smoother_kws
+        self.save_smooth = save_smooth
 
         if smoother is savgol_filter:
             if "window_length" not in smoother_kws:
@@ -56,6 +62,9 @@ class SmoothedFiniteDifference(FiniteDifference):
 
     def _differentiate(self, x, t):
         """Apply finite difference method after smoothing."""
-        x = self.smoother(x, **self.smoother_kws)
-        self.smoothed_x_ = x
-        return super(SmoothedFiniteDifference, self)._differentiate(x, t)
+        x_smooth = self.smoother(x, **self.smoother_kws)
+        if self.save_smooth:
+            self.smoothed_x_ = x_smooth
+        else:
+            self.smoothed_x_ = x
+        return super(SmoothedFiniteDifference, self)._differentiate(x_smooth, t)

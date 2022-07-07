@@ -157,6 +157,20 @@ Contributing examples
 ^^^^^^^^^^^^^^^^^^^^^
 We love seeing examples of PySINDy being used to solve interesting problems! If you would like to contribute an example, reach out to us by creating an issue.
 
+At a minimum, we need to be able to run the example notebooks in the normal mode as well as in a test mode that uses smaller data in order to run faster and simply verify that cells execute without error.  In order to do that, your example should obey the following directory tree
+
+.. code-block::
+
+  ./<name_of_example>/
+  \
+   |-example.py # save your notebook as a python script
+   |-example_data.py # has functions to create/load data
+   |-mock_data.py # has functions with same name as in example_data.py which create/load smaller datasets
+   |-example.ipynb # run python examples/publish_notebook/<name_of_example> to generate this.  Needs packages in requirements-dev.txt
+   |-other files, if required (helper module, data, etc)
+
+You can optimize your notebook for testing by checking ``__name__``.  When our tests run ``example.py`` they set the ``__name__`` global to ``"testing"``.  For instance, your notebook should determine whether to import from ``mock_data`` or ``example_data`` using this method.
+
 Contributing code
 ^^^^^^^^^^^^^^^^^
 We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To get started we recommend installing the packages in ``requirements-dev.txt`` via

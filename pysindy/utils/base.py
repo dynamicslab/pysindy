@@ -57,7 +57,7 @@ def validate_input(x, t=T_DEFAULT):
 
 
 def validate_no_reshape(x, t=T_DEFAULT):
-    """Forces input data to have compatible dimensions, if possible.
+    """Check types and numerical sensibility of arguments.
 
     Args:
         x: array of input data (measured coordinates across time)
@@ -89,13 +89,10 @@ def validate_no_reshape(x, t=T_DEFAULT):
     return x
 
 
-def validate_control_variables(
-    x, u, multiple_trajectories=False, trim_last_point=False
-):
-    """
-    Ensure that control variables u are compatible with the data x.
-    If ``return_array`` and ``multiple_trajectories`` are True, convert u from a list
-    into an array (of concatenated list entries).
+def validate_control_variables(x, u, trim_last_point=False):
+    """Ensure that control variables u are compatible with the data x.
+
+    Trims last control variable timepoint if set to True
     """
     if not isinstance(x, Sequence):
         raise ValueError("x must be a list when multiple_trajectories is True")
@@ -109,10 +106,9 @@ def validate_control_variables(
 
     def _check_control_shape(x, u, trim_last_point):
         """
-        Convert control variables u to np.array(dtype=float64) and compare
-        its shape against x. Assumes x is array-like.
+        Compare shape of control variable u against x.
         """
-        if u.shape[u.ax_time] - trim_last_point != x.shape[x.ax_time]:
+        if u.shape[u.ax_time] != x.shape[x.ax_time]:
             raise ValueError(
                 "control variables u must have same number of rows as x. "
                 "u has {} rows and x has {} rows".format(u.shape[0], len(x))

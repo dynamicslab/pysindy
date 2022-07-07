@@ -1,8 +1,6 @@
-from .axes import ax_time_to_ax_sample
 from .axes import AxesArray
+from .axes import comprehend_axes
 from .axes import concat_sample_axis
-from .axes import DefaultShapedInputsMixin
-from .axes import PDEShapedInputsMixin
 from .axes import SampleConcatter
 from .axes import wrap_axes
 from .base import capped_simplex_projection
@@ -58,12 +56,10 @@ from .odes import yeast
 
 __all__ = [
     "AxesArray",
-    "DefaultShapedInputsMixin",
-    "PDEShapedInputsMixin",
     "SampleConcatter",
-    "ax_time_to_ax_sample",
     "concat_sample_axis",
     "wrap_axes",
+    "comprehend_axes",
     "capped_simplex_projection",
     "drop_nan_samples",
     "equations",

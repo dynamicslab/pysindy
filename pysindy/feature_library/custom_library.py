@@ -8,6 +8,7 @@ from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
+from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
 
@@ -229,7 +230,8 @@ class CustomLibrary(BaseFeatureLibrary):
                     xp[..., library_idx] = f(*[x[..., j] for j in c])
                     library_idx += 1
 
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp = AxesArray(xp, comprehend_axes(xp))
+            xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

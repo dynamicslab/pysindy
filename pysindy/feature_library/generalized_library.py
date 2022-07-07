@@ -1,5 +1,3 @@
-from typing import Type
-
 import numpy as np
 from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
@@ -130,12 +128,10 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             if weak_libraries:
                 self.validate_input = libraries[weak_libraries].validate_input
                 self.calc_trajectory = libraries[weak_libraries].calc_trajectory
-                self.comprehend_axes = libraries[weak_libraries].comprehend_axes
                 self.spatiotemporal_grid = libraries[weak_libraries].spatiotemporal_grid
             elif pde_libraries:
                 self.validate_input = libraries[pde_libraries].validate_input
                 self.calc_trajectory = libraries[pde_libraries].calc_trajectory
-                self.comprehend_axes = libraries[pde_libraries].comprehend_axes
                 self.spatial_grid = libraries[pde_libraries].spatial_grid
         else:
             raise ValueError(
@@ -246,23 +242,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         return self
 
-    def has_type(self, libtype: Type, exclusively=False) -> bool:
-        """Checks whether this library has a specific library type.
-
-        Parameters
-        ----------
-        libtype : A type of feature library
-        exclusively: whether to check all libraries
-
-        Returns
-        -------
-        Bool indicating whether specific library type is present
-        """
-        has_inst = map(lambda lib: isinstance(lib, libtype), self.libraries_)
-        if exclusively:
-            return all(has_inst)
-        return any(has_inst)
-
     @x_sequence_or_item
     def transform(self, x_full):
         """Transform data with libs provided below.
@@ -283,12 +262,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            # n_samples = x.shape[x.ax_sample]
             n_features = x.shape[x.ax_coord]
             shape = np.array(x.shape)
-
-            # if isinstance(self.libraries_[0], WeakPDELibrary):
-            #     n_samples = self.libraries_[0].K * self.libraries_[0].num_trajectories
 
             if float(__version__[:3]) >= 1.0:
                 n_input_features = self.n_features_in_

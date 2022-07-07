@@ -34,6 +34,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -r requirements-dev.txt
+        pip install sympy # needed for notebook 9, but not required for pysindy
     - name: Test with pytest
       run: |
         pytest test --cov=pysindy --cov-report=xml

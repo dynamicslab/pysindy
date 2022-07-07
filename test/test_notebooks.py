@@ -47,7 +47,7 @@ def _cwd(directory):
 def test_notebook_script(directory: Path):
     # Run in native directory with modified sys.path for imports to work
     with _cwd(notebook_dir / directory):
-        runpy.run_path(notebook_dir / directory / "example.py", run_name="testing")
+        runpy.run_path(str(notebook_dir / directory / "example.py"), run_name="testing")
 
 
 @pytest.mark.parametrize("filename", notebooks)

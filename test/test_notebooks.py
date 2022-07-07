@@ -43,8 +43,28 @@ def _cwd(directory):
     os.chdir(cwd)
 
 
+@pytest.fixture
+def purge_notebook_modules():
+    """Remove notebook modules from sys.modules after test.
+
+    Because these modules share common names in each notebook and
+    module names have a system-wide scope, import machinery will not
+    import new modules for successive notebooks unless old modules of
+    same name are removed from sys.modules.
+
+    This might be better served by fixing imports in notebooks using
+    importlib.
+    """
+    SENTINEL = object()
+    sys.modules.pop("utils", SENTINEL)
+    sys.modules.pop("mock_data", SENTINEL)
+    yield
+    sys.modules.pop("utils", SENTINEL)
+    sys.modules.pop("mock_data", SENTINEL)
+
+
 @pytest.mark.parametrize("directory", notebook_scripts)
-def test_notebook_script(directory: Path):
+def test_notebook_script(directory: Path, purge_notebook_modules):
     # Run in native directory with modified sys.path for imports to work
     with _cwd(notebook_dir / directory):
         runpy.run_path(str(notebook_dir / directory / "example.py"), run_name="testing")

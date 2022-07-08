@@ -21,11 +21,11 @@ integrator_keywords["method"] = "LSODA"
 integrator_keywords["atol"] = 1e-12
 
 from utils import (
-    plot_kws,
-    pal,
     compare_methods,
     print_equations,
     compare_coefficient_plots,
+    plot_sho,
+    plot_lorenz,
 )
 
 if __name__ != "testing":
@@ -120,21 +120,8 @@ noise_level = 0.1
 dt, t_train, x_train, x_train_noisy = gen_data_sho(noise_level, integrator_keywords)
 
 # %%
-fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-
-ax.plot(x_train[:, 0], x_train[:, 1], ".", label="Clean", color=pal[0], **plot_kws)
-ax.plot(
-    x_train_noisy[:, 0],
-    x_train_noisy[:, 1],
-    ".",
-    label="Noisy",
-    color=pal[1],
-    **plot_kws
-)
-
-ax.set(title="Training data", xlabel="$x_0$", ylabel="$x_1$")
-ax.legend()
-fig.show()
+figure = plt.figure(figsize=[5, 5])
+plot_sho(x_train, x_train_noisy)
 
 # %%
 # Allow Trend Filtered method to work with linear functions
@@ -193,22 +180,7 @@ dt, t_train, x_train, x_train_noisy = gen_data_lorenz(noise_level, integrator_ke
 
 # %%
 fig = plt.figure(figsize=(8, 8))
-ax = fig.add_subplot(1, 1, 1, projection="3d")
-ax.plot(
-    x_train[:, 0], x_train[:, 1], x_train[:, 2], color=pal[0], label="Clean", **plot_kws
-)
-
-ax.plot(
-    x_train_noisy[:, 0],
-    x_train_noisy[:, 1],
-    x_train_noisy[:, 2],
-    ".",
-    color=pal[1],
-    label="Noisy",
-    alpha=0.3,
-)
-ax.set(title="Training data", xlabel="$x$", ylabel="$y$", zlabel="$z$")
-ax.legend()
+plot_lorenz(x_train, x_train_noisy)
 fig.show()
 
 # %%

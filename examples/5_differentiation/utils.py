@@ -116,3 +116,65 @@ def compare_coefficient_plots(
         axs[1, 0].set_ylabel("Noisy", labelpad=10)
 
         fig.tight_layout()
+
+
+def plot_sho(x_train, x_train_noisy, x_smoothed=None):
+    ax = plt.gca()
+    ax.plot(x_train[:, 0], x_train[:, 1], ".", label="Clean", color=pal[0], **plot_kws)
+    ax.plot(
+        x_train_noisy[:, 0],
+        x_train_noisy[:, 1],
+        ".",
+        label="Noisy",
+        color=pal[1],
+        **plot_kws,
+    )
+    if x_smoothed is not None:
+        ax.plot(
+            x_smoothed[:, 0],
+            x_smoothed[:, 1],
+            ".",
+            label="Smoothed",
+            color=pal[2],
+            **plot_kws,
+        )
+
+    ax.set(title="Training data", xlabel="$x_0$", ylabel="$x_1$")
+    ax.legend()
+    return ax
+
+
+def plot_lorenz(x_train, x_train_noisy, x_smoothed=None, ax=None):
+    if ax is None:
+        ax = plt.axes(projection="3d")
+    ax.plot(
+        x_train[:, 0],
+        x_train[:, 1],
+        x_train[:, 2],
+        color=pal[0],
+        label="Clean",
+        **plot_kws,
+    )
+
+    ax.plot(
+        x_train_noisy[:, 0],
+        x_train_noisy[:, 1],
+        x_train_noisy[:, 2],
+        ".",
+        color=pal[1],
+        label="Noisy",
+        alpha=0.3,
+    )
+    if x_smoothed is not None:
+        ax.plot(
+            x_smoothed[:, 0],
+            x_smoothed[:, 1],
+            x_smoothed[:, 2],
+            ".",
+            color=pal[2],
+            label="Smoothed",
+            alpha=0.3,
+        )
+    ax.set(title="Training data", xlabel="$x$", ylabel="$y$", zlabel="$z$")
+    ax.legend()
+    return ax

@@ -72,6 +72,7 @@ diffs = [
     ("Trend Filtered", ps.SINDyDerivative(kind="trend_filtered", order=0, alpha=1e-2)),
     ("Spectral", ps.SINDyDerivative(kind="spectral")),
     ("Spectral, PySINDy version", ps.SpectralDerivative()),
+    ("Kalman", ps.SINDyDerivative(kind="kalman", alpha=0.05)),
 ]
 
 # %% [markdown]
@@ -98,6 +99,7 @@ diffs[3] = (
     "Savitzky Golay",
     ps.SINDyDerivative(kind="savitzky_golay", left=0.1, right=0.1, order=3),
 )
+diffs[8] = ("Kalman", ps.SINDyDerivative(kind="kalman", alpha=0.01))
 
 x, y, y_dot, y_noisy = gen_data_step(noise_level)
 
@@ -128,6 +130,14 @@ plot_sho(x_train, x_train_noisy)
 diffs[5] = (
     "Trend Filtered",
     ps.SINDyDerivative(kind="trend_filtered", order=1, alpha=1e-2),
+)
+diffs[8] = ("Kalman", ps.SINDyDerivative(kind="kalman", alpha=0.5))
+diffs.append(("Smooth FD, reuse old x", ps.SmoothedFiniteDifference(save_smooth=False)))
+diffs.append(
+    (
+        "Kalman, reuse old x",
+        ps.SINDyDerivative(kind="kalman", alpha=0.5, save_smooth=False),
+    )
 )
 
 equations_clean = {}
@@ -166,6 +176,20 @@ compare_coefficient_plots(
 )
 
 # %% [markdown]
+
+# We can take a look at the smoothed values of x that some differentiation
+# methods implicitly calculate:
+# %%
+fig = plt.figure(figsize=[12, 5])
+fig.suptitle("Training Data Coordinates")
+plt.subplot(1, 2, 1)
+ax = plot_sho(x_train, x_train_noisy, diffs[2][1].smoothed_x_)
+ax.set_title("Savitzky-Golay filtered for Smoothed FD method")
+plt.subplot(1, 2, 2)
+ax = plot_sho(x_train, x_train_noisy, diffs[8][1].smoothed_x_)
+ax.set_title("Kalman smoothed")
+
+# %% [markdown]
 # ### Lorenz system
 #
 # $$ \begin{aligned} \dot x &= 10(y-x)\\ \dot y &= x(28 - z) - y \\ \dot z &= xy - \tfrac{8}{3} z, \end{aligned} $$
@@ -184,6 +208,12 @@ plot_lorenz(x_train, x_train_noisy)
 fig.show()
 
 # %%
+diffs[8] = ("Kalman", ps.SINDyDerivative(kind="kalman", alpha=0.0015))
+diffs[10] = (
+    "Kalman, reuse old x",
+    ps.SINDyDerivative(kind="kalman", alpha=0.0015, save_smooth=False),
+)
+
 equations_clean = {}
 equations_noisy = {}
 coefficients_clean = {}
@@ -219,6 +249,16 @@ compare_coefficient_plots(
     input_features=input_features,
     feature_names=feature_names,
 )
+
+# %%
+fig = plt.figure(figsize=(16.5, 8))
+fig.suptitle("Training Data Coordinates")
+ax = fig.add_subplot(1, 2, 1, projection="3d")
+ax = plot_lorenz(x_train, x_train_noisy, diffs[2][1].smoothed_x_, ax=ax)
+ax.set_title("Savitzky-Golay filtered for Smoothed FD method")
+ax = fig.add_subplot(1, 2, 2, projection="3d")
+ax = plot_lorenz(x_train, x_train_noisy, diffs[8][1].smoothed_x_, ax=ax)
+ax.set_title("Kalman smoothed")
 
 # %%
 import timeit

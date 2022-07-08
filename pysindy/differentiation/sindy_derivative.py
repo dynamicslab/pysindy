@@ -78,10 +78,7 @@ class SINDyDerivative(BaseDifferentiation):
         )
         x_dot = differentiator.d(x, t, axis=0)
         if self.save_smooth:
-            try:
-                self.smoothed_x_ = differentiator.smoothed_x_
-            except AttributeError:
-                self.smoothed_x_ = x
+            self.smoothed_x_ = differentiator.x(x, t, axis=0)
         else:
             self.smoothed_x_ = x
         return x_dot

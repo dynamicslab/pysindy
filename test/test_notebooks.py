@@ -55,12 +55,13 @@ def purge_notebook_modules():
     This might be better served by fixing imports in notebooks using
     importlib.
     """
-    SENTINEL = object()
-    sys.modules.pop("utils", SENTINEL)
-    sys.modules.pop("mock_data", SENTINEL)
+    local_modules = [
+        key for key in sys.modules if key[:5] == "utils" or key[:9] == "mock_data"
+    ]
+    [sys.modules.pop(mod) for mod in local_modules]
     yield
-    sys.modules.pop("utils", SENTINEL)
-    sys.modules.pop("mock_data", SENTINEL)
+    SENTINEL = object()
+    [sys.modules.pop(mod, SENTINEL) for mod in local_modules]
 
 
 @pytest.mark.parametrize("directory", notebook_scripts)
@@ -68,6 +69,11 @@ def test_notebook_script(directory: Path, purge_notebook_modules):
     # Run in native directory with modified sys.path for imports to work
     with _cwd(notebook_dir / directory):
         runpy.run_path(str(notebook_dir / directory / "example.py"), run_name="testing")
+
+
+def test_external(external_notebook: Path, purge_notebook_modules):
+    with _cwd(external_notebook.resolve()):
+        runpy.run_path(str("example.py"), run_name="testing")
 
 
 @pytest.mark.parametrize("filename", notebooks)

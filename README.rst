@@ -148,7 +148,7 @@ PySINDy implements a lot of advanced functionality that may be overwhelming for 
 
 .. image:: https://github.com/dynamicslab/pysindy/blob/master/docs/JOSS2/Fig3.png
 
-This flow chart summarizes how `PySINDy` users can start with a dataset and systematically choose the proper candidate library and sparse regression optimizer that are tailored for a specific scientific task. The `GeneralizedLibrary` class allows for tensoring, concatenating, and otherwise combining many different candidate libraries.
+This flow chart summarizes how ``PySINDy`` users can start with a dataset and systematically choose the proper candidate library and sparse regression optimizer that are tailored for a specific scientific task. The ``GeneralizedLibrary`` class allows for tensoring, concatenating, and otherwise combining many different candidate libraries.
 
 Community guidelines
 --------------------
@@ -209,7 +209,7 @@ There are a number of SINDy variants and advanced functionality that would be gr
 
 4. Integration of PySINDy with a Python model-predictive control (MPC) code.
 
-5. The PySINDy weak formulation is based on the work in Reinbold, Patrick AK, Daniel R. Gurevich, and Roman O. Grigoriev. "Using noisy or incomplete data to discover models of spatiotemporal dynamics." Physical Review E 101.1 (2020): 010203. It might be useful to additionally implement the weak formulation from Messenger, Daniel A., and David M. Bortz. "Weak SINDy for partial differential equations." Journal of Computational Physics (2021): 110525. The weak formulation in PySINDy is also fairly slow and computationally intensive, so finding ways to speed up the code would be great. 
+5. The PySINDy weak formulation is based on the work in Reinbold, Patrick AK, Daniel R. Gurevich, and Roman O. Grigoriev. "Using noisy or incomplete data to discover models of spatiotemporal dynamics." Physical Review E 101.1 (2020): 010203. It might be useful to additionally implement the weak formulation from Messenger, Daniel A., and David M. Bortz. "Weak SINDy for partial differential equations." Journal of Computational Physics (2021): 110525. The weak formulation in PySINDy is also fairly slow and computationally intensive, so finding ways to speed up the code would be great.
 
 6. The blended conditional gradients (BCG) algorithm for solving the constrained LASSO problem, Carderera, Alejandro, et al. "CINDy: Conditional gradient-based Identification of Non-linear Dynamics--Noise-robust recovery." arXiv preprint arXiv:2101.02630 (2021).
 
@@ -252,18 +252,18 @@ Bibtex:
 
 .. code-block:: text
 
-      @article{Kaptanoglu2022,
-  	doi = {10.21105/joss.03994},
-  	url = {https://doi.org/10.21105/joss.03994},
-  	year = {2022},
-  	publisher = {The Open Journal},
-  	volume = {7},
-  	number = {69},
-  	pages = {3994},
-  	author = {Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Andy J. Goldschmidt and Jared Callaham and Charles B. Delahunt and Zachary G. Nicolaou and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
-  	title = {PySINDy: A comprehensive Python package for robust sparse system identification},
-  	journal = {Journal of Open Source Software}
-	}
+    @article{Kaptanoglu2022,
+    doi = {10.21105/joss.03994},
+    url = {https://doi.org/10.21105/joss.03994},
+    year = {2022},
+    publisher = {The Open Journal},
+    volume = {7},
+    number = {69},
+    pages = {3994},
+    author = {Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Andy J. Goldschmidt and Jared Callaham and Charles B. Delahunt and Zachary G. Nicolaou and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
+    title = {PySINDy: A comprehensive Python package for robust sparse system identification},
+    journal = {Journal of Open Source Software}
+    }
 
 
 References
@@ -275,7 +275,7 @@ References
    `[arXiv] <https://arxiv.org/abs/2004.08424>`__
 
 -  Kaptanoglu, Alan A., Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Andy J. Goldschmidt
-   Jared L. Callaham, Charles B. Delahunt, Zachary G. Nicolaou, Kathleen Champion, 
+   Jared L. Callaham, Charles B. Delahunt, Zachary G. Nicolaou, Kathleen Champion,
    Jean-Christophe Loiseau, J. Nathan Kutz, and Steven L. Brunton.
    *PySINDy: A comprehensive Python package for robust sparse system identification.*
    arXiv preprint arXiv:2111.08481 (2021).
@@ -342,7 +342,7 @@ Thanks to the members of the community who have contributed to PySINDy!
 
 .. |JOSS1| image:: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644/status.svg
     :target: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644
-    
+
 .. |JOSS2| image:: https://joss.theoj.org/papers/10.21105/joss.03994/status.svg
     :target: https://doi.org/10.21105/joss.03994
 

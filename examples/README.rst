@@ -49,7 +49,7 @@ This notebook applies the ``TrappingSR3`` optimizer to various canonical fluid s
 
 `SINDyPI <https://pysindy.readthedocs.io/en/latest/examples/9_sindypi_with_sympy.html>`_
 ----------------------------------------------------------------------------------------------
-This notebook applies the ``SINDyPI`` optimizer to a simple implicit ODE and was originally proposed in this paper: Kaheman, Kadierdan, J. Nathan Kutz, and Steven L. Brunton. "SINDy-PI: a robust algorithm for parallel implicit sparse identification of nonlinear dynamics." Proceedings of the Royal Society A 476.2242 (2020): 20200279. 
+This notebook applies the ``SINDyPI`` optimizer to a simple implicit ODE and was originally proposed in this paper: Kaheman, Kadierdan, J. Nathan Kutz, and Steven L. Brunton. "SINDy-PI: a robust algorithm for parallel implicit sparse identification of nonlinear dynamics." Proceedings of the Royal Society A 476.2242 (2020): 20200279.
 
 `PDEFIND <https://pysindy.readthedocs.io/en/latest/examples/10_PDEFIND_examples.html>`_
 ----------------------------------------------------------------------------------------------
@@ -57,7 +57,7 @@ This notebook applies the PDEFIND algorithm (SINDy for PDE identification) to a 
 
 `Greedy Algorithms <https://pysindy.readthedocs.io/en/latest/examples/11_SSR_FROLS_examples.html>`_
 ----------------------------------------------------------------------------------------------
-This notebook uses the step-wise sparse regression (SSR) and forward-regression orthogonal least-squares (FROLS) algorithms, which are greedy algorithms that iteratively truncate (or add) one nonzero coefficient at each algorithm iteration. 
+This notebook uses the step-wise sparse regression (SSR) and forward-regression orthogonal least-squares (FROLS) algorithms, which are greedy algorithms that iteratively truncate (or add) one nonzero coefficient at each algorithm iteration.
 
 `Weak formulation SINDy <https://pysindy.readthedocs.io/en/latest/examples/12_weakform_SINDy_examples.html>`_
 ----------------------------------------------------------------------------------------------

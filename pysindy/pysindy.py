@@ -474,7 +474,7 @@ class SINDy(BaseEstimator):
             for pred in result
         ]
 
-        # Kept for backwards compatability.
+        # Kept for backwards compatibility.
         if not multiple_trajectories:
             return result[0]
         return result
@@ -513,7 +513,7 @@ class SINDy(BaseEstimator):
         ----------
         lhs: list of strings, optional (default None)
             List of variables to print on the left-hand sides of the learned equations.
-            By defualt :code:`self.input_features` are used.
+            By default :code:`self.input_features` are used.
 
         precision: int, optional (default 3)
             Precision to be used when printing out model coefficients.

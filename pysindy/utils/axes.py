@@ -9,7 +9,7 @@ HANDLED_FUNCTIONS = {}
 class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
     """A numpy-like array that keeps track of the meaning of its axes.
 
-    Paramters:
+    Parameters:
         input_array (array-like): the data to create the array.
         axes (dict): A dictionary of axis labels to shape indices.
             Allowed keys:

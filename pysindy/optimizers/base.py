@@ -7,7 +7,6 @@ from typing import Callable
 from typing import Tuple
 
 import numpy as np
-from numpy.random import choice
 from scipy import sparse
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model._base import _preprocess_data
@@ -360,7 +359,7 @@ def _drop_random_samples(
     replace: bool,
 ) -> Tuple[AxesArray]:
     n_samples = x.shape[x.ax_sample]
-    rand_inds = choice(range(n_samples), n_subset, replace=replace)
+    rand_inds = np.random.choice(range(n_samples), n_subset, replace=replace)
     x_new = np.take(x, rand_inds, axis=x.ax_sample)
     x_dot_new = np.take(x_dot, rand_inds, axis=x.ax_sample)
 

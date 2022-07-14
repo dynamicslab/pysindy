@@ -13,10 +13,10 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         input_array (array-like): the data to create the array.
         axes (dict): A dictionary of axis labels to shape indices.
             Allowed keys:
-                - ax_time: int
-                - ax_coord: int
-                - ax_sample: int
-                - ax_spatial: List[int]
+            -  ax_time: int
+            -  ax_coord: int
+            -  ax_sample: int
+            -  ax_spatial: List[int]
 
     Raises:
         AxesWarning if axes does not match shape of input_array

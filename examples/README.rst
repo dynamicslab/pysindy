@@ -7,7 +7,7 @@ This directory showcases the following examples of PySINDy in action.
 -----------------------------------------------------------------------------------------------------------
 This notebook gives an almost exhaustive overview of the different features available in PySINDy. It's a good reference for how to set various options and work with different types of datasets.
 
-`Introduction to SINDy <https://pysindy.readthedocs.io/en/latest/examples/2_introduction_to_sindy.html>`_
+`Introduction to SINDy <./2_introduction_to_sindy/example.ipynb>`_
 ---------------------------------------------------------------------------------------------------------------------
 We recommend that people new to SINDy start here. We give a gentle introduction to the SINDy method and how different steps in the algorithm are represented in PySINDy. We also show how to use PySINDy to learn a model for a simple linear differential equation.
 
@@ -30,7 +30,7 @@ Shows how PySINDy interfaces with various Scikit-learn objects.
 * Cross-validation
 * Sparse regressors
 
-`Differentiation <https://pysindy.readthedocs.io/en/latest/examples/5_differentation.html>`_
+`Differentiation <./5_differentation/example.ipynb>`_
 ---------------------------------------------------------------------------------------------------------
 Explore the differentiation methods available in PySINDy on pure differentiation problems and as components in the SINDy algorithm.
 
@@ -44,7 +44,7 @@ Use the ``ConstrainedSR3`` optimizer to build a constrained model for the tempor
 
 
 `Trapping SINDy <https://pysindy.readthedocs.io/en/latest/examples/8_trapping_sindy_paper_examples.html>`_
-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------
 This notebook applies the ``TrappingSR3`` optimizer to various canonical fluid systems., proposed in this paper: Kaptanoglu, Alan A., et al. "Promoting global stability in data-driven models of quadratic nonlinear dynamics." Physical Review Fluids 6.9 (2021): 094401. A preprint is found here `<https://arxiv.org/abs/2105.01843>`_.
 
 `SINDyPI <https://pysindy.readthedocs.io/en/latest/examples/9_sindypi_with_sympy.html>`_
@@ -56,11 +56,11 @@ This notebook applies the ``SINDyPI`` optimizer to a simple implicit ODE and was
 This notebook applies the PDEFIND algorithm (SINDy for PDE identification) to a number of PDEs, and was originally proposed in this paper: Rudy, Samuel H., et al. "Data-driven discovery of partial differential equations." Science Advances 3.4 (2017): e1602614.
 
 `Greedy Algorithms <https://pysindy.readthedocs.io/en/latest/examples/11_SSR_FROLS_examples.html>`_
-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 This notebook uses the step-wise sparse regression (SSR) and forward-regression orthogonal least-squares (FROLS) algorithms, which are greedy algorithms that iteratively truncate (or add) one nonzero coefficient at each algorithm iteration.
 
 `Weak formulation SINDy <https://pysindy.readthedocs.io/en/latest/examples/12_weakform_SINDy_examples.html>`_
-----------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
 This notebook uses SINDy to identify the weak-formulation of a system of ODEs or PDEs, adding significant robustness against noise in the data.
 
 `Model ensembles <https://pysindy.readthedocs.io/en/latest/examples/13_ensembling.html>`_
@@ -74,3 +74,8 @@ Demonstrates the use of SINDy to learn a model for the quasiperiodic dynamics in
 
 Full table of contents
 ----------------------
+.. toctree::
+    :glob:
+    :hidden:
+
+    **

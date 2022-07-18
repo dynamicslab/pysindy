@@ -1,5 +1,6 @@
 import importlib
-import pathlib
+import shutil
+from pathlib import Path
 
 author = "dynamicslab"
 project = "pysindy"  # package name
@@ -15,6 +16,7 @@ version = release = getattr(module, "__version__")
 master_doc = "index"
 
 extensions = [
+    "nbsphinx",
     "sphinxcontrib.apidoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.todo",
@@ -22,9 +24,9 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx.ext.mathjax",
-    "sphinx_nbexamples",
     "sphinx.ext.intersphinx",
 ]
+nb_execution_mode = "off"
 
 apidoc_module_dir = f"../{project}"
 apidoc_excluded_paths = ["tests"]
@@ -36,15 +38,10 @@ autoclass_content = "init"
 
 language = "en"
 
-here = pathlib.Path(__file__).parent
+here = Path(__file__).parent.resolve()
 
 if (here / "static/custom.css").exists():
-
     html_static_path = ["static"]
-
-    def setup(app):
-        app.add_css_file("custom.css")
-
 
 exclude_patterns = ["build", "_build"]
 # pygments_style = "sphinx"
@@ -60,13 +57,6 @@ html_show_copyright = True
 
 default_role = "any"
 html_sourcelink_suffix = ""
-
-example_gallery_config = dict(
-    dont_preprocess=True,
-    examples_dirs=["../examples"],
-    gallery_dirs=["examples"],
-    pattern=".+.ipynb",
-)
 
 intersphinx_mapping = {
     "derivative": ("https://derivative.readthedocs.io/en/latest/", None)
@@ -110,3 +100,30 @@ def patched_parse(self):
 
 GoogleDocstring._unpatched_parse = GoogleDocstring._parse
 GoogleDocstring._parse = patched_parse
+
+
+def setup(app):
+    """Our sphinx extension for copying from examples/ to docs/examples
+
+    Since nbsphinx does not handle glob/regex paths, we need to
+    manually copy documentation source files from examples.  See issue
+    # 230.
+    """
+    doc_examples = here / "examples"
+    if not doc_examples.exists():
+        (here / "examples").mkdir()
+    example_source = (here / "../examples").resolve()
+    source_notebooks = example_source.glob("**/*.ipynb")
+    shutil.copy(example_source / "README.rst", doc_examples / "index.rst")
+    for notebook in source_notebooks:
+        if notebook.parent == example_source:
+            new_dir = doc_examples / notebook.stem
+        else:
+            new_dir = doc_examples / notebook.parent.stem
+        new_dir.mkdir(exist_ok=True)
+        new_file = new_dir / "example.ipynb"
+        print(f"Creating file {new_file}")
+        shutil.copy(notebook, new_file)
+
+    if (here / "static/custom.css").exists():
+        app.add_css_file("custom.css")

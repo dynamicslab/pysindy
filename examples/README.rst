@@ -72,10 +72,12 @@ This notebook uses sub-sampling of the data and sub-sampling of the SINDy librar
 Demonstrates the use of SINDy to learn a model for the quasiperiodic dynamics in a shear-driven cavity at Re=7500, following Callaham, Brunton, and Loiseau (2021), preprint available here `<https://arxiv.org/pdf/2106.02409>`_.
 
 
-Full table of contents
-----------------------
+.. Full table of contents
+.. ----------------------
+
 .. toctree::
     :glob:
     :hidden:
+    :maxdepth: 0
 
     **

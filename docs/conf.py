@@ -43,7 +43,7 @@ here = Path(__file__).parent.resolve()
 if (here / "static/custom.css").exists():
     html_static_path = ["static"]
 
-exclude_patterns = ["build", "_build"]
+exclude_patterns = ["build", "_build", "Youtube"]
 # pygments_style = "sphinx"
 
 add_module_names = True
@@ -124,6 +124,11 @@ def setup(app):
         new_file = new_dir / "example.ipynb"
         print(f"Creating file {new_file}")
         shutil.copy(notebook, new_file)
-
+    # Notebook 15 uses an image file
+    (doc_examples / "15_pysindy_lectures/data").mkdir(exist_ok=True)
+    shutil.copy(
+        example_source / "data/optimizer_summary.jpg",
+        doc_examples / "15_pysindy_lectures/data/optimizer_summary.jpg",
+    )
     if (here / "static/custom.css").exists():
         app.add_css_file("custom.css")

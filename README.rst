@@ -317,6 +317,8 @@ Related packages
 
 Contributors
 ------------
+This repository is a fork from `original work <https://github.com/Ohjeah/sparsereg>`_ by `Markus Quade <https://github.com/Ohjeah>`_.
+
 Thanks to the members of the community who have contributed to PySINDy!
 
 +-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+

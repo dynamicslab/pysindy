@@ -46,6 +46,7 @@ setup(
     packages=find_packages(exclude=["test", "examples"]),
     install_requires=REQUIRED,
     python_requires=PYTHON,
+    extras_require={"miosr": ["gurobipy"]},
     license=LICENSE,
     classifiers=CLASSIFIERS,
 )

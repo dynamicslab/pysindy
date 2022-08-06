@@ -30,6 +30,7 @@ from .feature_library import SINDyPILibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import FROLS
+from .optimizers import MIOSR
 from .optimizers import SINDyOptimizer
 from .optimizers import SR3
 from .optimizers import SSR

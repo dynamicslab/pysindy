@@ -1,4 +1,13 @@
-import gurobipy as gp
+try:
+    import gurobipy as gp
+except ImportError:
+    raise ImportError(
+        "To use MIOSR please install pysindy with pip install pysindy[miosr]"
+        "to gain access to a restricted installation of Gurobi."
+        "Free unrestricted academic licenses are available at "
+        "https://www.gurobi.com/academia/academic-program-and-licenses/"
+    )
+
 import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
@@ -11,8 +20,7 @@ class MIOSR(BaseOptimizer):
     Solves the sparsity constrained regression problem to provable optimality
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + \\lambda R(u)
-        + (0.5 / \\nu)\\|w-u\\|^2_2
+        \\|y-Xw\\|^2_2 + \\lambda R(u)
 
     .. math::
 
@@ -30,17 +38,17 @@ class MIOSR(BaseOptimizer):
     ----------
     target_sparsity : int, optional (default None)
         The maximum number of nonzero coefficients across all dimensions.
-        If set, and `group_sparsity` is not set, the model will fit all
-        dimensions jointly, potentially reducing statistical efficiency.
+        If set, the model will fit all dimensions jointly, potentially reducing
+        statistical efficiency.
 
     group_sparsity : int tuple, optional (default None)
         Tuple of length n_targets constraining the number of nonzero
         coefficients for each target dimension.
 
-      alpha : float, optional (default 0.01)
+    alpha : float, optional (default 0.01)
         Optional L2 (ridge) regularization on the weight vector.
 
-    regression_timeout : int, optional (default 30)
+    regression_timeout : int, optional (default 10)
         The timeout (in seconds) of the gurobi optimizer to solve and prove
         optimality (either per dimension or jointly depending on the
         above sparsity settings).
@@ -141,71 +149,86 @@ class MIOSR(BaseOptimizer):
         self.model = None
 
     def _make_model(self, X, y, k, warm_start=None):
-        m = gp.Model()
-        n, d = X.shape
-        _, r = y.shape
+        model = gp.Model()
+        n_samples, n_features = X.shape
+        _, n_targets = y.shape
 
-        beta = m.addMVar(
-            r * d, lb=-gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="beta"
+        coeff_var = model.addMVar(
+            n_targets * n_features,
+            lb=-gp.GRB.INFINITY,
+            vtype=gp.GRB.CONTINUOUS,
+            name="coeff_var",
         )
-        iszero = m.addMVar(r * d, vtype=gp.GRB.BINARY, name="iszero")
+        iszero = model.addMVar(
+            n_targets * n_features, vtype=gp.GRB.BINARY, name="iszero"
+        )
 
         # Sparsity constraint
-        for i in range(r * d):
-            m.addSOS(gp.GRB.SOS_TYPE1, [beta[i], iszero[i]])
-        m.addConstr(iszero.sum() >= (r * d) - k, name="sparsity")
+        for i in range(n_targets * n_features):
+            model.addSOS(gp.GRB.SOS_TYPE1, [coeff_var[i], iszero[i]])
+        model.addConstr(iszero.sum() >= (n_targets * n_features) - k, name="sparsity")
 
         # Group sparsity constraints
-        if self.target_sparsity is not None and self.group_sparsity is not None:
-            for i in range(r):
+        if self.group_sparsity is not None and n_targets > 1:
+            for i in range(n_targets):
                 dimension_sparsity = self.group_sparsity[i]
                 print(dimension_sparsity)
-                m.addConstr(
-                    iszero[i * d : (i + 1) * d].sum() >= d - dimension_sparsity,
+                model.addConstr(
+                    iszero[i * n_features : (i + 1) * n_features].sum()
+                    >= n_features - dimension_sparsity,
                     name=f"group_sparsity{i}",
                 )
 
         # General equality constraints
         if self.constraint_lhs is not None and self.constraint_rhs is not None:
             if self.constraint_order == "feature":
-                target_indexing = np.arange(r * d).reshape(r, d, order="F").flatten()
+                target_indexing = (
+                    np.arange(n_targets * n_features)
+                    .reshape(n_targets, n_features, order="F")
+                    .flatten()
+                )
                 constraint_lhs = self.constraint_lhs[:, target_indexing]
             else:
                 constraint_lhs = self.constraint_lhs
-            m.addConstr(
-                constraint_lhs @ beta == self.constraint_rhs, name="coefficient_constrs"
+            model.addConstr(
+                constraint_lhs @ coeff_var == self.constraint_rhs, name="coeff_constrs"
             )
 
         if warm_start is not None:
-            warm_start = warm_start.reshape(1, r * d)[0]
-            for i in range(d):
+            warm_start = warm_start.reshape(1, n_targets * n_features)[0]
+            for i in range(n_features):
                 iszero[i].start = abs(warm_start[i]) < 1e-6
-                beta[i].start = warm_start[i]
+                coeff_var[i].start = warm_start[i]
 
+        # Equation 15 in paper
         Quad = np.dot(X.T, X)
-        obj = self.alpha * (beta @ beta)
-        for i in range(r):
+        obj = self.alpha * (coeff_var @ coeff_var)
+        for i in range(n_targets):
             lin = np.dot(y[:, i].T, X)
-            obj += beta[d * i : d * (i + 1)] @ Quad @ beta[d * i : d * (i + 1)]
-            obj -= 2 * (lin @ beta[d * i : d * (i + 1)])
+            obj += (
+                coeff_var[n_features * i : n_features * (i + 1)]
+                @ Quad
+                @ coeff_var[n_features * i : n_features * (i + 1)]
+            )
+            obj -= 2 * (lin @ coeff_var[n_features * i : n_features * (i + 1)])
 
-        m.setObjective(obj, gp.GRB.MINIMIZE)
+        model.setObjective(obj, gp.GRB.MINIMIZE)
 
-        m.params.OutputFlag = 1 if self.verbose else 0
-        m.params.timelimit = self.regression_timeout
-        m.update()
+        model.params.OutputFlag = 1 if self.verbose else 0
+        model.params.timelimit = self.regression_timeout
+        model.update()
 
-        self.model = m
+        self.model = model
 
-        return m, beta
+        return model, coeff_var
 
     def _regress(self, X, y, k, warm_start=None):
         """
         Deploy and optimize the MIO formulation of L0-Regression.
         """
-        m, beta = self._make_model(X, y, k, warm_start)
+        m, coeff_var = self._make_model(X, y, k, warm_start)
         m.optimize()
-        return beta.X
+        return coeff_var.X
 
     def _reduce(self, x, y):
         """
@@ -214,23 +237,23 @@ class MIOSR(BaseOptimizer):
         Assumes an initial guess for coefficients and support are saved in
         ``self.coef_`` and ``self.ind_``.
         """
-        regress_jointly = self.target_sparsity is not None
-
         if self.initial_guess is not None:
             self.coef_ = self.initial_guess
 
-        n, d = x.shape
-        n, r = y.shape
+        n_samples, n_features = x.shape
+        _, n_targets = y.shape
 
-        if regress_jointly:
-            coefs = self._regress(x, y, self.target_sparsity)
+        if (
+            self.target_sparsity is not None or self.constraint_lhs is not None
+        ):  # Regress jointly
+            coefs = self._regress(x, y, self.target_sparsity, self.initial_guess)
             # Remove nonzero terms due to numerical error
             non_active_ixs = np.argsort(np.abs(coefs))[: -int(self.target_sparsity)]
             coefs[non_active_ixs] = 0
-            self.coef_ = coefs.reshape(r, d)
+            self.coef_ = coefs.reshape(n_targets, n_features)
             self.ind_ = (np.abs(self.coef_) > 1e-6).astype(int)
-        else:
-            for i in range(r):
+        else:  # Regress dimensionwise
+            for i in range(n_targets):
                 k = self.group_sparsity[i]
                 warm_start = (
                     None if self.initial_guess is None else self.initial_guess[[i], :]

@@ -180,7 +180,7 @@ def test_sample_weight_optimizers(data_lorenz, optimizer):
     check_is_fitted(model)
 
 
-@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3, MIOSR])
+@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3])
 @pytest.mark.parametrize("params", [dict(threshold=-1), dict(max_iter=0)])
 def test_general_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
@@ -872,6 +872,41 @@ def test_trapping_inequality_constraints(data_lorenz, params):
     assert np.all(
         np.dot(constraint_matrix, (model.coefficients()).flatten()) <= constraint_rhs
     ) or np.allclose(
+        np.dot(constraint_matrix, (model.coefficients()).flatten()),
+        constraint_rhs,
+        atol=1e-3,
+    )
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(target_sparsity=2),
+        dict(target_sparsity=7),
+    ],
+)
+def test_miosr_equality_constraints(data_lorenz, params):
+    x, t = data_lorenz
+    constraint_rhs = np.array([-10.0, 28.0])
+    constraint_matrix = np.zeros((2, 30))
+    constraint_matrix[0, 1] = 1.0
+    constraint_matrix[1, 11] = 1.0
+    feature_names = ["x", "y", "z"]
+
+    opt = MIOSR(
+        constraint_lhs=constraint_matrix,
+        constraint_rhs=constraint_rhs,
+        constraint_order="target",
+        **params,
+    )
+    poly_lib = PolynomialLibrary(degree=2)
+    model = SINDy(
+        optimizer=opt,
+        feature_library=poly_lib,
+        feature_names=feature_names,
+    )
+    model.fit(x, t=t[1] - t[0], unbias=False)
+    assert np.allclose(
         np.dot(constraint_matrix, (model.coefficients()).flatten()),
         constraint_rhs,
         atol=1e-3,

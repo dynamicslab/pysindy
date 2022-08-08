@@ -30,7 +30,11 @@ from .feature_library import SINDyPILibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import FROLS
-from .optimizers import MIOSR
+
+try:  # Waiting on PEP 690 to lazy import gurobipy
+    from .optimizers import MIOSR
+except ImportError:
+    pass
 from .optimizers import SINDyOptimizer
 from .optimizers import SR3
 from .optimizers import SSR

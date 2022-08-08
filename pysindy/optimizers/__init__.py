@@ -1,7 +1,11 @@
 from .base import BaseOptimizer
 from .constrained_sr3 import ConstrainedSR3
 from .frols import FROLS
-from .miosr import MIOSR
+
+try:  # Waiting on PEP 690 to lazy import gurobipy
+    from .miosr import MIOSR
+except ImportError:
+    pass
 from .sindy_optimizer import SINDyOptimizer
 from .sindy_pi import SINDyPI
 from .sr3 import SR3

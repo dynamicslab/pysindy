@@ -36,7 +36,7 @@ class MIOSR(BaseOptimizer):
 
     Parameters
     ----------
-    target_sparsity : int, optional (default None)
+    target_sparsity : int, optional (default 5)
         The maximum number of nonzero coefficients across all dimensions.
         If set, the model will fit all dimensions jointly, potentially reducing
         statistical efficiency.
@@ -172,7 +172,6 @@ class MIOSR(BaseOptimizer):
         if self.group_sparsity is not None and n_targets > 1:
             for i in range(n_targets):
                 dimension_sparsity = self.group_sparsity[i]
-                print(dimension_sparsity)
                 model.addConstr(
                     iszero[i * n_features : (i + 1) * n_features].sum()
                     >= n_features - dimension_sparsity,

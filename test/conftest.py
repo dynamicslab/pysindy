@@ -1,6 +1,8 @@
 """
 Shared pytest fixtures for unit tests.
 """
+from pathlib import Path
+
 import numpy as np
 import pytest
 from scipy.integrate import solve_ivp
@@ -17,6 +19,29 @@ from pysindy.utils.odes import logistic_map_control
 from pysindy.utils.odes import logistic_map_multicontrol
 from pysindy.utils.odes import lorenz
 from pysindy.utils.odes import lorenz_control
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--external-notebook",
+        action="append",
+        default=[],
+        help=(
+            "name of notebook to test.  Only valid if running"
+            " test_notebooks.test_external"
+        ),
+    )
+
+
+def pytest_generate_tests(metafunc):
+    if "external_notebook" in metafunc.fixturenames:
+        metafunc.parametrize(
+            "external_notebook",
+            [
+                Path(f.lstrip('"').rstrip('"'))
+                for f in metafunc.config.getoption("external_notebook")
+            ],
+        )
 
 
 @pytest.fixture

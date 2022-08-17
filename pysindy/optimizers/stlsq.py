@@ -1,11 +1,14 @@
 import warnings
 
 import numpy as np
+from scipy.linalg import LinAlgWarning
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ridge_regression
 from sklearn.utils.validation import check_is_fitted
 
 from .base import BaseOptimizer
+
+warnings.filterwarnings("ignore", category=LinAlgWarning)
 
 
 class STLSQ(BaseOptimizer):
@@ -136,7 +139,14 @@ class STLSQ(BaseOptimizer):
     def _regress(self, x, y):
         """Perform the ridge regression"""
         kw = self.ridge_kw or {}
-        coef = ridge_regression(x, y, self.alpha, **kw)
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=LinAlgWarning)
+            try:
+                coef = ridge_regression(x, y, self.alpha, **kw)
+            except LinAlgWarning:
+                # increase alpha until warning stops
+                self.alpha = 2 * self.alpha
         self.iters += 1
         return coef
 
@@ -190,10 +200,10 @@ class STLSQ(BaseOptimizer):
             coef = np.zeros((n_targets, n_features))
             for i in range(n_targets):
                 if np.count_nonzero(ind[i]) == 0:
-                    warnings.warn(
-                        "Sparsity parameter is too big ({}) and eliminated all "
-                        "coefficients".format(self.threshold)
-                    )
+                    # warnings.warn(
+                    #    "Sparsity parameter is too big ({}) and eliminated all "
+                    #    "coefficients".format(self.threshold)
+                    # )
                     continue
                 coef_i = self._regress(x[:, ind[i]], y[:, i])
                 coef_i, ind_i = self._sparse_coefficients(

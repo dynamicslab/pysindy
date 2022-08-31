@@ -269,6 +269,7 @@ def rudy_algorithm2(
     x_train,
     x_test,
     t_train,
+    t_test,
     ode_lib,
     dtol,
     alpha=1e-5,
@@ -302,7 +303,7 @@ def rudy_algorithm2(
 
     # Compute MSE on the testing x_dot data (takes x_test and computes x_dot_test)
     error_best = model.score(
-        x_test, metric=mean_squared_error, squared=False
+        x_test, metric=mean_squared_error, squared=False, t=t_test
     ) + l0_penalty * np.count_nonzero(coef_best)
 
     coef_history_ = np.zeros((coef_best.shape[0], coef_best.shape[1], 1 + tol_iter))
@@ -326,8 +327,9 @@ def rudy_algorithm2(
         coef_new = optimizer.coef_
         coef_history_[:, :, i + 1] = coef_new
         error_new = model.score(
-            x_test, metric=mean_squared_error, squared=False
+            x_test, metric=mean_squared_error, squared=False, t=t_test
         ) + l0_penalty * np.count_nonzero(coef_new)
+        print(i, tol, dtol, alpha, optimizer_max_iter, error_new)
         error_history_[i + 1] = error_new
 
         # If error improves, set the new best coefficients

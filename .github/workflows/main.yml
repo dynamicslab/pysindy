@@ -35,6 +35,13 @@ jobs:
       run: |
         pip install -r requirements-dev.txt
         pip install sympy # needed for notebook 9, but not required for pysindy
+    - name: Build the docs
+      # Not exactly how RTD does it, but close.
+      run: |
+        sudo apt-get install pandoc
+        cd docs
+        python -m sphinx -T -E -W -b html -d _build/doctrees . _build/html
+        cd ..
     - name: Test with pytest
       run: |
         pytest test --cov=pysindy --cov-report=xml

@@ -16,7 +16,7 @@ sphinxcontrib-apidoc
 sphinx_rtd_theme
 pre-commit
 hypothesis
-sphinx-nbexamples
+nbsphinx
 jupyter_contrib_nbextensions
 pandas
 seaborn

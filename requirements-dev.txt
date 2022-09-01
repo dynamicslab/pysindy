@@ -21,4 +21,4 @@ jupyter_contrib_nbextensions
 pandas
 seaborn
 scs<=2.1.4
-gurobipy
+gurobipy>=9.5.1

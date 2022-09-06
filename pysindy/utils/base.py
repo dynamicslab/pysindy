@@ -26,7 +26,7 @@ def validate_input(x, t=T_DEFAULT):
         t: time values for measurements.
 
     Returns:
-        x as 2D array, with time dimension on first axis and coordiante
+        x as 2D array, with time dimension on first axis and coordinate
         index on second axis.
     """
     if not isinstance(x, np.ndarray):
@@ -64,7 +64,7 @@ def validate_no_reshape(x, t=T_DEFAULT):
         t: time values for measurements.
 
     Returns:
-        x as 2D array, with time dimension on first axis and coordiante
+        x as 2D array, with time dimension on first axis and coordinate
         index on second axis.
     """
     if not isinstance(x, np.ndarray):

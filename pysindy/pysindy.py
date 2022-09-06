@@ -474,7 +474,7 @@ class SINDy(BaseEstimator):
             for pred in result
         ]
 
-        # Kept for backwards compatability.
+        # Kept for backwards compatibility.
         if not multiple_trajectories:
             return result[0]
         return result
@@ -513,7 +513,7 @@ class SINDy(BaseEstimator):
         ----------
         lhs: list of strings, optional (default None)
             List of variables to print on the left-hand sides of the learned equations.
-            By defualt :code:`self.input_features` are used.
+            By default :code:`self.input_features` are used.
 
         precision: int, optional (default 3)
             Precision to be used when printing out model coefficients.
@@ -620,11 +620,7 @@ class SINDy(BaseEstimator):
 
     def _process_multiple_trajectories(self, x, t, x_dot):
         """
-        Handle input data that contains multiple trajectories by doing the
-        necessary validation, reshaping, and computation of derivatives.
-
-        This method essentially just loops over elements of each list in parallel,
-        validates them, and (optionally) concatenates them together.
+        Calculate derivatives of input data, iterating through trajectories.
 
         Parameters
         ----------
@@ -633,18 +629,15 @@ class SINDy(BaseEstimator):
             trajectory.
 
         t: list of np.ndarray or int
-            List of time points for different trajectories.
-            If a list of ints is passed, each entry is assumed to be the timestep
-            for the corresponding trajectory in x.
+            List of time points for different trajectories.  If a list of ints
+            is passed, each entry is assumed to be the timestep for the
+            corresponding trajectory in x.  If np.ndarray is passed, it is
+            used for each trajectory.
 
         x_dot: list of np.ndarray
             List of derivative measurements, with each entry corresponding to a
             different trajectory. If None, the derivatives will be approximated
             from x.
-
-        return_array: boolean, optional (default True)
-            Whether to return concatenated np.ndarrays.
-            If False, the outputs will be lists with an entry for each trajectory.
 
         Returns
         -------
@@ -658,51 +651,17 @@ class SINDy(BaseEstimator):
             will be an np.ndarray of concatenated trajectories.
             If False, x_out will be a list.
         """
-        if not isinstance(x, Sequence):
-            raise TypeError("Input x must be a list")
-
-        if self.discrete_time:
-            x = [validate_input(xi) for xi in x]
-            if x_dot is None:
+        if x_dot is None:
+            if self.discrete_time:
                 x_dot = [xi[1:] for xi in x]
                 x = [xi[:-1] for xi in x]
             else:
-                if not isinstance(x_dot, Sequence):
-                    raise TypeError(
-                        "x_dot must be a list if used with x of list type "
-                        "(i.e. for multiple trajectories)"
-                    )
-                x_dot = [validate_input(xd) for xd in x_dot]
-        else:
-            if x_dot is None:
-                x = [
-                    self.feature_library.validate_input(xi, ti)
-                    for xi, ti in _zip_like_sequence(x, t)
-                ]
                 x_dot = [
                     self.feature_library.calc_trajectory(
                         self.differentiation_method, xi, ti
                     )
                     for xi, ti in _zip_like_sequence(x, t)
                 ]
-            else:
-                if not isinstance(x_dot, Sequence):
-                    raise TypeError(
-                        "x_dot must be a list if used with x of list type "
-                        "(i.e. for multiple trajectories)"
-                    )
-                if isinstance(t, Sequence):
-                    x = [
-                        self.feature_library.validate_input(xi, ti)
-                        for xi, ti in zip(x, t)
-                    ]
-                    x_dot = [
-                        self.feature_library.validate_input(xd, ti)
-                        for xd, ti in zip(x_dot, t)
-                    ]
-                else:
-                    x = [self.feature_library.validate_input(xi, t) for xi in x]
-                    x_dot = [self.feature_library.validate_input(xd, t) for xd in x_dot]
         return x, x_dot
 
     def differentiate(self, x, t=None, multiple_trajectories=False):

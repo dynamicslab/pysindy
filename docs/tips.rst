@@ -10,18 +10,18 @@ Numerical differentiation is one of the core components of the SINDy method. Der
 
 .. math::
 
-	\dot{X} \approx \Theta(X)\Xi.
+    \dot{X} \approx \Theta(X)\Xi.
 
 If care is not taken in computing these derivatives, the quality of the learned model is likely to suffer.
 
 By default, a second order finite difference method is used to differentiate input data. Finite difference methods tend to amplify noise in data. If the data are smooth (at least twice differentiable), then finite difference methods give accurate derivative approximations. When the data are noisy, they give derivative estimates with *more* noise than the original data. The following figure visualizes the impact of noise on numerical derivatives. Note that even a small amount of noise in the data can produce noticeable degradation in the quality of the numerical derivative.
 
 .. figure:: figures/noisy_differentiation.png
-	:align: center
-	:alt: A toy example illustrating the effect of noise on derivatives computed with a second order finite difference method
-	:figclass: align-center
+    :align: center
+    :alt: A toy example illustrating the effect of noise on derivatives computed with a second order finite difference method
+    :figclass: align-center
 
-	A toy example illustrating the effect of noise on derivatives computed with a second order finite difference method. Left: The data to be differentiated; :math:`y=\sin(x)` with and without a small amount of additive noise (normally distributed with mean 0 and standard deviation 0.01). Right: Derivatives of the data; the exact derivative :math:`\cos(x)` (blue), the finite difference derivative of the exact data (black, dashed), and the finite difference derivative of the noisy data.
+    A toy example illustrating the effect of noise on derivatives computed with a second order finite difference method. Left: The data to be differentiated; :math:`y=\sin(x)` with and without a small amount of additive noise (normally distributed with mean 0 and standard deviation 0.01). Right: Derivatives of the data; the exact derivative :math:`\cos(x)` (blue), the finite difference derivative of the exact data (black, dashed), and the finite difference derivative of the noisy data.
 
 One way to mitigate the effects of noise is to smooth the measurements before computing derivatives. The :code:`SmoothedFiniteDifference` method can be used for this purpose.
 A numerical differentiation scheme with total variation regularization has also been proposed [Chartrand_2011]_ and recommended for use in SINDy [Brunton_2016]_.
@@ -35,11 +35,11 @@ The SINDy method assumes dynamics can be represented as a *sparse* linear combin
 
 Typically, prior knowledge of the system of interest and its dynamics should be used to make a judicious choice of basis functions. When such information is unavailable, the default class of library functions, polynomials, are a good place to start, as smooth functions have rapidly converging Taylor series. Brunton et al. [Brunton_2016]_ showed that, equipped with a  polynomial library, SINDy can recover the first few terms of the (zero-centered) Taylor series of the true right-hand side function :math:`\mathbf{f}(x)`. If one has reason to believe the dynamics can be sparsely represented in terms of Chebyshev polynomials rather than monomials, then the library should include Chebyshev polynomials.
 
-PySINDy includes the :code:`CustomLibrary` and :code:`IdentityLibrary` objects to allow for flexibility in the library functions. When the desired library consists of a set of functions that should be applied to each measurement variable (or pair, triplet, etc. of measurement variables) in turn, the :code:`CustomLibrary` class should be used. The :code:`IdentityLibrary` class is the most customizable, but transfers the work of computing library functions over to the user. It expects that all the features one wishes to include in the library have already been computed and are present in :code:`X` before :code:`SINDy.fit` is called, as it simply applies the identity map to each variable that is passed to it. 
+PySINDy includes the :code:`CustomLibrary` and :code:`IdentityLibrary` objects to allow for flexibility in the library functions. When the desired library consists of a set of functions that should be applied to each measurement variable (or pair, triplet, etc. of measurement variables) in turn, the :code:`CustomLibrary` class should be used. The :code:`IdentityLibrary` class is the most customizable, but transfers the work of computing library functions over to the user. It expects that all the features one wishes to include in the library have already been computed and are present in :code:`X` before :code:`SINDy.fit` is called, as it simply applies the identity map to each variable that is passed to it.
 It is best suited for situations in which one has very specific instructions for how to apply library functions (e.g. if some of the functions should be applied to only some of the input variables).
 
-As terms are added to the library, the underlying sparse regression problem becomes increasingly ill-conditioned. Therefore it is recommended to start with a small library whose size is gradually expanded until the desired level of performance is achieved. 
-For example, a user may wish to start with a library of linear terms and then add quadratic and cubic terms as necessary to improve model performance.  
+As terms are added to the library, the underlying sparse regression problem becomes increasingly ill-conditioned. Therefore it is recommended to start with a small library whose size is gradually expanded until the desired level of performance is achieved.
+For example, a user may wish to start with a library of linear terms and then add quadratic and cubic terms as necessary to improve model performance.
 For the best results, the strength of regularization applied should be increased in proportion to the size of the library to account for the worsening condition number of the resulting linear system.
 
 Users may also choose to implement library classes tailored to their applications. To do so one should have the new class inherit from our :code:`BaseFeatureLibrary` class. See the documentation for guidance on which functions the new class is expected to implement.

@@ -114,7 +114,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         If True, assume the grid is periodic in all spatial directions.
 
     num_pts_per_domain : int, deprecated (default None)
-        Included here to retain backwards compatability with older code
+        Included here to retain backwards compatibility with older code
         that uses this parameter. However, it merely raises a
         DeprecationWarning and then is ignored.
 

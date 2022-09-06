@@ -9,6 +9,7 @@ from sklearn.utils.validation import check_is_fitted
 from .base import BaseOptimizer
 
 warnings.filterwarnings("ignore", category=LinAlgWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 class STLSQ(BaseOptimizer):

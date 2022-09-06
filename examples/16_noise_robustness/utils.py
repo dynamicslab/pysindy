@@ -285,9 +285,10 @@ def rudy_algorithm2(
     """
 
     # Do an initial least-squares fit to get an initial guess of the coefficients
+    # start with initial guess that all coefs are zero
     optimizer = ps.STLSQ(
-        threshold=0,
-        alpha=0,
+        threshold=1e-3,  # dtol,
+        alpha=1e-5,  # alpha,
         max_iter=optimizer_max_iter,
         normalize_columns=normalize_columns,
         ridge_kw={"tol": 1e-10},
@@ -296,6 +297,7 @@ def rudy_algorithm2(
     # Compute initial model
     model = ps.SINDy(feature_library=ode_lib, optimizer=optimizer)
     model.fit(x_train, t=t_train, quiet=True)
+    model_best = model
 
     # Set the L0 penalty based on the condition number of Theta
     l0_penalty = l0_pen * np.linalg.cond(optimizer.Theta_)
@@ -304,13 +306,14 @@ def rudy_algorithm2(
     # Compute MSE on the testing x_dot data (takes x_test and computes x_dot_test)
     error_best = model.score(
         x_test, metric=mean_squared_error, squared=False, t=t_test
-    ) + l0_penalty * np.count_nonzero(coef_best)
+    )  # + l0_penalty * np.count_nonzero(coef_best)
 
     coef_history_ = np.zeros((coef_best.shape[0], coef_best.shape[1], 1 + tol_iter))
     error_history_ = np.zeros(1 + tol_iter)
     coef_history_[:, :, 0] = coef_best
     error_history_[0] = error_best
     tol = dtol
+    print(coef_best)
 
     # Loop over threshold values, note needs some coding
     # if not using STLSQ optimizer
@@ -320,6 +323,7 @@ def rudy_algorithm2(
             alpha=alpha,
             max_iter=optimizer_max_iter,
             normalize_columns=normalize_columns,
+            #thresholder='l0'
             ridge_kw={"tol": 1e-10},
         )
         model = ps.SINDy(feature_library=ode_lib, optimizer=optimizer)
@@ -328,22 +332,28 @@ def rudy_algorithm2(
         coef_history_[:, :, i + 1] = coef_new
         error_new = model.score(
             x_test, metric=mean_squared_error, squared=False, t=t_test
-        ) + l0_penalty * np.count_nonzero(coef_new)
-        print(i, tol, dtol, alpha, optimizer_max_iter, error_new)
+        )  # + l0_penalty * np.count_nonzero(coef_new)
+        print(i, tol, dtol, error_best, error_new)
+        x_dot_test = model.differentiate(x_test, t=t_test)
+        x_dot_test_pred = model.predict(x_test)
+        print(np.linalg.norm(x_dot_test - x_dot_test_pred, ord=2))
         error_history_[i + 1] = error_new
 
         # If error improves, set the new best coefficients
-        if error_new <= error_best:
+        # Note < not <= since if all coefficients are zero,
+        # this would still keep increasing the threshold!
+        if error_new < error_best:
             error_best = error_new
             coef_best = coef_new
             tol += dtol
             # tol *= change_factor
+            model_best = model
         else:
             # tol = tol / (change_factor * 1.1)
             tol = max(0, tol - change_factor * dtol)
-            dtol = change_factor * dtol / (tol_iter - i)
+            dtol = change_factor * dtol  # / (tol_iter - i)
             tol += dtol
-    return coef_best, error_best, coef_history_, error_history_, model
+    return coef_best, error_best, coef_history_, error_history_, model_best
 
 
 def make_dysts_true_coefficients(

@@ -2,9 +2,44 @@ import inspect
 
 import dysts.flows as flows
 import numpy as np
-from sklearn.metrics import mean_squared_error
 
 import pysindy as ps
+
+# from sklearn.metrics import mean_squared_error
+
+
+def normalized_RMSE(x_dot_true, x_dot_pred):
+    return np.linalg.norm(x_dot_true - x_dot_pred, ord=2) / np.linalg.norm(x_dot_true)
+
+
+def total_coefficient_error_normalized(xi_true, xi_pred):
+    return np.linalg.norm(xi_true - xi_pred) / np.linalg.norm(xi_true)
+
+
+def coefficient_errors(xi_true, xi_pred):
+    errors = np.zeros(xi_true.shape)
+    for i in range(xi_true.shape[0]):
+        for j in range(xi_true.shape[1]):
+            if np.isclose(xi_true[i, j], 0.0):
+                errors[i, j] = abs(xi_true[i, j] - xi_pred[i, j])
+            else:
+                errors[i, j] = abs(xi_true[i, j] - xi_pred[i, j]) / xi_true[i, j]
+    return errors
+
+
+def total_coefficient_error(xi_true, xi_pred):
+    errors = np.zeros(xi_true.shape)
+    for i in range(xi_true.shape[0]):
+        for j in range(xi_true.shape[1]):
+            errors[i, j] = xi_true[i, j] - xi_pred[i, j]
+    return np.linalg.norm(errors, ord=2)
+
+
+def success_rate(xi_true, xi_pred):
+    print("to do")
+
+
+# def stability_metric():
 
 
 def get_nonlinear_terms(num_attractors):
@@ -278,6 +313,7 @@ def rudy_algorithm2(
     l0_pen=1e-3,
     normalize_columns=True,
     optimizer_max_iter=20,
+    input_names=["x", "y", "z"],
 ):
     """
     # Algorithm to scan over threshold values during Ridge Regression, and select
@@ -287,33 +323,45 @@ def rudy_algorithm2(
     # Do an initial least-squares fit to get an initial guess of the coefficients
     # start with initial guess that all coefs are zero
     optimizer = ps.STLSQ(
-        threshold=1e-3,  # dtol,
-        alpha=1e-5,  # alpha,
+        threshold=dtol,
+        alpha=alpha,
         max_iter=optimizer_max_iter,
         normalize_columns=normalize_columns,
         ridge_kw={"tol": 1e-10},
     )
+    # optimizer = ps.SR3(
+    #     threshold=dtol,
+    #     max_iter=optimizer_max_iter,
+    #     normalize_columns=normalize_columns,
+    # )
 
     # Compute initial model
-    model = ps.SINDy(feature_library=ode_lib, optimizer=optimizer)
+    model = ps.SINDy(
+        feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+    )
     model.fit(x_train, t=t_train, quiet=True)
     model_best = model
 
     # Set the L0 penalty based on the condition number of Theta
-    l0_penalty = l0_pen * np.linalg.cond(optimizer.Theta_)
+    l0_penalty = l0_pen  # * np.linalg.cond(optimizer.Theta_)
     coef_best = optimizer.coef_
+    x_dot_test = model.differentiate(x_test, t=t_test)
+    x_dot_test_pred = model.predict(x_test)
 
     # Compute MSE on the testing x_dot data (takes x_test and computes x_dot_test)
-    error_best = model.score(
-        x_test, metric=mean_squared_error, squared=False, t=t_test
-    )  # + l0_penalty * np.count_nonzero(coef_best)
+    error_best = normalized_RMSE(
+        x_dot_test, x_dot_test_pred
+    ) + l0_penalty * np.count_nonzero(coef_best)
+    # error_best = model.score(
+    #    x_test, metric=mean_squared_error, squared=False, t=t_test
+    # ) # + l0_penalty * np.count_nonzero(coef_best)
 
     coef_history_ = np.zeros((coef_best.shape[0], coef_best.shape[1], 1 + tol_iter))
     error_history_ = np.zeros(1 + tol_iter)
     coef_history_[:, :, 0] = coef_best
     error_history_[0] = error_best
     tol = dtol
-    print(coef_best)
+    threshold_best = tol
 
     # Loop over threshold values, note needs some coding
     # if not using STLSQ optimizer
@@ -323,20 +371,29 @@ def rudy_algorithm2(
             alpha=alpha,
             max_iter=optimizer_max_iter,
             normalize_columns=normalize_columns,
-            #thresholder='l0'
+            # thresholder='l0'
             ridge_kw={"tol": 1e-10},
         )
-        model = ps.SINDy(feature_library=ode_lib, optimizer=optimizer)
+        # optimizer = ps.SR3(
+        #     threshold=dtol,
+        #     max_iter=optimizer_max_iter,
+        #     normalize_columns=normalize_columns,
+        # )
+        model = ps.SINDy(
+            feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+        )
         model.fit(x_train, t=t_train)
         coef_new = optimizer.coef_
         coef_history_[:, :, i + 1] = coef_new
-        error_new = model.score(
-            x_test, metric=mean_squared_error, squared=False, t=t_test
-        )  # + l0_penalty * np.count_nonzero(coef_new)
-        print(i, tol, dtol, error_best, error_new)
         x_dot_test = model.differentiate(x_test, t=t_test)
         x_dot_test_pred = model.predict(x_test)
-        print(np.linalg.norm(x_dot_test - x_dot_test_pred, ord=2))
+        error_new = normalized_RMSE(
+            x_dot_test, x_dot_test_pred
+        ) + l0_penalty * np.count_nonzero(coef_new)
+        # model.score(
+        #    x_test, metric=mean_squared_error, squared=False, t=t_test
+        # )  # * np.sqrt(np.shape(x_dot_test)[0] * np.shape(x_dot_test)[1])  # + l0_penalty * np.count_nonzero(coef_new)
+        # print(i, tol, dtol, error_best, error_new)
         error_history_[i + 1] = error_new
 
         # If error improves, set the new best coefficients
@@ -345,6 +402,7 @@ def rudy_algorithm2(
         if error_new < error_best:
             error_best = error_new
             coef_best = coef_new
+            threshold_best = tol
             tol += dtol
             # tol *= change_factor
             model_best = model
@@ -353,7 +411,134 @@ def rudy_algorithm2(
             tol = max(0, tol - change_factor * dtol)
             dtol = change_factor * dtol  # / (tol_iter - i)
             tol += dtol
-    return coef_best, error_best, coef_history_, error_history_, model_best
+    return (
+        coef_best,
+        error_best,
+        coef_history_,
+        error_history_,
+        threshold_best,
+        model_best,
+    )
+
+
+def rudy_algorithm3(
+    x_train,
+    x_test,
+    t_train,
+    t_test,
+    ode_lib,
+    dtol,
+    coef_true,
+    alpha=1e-5,
+    tol_iter=25,
+    change_factor=2,
+    l0_pen=1e-3,
+    normalize_columns=True,
+    optimizer_max_iter=20,
+    input_names=["x", "y", "z"],
+):
+    """
+    Algorithm to scan over threshold values during Ridge Regression, and select
+    highest performing model on the test set using the coefficient error!
+    """
+
+    # Do an initial least-squares fit to get an initial guess of the coefficients
+    # start with initial guess that all coefs are zero
+    optimizer = ps.STLSQ(
+        threshold=dtol,
+        alpha=alpha,
+        max_iter=optimizer_max_iter,
+        normalize_columns=normalize_columns,
+        ridge_kw={"tol": 1e-10},
+    )
+    # optimizer = ps.SR3(
+    #     threshold=dtol,
+    #     max_iter=optimizer_max_iter,
+    #     normalize_columns=normalize_columns,
+    # )
+
+    # Compute initial model
+    model = ps.SINDy(
+        feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+    )
+    model.fit(x_train, t=t_train, quiet=True)
+    model_best = model
+
+    # Set the L0 penalty based on the condition number of Theta
+    l0_penalty = l0_pen  # * np.linalg.cond(optimizer.Theta_)
+    coef_best = optimizer.coef_
+
+    error_best = total_coefficient_error_normalized(
+        coef_best, coef_true
+    ) + l0_penalty * np.count_nonzero(coef_best)
+    # error_best = model.score(
+    #    x_test, metric=mean_squared_error, squared=False, t=t_test
+    # ) # + l0_penalty * np.count_nonzero(coef_best)
+
+    coef_history_ = np.zeros((coef_best.shape[0], coef_best.shape[1], 1 + tol_iter))
+    error_history_ = np.zeros(1 + tol_iter)
+    coef_history_[:, :, 0] = coef_best
+    error_history_[0] = error_best
+    tol = dtol
+    threshold_best = tol
+
+    # Loop over threshold values, note needs some coding
+    # if not using STLSQ optimizer
+    for i in range(tol_iter):
+        optimizer = ps.STLSQ(
+            threshold=tol,
+            alpha=alpha,
+            max_iter=optimizer_max_iter,
+            normalize_columns=normalize_columns,
+            # thresholder='l0'
+            ridge_kw={"tol": 1e-10},
+        )
+        # optimizer = ps.SR3(
+        #     threshold=dtol,
+        #     max_iter=optimizer_max_iter,
+        #     normalize_columns=normalize_columns,
+        # )
+        model = ps.SINDy(
+            feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+        )
+        model.fit(x_train, t=t_train)
+        coef_new = optimizer.coef_
+        coef_history_[:, :, i + 1] = coef_new
+        # x_dot_test = model.differentiate(x_test, t=t_test)
+        # x_dot_test_pred = model.predict(x_test)
+        error_new = total_coefficient_error_normalized(
+            coef_new, coef_true
+        ) + l0_penalty * np.count_nonzero(coef_new)
+        # error_new = np.linalg.norm(x_dot_test - x_dot_test_pred, ord=2) + l0_penalty * np.count_nonzero(coef_new)
+        # model.score(
+        #    x_test, metric=mean_squared_error, squared=False, t=t_test
+        # )  # * np.sqrt(np.shape(x_dot_test)[0] * np.shape(x_dot_test)[1])  # + l0_penalty * np.count_nonzero(coef_new)
+        print(i, tol, dtol, error_best, error_new)
+        error_history_[i + 1] = error_new
+
+        # If error improves, set the new best coefficients
+        # Note < not <= since if all coefficients are zero,
+        # this would still keep increasing the threshold!
+        if error_new < error_best:
+            error_best = error_new
+            coef_best = coef_new
+            threshold_best = tol
+            tol += dtol
+            # tol *= change_factor
+            model_best = model
+        else:
+            # tol = tol / (change_factor * 1.1)
+            tol = max(0, tol - change_factor * dtol)
+            dtol = change_factor * dtol  # / (tol_iter - i)
+            tol += dtol
+    return (
+        coef_best,
+        error_best,
+        coef_history_,
+        error_history_,
+        threshold_best,
+        model_best,
+    )
 
 
 def make_dysts_true_coefficients(
@@ -393,6 +578,7 @@ def make_dysts_true_coefficients(
         system_str = system_str[cut2 + 5 :]
         chunks = system_str.split("\n")[:-1]
         params = param_list[i]
+        print(system, chunks)
         for j, chunk in enumerate(chunks):
             cind = chunk.rfind("=")
             chunk = chunk[cind + 1 :]
@@ -404,6 +590,7 @@ def make_dysts_true_coefficients(
                 chunk = chunk.replace(key, str(params[key]), 10)
             # print(chunk)
             chunk = chunk.replace("--", "", 10)
+            chunk = chunk.replace("- -", "+ ", 10)
             # get all variables into (x, y, z, w) form
             chunk = chunk.replace("q1", "x", 10)
             chunk = chunk.replace("q2", "y", 10)
@@ -437,6 +624,12 @@ def make_dysts_true_coefficients(
             chunk = chunk.replace("w * z", "zw", 10)
 
             # Do any unique ones
+            chunk = chunk.replace("1 / 0.03", "33.3333333333", 10)
+            chunk = chunk.replace("1.0 / 0.03", "33.3333333333", 10)
+            chunk = chunk.replace("1 / 0.8", "1.25", 10)
+            chunk = chunk.replace("1.0 / 0.8", "1.25", 10)
+            chunk = chunk.replace("0.0322 / 0.8", "0.04025", 10)
+            chunk = chunk.replace("0.49 / 0.03", "16.3333333333", 10)
             chunk = chunk.replace("(-10 + -4)", "-14", 10)
             chunk = chunk.replace("(-10 * -4)", "40", 10)
             chunk = chunk.replace("3.0 * 1.0", "3", 10)
@@ -484,7 +677,6 @@ def make_dysts_true_coefficients(
             #         chunk = feature_chunk_compact.replace('- z', '-1z')
             #         chunk = feature_chunk_compact.replace('- w', '-1w')
 
-            # print(i, chunk)
             # Okay strings are formatted. Time to read them into the
             # coefficient matrix
             for k, feature in enumerate(np.flip(feature_names[1:])):

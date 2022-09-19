@@ -3,11 +3,12 @@ import warnings
 
 import dysts.flows as flows
 import numpy as np
-from matplotlib import pyplot as plt
-# Annoyingly requires the neurokit2 package - "pip install neurokit2"
 from dysts.analysis import sample_initial_conditions
+from matplotlib import pyplot as plt
 
 import pysindy as ps
+
+# Annoyingly requires the neurokit2 package - "pip install neurokit2"
 
 
 def plot_coef_errors(
@@ -16,59 +17,80 @@ def plot_coef_errors(
     xdot_rmse_errors,
     best_threshold_values,
     scale_list,
-    systems_list
+    systems_list,
 ):
     # Count up number of systems that can be successfully identified to 10% total coefficient error
     num_attractors = len(systems_list)
     coef_summary = np.zeros(num_attractors)
     for i, attractor_name in enumerate(all_sols_train):
-        coef_summary[i] = (best_normalized_coef_errors[attractor_name][0] < 0.1)
+        coef_summary[i] = best_normalized_coef_errors[attractor_name][0] < 0.1
 
-    print('# of dynamical systems that have < 10% coefficient error in the fit, ',
-          'when , error * 100, % Gaussian noise is added to every trajectory point ',
-          int(np.sum(coef_summary)), ' / ', len(systems_list))
+    print(
+        "# of dynamical systems that have < 10% coefficient error in the fit, ",
+        "when , error * 100, % Gaussian noise is added to every trajectory point ",
+        int(np.sum(coef_summary)),
+        " / ",
+        len(systems_list),
+    )
 
     fig = plt.figure(figsize=(20, 2))
     for i, attractor_name in enumerate(all_sols_train):
-        plt.scatter(i, best_normalized_coef_errors[attractor_name][0], c='r',
-                    label='Avg. normalized coef errors')
-        plt.scatter(i, abs(np.array(xdot_rmse_errors[attractor_name])), c='g',
-                    label='Avg. RMSE errors')
-        plt.scatter(i, best_threshold_values[attractor_name], c='b',
-                    label='Avg. best threshold')
+        plt.scatter(
+            i,
+            best_normalized_coef_errors[attractor_name][0],
+            c="r",
+            label="Avg. normalized coef errors",
+        )
+        plt.scatter(
+            i,
+            abs(np.array(xdot_rmse_errors[attractor_name])),
+            c="g",
+            label="Avg. RMSE errors",
+        )
+        plt.scatter(
+            i, best_threshold_values[attractor_name], c="b", label="Avg. best threshold"
+        )
     plt.grid(True)
-    plt.yscale('log')
-    plt.plot(np.linspace(-0.5, num_attractors + 1, num_attractors),
-             0.1 * np.ones(num_attractors), 'k--', label='10% error')
-    plt.legend(['10% normalized error', '$E_{coef}$', '$E_{RMSE}$', 'Optimal threshold'],
-               framealpha=1.0, ncol=4, fontsize=13)
+    plt.yscale("log")
+    plt.plot(
+        np.linspace(-0.5, num_attractors + 1, num_attractors),
+        0.1 * np.ones(num_attractors),
+        "k--",
+        label="10% error",
+    )
+    plt.legend(
+        ["10% normalized error", "$E_{coef}$", "$E_{RMSE}$", "Optimal threshold"],
+        framealpha=1.0,
+        ncol=4,
+        fontsize=13,
+    )
     ax = plt.gca()
-    plt.xticks(np.arange(num_attractors), rotation='vertical', fontsize=16)
+    plt.xticks(np.arange(num_attractors), rotation="vertical", fontsize=16)
     plt.xlim(-0.5, num_attractors + 1)
     systems_list_cleaned = []
     for i, system in enumerate(systems_list):
-        if system == 'GuckenheimerHolmes':
-            systems_list_cleaned.append('GuckenHolmes')
-        elif system == 'NuclearQuadrupole':
-            systems_list_cleaned.append('NuclearQuad')
-        elif system == 'RabinovichFabrikant':
-            systems_list_cleaned.append('RabFabrikant')
-        elif system == 'KawczynskiStrizhak':
-            systems_list_cleaned.append('KawcStrizhak')
-        elif system == 'RikitakeDynamo':
-            systems_list_cleaned.append('RikiDynamo')
-        elif system == 'ShimizuMorioka':
-            systems_list_cleaned.append('ShMorioka')
-        elif system == 'HindmarshRose':
-            systems_list_cleaned.append('Hindmarsh')
-        elif system == 'RayleighBenard':
-            systems_list_cleaned.append('RayBenard')
+        if system == "GuckenheimerHolmes":
+            systems_list_cleaned.append("GuckenHolmes")
+        elif system == "NuclearQuadrupole":
+            systems_list_cleaned.append("NuclearQuad")
+        elif system == "RabinovichFabrikant":
+            systems_list_cleaned.append("RabFabrikant")
+        elif system == "KawczynskiStrizhak":
+            systems_list_cleaned.append("KawcStrizhak")
+        elif system == "RikitakeDynamo":
+            systems_list_cleaned.append("RikiDynamo")
+        elif system == "ShimizuMorioka":
+            systems_list_cleaned.append("ShMorioka")
+        elif system == "HindmarshRose":
+            systems_list_cleaned.append("Hindmarsh")
+        elif system == "RayleighBenard":
+            systems_list_cleaned.append("RayBenard")
         else:
             systems_list_cleaned.append(system)
     ax.set_xticklabels(np.array(systems_list_cleaned))
     plt.ylim(1e-4, 1e4)
     plt.yticks(fontsize=20)
-    plt.savefig('model_summary_without_added_noise_Algo3.pdf')
+    plt.savefig("model_summary_without_added_noise_Algo3.pdf")
 
     # Repeat the plot, but reorder things by the amount of scale separation
     scale_sort = np.argsort(scale_list)
@@ -77,22 +99,36 @@ def plot_coef_errors(
     cerrs = []
     fig = plt.figure(figsize=(20, 2))
     for i, attractor_name in enumerate(systems_list_sorted):
-        plt.scatter(i, best_normalized_coef_errors[attractor_name][0], c='r',
-                    label='Avg. normalized coef errors')
+        plt.scatter(
+            i,
+            best_normalized_coef_errors[attractor_name][0],
+            c="r",
+            label="Avg. normalized coef errors",
+        )
         cerrs.append(best_normalized_coef_errors[attractor_name][0])
 
     plt.grid(True)
-    plt.yscale('log')
-    plt.plot(np.linspace(-0.5, num_attractors + 1, num_attractors), 0.1 * np.ones(num_attractors), 'k--', label='10% error')
-    plt.legend(['10% normalized error', '$E_{coef}$'],
-               framealpha=1.0, ncol=4, fontsize=13, loc='upper left')
+    plt.yscale("log")
+    plt.plot(
+        np.linspace(-0.5, num_attractors + 1, num_attractors),
+        0.1 * np.ones(num_attractors),
+        "k--",
+        label="10% error",
+    )
+    plt.legend(
+        ["10% normalized error", "$E_{coef}$"],
+        framealpha=1.0,
+        ncol=4,
+        fontsize=13,
+        loc="upper left",
+    )
     ax = plt.gca()
-    plt.xticks(np.arange(num_attractors), rotation='vertical', fontsize=16)
+    plt.xticks(np.arange(num_attractors), rotation="vertical", fontsize=16)
     plt.xlim(-0.5, num_attractors + 1)
     ax.set_xticklabels(np.array(systems_list_cleaned)[scale_sort])
-    #plt.ylim(1e-4, 1e1)
+    # plt.ylim(1e-4, 1e1)
     plt.yticks(fontsize=20)
-    plt.savefig('model_summary_scaleSeparation_without_added_noise_Algo3.pdf')
+    plt.savefig("model_summary_scaleSeparation_without_added_noise_Algo3.pdf")
 
     from scipy.stats import linregress
 
@@ -100,29 +136,36 @@ def plot_coef_errors(
         scale_list_sorted, np.log(cerrs)
     )
     print(slope, intercept, r_value, p_value, std_err)
-    print('R^2 value = ', r_value ** 2)
+    print("R^2 value = ", r_value**2)
 
     fig = plt.figure(figsize=(20, 2))
     for i, attractor_name in enumerate(systems_list_sorted):
-        plt.scatter(scale_list_sorted[i],
-                    best_normalized_coef_errors[attractor_name][0], c='r',
-                    label='Avg. normalized coef errors')
-    plt.plot(scale_list_sorted,
-             np.exp(slope * scale_list_sorted + intercept), 'k')
-    plt.yscale('log')
-    plt.xscale('log')
+        plt.scatter(
+            scale_list_sorted[i],
+            best_normalized_coef_errors[attractor_name][0],
+            c="r",
+            label="Avg. normalized coef errors",
+        )
+    plt.plot(scale_list_sorted, np.exp(slope * scale_list_sorted + intercept), "k")
+    plt.yscale("log")
+    plt.xscale("log")
     plt.grid(True)
     # plt.yscale('log')
     # plt.plot(np.linspace(-0.5, num_attractors + 1, num_attractors), 0.1 * np.ones(num_attractors), 'k--', label='10% error')
-    plt.legend(['Best linear feat', '$E_{coef}$'], loc='lower right',
-               framealpha=1.0, ncol=4, fontsize=13)
+    plt.legend(
+        ["Best linear feat", "$E_{coef}$"],
+        loc="lower right",
+        framealpha=1.0,
+        ncol=4,
+        fontsize=13,
+    )
     ax = plt.gca()
     # plt.xticks(np.arange(num_attractors), rotation='vertical', fontsize=16)
     # plt.xlim(-0.5, num_attractors + 1)
     # ax.set_xticklabels(np.array(systems_list_cleaned)[scale_sort])
     # plt.ylim(1e-4, 1e1)
     plt.yticks(fontsize=20)
-    plt.savefig('model_summary_scaleSeparation_without_added_noise.pdf')
+    plt.savefig("model_summary_scaleSeparation_without_added_noise.pdf")
     plt.show()
 
 
@@ -132,40 +175,44 @@ def plot_individual_coef_errors(
     true_coefficients,
     dimension_list,
     systems_list,
-    models
+    models,
 ):
     poly_library = ps.PolynomialLibrary(degree=4)
-    colors = ['r', 'b', 'g', 'm']
-    labels = ['xdot', 'ydot', 'zdot', 'wdot']
+    colors = ["r", "b", "g", "m"]
+    labels = ["xdot", "ydot", "zdot", "wdot"]
 
     for i, system in enumerate(systems_list):
         x_train = all_sols_train[system]
         plt.figure(figsize=(20, 2))
         if dimension_list[i] == 3:
-            feature_names = poly_library.fit(x_train).get_feature_names(
-                ['x', 'y', 'z']
-            )
+            feature_names = poly_library.fit(x_train).get_feature_names(["x", "y", "z"])
         else:
             feature_names = poly_library.fit(x_train).get_feature_names(
-                ['x', 'y', 'z', 'w']
+                ["x", "y", "z", "w"]
             )
         for k in range(dimension_list[i]):
             plt.grid(True)
             plt.scatter(
                 feature_names,
                 np.mean(np.array(predicted_coefficients[system])[:, k, :], 0),
-                color=colors[k], label=labels[k],
-                s=100
+                color=colors[k],
+                label=labels[k],
+                s=100,
             )
-            plt.scatter(feature_names, np.array(true_coefficients[i][k, :]),
-                        color='k', label='True ' + labels[k], s=50)
+            plt.scatter(
+                feature_names,
+                np.array(true_coefficients[i][k, :]),
+                color="k",
+                label="True " + labels[k],
+                s=50,
+            )
         if dimension_list[i] == 3:
-            plt.legend(loc='upper right', framealpha=1.0, ncol=6)
+            plt.legend(loc="upper right", framealpha=1.0, ncol=6)
         else:
-            plt.legend(loc='upper right', framealpha=1.0, ncol=8)
+            plt.legend(loc="upper right", framealpha=1.0, ncol=8)
         plt.title(system)
         # plt.yscale('symlog', linthreshy=1e-3)
-        plt.legend(loc='upper right', framealpha=1.0, ncol=6)
+        plt.legend(loc="upper right", framealpha=1.0, ncol=6)
         print(system)
         models[i].print()
 
@@ -265,6 +312,7 @@ def success_rate(xi_true, xi_pred):
 
 # def stability_metric():
 
+
 def Pareto_scan(
     systems_list,
     dimension_list,
@@ -286,7 +334,7 @@ def Pareto_scan(
     best_threshold_values = {}
     best_normalized_coef_errors = {}
 
-    # initialize sturctures
+    # initialize structures
     num_attractors = len(systems_list)
     for system in systems_list:
         xdot_rmse_errors[system] = list()
@@ -312,19 +360,27 @@ def Pareto_scan(
         t_train = all_t_train[attractor_name]
         t_test = all_t_test[attractor_name]
         if dimension_list[i] == 3:
-            input_names = ['x', 'y', 'z']
+            input_names = ["x", "y", "z"]
         else:
-            input_names = ['x', 'y', 'z', 'w']
+            input_names = ["x", "y", "z", "w"]
         feature_names = poly_library.fit(x_train).get_feature_names(input_names)
 
         # Sweep a Pareto front
         if coef_error_metric:
-            (coef_best, err_best, coef_history,
-             err_history, threshold_best, model,
-             condition_numbers[i]
-             ) = rudy_algorithm3(
-                x_train, x_test, t_train,
-                ode_lib=poly_library, dtol=1e-2,
+            (
+                coef_best,
+                err_best,
+                coef_history,
+                err_history,
+                threshold_best,
+                model,
+                condition_numbers[i],
+            ) = rudy_algorithm3(
+                x_train,
+                x_test,
+                t_train,
+                ode_lib=poly_library,
+                dtol=1e-2,
                 optimizer_max_iter=max_iter,
                 tol_iter=tol_iter,
                 change_factor=1.05,
@@ -333,15 +389,23 @@ def Pareto_scan(
                 normalize_columns=True,
                 t_test=t_test,
                 input_names=input_names,
-                coef_true=true_coefficients[i]
+                coef_true=true_coefficients[i],
             )
         else:
-            (coef_best, err_best, coef_history,
-             err_history, threshold_best, model,
-             condition_numbers[i]
-             ) = rudy_algorithm2(
-                x_train, x_test, t_train,
-                ode_lib=poly_library, dtol=1e-2,
+            (
+                coef_best,
+                err_best,
+                coef_history,
+                err_history,
+                threshold_best,
+                model,
+                condition_numbers[i],
+            ) = rudy_algorithm2(
+                x_train,
+                x_test,
+                t_train,
+                ode_lib=poly_library,
+                dtol=1e-2,
                 optimizer_max_iter=max_iter,
                 tol_iter=tol_iter,
                 change_factor=1.05,
@@ -369,9 +433,15 @@ def Pareto_scan(
             total_coefficient_error_normalized(true_coefficients[i], coef_best)
         )
     return (
-        xdot_rmse_errors, xdot_coef_errors, x_dot_tests, x_dot_test_preds,
-        predicted_coefficients, best_threshold_values,
-        best_normalized_coef_errors, models, condition_numbers
+        xdot_rmse_errors,
+        xdot_coef_errors,
+        x_dot_tests,
+        x_dot_test_preds,
+        predicted_coefficients,
+        best_threshold_values,
+        best_normalized_coef_errors,
+        models,
+        condition_numbers,
     )
 
 

@@ -1,8 +1,9 @@
-import numpy as np
-import dysts.flows as flows
-from sympy.parsing.sympy_parser import parse_expr
-from sympy import count_ops
 import inspect
+
+import dysts.flows as flows
+import numpy as np
+from sympy import count_ops
+from sympy.parsing.sympy_parser import parse_expr
 
 
 def compute_medl(systems_list, all_sols_train, param_list):
@@ -45,11 +46,11 @@ def get_stand_expr(x_train, system, params):
     cut1 = system_str.find("return")
     system_str = system_str[: cut1 - 1]
     cut2 = system_str.rfind("):")
-    system_str = system_str[cut2 + 5:]
+    system_str = system_str[cut2 + 5 :]
     chunks = system_str.split("\n")[:-1]
     for j, chunk in enumerate(chunks):
         cind = chunk.rfind("=")
-        chunk = chunk[cind + 1:]
+        chunk = chunk[cind + 1 :]
         for key in params.keys():
             if "Lorenz" in system and "rho" in params.keys():
                 chunk = chunk.replace("rho", str(params["rho"]), 10)
@@ -139,16 +140,21 @@ Citation:
 
 
 def get_expr_complexity(expr):
+    """Todo -- add comments to all the subfunctions here"""
     expr = parse_expr(expr, evaluate=True)
     compl = 0
 
     def is_atomic_number(expr):
         return expr.is_Atom and expr.is_number
 
-    numbers_expr = [subexpression for subexpression in expr.args
-                    if is_atomic_number(subexpression)]
-    variables_expr = [subexpression for subexpression in expr.args
-                      if not(is_atomic_number(subexpression))]
+    numbers_expr = [
+        subexpression for subexpression in expr.args if is_atomic_number(subexpression)
+    ]
+    variables_expr = [
+        subexpression
+        for subexpression in expr.args
+        if not (is_atomic_number(subexpression))
+    ]
 
     for j in numbers_expr:
         try:
@@ -202,7 +208,7 @@ def bestApproximation(x, imax):
         return num, den
 
     def contFracRationalApproximations(c):
-        return np.array(list(contfrac2frac(c[:i+1]) for i in range(len(c))))
+        return np.array(list(contfrac2frac(c[: i + 1]) for i in range(len(c))))
 
     def contFracApproximations(c):
         q = contFracRationalApproximations(c)
@@ -216,19 +222,22 @@ def bestApproximation(x, imax):
 
     def pval(p):
         p = p.astype(float)
-        return 1 - np.exp(-p ** 0.87 / 0.36)
+        return 1 - np.exp(-(p**0.87) / 0.36)
 
     xsign = np.sign(x)
     q = truncateContFrac(
-        contFracRationalApproximations(float2contfrac(abs(x), 20)), imax)
+        contFracRationalApproximations(float2contfrac(abs(x), 20)), imax
+    )
 
     if len(q) > 0:
-        p = np.abs(q[:, 0] / q[:, 1] - abs(x)).astype(float)\
-            * (1 + np.abs(q[:, 0])) * q[:, 1]
+        p = (
+            np.abs(q[:, 0] / q[:, 1] - abs(x)).astype(float)
+            * (1 + np.abs(q[:, 0]))
+            * q[:, 1]
+        )
         p = pval(p)
         i = np.argmin(p)
-        return (xsign * q[i, 0] / float(q[i, 1]),
-                xsign * q[i, 0], q[i, 1], p[i])
+        return (xsign * q[i, 0] / float(q[i, 1]), xsign * q[i, 0], q[i, 1], p[i])
     else:
         return (None, 0, 0, 1)
 

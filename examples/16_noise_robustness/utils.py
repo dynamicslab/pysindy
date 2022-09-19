@@ -33,7 +33,7 @@ def plot_coef_errors(
         len(systems_list),
     )
 
-    fig = plt.figure(figsize=(20, 2))
+    plt.figure(figsize=(20, 2))
     for i, attractor_name in enumerate(all_sols_train):
         plt.scatter(
             i,
@@ -97,7 +97,7 @@ def plot_coef_errors(
     scale_list_sorted = np.sort(scale_list)
     systems_list_sorted = np.array(systems_list)[scale_sort]
     cerrs = []
-    fig = plt.figure(figsize=(20, 2))
+    plt.figure(figsize=(20, 2))
     for i, attractor_name in enumerate(systems_list_sorted):
         plt.scatter(
             i,
@@ -138,7 +138,7 @@ def plot_coef_errors(
     print(slope, intercept, r_value, p_value, std_err)
     print("R^2 value = ", r_value**2)
 
-    fig = plt.figure(figsize=(20, 2))
+    plt.figure(figsize=(20, 2))
     for i, attractor_name in enumerate(systems_list_sorted):
         plt.scatter(
             scale_list_sorted[i],
@@ -363,7 +363,8 @@ def Pareto_scan(
             input_names = ["x", "y", "z"]
         else:
             input_names = ["x", "y", "z", "w"]
-        feature_names = poly_library.fit(x_train).get_feature_names(input_names)
+
+        # feature_names = poly_library.fit(x_train).get_feature_names(input_names)
 
         # Sweep a Pareto front
         if coef_error_metric:

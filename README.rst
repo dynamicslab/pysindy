@@ -169,7 +169,7 @@ At a minimum, we need to be able to run the example notebooks in the normal mode
    |-example.ipynb # run python examples/publish_notebook/<name_of_example> to generate this.  Needs packages in requirements-dev.txt
    |-utils.py (Any other names example.py needs to import.  Any additional local modules imported by example.py need to be submodules of utils.py, e.g. utils.plotting)
 
-You can optimize your notebook for testing by checking ``__name__``.  When our tests run ``example.py`` they set the ``__name__`` global to ``"testing"``.  For instance, your notebook should determine whether to import from ``mock_data`` or ``example_data`` using this method (another example: you could also use this method to set ``max_iter``).  It's a bit arbitrary, but try to make your examples run in under ten seconds using the mock data.  You can use our test to verify your example in testing mode: 
+You can optimize your notebook for testing by checking ``__name__``.  When our tests run ``example.py`` they set the ``__name__`` global to ``"testing"``.  For instance, your notebook should determine whether to import from ``mock_data`` or ``example_data`` using this method (another example: you could also use this method to set ``max_iter``).  It's a bit arbitrary, but try to make your examples run in under ten seconds using the mock data.  You can use our test to verify your example in testing mode:
 
 .. code-block::
 
@@ -319,6 +319,7 @@ Related packages
 * `PyDMD <https://github.com/mathLab/PyDMD/>`_ - A Python package using the Dynamic Mode Decomposition (DMD) for a data-driven model simplification based on spatiotemporal coherent structures. DMD is a great alternative to SINDy.
 * `PySINDyGUI <https://github.com/hyumo/pysindy-gui>`_ - A slick-looking GUI for PySINDy.
 * `SEED <https://github.com/M-Vause/SEED2.0>`_ - Software for the Extraction of Equations from Data: a GUI for many of the methods provided by PySINDy.
+* `SymINDy <https://github.com/andreikitaitsev/SymINDy/>`_ - A Python package combining SINDy with genetic programming-based symbolic regression, used for the functions library optimization.
 
 Contributors
 ------------

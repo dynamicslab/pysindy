@@ -1,14 +1,14 @@
 import numpy as np
 import dysts.flows as flows
-from sympy import Rational
 from sympy.parsing.sympy_parser import parse_expr
-from sympy import preorder_traversal, count_ops
+from sympy import count_ops
 import inspect
 
 
 def compute_medl(systems_list, all_sols_train, param_list):
     """
-    Computes the mean-error-description-length (MEDL) of all systems in the given system list.
+    Computes the mean-error-description-length (MEDL) of all
+    systems in the given system list.
 
     Attributes
     ----------
@@ -17,11 +17,13 @@ def compute_medl(systems_list, all_sols_train, param_list):
     all_sols_train: dictionary
         a dictionary of systems' trajectories
     param_list:
-        a list of dictionaries which contains the parameter values used to generate the system 
+        a list of dictionaries which contains the parameter values
+        used to generate the system
 
     Returns
     -------
-        a list MEDL of the systems in the same order as systems in the system list
+        a list MEDL of the systems in the same order as systems in
+        the system list
     """
     compl_list = []
     for i, system in enumerate(systems_list):
@@ -43,11 +45,11 @@ def get_stand_expr(x_train, system, params):
     cut1 = system_str.find("return")
     system_str = system_str[: cut1 - 1]
     cut2 = system_str.rfind("):")
-    system_str = system_str[cut2 + 5 :]
+    system_str = system_str[cut2 + 5:]
     chunks = system_str.split("\n")[:-1]
     for j, chunk in enumerate(chunks):
         cind = chunk.rfind("=")
-        chunk = chunk[cind + 1 :]
+        chunk = chunk[cind + 1:]
         for key in params.keys():
             if "Lorenz" in system and "rho" in params.keys():
                 chunk = chunk.replace("rho", str(params["rho"]), 10)
@@ -63,7 +65,7 @@ def get_stand_expr(x_train, system, params):
         chunk = chunk.replace("p2", "w", 10)
         chunk = chunk.replace("px", "z", 10)
         chunk = chunk.replace("py", "w", 10)
-        
+
         # Do any unique ones
         chunk = chunk.replace("(-10 + -4)", "-14", 10)
         chunk = chunk.replace("(-10 * -4)", "40", 10)
@@ -106,12 +108,12 @@ def get_stand_expr(x_train, system, params):
     return chunks
 
 
-#-----------------------------------------------------------------------------#
+###############################################################################
 # Methods, bestApproximation, get_numberDL_scanned, and get_expr_complexity,  #
 # are retrieved from https://github.com/SJ001/AI-Feynman.                     #
 #                                                                             #
 # We modified get_expr_complexity to make it behave correctly with powers.    #
-#-----------------------------------------------------------------------------#
+###############################################################################
 """
 Citation:
 @article{udrescu2020ai,
@@ -126,36 +128,44 @@ Citation:
 }
 
 @article{udrescu2020ai,
-  title={AI Feynman 2.0: Pareto-optimal symbolic regression exploiting graph modularity},
-  author={Udrescu, Silviu-Marian and Tan, Andrew and Feng, Jiahai and Neto, Orisvaldo and Wu, Tailin and Tegmark, Max},
+  title={AI Feynman 2.0:
+  Pareto-optimal symbolic regression exploiting graph modularity},
+  author={Udrescu, Silviu-Marian and Tan, Andrew and Feng, Jiahai and Neto,
+  Orisvaldo and Wu, Tailin and Tegmark, Max},
   journal={arXiv preprint arXiv:2006.10782},
   year={2020}
 }
 """
+
+
 def get_expr_complexity(expr):
     expr = parse_expr(expr, evaluate=True)
     compl = 0
 
-    is_atomic_number = lambda expr: expr.is_Atom and expr.is_number
-    numbers_expr = [subexpression for subexpression in expr.args if is_atomic_number(subexpression)]
-    variables_expr = [subexpression for subexpression in expr.args if not(is_atomic_number(subexpression))]
+    def is_atomic_number(expr):
+        return expr.is_Atom and expr.is_number
+
+    numbers_expr = [subexpression for subexpression in expr.args
+                    if is_atomic_number(subexpression)]
+    variables_expr = [subexpression for subexpression in expr.args
+                      if not(is_atomic_number(subexpression))]
 
     for j in numbers_expr:
         try:
             compl = compl + get_number_DL_snapped(float(j))
-        except:
+        except Exception as e:
             compl = compl + 1000000
 
     # compute n, k: n basis functions appear k times
     n_uniq_vars = len(expr.free_symbols)
-    n_uniq_ops = len(count_ops(expr,visual=True).free_symbols)
+    n_uniq_ops = len(count_ops(expr, visual=True).free_symbols)
 
     N = n_uniq_vars + n_uniq_ops
 
     n_ops = count_ops(expr)
     n_vars = len(variables_expr)
 
-    n_power_addional = 0 
+    n_power_addional = 0
     for subexpression in variables_expr:
         if subexpression.is_Pow:
             b, e = subexpression.as_base_exp()
@@ -170,51 +180,54 @@ def get_expr_complexity(expr):
     return compl
 
 
-def bestApproximation(x,imax):
-    def float2contfrac(x,nmax):
+def bestApproximation(x, imax):
+    def float2contfrac(x, nmax):
         x = float(x)
         c = [np.floor(x)]
         y = x - np.floor(x)
         k = 0
-        while np.abs(y)!=0 and k<nmax:
+        while np.abs(y) != 0 and k < nmax:
             y = 1 / float(y)
             i = np.floor(y)
             c.append(i)
             y = y - i
             k = k + 1
         return c
-    
+
     def contfrac2frac(seq):
         num, den = 1, 0
         for u in reversed(seq):
-            num, den = den + num*u, num
+            num, den = den + num * u, num
         return num, den
-    
+
     def contFracRationalApproximations(c):
         return np.array(list(contfrac2frac(c[:i+1]) for i in range(len(c))))
-    
+
     def contFracApproximations(c):
         q = contFracRationalApproximations(c)
-        return q[:,0] / float(q[:,1])
-    
-    def truncateContFrac(q,imax):
+        return q[:, 0] / float(q[:, 1])
+
+    def truncateContFrac(q, imax):
         k = 0
-        while k < len(q) and np.maximum(np.abs(q[k,0]), q[k,1]) <= imax:
+        while k < len(q) and np.maximum(np.abs(q[k, 0]), q[k, 1]) <= imax:
             k = k + 1
         return q[:k]
-    
+
     def pval(p):
         p = p.astype(float)
         return 1 - np.exp(-p ** 0.87 / 0.36)
-    
+
     xsign = np.sign(x)
-    q = truncateContFrac(contFracRationalApproximations(float2contfrac(abs(x),20)),imax)
-    
+    q = truncateContFrac(
+        contFracRationalApproximations(float2contfrac(abs(x), 20)), imax)
+
     if len(q) > 0:
-        p = np.abs(q[:,0] / q[:,1] - abs(x)).astype(float) * (1 + np.abs(q[:,0])) * q[:,1]
+        p = np.abs(q[:, 0] / q[:, 1] - abs(x)).astype(float)\
+            * (1 + np.abs(q[:, 0])) * q[:, 1]
         p = pval(p)
         i = np.argmin(p)
-        return (xsign * q[i,0] / float(q[i,1]), xsign* q[i,0], q[i,1], p[i])
+        return (xsign * q[i, 0] / float(q[i, 1]),
+                xsign * q[i, 0], q[i, 1], p[i])
     else:
         return (None, 0, 0, 1)
 
@@ -226,12 +239,11 @@ def get_number_DL_snapped(n):
         return 1000000
     elif np.abs(n - int(n)) < epsilon:
         return np.log2(1 + abs(int(n)))
-    elif np.abs(n - bestApproximation(n,10000)[0]) < epsilon:
+    elif np.abs(n - bestApproximation(n, 10000)[0]) < epsilon:
         _, numerator, denominator, _ = bestApproximation(n, 10000)
         return np.log2((1 + abs(numerator)) * abs(denominator))
     elif np.abs(n - np.pi) < epsilon:
-        return np.log2(1+3)
+        return np.log2(1 + 3)
     else:
         PrecisionFloorLoss = 1e-14
         return np.log2(1 + (float(n) / PrecisionFloorLoss) ** 2) / 2
-#-----------------------------------------------------------------------------#

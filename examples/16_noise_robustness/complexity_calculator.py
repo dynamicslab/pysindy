@@ -155,6 +155,7 @@ def get_expr_complexity(expr):
             compl = compl + get_number_DL_snapped(float(j))
         except Exception as e:
             compl = compl + 1000000
+            print(e.message, e.args)
 
     # compute n, k: n basis functions appear k times
     n_uniq_vars = len(expr.free_symbols)

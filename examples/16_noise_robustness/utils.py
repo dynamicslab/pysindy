@@ -29,8 +29,11 @@ def run_ensembling(
     num_trajectories = test_trajectories[systems_list[0]].shape[1]
     poly_library = ps.PolynomialLibrary(degree=4)
     num_attractors = len(systems_list)
-    x_dot_pred = np.zeros((n, num_attractors, n_models, num_trajectories))
-    x_pred = np.zeros((n, num_attractors, n_models, num_trajectories))
+    x_dot_pred = dict()
+
+    # x_dot_test = np.zeros((n, num_attractors, num_trajectories))
+    x_pred = dict()
+    coef_lists = dict()
 
     for i, attractor_name in enumerate(systems_list):
 
@@ -41,6 +44,16 @@ def run_ensembling(
             input_names = ["x", "y", "z"]
         else:
             input_names = ["x", "y", "z", "w"]
+
+        x_dot_pred[attractor_name] = np.zeros((n, n_models,
+                                               num_trajectories,
+                                               dimension_list[i]
+                                               ))
+        x_pred[attractor_name] = np.zeros((n, n_models,
+                                           num_trajectories,
+                                           dimension_list[i]
+                                           ))
+
         optimizer = ps.STLSQ(
             threshold=best_threshold_values[attractor_name][0],
             alpha=alpha,
@@ -52,24 +65,24 @@ def run_ensembling(
             feature_library=poly_library,
             optimizer=optimizer,
             feature_names=input_names,
-            ensemble=True,
-            n_models=n_models,
         )
-        model.fit(x_train, t=t_train, quiet=True)
-        coef_list = model.coef_list
+        model.fit(x_train, t=t_train, quiet=True, ensemble=True, n_models=n_models)
+        coef_list = np.array(model.coef_list)
+        coef_lists[attractor_name] = coef_list
 
         for j in range(n_models):
             optimizer.coef_ = coef_list[j, :, :]
             for k in range(num_trajectories):
+                print('Model ', j, ', Trajectory ', k)
                 x_test = test_trajectories[attractor_name][:, k, :]
-                t_test = test_trajectories[attractor_name][:, k]
-                x_dot_test[:, :, k] = model.differentiate(
-                    x_test,
-                    t=t_test
-                )
-                x_dot_pred[:, i, j, k] = model.predict(x_test)
-                x_pred[:, i, j, k] = model.simulate(x_test[0, :], t_test)
-        return x_pred, x_dot_pred
+                t_test = test_trajectories_t[attractor_name][:, k]
+                # x_dot_test[:, :, k] = model.differentiate(
+                #     x_test,
+                #     t=t_test
+                # )
+                x_dot_pred[attractor_name][:, j, k, :] = model.predict(x_test)
+                x_pred[attractor_name][:, j, k, :] = model.simulate(x_test[0, :], t_test)
+        return x_pred, x_dot_pred, coef_lists
 
 
 def plot_coef_errors(
@@ -79,6 +92,7 @@ def plot_coef_errors(
     best_threshold_values,
     scale_list,
     systems_list,
+    normalize_columns=True
 ):
     # Count up number of systems that can be successfully identified to 10% total coefficient error
     num_attractors = len(systems_list)
@@ -150,7 +164,10 @@ def plot_coef_errors(
         else:
             systems_list_cleaned.append(system)
     ax.set_xticklabels(np.array(systems_list_cleaned))
-    plt.ylim(1e-4, 1e4)
+    if normalize_columns:
+        plt.ylim(1e-4, 1e4)
+    else:
+        plt.ylim(1e-4, 1e1)
     plt.yticks(fontsize=20)
     plt.savefig("model_summary_without_added_noise_Algo3.pdf")
 

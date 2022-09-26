@@ -11,6 +11,67 @@ import pysindy as ps
 # Annoyingly requires the neurokit2 package - "pip install neurokit2"
 
 
+def run_ensembling(
+    systems_list,
+    all_sols_train,
+    all_t_train,
+    test_trajectories,
+    test_trajectories_t,
+    dimension_list,
+    best_threshold_values,
+    alpha=1e-5,
+    optimizer_max_iter=100,
+    normalize_columns=True,
+    n_models=20,
+):
+
+    n = test_trajectories[systems_list[0]].shape[0]
+    num_trajectories = test_trajectories[systems_list[0]].shape[1]
+    poly_library = ps.PolynomialLibrary(degree=4)
+    num_attractors = len(systems_list)
+    x_dot_pred = np.zeros((n, num_attractors, n_models, num_trajectories))
+    x_pred = np.zeros((n, num_attractors, n_models, num_trajectories))
+
+    for i, attractor_name in enumerate(systems_list):
+
+        x_train = np.copy(all_sols_train[attractor_name])
+        t_train = all_t_train[attractor_name]
+
+        if dimension_list[i] == 3:
+            input_names = ["x", "y", "z"]
+        else:
+            input_names = ["x", "y", "z", "w"]
+        optimizer = ps.STLSQ(
+            threshold=best_threshold_values[attractor_name][0],
+            alpha=alpha,
+            max_iter=optimizer_max_iter,
+            normalize_columns=normalize_columns,
+            ridge_kw={"tol": 1e-10},
+        )
+        model = ps.SINDy(
+            feature_library=poly_library,
+            optimizer=optimizer,
+            feature_names=input_names,
+            ensemble=True,
+            n_models=n_models,
+        )
+        model.fit(x_train, t=t_train, quiet=True)
+        coef_list = model.coef_list
+
+        for j in range(n_models):
+            optimizer.coef_ = coef_list[j, :, :]
+            for k in range(num_trajectories):
+                x_test = test_trajectories[attractor_name][:, k, :]
+                t_test = test_trajectories[attractor_name][:, k]
+                x_dot_test[:, :, k] = model.differentiate(
+                    x_test,
+                    t=t_test
+                )
+                x_dot_pred[:, i, j, k] = model.predict(x_test)
+                x_pred[:, i, j, k] = model.simulate(x_test[0, :], t_test)
+        return x_pred, x_dot_pred
+
+
 def plot_coef_errors(
     all_sols_train,
     best_normalized_coef_errors,
@@ -48,7 +109,8 @@ def plot_coef_errors(
             label="Avg. RMSE errors",
         )
         plt.scatter(
-            i, best_threshold_values[attractor_name], c="b", label="Avg. best threshold"
+            i, best_threshold_values[attractor_name], c="b",
+            label="Avg. best threshold"
         )
     plt.grid(True)
     plt.yscale("log")
@@ -130,42 +192,42 @@ def plot_coef_errors(
     plt.yticks(fontsize=20)
     plt.savefig("model_summary_scaleSeparation_without_added_noise_Algo3.pdf")
 
-    from scipy.stats import linregress
-
-    slope, intercept, r_value, p_value, std_err = linregress(
-        scale_list_sorted, np.log(cerrs)
-    )
-    print(slope, intercept, r_value, p_value, std_err)
-    print("R^2 value = ", r_value**2)
-
-    plt.figure(figsize=(20, 2))
-    for i, attractor_name in enumerate(systems_list_sorted):
-        plt.scatter(
-            scale_list_sorted[i],
-            best_normalized_coef_errors[attractor_name][0],
-            c="r",
-            label="Avg. normalized coef errors",
-        )
-    plt.plot(scale_list_sorted, np.exp(slope * scale_list_sorted + intercept), "k")
-    plt.yscale("log")
-    plt.xscale("log")
-    plt.grid(True)
-    # plt.yscale('log')
-    # plt.plot(np.linspace(-0.5, num_attractors + 1, num_attractors), 0.1 * np.ones(num_attractors), 'k--', label='10% error')
-    plt.legend(
-        ["Best linear feat", "$E_{coef}$"],
-        loc="lower right",
-        framealpha=1.0,
-        ncol=4,
-        fontsize=13,
-    )
-    ax = plt.gca()
-    # plt.xticks(np.arange(num_attractors), rotation='vertical', fontsize=16)
-    # plt.xlim(-0.5, num_attractors + 1)
-    # ax.set_xticklabels(np.array(systems_list_cleaned)[scale_sort])
-    # plt.ylim(1e-4, 1e1)
-    plt.yticks(fontsize=20)
-    plt.savefig("model_summary_scaleSeparation_without_added_noise.pdf")
+    # from scipy.stats import linregress
+    #
+    # slope, intercept, r_value, p_value, std_err = linregress(
+    #     scale_list_sorted, np.log(cerrs)
+    # )
+    # print(slope, intercept, r_value, p_value, std_err)
+    # print("R^2 value = ", r_value**2)
+    #
+    # plt.figure(figsize=(20, 2))
+    # for i, attractor_name in enumerate(systems_list_sorted):
+    #     plt.scatter(
+    #         scale_list_sorted[i],
+    #         best_normalized_coef_errors[attractor_name][0],
+    #         c="r",
+    #         label="Avg. normalized coef errors",
+    #     )
+    # plt.plot(scale_list_sorted, np.exp(slope * scale_list_sorted + intercept), "k")
+    # plt.yscale("log")
+    # plt.xscale("log")
+    # plt.grid(True)
+    # # plt.yscale('log')
+    # # plt.plot(np.linspace(-0.5, num_attractors + 1, num_attractors), 0.1 * np.ones(num_attractors), 'k--', label='10% error')
+    # plt.legend(
+    #     ["Best linear feat", "$E_{coef}$"],
+    #     loc="lower right",
+    #     framealpha=1.0,
+    #     ncol=4,
+    #     fontsize=13,
+    # )
+    # ax = plt.gca()
+    # # plt.xticks(np.arange(num_attractors), rotation='vertical', fontsize=16)
+    # # plt.xlim(-0.5, num_attractors + 1)
+    # # ax.set_xticklabels(np.array(systems_list_cleaned)[scale_sort])
+    # # plt.ylim(1e-4, 1e1)
+    # plt.yticks(fontsize=20)
+    # plt.savefig("model_summary_scaleSeparation_without_added_noise.pdf")
     plt.show()
 
 
@@ -273,6 +335,59 @@ def load_data(
     return all_sols_train, all_t_train, all_sols_test, all_t_test
 
 
+def make_test_trajectories(
+    systems_list,
+    all_properties,
+    n=200,
+    pts_per_period=20,
+    random_bump=False,
+    include_transients=False,
+    approximate_center=0.0,  # approximate center of the attractor
+    n_trajectories=20,
+):
+    num_attractors = len(systems_list)
+    all_sols_test = dict()
+    all_t_test = dict()
+
+    for i, equation_name in enumerate(systems_list):
+
+        dimension = all_properties[equation_name]["embedding_dimension"]
+        if dimension == 3:
+            input_names = ["x", "y", "z"]
+        else:
+            input_names = ["x", "y", "z", "w"]
+        all_sols_test[equation_name] = np.zeros((n, n_trajectories, dimension))
+        all_t_test[equation_name] = np.zeros((n, n_trajectories))
+
+        eq = getattr(flows, equation_name)()
+        print(i, eq)
+
+        ic_test = sample_initial_conditions(
+            eq, n_trajectories, traj_length=1000, pts_per_period=30
+        )
+
+        # Sample at roughly the smallest time scale!!
+        if include_transients:
+            pts_per_period = int(1 / (all_properties[equation_name]["dt"] * 10))
+            n = pts_per_period * 10  # sample 10 periods at the largest time scale
+
+        # Kick it off the attractor by random bump with, at most, 25% of the norm of the IC
+        for j in range(n_trajectories):
+            if random_bump:
+                ic_test[j, :] += (np.random.rand(len(ic_test[j, :])) - 0.5) * abs(ic_test[j, :]) / 10
+            eq.ic = ic_test[j, :]
+            t_sol, sol = eq.make_trajectory(
+                n,
+                pts_per_period=pts_per_period,
+                resample=True,
+                return_times=True,
+                standardize=False,
+            )
+            all_sols_test[equation_name][:, j, :] = sol
+            all_t_test[equation_name][:, j] = t_sol
+    return all_sols_test, all_t_test
+
+
 def normalized_RMSE(x_dot_true, x_dot_pred):
     return np.linalg.norm(x_dot_true - x_dot_pred, ord=2) / np.linalg.norm(
         x_dot_true, ord=2
@@ -323,6 +438,7 @@ def Pareto_scan(
     all_t_test,
     coef_error_metric=False,
     l0_penalty=1e-5,
+    normalize_columns=True,
 ):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -387,7 +503,7 @@ def Pareto_scan(
                 change_factor=1.05,
                 l0_pen=l0_penalty,
                 alpha=1e-5,
-                normalize_columns=True,
+                normalize_columns=normalize_columns,
                 t_test=t_test,
                 input_names=input_names,
                 coef_true=true_coefficients[i],
@@ -412,7 +528,7 @@ def Pareto_scan(
                 change_factor=1.05,
                 l0_pen=l0_penalty,
                 alpha=1e-5,
-                normalize_columns=True,
+                normalize_columns=normalize_columns,
                 t_test=t_test,
                 input_names=input_names,
             )
@@ -862,11 +978,6 @@ def rudy_algorithm3(
         normalize_columns=normalize_columns,
         ridge_kw={"tol": 1e-10},
     )
-    # optimizer = ps.SR3(
-    #     threshold=dtol,
-    #     max_iter=optimizer_max_iter,
-    #     normalize_columns=normalize_columns,
-    # )
 
     # Compute initial model
     model = ps.SINDy(
@@ -883,9 +994,6 @@ def rudy_algorithm3(
     error_best = total_coefficient_error_normalized(
         coef_true, coef_best
     ) + l0_penalty * np.count_nonzero(coef_best)
-    # error_best = model.score(
-    #    x_test, metric=mean_squared_error, squared=False, t=t_test
-    # ) # + l0_penalty * np.count_nonzero(coef_best)
 
     coef_history_ = np.zeros((coef_best.shape[0], coef_best.shape[1], 1 + tol_iter))
     error_history_ = np.zeros(1 + tol_iter)
@@ -902,14 +1010,8 @@ def rudy_algorithm3(
             alpha=alpha,
             max_iter=optimizer_max_iter,
             normalize_columns=normalize_columns,
-            # thresholder='l0'
             ridge_kw={"tol": 1e-10},
         )
-        # optimizer = ps.SR3(
-        #     threshold=dtol,
-        #     max_iter=optimizer_max_iter,
-        #     normalize_columns=normalize_columns,
-        # )
         model = ps.SINDy(
             feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
         )
@@ -918,16 +1020,9 @@ def rudy_algorithm3(
         if np.isclose(np.sum(coef_new), 0.0):
             break
         coef_history_[:, :, i + 1] = coef_new
-        # x_dot_test = model.differentiate(x_test, t=t_test)
-        # x_dot_test_pred = model.predict(x_test)
         error_new = total_coefficient_error_normalized(
             coef_true, coef_new
         ) + l0_penalty * np.count_nonzero(coef_new)
-        # error_new = np.linalg.norm(x_dot_test - x_dot_test_pred, ord=2) + l0_penalty * np.count_nonzero(coef_new)
-        # model.score(
-        #    x_test, metric=mean_squared_error, squared=False, t=t_test
-        # )  # * np.sqrt(np.shape(x_dot_test)[0] * np.shape(x_dot_test)[1])  # + l0_penalty * np.count_nonzero(coef_new)
-        # print(i, tol, dtol, error_best, error_new)
         error_history_[i + 1] = error_new
 
         # If error improves, set the new best coefficients
@@ -937,14 +1032,121 @@ def rudy_algorithm3(
             error_best = error_new
             coef_best = coef_new
             threshold_best = tol
-            #    tol += dtol
-            # tol *= change_factor
             model_best = model
-        # else:
-        # tol = tol / (change_factor * 1.1)
-        #    tol = max(0, tol - change_factor * dtol)
-        # dtol = change_factor * dtol / (tol_iter - i)
-        #    tol += change_factor * dtol / (tol_iter - i)  # dtol
+        dtol = dtol * change_factor
+        tol += dtol
+
+    return (
+        coef_best,
+        error_best,
+        coef_history_,
+        error_history_,
+        threshold_best,
+        model_best,
+        condition_number,
+    )
+
+
+def rudy_algorithm4(
+    x_train,
+    x_test,
+    t_train,
+    t_test,
+    ode_lib,
+    dtol,
+    coef_true,
+    alpha=1e-5,
+    tol_iter=25,
+    change_factor=2,
+    l0_pen=1e-3,
+    normalize_columns=True,
+    optimizer_max_iter=20,
+    input_names=["x", "y", "z"],
+):
+    """
+    Algorithm to scan over threshold values during Ridge Regression, and select
+    highest performing model on the test set using the coefficient error
+    on the testing trajectory, not is derivative!
+    """
+
+    # Do an initial least-squares fit to get an initial guess of the coefficients
+    # start with initial guess that all coefs are zero
+    optimizer = ps.STLSQ(
+        threshold=0,
+        alpha=alpha,
+        max_iter=optimizer_max_iter,
+        normalize_columns=normalize_columns,
+        ridge_kw={"tol": 1e-10},
+    )
+
+    # Compute initial model
+    model = ps.SINDy(
+        feature_library=ode_lib,
+        optimizer=optimizer,
+        feature_names=input_names
+    )
+    model.fit(x_train, t=t_train, quiet=True)
+    model_best = model
+    condition_number = np.linalg.cond(optimizer.Theta_)
+    x_pred = model.simulate(x_test[0, :], t_test)
+
+    # Set the L0 penalty based on the condition number of Theta
+    l0_penalty = l0_pen  # * np.linalg.cond(optimizer.Theta_)
+    coef_best = optimizer.coef_
+
+    error_best = normalized_RMSE(
+        x_test, x_pred
+    ) + l0_penalty * np.count_nonzero(coef_best)
+
+    coef_history_ = np.zeros((coef_best.shape[0], coef_best.shape[1], 1 + tol_iter))
+    error_history_ = np.zeros(1 + tol_iter)
+    coef_history_[:, :, 0] = coef_best
+    error_history_[0] = error_best
+    tol = dtol
+    threshold_best = tol
+
+    # Loop over threshold values, note needs some coding
+    # if not using STLSQ optimizer
+    for i in range(tol_iter):
+        optimizer = ps.STLSQ(
+            threshold=tol,
+            alpha=alpha,
+            max_iter=optimizer_max_iter,
+            normalize_columns=normalize_columns,
+            ridge_kw={"tol": 1e-10},
+        )
+        model = ps.SINDy(
+            feature_library=ode_lib,
+            optimizer=optimizer,
+            feature_names=input_names
+        )
+        model.fit(x_train, t=t_train, quiet=True)
+        coef_new = optimizer.coef_
+        if np.isclose(np.sum(coef_new), 0.0):
+            break
+        coef_history_[:, :, i + 1] = coef_new
+        # x_dot_test = model.differentiate(x_test, t=t_test)
+        # x_dot_test_pred = model.predict(x_test)
+        traj_errors = np.zeros(num_trajectories)
+        num_bounded = num_trajectories
+        for j in range(num_trajectories):
+            x_pred = model.simulate(test_trajectories[0, j, :], t=t_test)
+            traj_errors[j] = normalized_RMSE(
+                test_trajectories[:, j, :], x_pred
+            ) + l0_penalty * np.count_nonzero(coef_new)
+            if traj_errors[j] > 1e2:
+                num_bounded -= 1
+        error_new = np.mean(traj_errors)
+        error_history_[i + 1] = error_new
+
+        # If error improves, set the new best coefficients
+        # Note < not <= since if all coefficients are zero,
+        # this would still keep increasing the threshold!
+        if error_new < error_best:
+            error_best = error_new
+            coef_best = coef_new
+            threshold_best = tol
+            model_best = model
         dtol = dtol * change_factor
         tol += dtol
 

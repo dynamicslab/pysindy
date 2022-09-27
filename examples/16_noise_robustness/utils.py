@@ -5,6 +5,7 @@ import dysts.flows as flows
 import numpy as np
 from dysts.analysis import sample_initial_conditions
 from matplotlib import pyplot as plt
+from sklearn.metrics import mean_squared_error
 
 import pysindy as ps
 
@@ -37,6 +38,7 @@ def run_ensembling(
 
     for i, attractor_name in enumerate(systems_list):
 
+        print(i, attractor_name)
         x_train = np.copy(all_sols_train[attractor_name])
         t_train = all_t_train[attractor_name]
 
@@ -45,11 +47,11 @@ def run_ensembling(
         else:
             input_names = ["x", "y", "z", "w"]
 
-        x_dot_pred[attractor_name] = np.zeros((n, n_models,
+        x_dot_pred[attractor_name] = np.zeros((n,
                                                num_trajectories,
                                                dimension_list[i]
                                                ))
-        x_pred[attractor_name] = np.zeros((n, n_models,
+        x_pred[attractor_name] = np.zeros((n,
                                            num_trajectories,
                                            dimension_list[i]
                                            ))
@@ -70,19 +72,19 @@ def run_ensembling(
         coef_list = np.array(model.coef_list)
         coef_lists[attractor_name] = coef_list
 
-        for j in range(n_models):
-            optimizer.coef_ = coef_list[j, :, :]
-            for k in range(num_trajectories):
-                print('Model ', j, ', Trajectory ', k)
-                x_test = test_trajectories[attractor_name][:, k, :]
-                t_test = test_trajectories_t[attractor_name][:, k]
-                # x_dot_test[:, :, k] = model.differentiate(
-                #     x_test,
-                #     t=t_test
-                # )
-                x_dot_pred[attractor_name][:, j, k, :] = model.predict(x_test)
-                x_pred[attractor_name][:, j, k, :] = model.simulate(x_test[0, :], t_test)
-        return x_pred, x_dot_pred, coef_lists
+        # for j in range(n_models):
+        # optimizer.coef_ = coef_list[j, :, :]
+        optimizer.coef_ = np.median(coef_list, axis=0)
+
+        for k in range(num_trajectories):
+            print('Trajectory ', k)
+            x_test = test_trajectories[attractor_name][:, k, :]
+            t_test = test_trajectories_t[attractor_name][:, k]
+            # x_dot_pred[attractor_name][:, j, k, :] = model.predict(x_test)
+            # x_pred[attractor_name][:, j, k, :] = model.simulate(x_test[0, :], t_test)
+            x_dot_pred[attractor_name][:, k, :] = model.predict(x_test)
+            x_pred[attractor_name][:, k, :] = model.simulate(x_test[0, :], t_test, integrator='odeint')
+    return x_pred, x_dot_pred, coef_lists
 
 
 def plot_coef_errors(
@@ -317,11 +319,11 @@ def load_data(
             eq, 2, traj_length=1000, pts_per_period=30
         )
 
-        # Kick it off the attractor by random bump with, at most, 25% of the norm of the IC
+        # Kick it off the attractor by random bump with, at most, 1% of the norm of the IC
         if random_bump:
             print(ic_train)
-            ic_train += (np.random.rand(len(ic_train)) - 0.5) * abs(ic_train) / 10
-            ic_test += (np.random.rand(len(ic_test)) - 0.5) * abs(ic_test) / 10
+            ic_train += (np.random.rand(len(ic_train)) - 0.5) * abs(ic_train) / 50
+            ic_test += (np.random.rand(len(ic_test)) - 0.5) * abs(ic_test) / 50
             print(ic_train)
 
         # Sample at roughly the smallest time scale!!
@@ -456,6 +458,7 @@ def Pareto_scan(
     coef_error_metric=False,
     l0_penalty=1e-5,
     normalize_columns=True,
+    error_level=1,  # as a percent of the RMSE of the training data
 ):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -489,6 +492,8 @@ def Pareto_scan(
         print(i, " / ", num_attractors, ", System = ", attractor_name)
 
         x_train = np.copy(all_sols_train[attractor_name])
+        rmse = mean_squared_error(x_train, np.zeros(x_train.shape), squared=False)
+        x_train_noisy = x_train + np.random.normal(0, rmse / 100.0 * error_level, x_train.shape)
         x_test = np.copy(all_sols_test[attractor_name])
         t_train = all_t_train[attractor_name]
         t_test = all_t_test[attractor_name]
@@ -510,7 +515,7 @@ def Pareto_scan(
                 model,
                 condition_numbers[i],
             ) = rudy_algorithm3(
-                x_train,
+                x_train_noisy,
                 x_test,
                 t_train,
                 ode_lib=poly_library,
@@ -535,7 +540,7 @@ def Pareto_scan(
                 model,
                 condition_numbers[i],
             ) = rudy_algorithm2(
-                x_train,
+                x_train_noisy,
                 x_test,
                 t_train,
                 ode_lib=poly_library,

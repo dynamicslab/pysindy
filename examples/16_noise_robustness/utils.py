@@ -83,7 +83,8 @@ def run_ensembling(
             # x_dot_pred[attractor_name][:, j, k, :] = model.predict(x_test)
             # x_pred[attractor_name][:, j, k, :] = model.simulate(x_test[0, :], t_test)
             x_dot_pred[attractor_name][:, k, :] = model.predict(x_test)
-            x_pred[attractor_name][:, k, :] = model.simulate(x_test[0, :], t_test, integrator='odeint')
+            x0 = x_test[0, :] + (np.random.rand(x_test[0, :].shape) - 0.5) * np.linalg.norm(x_test) / 100.0
+            x_pred[attractor_name][:, k, :] = model.simulate(x0, t_test, integrator='odeint')
     return x_pred, x_dot_pred, coef_lists
 
 

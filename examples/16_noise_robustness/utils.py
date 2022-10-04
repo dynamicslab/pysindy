@@ -6,6 +6,7 @@ import numpy as np
 from dysts.analysis import sample_initial_conditions
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error
+from scipy.special import comb
 
 import pysindy as ps
 
@@ -83,7 +84,7 @@ def run_ensembling(
             # x_dot_pred[attractor_name][:, j, k, :] = model.predict(x_test)
             # x_pred[attractor_name][:, j, k, :] = model.simulate(x_test[0, :], t_test)
             x_dot_pred[attractor_name][:, k, :] = model.predict(x_test)
-            x0 = x_test[0, :] + (np.random.rand(x_test[0, :].shape) - 0.5) * np.linalg.norm(x_test) / 100.0
+            x0 = x_test[0, :] + (np.random.rand(x_test[0, :].shape[0]) - 0.5) * np.linalg.norm(x_test) / 100.0
             x_pred[attractor_name][:, k, :] = model.simulate(x0, t_test, integrator='odeint')
     return x_pred, x_dot_pred, coef_lists
 
@@ -179,6 +180,7 @@ def plot_coef_errors(
     scale_list_sorted = np.sort(scale_list)
     systems_list_sorted = np.array(systems_list)[scale_sort]
     cerrs = []
+    rmse_errs = []
     plt.figure(figsize=(20, 2))
     for i, attractor_name in enumerate(systems_list_sorted):
         plt.scatter(
@@ -187,8 +189,16 @@ def plot_coef_errors(
             c="r",
             label="Avg. normalized coef errors",
         )
+        plt.scatter(
+            i,
+            abs(np.array(xdot_rmse_errors[attractor_name])),
+            c="g",
+            label="Avg. RMSE errors",
+        )
+        rmse_errs.append(abs(np.array(xdot_rmse_errors[attractor_name]))[0])
         cerrs.append(best_normalized_coef_errors[attractor_name][0])
 
+    print(scale_list_sorted, rmse_errs)
     plt.grid(True)
     plt.yscale("log")
     plt.plot(
@@ -212,42 +222,48 @@ def plot_coef_errors(
     plt.yticks(fontsize=20)
     plt.savefig("model_summary_scaleSeparation_without_added_noise_Algo3.pdf")
 
-    # from scipy.stats import linregress
-    #
-    # slope, intercept, r_value, p_value, std_err = linregress(
-    #     scale_list_sorted, np.log(cerrs)
-    # )
-    # print(slope, intercept, r_value, p_value, std_err)
-    # print("R^2 value = ", r_value**2)
-    #
-    # plt.figure(figsize=(20, 2))
-    # for i, attractor_name in enumerate(systems_list_sorted):
-    #     plt.scatter(
-    #         scale_list_sorted[i],
-    #         best_normalized_coef_errors[attractor_name][0],
-    #         c="r",
-    #         label="Avg. normalized coef errors",
-    #     )
-    # plt.plot(scale_list_sorted, np.exp(slope * scale_list_sorted + intercept), "k")
-    # plt.yscale("log")
-    # plt.xscale("log")
-    # plt.grid(True)
-    # # plt.yscale('log')
-    # # plt.plot(np.linspace(-0.5, num_attractors + 1, num_attractors), 0.1 * np.ones(num_attractors), 'k--', label='10% error')
-    # plt.legend(
-    #     ["Best linear feat", "$E_{coef}$"],
-    #     loc="lower right",
-    #     framealpha=1.0,
-    #     ncol=4,
-    #     fontsize=13,
-    # )
-    # ax = plt.gca()
-    # # plt.xticks(np.arange(num_attractors), rotation='vertical', fontsize=16)
-    # # plt.xlim(-0.5, num_attractors + 1)
-    # # ax.set_xticklabels(np.array(systems_list_cleaned)[scale_sort])
-    # # plt.ylim(1e-4, 1e1)
-    # plt.yticks(fontsize=20)
-    # plt.savefig("model_summary_scaleSeparation_without_added_noise.pdf")
+    from scipy.stats import linregress
+
+    slope, intercept, r_value, p_value, std_err = linregress(
+        scale_list_sorted, np.log(rmse_errs)
+    )
+    print(slope, intercept, r_value, p_value, std_err)
+    print("R^2 value = ", r_value**2)
+
+    plt.figure(figsize=(20, 2))
+    for i, attractor_name in enumerate(systems_list_sorted):
+        plt.scatter(
+            scale_list_sorted[i],
+            best_normalized_coef_errors[attractor_name][0],
+            c="r",
+            label="Avg. normalized coef errors",
+        )
+        plt.scatter(
+            scale_list_sorted[i],
+            abs(np.array(xdot_rmse_errors[attractor_name])),
+            c="g",
+            label="Avg. RMSE errors",
+        )
+    plt.plot(scale_list_sorted, np.exp(slope * scale_list_sorted + intercept), "k")
+    plt.yscale("log")
+    plt.xscale("log")
+    plt.grid(True)
+    # plt.yscale('log')
+    # plt.plot(np.linspace(-0.5, num_attractors + 1, num_attractors), 0.1 * np.ones(num_attractors), 'k--', label='10% error')
+    plt.legend(
+        ["Best linear feat", "$E_{coef}$"],
+        loc="lower right",
+        framealpha=1.0,
+        ncol=4,
+        fontsize=13,
+    )
+    ax = plt.gca()
+    # plt.xticks(np.arange(num_attractors), rotation='vertical', fontsize=16)
+    # plt.xlim(-0.5, num_attractors + 1)
+    # ax.set_xticklabels(np.array(systems_list_cleaned)[scale_sort])
+    # plt.ylim(1e-4, 1e1)
+    plt.yticks(fontsize=20)
+    plt.savefig("model_summary_scaleSeparation_without_added_noise.pdf")
     plt.show()
 
 
@@ -306,6 +322,7 @@ def load_data(
     pts_per_period=20,
     random_bump=False,
     include_transients=False,
+    n_trajectories=1
 ):
     all_sols_train = dict()
     all_sols_test = dict()
@@ -314,44 +331,49 @@ def load_data(
 
     for i, equation_name in enumerate(systems_list):
         eq = getattr(flows, equation_name)()
+        all_sols_train[equation_name] = []
+        all_sols_test[equation_name] = []
+        all_t_train[equation_name] = []
+        all_t_test[equation_name] = []
         print(i, eq)
 
-        ic_train, ic_test = sample_initial_conditions(
-            eq, 2, traj_length=1000, pts_per_period=30
-        )
+        for j in range(n_trajectories):
+            ic_train, ic_test = sample_initial_conditions(
+                eq, 2, traj_length=1000, pts_per_period=30
+            )
 
-        # Kick it off the attractor by random bump with, at most, 1% of the norm of the IC
-        if random_bump:
-            print(ic_train)
-            ic_train += (np.random.rand(len(ic_train)) - 0.5) * abs(ic_train) / 50
-            ic_test += (np.random.rand(len(ic_test)) - 0.5) * abs(ic_test) / 50
-            print(ic_train)
+            # Kick it off the attractor by random bump with, at most, 1% of the norm of the IC
+            if random_bump:
+                print(ic_train)
+                ic_train += (np.random.rand(len(ic_train)) - 0.5) * abs(ic_train) / 50
+                ic_test += (np.random.rand(len(ic_test)) - 0.5) * abs(ic_test) / 50
+                print(ic_train)
 
-        # Sample at roughly the smallest time scale!!
-        if include_transients:
-            pts_per_period = int(1 / (all_properties[equation_name]["dt"] * 10))
-            n = pts_per_period * 10  # sample 10 periods at the largest time scale
+            # Sample at roughly the smallest time scale!!
+            if include_transients:
+                pts_per_period = int(1 / (all_properties[equation_name]["dt"] * 10))
+                n = pts_per_period * 10  # sample 10 periods at the largest time scale
 
-        eq.ic = ic_train
-        t_sol, sol = eq.make_trajectory(
-            n,
-            pts_per_period=pts_per_period,
-            resample=True,
-            return_times=True,
-            standardize=False,
-        )
-        all_sols_train[equation_name] = sol
-        all_t_train[equation_name] = t_sol
-        eq.ic = ic_test
-        t_sol, sol = eq.make_trajectory(
-            n,
-            pts_per_period=pts_per_period,
-            resample=True,
-            return_times=True,
-            standardize=False,
-        )
-        all_sols_test[equation_name] = sol
-        all_t_test[equation_name] = t_sol
+            eq.ic = ic_train
+            t_sol, sol = eq.make_trajectory(
+                n,
+                pts_per_period=pts_per_period,
+                resample=True,
+                return_times=True,
+                standardize=False,
+            )
+            all_sols_train[equation_name].append(sol)
+            all_t_train[equation_name].append(t_sol)
+            eq.ic = ic_test
+            t_sol, sol = eq.make_trajectory(
+                n,
+                pts_per_period=pts_per_period,
+                resample=True,
+                return_times=True,
+                standardize=False,
+            )
+            all_sols_test[equation_name].append(sol)
+            all_t_test[equation_name].append(t_sol)
     return all_sols_train, all_t_train, all_sols_test, all_t_test
 
 
@@ -460,7 +482,11 @@ def Pareto_scan(
     l0_penalty=1e-5,
     normalize_columns=True,
     error_level=1,  # as a percent of the RMSE of the training data
+    tol_iter=300,
 ):
+    """
+        Stitch all the training and testing trajectories together?
+    """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
@@ -481,8 +507,12 @@ def Pareto_scan(
         best_normalized_coef_errors[system] = list()
 
     # iterate over all systems and noise levels
+    if normalize_columns:
+        dtol = 1e-2  # threshold values will be higher if feature library is normalized
+    else:
+        dtol = 1e-6
+
     max_iter = 100
-    tol_iter = 300
     poly_library = ps.PolynomialLibrary(degree=4)
     models = []
     x_dot_tests = []
@@ -520,10 +550,10 @@ def Pareto_scan(
                 x_test,
                 t_train,
                 ode_lib=poly_library,
-                dtol=1e-2,
+                dtol=dtol,
                 optimizer_max_iter=max_iter,
                 tol_iter=tol_iter,
-                change_factor=1.05,
+                change_factor=1.1,
                 l0_pen=l0_penalty,
                 alpha=1e-5,
                 normalize_columns=normalize_columns,
@@ -545,10 +575,10 @@ def Pareto_scan(
                 x_test,
                 t_train,
                 ode_lib=poly_library,
-                dtol=1e-2,
+                dtol=dtol,
                 optimizer_max_iter=max_iter,
                 tol_iter=tol_iter,
-                change_factor=1.05,
+                change_factor=1.1,
                 l0_pen=l0_penalty,
                 alpha=1e-5,
                 normalize_columns=normalize_columns,
@@ -583,6 +613,149 @@ def Pareto_scan(
         models,
         condition_numbers,
     )
+
+
+def Pareto_scan_ensembling(
+    systems_list,
+    dimension_list,
+    true_coefficients,
+    all_sols_train,
+    all_t_train,
+    all_sols_test,
+    all_t_test,
+    l0_penalty=1e-5,
+    normalize_columns=False,
+    error_level=0,  # as a percent of the RMSE of the training data
+    tol_iter=300,
+    n_models=10,
+):
+    """
+        Stitch all the training trajectories together and then subsample
+        them to make n_models SINDy models. Pareto optimal is determined
+        by computing the minimum average RMSE error in x_dot.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+    # define data structure for records
+    xdot_rmse_errors = {}
+    xdot_coef_errors = {}
+    predicted_coefficients = {}
+    best_threshold_values = {}
+    best_normalized_coef_errors = {}
+
+    # initialize structures
+    num_attractors = len(systems_list)
+    for system in systems_list:
+        xdot_rmse_errors[system] = list()
+        xdot_coef_errors[system] = list()
+        predicted_coefficients[system] = list()
+        best_threshold_values[system] = list()
+        best_normalized_coef_errors[system] = list()
+
+    # iterate over all systems and noise levels
+    if normalize_columns:
+        dtol = 1e-2  # threshold values will be higher if feature library is normalized
+    else:
+        dtol = 1e-6
+
+    max_iter = 100
+    poly_library = ps.PolynomialLibrary(degree=4)
+    models = []
+    x_dot_tests = []
+    x_dot_test_preds = []
+    condition_numbers = np.zeros(num_attractors)
+
+    for i, attractor_name in enumerate(systems_list):
+        print(i, " / ", num_attractors, ", System = ", attractor_name)
+
+        x_train = np.copy(all_sols_train[attractor_name])
+        for j in range(len(x_train)):
+            print(np.shape(x_train), np.shape(x_train[0]))
+            rmse = mean_squared_error(x_train[j], np.zeros(x_train[j].shape), squared=False)
+            x_train_noisy = x_train[j] + np.random.normal(0, rmse / 100.0 * error_level, x_train[j].shape)
+            x_train[j] = x_train_noisy
+        x_test = all_sols_test[attractor_name]
+        t_train = all_t_train[attractor_name]
+        t_test = all_t_test[attractor_name]
+        if dimension_list[i] == 3:
+            input_names = ["x", "y", "z"]
+        else:
+            input_names = ["x", "y", "z", "w"]
+
+        # feature_names = poly_library.fit(x_train).get_feature_names(input_names)
+
+        # Sweep a Pareto front
+        (
+            coef_best,
+            err_best,
+            coef_history,
+            err_history,
+            threshold_best,
+            model,
+            condition_numbers[i],
+        ) = rudy_algorithm2(
+            x_train,
+            x_test,
+            t_train,
+            ode_lib=poly_library,
+            dtol=dtol,
+            optimizer_max_iter=max_iter,
+            tol_iter=tol_iter,
+            change_factor=1.1,
+            l0_pen=l0_penalty,
+            alpha=1e-5,
+            normalize_columns=normalize_columns,
+            t_test=t_test,
+            input_names=input_names,
+        )
+
+        x_dot_test = model.differentiate(x_test, t=t_test)
+        x_dot_test_pred = model.predict(x_test)
+        models.append(model)
+        x_dot_tests.append(x_dot_test)
+        x_dot_test_preds.append(x_dot_test_pred)
+        best_threshold_values[attractor_name].append(threshold_best)
+        xdot_rmse_errors[attractor_name].append(
+            normalized_RMSE(x_dot_test, x_dot_test_pred)
+        )
+        xdot_coef_errors[attractor_name].append(
+            coefficient_errors(true_coefficients[i], coef_best)
+        )
+        predicted_coefficients[attractor_name].append(coef_best)
+        best_normalized_coef_errors[attractor_name].append(
+            total_coefficient_error_normalized(true_coefficients[i], coef_best)
+        )
+    return (
+        xdot_rmse_errors,
+        xdot_coef_errors,
+        x_dot_tests,
+        x_dot_test_preds,
+        predicted_coefficients,
+        best_threshold_values,
+        best_normalized_coef_errors,
+        models,
+        condition_numbers,
+    )
+
+
+def nonlinear_terms_from_coefficients(true_coefficients):
+    # number of terms that are constant, linear, quadratic, cubic, and quartic
+    num_attractors = len(true_coefficients)
+    number_nonlinear_terms = np.zeros((num_attractors + 1, 5))
+    for i in range(num_attractors):
+        dim = true_coefficients[i].shape[0]
+        number_nonlinear_terms[i, 0] = np.count_nonzero(true_coefficients[i][:, 0])
+        number_nonlinear_terms[i, 1] = np.count_nonzero(true_coefficients[i][:, 1:dim + 1])
+        num_quad = int(comb(2 + dim - 1, dim - 1))
+        num_cubic = int(comb(3 + dim - 1, dim - 1))
+        num_quartic = int(comb(4 + dim - 1, dim - 1))
+        coeff_index = dim + 1 + num_quad
+        number_nonlinear_terms[i, 2] = np.count_nonzero(true_coefficients[i][:, dim + 1:coeff_index])
+        number_nonlinear_terms[i, 3] = np.count_nonzero(true_coefficients[i][:, coeff_index:coeff_index + num_cubic])
+        coeff_index += num_cubic
+        number_nonlinear_terms[i, 4] = np.count_nonzero(true_coefficients[i][:, coeff_index:])
+    return number_nonlinear_terms
 
 
 def get_nonlinear_terms(num_attractors):
@@ -1195,7 +1368,7 @@ def make_dysts_true_coefficients(
 
     for i, system in enumerate(systems_list):
         # print(i, system)
-        x_train = all_sols_train[system]
+        x_train = all_sols_train[system][0]
         if dimension_list[i] == 3:
             feature_names = poly_library.fit(x_train).get_feature_names(["x", "y", "z"])
         else:

@@ -28,7 +28,7 @@ def compute_medl(systems_list, all_sols_train, param_list):
     """
     compl_list = []
     for i, system in enumerate(systems_list):
-        x_train = all_sols_train[system]
+        x_train = all_sols_train[system][0]
         params = param_list[i]
         std_eqs = get_stand_expr(x_train, system, params)
         curr_compl = 0

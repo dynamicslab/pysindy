@@ -19,7 +19,14 @@ from .differentiation import FiniteDifference
 from .feature_library import PolynomialLibrary
 from .optimizers import EnsembleOptimizer
 from .optimizers import SINDyOptimizer
-from .optimizers import SINDyPI
+
+try:  # Waiting on PEP 690 to lazy import CVXPY
+    from .optimizers import SINDyPI
+
+    sindy_pi_flag = True
+except ImportError:
+    sindy_pi_flag = False
+    pass
 from .optimizers import STLSQ
 from .utils import AxesArray
 from .utils import comprehend_axes
@@ -519,8 +526,11 @@ class SINDy(BaseEstimator):
             Precision to be used when printing out model coefficients.
         """
         eqns = self.equations(precision)
-        if isinstance(self.optimizer, SINDyPI):
-            feature_names = self.get_feature_names()
+        if sindy_pi_flag:
+            if isinstance(self.optimizer, SINDyPI):
+                feature_names = self.get_feature_names()
+            else:
+                feature_names = self.feature_names
         else:
             feature_names = self.feature_names
         for i, eqn in enumerate(eqns):
@@ -528,12 +538,16 @@ class SINDy(BaseEstimator):
                 names = "(" + feature_names[i] + ")"
                 print(names + "[k+1] = " + eqn)
             elif lhs is None:
-                if not isinstance(self.optimizer, SINDyPI):
+                if sindy_pi_flag:
+                    if not isinstance(self.optimizer, SINDyPI):
+                        names = "(" + feature_names[i] + ")"
+                        print(names + "' = " + eqn)
+                    else:
+                        names = feature_names[i]
+                        print(names + " = " + eqn)
+                else:
                     names = "(" + feature_names[i] + ")"
                     print(names + "' = " + eqn)
-                else:
-                    names = feature_names[i]
-                    print(names + " = " + eqn)
             else:
                 print(lhs[i] + " = " + eqn)
 

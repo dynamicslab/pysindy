@@ -28,7 +28,7 @@ class MIOSR(BaseOptimizer):
 
     by using type-1 specially ordered sets (SOS1) to encode the support of
     the coefficients. Can optionally add additional constraints on the
-    coefficients or access the gurobi `model` directly for advanced usage.
+    coefficients or access the gurobi model directly for advanced usage.
     See the following reference for additional details:
 
         Bertsimas, D. and Gurnee, W., 2022. Learning Sparse Nonlinear Dynamics

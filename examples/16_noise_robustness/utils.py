@@ -5,8 +5,8 @@ import dysts.flows as flows
 import numpy as np
 from dysts.analysis import sample_initial_conditions
 from matplotlib import pyplot as plt
-from sklearn.metrics import mean_squared_error
 from scipy.special import comb
+from sklearn.metrics import mean_squared_error
 
 import pysindy as ps
 
@@ -48,14 +48,8 @@ def run_ensembling(
         else:
             input_names = ["x", "y", "z", "w"]
 
-        x_dot_pred[attractor_name] = np.zeros((n,
-                                               num_trajectories,
-                                               dimension_list[i]
-                                               ))
-        x_pred[attractor_name] = np.zeros((n,
-                                           num_trajectories,
-                                           dimension_list[i]
-                                           ))
+        x_dot_pred[attractor_name] = np.zeros((n, num_trajectories, dimension_list[i]))
+        x_pred[attractor_name] = np.zeros((n, num_trajectories, dimension_list[i]))
 
         optimizer = ps.STLSQ(
             threshold=best_threshold_values[attractor_name][0],
@@ -78,14 +72,20 @@ def run_ensembling(
         optimizer.coef_ = np.median(coef_list, axis=0)
 
         for k in range(num_trajectories):
-            print('Trajectory ', k)
             x_test = test_trajectories[attractor_name][:, k, :]
             t_test = test_trajectories_t[attractor_name][:, k]
             # x_dot_pred[attractor_name][:, j, k, :] = model.predict(x_test)
             # x_pred[attractor_name][:, j, k, :] = model.simulate(x_test[0, :], t_test)
             x_dot_pred[attractor_name][:, k, :] = model.predict(x_test)
-            x0 = x_test[0, :] + (np.random.rand(x_test[0, :].shape[0]) - 0.5) * np.linalg.norm(x_test) / 100.0
-            x_pred[attractor_name][:, k, :] = model.simulate(x0, t_test, integrator='odeint')
+            x0 = (
+                x_test[0, :]
+                + (np.random.rand(x_test[0, :].shape[0]) - 0.5)
+                * np.linalg.norm(x_test)
+                / 100.0
+            )
+            x_pred[attractor_name][:, k, :] = model.simulate(
+                x0, t_test, integrator="odeint"
+            )
     return x_pred, x_dot_pred, coef_lists
 
 
@@ -96,7 +96,7 @@ def plot_coef_errors(
     best_threshold_values,
     scale_list,
     systems_list,
-    normalize_columns=True
+    normalize_columns=True,
 ):
     # Count up number of systems that can be successfully identified to 10% total coefficient error
     num_attractors = len(systems_list)
@@ -127,8 +127,7 @@ def plot_coef_errors(
             label="Avg. RMSE errors",
         )
         plt.scatter(
-            i, best_threshold_values[attractor_name], c="b",
-            label="Avg. best threshold"
+            i, best_threshold_values[attractor_name], c="b", label="Avg. best threshold"
         )
     plt.grid(True)
     plt.yscale("log")
@@ -322,7 +321,7 @@ def load_data(
     pts_per_period=20,
     random_bump=False,
     include_transients=False,
-    n_trajectories=1
+    n_trajectories=1,
 ):
     all_sols_train = dict()
     all_sols_test = dict()
@@ -416,7 +415,9 @@ def make_test_trajectories(
         # Kick it off the attractor by random bump with, at most, 25% of the norm of the IC
         for j in range(n_trajectories):
             if random_bump:
-                ic_test[j, :] += (np.random.rand(len(ic_test[j, :])) - 0.5) * abs(ic_test[j, :]) / 10
+                ic_test[j, :] += (
+                    (np.random.rand(len(ic_test[j, :])) - 0.5) * abs(ic_test[j, :]) / 10
+                )
             eq.ic = ic_test[j, :]
             t_sol, sol = eq.make_trajectory(
                 n,
@@ -485,7 +486,7 @@ def Pareto_scan(
     tol_iter=300,
 ):
     """
-        Stitch all the training and testing trajectories together?
+    Stitch all the training and testing trajectories together?
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -523,8 +524,10 @@ def Pareto_scan(
         print(i, " / ", num_attractors, ", System = ", attractor_name)
 
         x_train = np.copy(all_sols_train[attractor_name])
-        rmse = mean_squared_error(x_train, np.zeros(x_train.shape), squared=False)
-        x_train_noisy = x_train + np.random.normal(0, rmse / 100.0 * error_level, x_train.shape)
+        rmse = mean_squared_error(x_train[0], np.zeros(x_train[0].shape), squared=False)
+        x_train_noisy = x_train + np.random.normal(
+            0, rmse / 100.0 * error_level, x_train.shape
+        )
         x_test = np.copy(all_sols_test[attractor_name])
         t_train = all_t_train[attractor_name]
         t_test = all_t_test[attractor_name]
@@ -628,11 +631,14 @@ def Pareto_scan_ensembling(
     error_level=0,  # as a percent of the RMSE of the training data
     tol_iter=300,
     n_models=10,
+    n_subset=40,
+    replace=False,
+    weak_form=False,
 ):
     """
-        Stitch all the training trajectories together and then subsample
-        them to make n_models SINDy models. Pareto optimal is determined
-        by computing the minimum average RMSE error in x_dot.
+    Stitch all the training trajectories together and then subsample
+    them to make n_models SINDy models. Pareto optimal is determined
+    by computing the minimum average RMSE error in x_dot.
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -660,7 +666,43 @@ def Pareto_scan_ensembling(
         dtol = 1e-6
 
     max_iter = 100
-    poly_library = ps.PolynomialLibrary(degree=4)
+    if not weak_form:
+        poly_library = ps.PolynomialLibrary(degree=4)
+    else:
+        library_functions = [
+            lambda x: x,
+            lambda x: x * x,
+            lambda x, y: x * y,
+            lambda x: x * x * x,
+            lambda x, y: x * x * y,
+            lambda x, y: x * y * y,
+            lambda x, y, z: x * y * z,
+            lambda x: x * x * x * x,
+            lambda x, y: x * x * x * y,
+            lambda x, y: x * y * y * y,
+            lambda x, y: x * x * y * y,
+            lambda x, y, z: x * y * y * z,
+            lambda x, y, z: x * y * z * z,
+            lambda x, y, z: x * x * y * z,
+            lambda x, y, z, w: x * y * z * w,
+        ]
+        library_function_names = [
+            lambda x: x,
+            lambda x: x + "^2",
+            lambda x, y: x + " " + y,
+            lambda x: x + "^3",
+            lambda x, y: x + "^2 " + y,
+            lambda x, y: x + " " + y + "^2",
+            lambda x, y, z: x + " " + y + " " + z,
+            lambda x: x + "^4",
+            lambda x, y: x + "^3 " + y,
+            lambda x, y: x + " " + y + "^3",
+            lambda x, y: x + "^2 " + y + "^2",
+            lambda x, y, z: x + " " + y + "^2 " + z,
+            lambda x, y, z: x + " " + y + " " + z + "^2",
+            lambda x, y, z: x + "^2 " + y + " " + z,
+            lambda x, y, z, w: x + " " + y + " " + z + " " + w,
+        ]
     models = []
     x_dot_tests = []
     x_dot_test_preds = []
@@ -670,20 +712,40 @@ def Pareto_scan_ensembling(
         print(i, " / ", num_attractors, ", System = ", attractor_name)
 
         x_train = np.copy(all_sols_train[attractor_name])
+        x_train_list = []
+        t_train_list = []
+        x_test_list = []
+        t_test_list = []
         for j in range(len(x_train)):
-            print(np.shape(x_train), np.shape(x_train[0]))
-            rmse = mean_squared_error(x_train[j], np.zeros(x_train[j].shape), squared=False)
-            x_train_noisy = x_train[j] + np.random.normal(0, rmse / 100.0 * error_level, x_train[j].shape)
-            x_train[j] = x_train_noisy
-        x_test = all_sols_test[attractor_name]
-        t_train = all_t_train[attractor_name]
-        t_test = all_t_test[attractor_name]
+            rmse = mean_squared_error(
+                x_train[j], np.zeros(x_train[j].shape), squared=False
+            )
+            x_train_noisy = x_train[j] + np.random.normal(
+                0, rmse / 100.0 * error_level, x_train[j].shape
+            )
+            x_train_list.append(x_train_noisy)
+            x_test_list.append(all_sols_test[attractor_name][j])
+            t_train_list.append(all_t_train[attractor_name][j])
+            t_test_list.append(all_t_test[attractor_name][j])
+        # x_test = all_sols_test[attractor_name]
+        # t_test = all_t_test[attractor_name]
         if dimension_list[i] == 3:
             input_names = ["x", "y", "z"]
         else:
             input_names = ["x", "y", "z", "w"]
 
         # feature_names = poly_library.fit(x_train).get_feature_names(input_names)
+
+        # Critical step for the weak form -- change the grid to match the system!
+        if weak_form:
+            poly_library = ps.WeakPDELibrary(
+                library_functions=library_functions,
+                function_names=library_function_names,
+                spatiotemporal_grid=all_t_train[attractor_name][0],
+                is_uniform=True,
+                include_bias=True,
+                K=100,
+            )
 
         # Sweep a Pareto front
         (
@@ -695,9 +757,9 @@ def Pareto_scan_ensembling(
             model,
             condition_numbers[i],
         ) = rudy_algorithm2(
-            x_train,
-            x_test,
-            t_train,
+            x_train_list,
+            x_test_list,
+            t_train_list,
             ode_lib=poly_library,
             dtol=dtol,
             optimizer_max_iter=max_iter,
@@ -706,25 +768,36 @@ def Pareto_scan_ensembling(
             l0_pen=l0_penalty,
             alpha=1e-5,
             normalize_columns=normalize_columns,
-            t_test=t_test,
+            t_test=t_test_list,
             input_names=input_names,
+            ensemble=True,
+            n_models=n_models,
+            n_subset=n_subset,
+            replace=replace,
         )
 
-        x_dot_test = model.differentiate(x_test, t=t_test)
-        x_dot_test_pred = model.predict(x_test)
+        print(model.get_feature_names())
+
+        print(np.array(coef_best).shape, np.array(true_coefficients[i]).shape)
+        x_dot_test = model.differentiate(
+            x_test_list, t=t_test_list, multiple_trajectories=True
+        )
+        # print(model.optimizer.Theta_.shape, model.optimizer.coef_.shape, model.optimizer.coef_[0].shape, model.optimizer.coef_)
+        # x_dot_test_pred = model.optimizer.Theta_ @ model.optimizer.coef_.T
+        x_dot_test_pred = model.predict(x_test_list, multiple_trajectories=True)
         models.append(model)
         x_dot_tests.append(x_dot_test)
         x_dot_test_preds.append(x_dot_test_pred)
         best_threshold_values[attractor_name].append(threshold_best)
-        xdot_rmse_errors[attractor_name].append(
-            normalized_RMSE(x_dot_test, x_dot_test_pred)
-        )
+        xdot_rmse_errors[attractor_name].append(err_best)
         xdot_coef_errors[attractor_name].append(
-            coefficient_errors(true_coefficients[i], coef_best)
+            coefficient_errors(true_coefficients[i], np.mean(coef_best, axis=0))
         )
         predicted_coefficients[attractor_name].append(coef_best)
         best_normalized_coef_errors[attractor_name].append(
-            total_coefficient_error_normalized(true_coefficients[i], coef_best)
+            total_coefficient_error_normalized(
+                true_coefficients[i], np.mean(coef_best, axis=0)
+            )
         )
     return (
         xdot_rmse_errors,
@@ -742,19 +815,27 @@ def Pareto_scan_ensembling(
 def nonlinear_terms_from_coefficients(true_coefficients):
     # number of terms that are constant, linear, quadratic, cubic, and quartic
     num_attractors = len(true_coefficients)
-    number_nonlinear_terms = np.zeros((num_attractors + 1, 5))
+    number_nonlinear_terms = np.zeros((num_attractors, 5))
     for i in range(num_attractors):
         dim = true_coefficients[i].shape[0]
         number_nonlinear_terms[i, 0] = np.count_nonzero(true_coefficients[i][:, 0])
-        number_nonlinear_terms[i, 1] = np.count_nonzero(true_coefficients[i][:, 1:dim + 1])
+        number_nonlinear_terms[i, 1] = np.count_nonzero(
+            true_coefficients[i][:, 1 : dim + 1]
+        )
         num_quad = int(comb(2 + dim - 1, dim - 1))
         num_cubic = int(comb(3 + dim - 1, dim - 1))
         num_quartic = int(comb(4 + dim - 1, dim - 1))
         coeff_index = dim + 1 + num_quad
-        number_nonlinear_terms[i, 2] = np.count_nonzero(true_coefficients[i][:, dim + 1:coeff_index])
-        number_nonlinear_terms[i, 3] = np.count_nonzero(true_coefficients[i][:, coeff_index:coeff_index + num_cubic])
+        number_nonlinear_terms[i, 2] = np.count_nonzero(
+            true_coefficients[i][:, dim + 1 : coeff_index]
+        )
+        number_nonlinear_terms[i, 3] = np.count_nonzero(
+            true_coefficients[i][:, coeff_index : coeff_index + num_cubic]
+        )
         coeff_index += num_cubic
-        number_nonlinear_terms[i, 4] = np.count_nonzero(true_coefficients[i][:, coeff_index:])
+        number_nonlinear_terms[i, 4] = np.count_nonzero(
+            true_coefficients[i][:, coeff_index:]
+        )
     return number_nonlinear_terms
 
 
@@ -1030,106 +1111,143 @@ def rudy_algorithm2(
     normalize_columns=True,
     optimizer_max_iter=20,
     input_names=["x", "y", "z"],
+    ensemble=False,
+    n_models=10,
+    n_subset=40,
+    replace=False,
 ):
     """
     # Algorithm to scan over threshold values during Ridge Regression, and select
     # highest performing model on the test set
     """
 
+    n_trajectories = np.array(x_test).shape[0]
+    n_state = np.array(x_test).shape[2]
+    if isinstance(ode_lib, ps.WeakPDELibrary):
+        weak_form = True
+        n_time = ode_lib.K
+    else:
+        weak_form = False
+        n_time = np.array(x_test).shape[1]
+
     # Do an initial least-squares fit to get an initial guess of the coefficients
     # start with initial guess that all coefs are zero
-    optimizer = ps.STLSQ(
-        threshold=0,
-        alpha=alpha,
-        max_iter=optimizer_max_iter,
-        normalize_columns=normalize_columns,
-        ridge_kw={"tol": 1e-10},
+    optimizer = ps.EnsembleOptimizer(
+        opt=ps.STLSQ(
+            threshold=0,
+            alpha=alpha,
+            max_iter=optimizer_max_iter,
+            normalize_columns=normalize_columns,
+            ridge_kw={"tol": 1e-10},
+        ),
+        bagging=ensemble,
+        n_models=n_models,
+        n_subset=n_subset,
+        replace=replace,
+        # ensemble_aggregator=np.mean
     )
-    # optimizer = ps.SR3(
-    #     threshold=dtol,
-    #     max_iter=optimizer_max_iter,
-    #     normalize_columns=normalize_columns,
-    # )
 
     # Compute initial model
     model = ps.SINDy(
         feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
     )
-    model.fit(x_train, t=t_train, quiet=True)
-    model_best = model
+    model.fit(
+        x_train,
+        t=t_train,
+        quiet=True,
+        multiple_trajectories=True,
+    )
     condition_number = np.linalg.cond(optimizer.Theta_)
 
     # Set the L0 penalty based on the condition number of Theta
     l0_penalty = l0_pen  # * np.linalg.cond(optimizer.Theta_)
-    coef_best = optimizer.coef_
-    x_dot_test = model.differentiate(x_test, t=t_test)
-    x_dot_test_pred = model.predict(x_test)
+    coef_best = np.array(optimizer.coef_list)
+    optimizer.coef_ = np.mean(coef_best, axis=0)
+    model_best = model
 
-    # Compute MSE on the testing x_dot data (takes x_test and computes x_dot_test)
-    error_best = normalized_RMSE(
-        x_dot_test, x_dot_test_pred
-    ) + l0_penalty * np.count_nonzero(coef_best)
-    # error_best = model.score(
-    #    x_test, metric=mean_squared_error, squared=False, t=t_test
-    # ) # + l0_penalty * np.count_nonzero(coef_best)
+    # For each model, compute x_dot_test and compute the RMSE error
+    error_new = np.zeros(n_models)
+    error_best = np.zeros(n_models)
 
-    coef_history_ = np.zeros((coef_best.shape[0], coef_best.shape[1], 1 + tol_iter))
-    error_history_ = np.zeros(1 + tol_iter)
-    coef_history_[:, :, 0] = coef_best
-    error_history_[0] = error_best
+    for i in range(n_models):
+        optimizer.coef_ = coef_best[i, :, :]
+        x_dot_test = model.differentiate(x_test, t=t_test, multiple_trajectories=True)
+        x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+        error_best[i] = normalized_RMSE(
+            np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
+            np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
+        ) + l0_penalty * np.count_nonzero(coef_best[i, :, :])
+
+    coef_history_ = np.zeros(
+        (n_models, coef_best.shape[1], coef_best.shape[2], 1 + tol_iter)
+    )
+    error_history_ = np.zeros((n_models, 1 + tol_iter))
+    coef_history_[:, :, :, 0] = coef_best
+    error_history_[:, 0] = error_best
     tol = dtol
     threshold_best = tol
 
     # Loop over threshold values, note needs some coding
     # if not using STLSQ optimizer
     for i in range(tol_iter):
-        optimizer = ps.STLSQ(
-            threshold=tol,
-            alpha=alpha,
-            max_iter=optimizer_max_iter,
-            normalize_columns=normalize_columns,
-            # thresholder='l0'
-            ridge_kw={"tol": 1e-10},
+        optimizer = ps.EnsembleOptimizer(
+            opt=ps.STLSQ(
+                threshold=tol,
+                alpha=alpha,
+                max_iter=optimizer_max_iter,
+                normalize_columns=normalize_columns,
+                ridge_kw={"tol": 1e-10},
+            ),
+            bagging=ensemble,
+            n_models=n_models,
+            n_subset=n_subset,
+            replace=replace,
+            # ensemble_aggregator=np.mean
         )
-        # optimizer = ps.SR3(
-        #     threshold=dtol,
-        #     max_iter=optimizer_max_iter,
-        #     normalize_columns=normalize_columns,
-        # )
         model = ps.SINDy(
             feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
         )
-        model.fit(x_train, t=t_train, quiet=True)
-        coef_new = optimizer.coef_
+        model.fit(
+            x_train,
+            t=t_train,
+            quiet=True,
+            multiple_trajectories=True,
+        )
+
+        # For each model, compute x_dot_test and compute the RMSE error
+        coef_new = np.array(optimizer.coef_list)
         if np.isclose(np.sum(coef_new), 0.0):
             break
-        coef_history_[:, :, i + 1] = coef_new
-        x_dot_test = model.differentiate(x_test, t=t_test)
-        x_dot_test_pred = model.predict(x_test)
-        error_new = normalized_RMSE(
-            x_dot_test, x_dot_test_pred
-        ) + l0_penalty * np.count_nonzero(coef_new)
-        # model.score(
-        #    x_test, metric=mean_squared_error, squared=False, t=t_test
-        # )  # * np.sqrt(np.shape(x_dot_test)[0] * np.shape(x_dot_test)[1])  # + l0_penalty * np.count_nonzero(coef_new)
-        # print(i, tol, dtol, error_best, error_new)
-        error_history_[i + 1] = error_new
+
+        for j in range(n_models):
+            optimizer.coef_ = np.copy(coef_new[j, :, :])
+            model.optimizer.coef_ = np.copy(coef_new[j, :, :])
+            x_dot_test = model.differentiate(
+                x_test, t=t_test, multiple_trajectories=True
+            )
+            # x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            # x_dot_test_pred = optimizer.Theta_ @ coef_new[j, :, :].T
+            error_new[j] = normalized_RMSE(
+                np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
+                np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
+            ) + l0_penalty * np.count_nonzero(coef_new[j, :, :])
+            # print(j, error_new[j], coef_new[j, :, :])
+        # print(i, error_new)
+
+        coef_history_[:, :, :, i + 1] = coef_new
+        error_history_[:, i + 1] = error_new
 
         # If error improves, set the new best coefficients
         # Note < not <= since if all coefficients are zero,
         # this would still keep increasing the threshold!
-        if error_new < error_best:
-            error_best = error_new
-            coef_best = coef_new
+        if np.mean(error_new) < np.mean(error_best):
+            error_best = np.copy(error_new)
+            coef_best = np.copy(coef_new)
             threshold_best = tol
-            #    tol += dtol
-            # tol *= change_factor
+            model.optimizer.coef_ = np.median(coef_new, axis=0)
+            # model.optimizer.coef_ = model.optimizer.coef_[abs(model.optimizer.coef_) > 1e-2]
             model_best = model
-        # else:
-        # tol = tol / (change_factor * 1.1)
-        #    tol = max(0, tol - change_factor * dtol)
-        # dtol = change_factor * dtol / (tol_iter - i)
-        #    tol += change_factor * dtol / (tol_iter - i)  # dtol
         dtol = dtol * change_factor
         tol += dtol
 
@@ -1277,9 +1395,7 @@ def rudy_algorithm4(
 
     # Compute initial model
     model = ps.SINDy(
-        feature_library=ode_lib,
-        optimizer=optimizer,
-        feature_names=input_names
+        feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
     )
     model.fit(x_train, t=t_train, quiet=True)
     model_best = model
@@ -1290,9 +1406,9 @@ def rudy_algorithm4(
     l0_penalty = l0_pen  # * np.linalg.cond(optimizer.Theta_)
     coef_best = optimizer.coef_
 
-    error_best = normalized_RMSE(
-        x_test, x_pred
-    ) + l0_penalty * np.count_nonzero(coef_best)
+    error_best = normalized_RMSE(x_test, x_pred) + l0_penalty * np.count_nonzero(
+        coef_best
+    )
 
     coef_history_ = np.zeros((coef_best.shape[0], coef_best.shape[1], 1 + tol_iter))
     error_history_ = np.zeros(1 + tol_iter)
@@ -1312,9 +1428,7 @@ def rudy_algorithm4(
             ridge_kw={"tol": 1e-10},
         )
         model = ps.SINDy(
-            feature_library=ode_lib,
-            optimizer=optimizer,
-            feature_names=input_names
+            feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
         )
         model.fit(x_train, t=t_train, quiet=True)
         coef_new = optimizer.coef_

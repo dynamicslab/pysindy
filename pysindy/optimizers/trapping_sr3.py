@@ -341,7 +341,7 @@ class TrappingSR3(SR3):
             for j in range(r):
                 for k in range(r):
                     for kk in range(N):
-                        if i == kk and j == k:
+                        if i == k and j == kk:
                             PL_tensor_unsym[i, j, k, kk] = 1.0
 
         # Now symmetrize PL

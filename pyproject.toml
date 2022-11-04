@@ -7,18 +7,22 @@ write_to = "pysindy/version.py"
 
 [tool.black]
 line-length = 88
-exclude = '''
+extend-exclude = '''
 /(
     \.git
   | \.mypy_cache
   | \.venv
+  | .vscode
+  | version.py
   | build
   | dist
+  | env
 )/
 '''
 
 [tool.pytest.ini_options]
 filterwarnings = [
   "ignore::RuntimeWarning",
-  "ignore::UserWarning"
-]
+  "ignore::UserWarning",]
+addopts = '-m "not slow"'
+markers = ["slow"]

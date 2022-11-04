@@ -1,21 +1,25 @@
 -e .
 -r requirements.txt
-pytest
+pytest~=6.0.0
+black
 pytest-cov
 pytest-lazy-fixture
 flake8-builtins-unleashed
 codecov
+cvxpy
 setuptools_scm
 setuptools_scm_git_archive
 jupyter
+jupytext
 notebook
 sphinx >= 2
 sphinxcontrib-apidoc
 sphinx_rtd_theme
 pre-commit
 hypothesis
-sphinx-nbexamples
+nbsphinx
 jupyter_contrib_nbextensions
 pandas
 seaborn
 scs<=2.1.4
+gurobipy>=9.5.1

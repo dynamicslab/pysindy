@@ -19,7 +19,9 @@ from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import SINDyPILibrary
 from pysindy.optimizers import ConstrainedSR3
+from pysindy.optimizers import EnsembleOptimizer
 from pysindy.optimizers import FROLS
+from pysindy.optimizers import MIOSR
 from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import SR3
@@ -96,6 +98,7 @@ def data(request):
         Lasso(fit_intercept=False),
         ElasticNet(fit_intercept=False),
         DummyLinearModel(),
+        MIOSR(),
     ],
 )
 def test_fit(data_derivative_1d, optimizer):
@@ -115,7 +118,7 @@ def test_fit(data_derivative_1d, optimizer):
 
 @pytest.mark.parametrize(
     "optimizer",
-    [STLSQ(), SSR(), SSR(criteria="model_residual"), FROLS(), SR3()],
+    [STLSQ(), SSR(), SSR(criteria="model_residual"), FROLS(), SR3(), MIOSR()],
 )
 def test_not_fitted(optimizer):
     with pytest.raises(NotFittedError):
@@ -155,6 +158,7 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
 def test_sample_weight_optimizers(data_lorenz, optimizer):
@@ -227,6 +231,13 @@ def test_trapping_bad_parameters(params):
         TrappingSR3(**params)
 
 
+def test_trapping_objective_print():
+    # test error in verbose print logic when max_iter < 10
+    opt = TrappingSR3(max_iter=2, verbose=True)
+    arr = np.ones(1)
+    opt._objective(arr, arr, arr, arr, arr, 1)
+
+
 @pytest.mark.parametrize(
     "params",
     [
@@ -271,14 +282,14 @@ def test_sindypi_fit(params):
     x_library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y, z: x * y * z,
-        lambda x, y: x * y ** 2,
-        lambda x: x ** 3,
+        lambda x, y: x * y**2,
+        lambda x: x**3,
         lambda x, y, z, w: x * y * z * w,
-        lambda x, y, z: x * y * z ** 2,
-        lambda x, y: x * y ** 3,
-        lambda x: x ** 4,
+        lambda x, y, z: x * y * z**2,
+        lambda x, y: x * y**3,
+        lambda x: x**4,
     ]
     # initialize a linear polynomial library for x_dot
     x_dot_library_functions = [lambda x: x]
@@ -335,7 +346,7 @@ def test_sr3_quadratic_library(params):
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     library_function_names = [
         lambda x: str(x),
@@ -371,7 +382,7 @@ def test_constrained_sr3_quadratic_library(params):
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     library_function_names = [
         lambda x: str(x),
@@ -473,10 +484,10 @@ def test_trapping_cubic_library():
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y, z: x * y * z,
-        lambda x, y: x ** 2 * y,
-        lambda x: x ** 3,
+        lambda x, y: x**2 * y,
+        lambda x: x**3,
     ]
     library_function_names = [
         lambda x: str(x),
@@ -615,6 +626,7 @@ def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
 def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
+    x_dot = x_dot.reshape(-1, 1)
 
     optimizer_biased = SINDyOptimizer(
         STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=False
@@ -636,6 +648,7 @@ def test_unbias(data_derivative_1d):
 def test_unbias_external(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
+    x_dot = x_dot.reshape(-1, 1)
 
     optimizer_biased = SINDyOptimizer(
         Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=False
@@ -732,7 +745,7 @@ def test_fit_warn(data_derivative_1d, optimizer):
         optimizer.fit(x, x_dot)
 
 
-@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3])
+@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_row_format_constraints(data_linear_combination, optimizer, target_value):
     # Solution is x_dot = x.dot(np.array([[1, 1, 0], [0, 1, 1]]))
@@ -757,7 +770,7 @@ def test_row_format_constraints(data_linear_combination, optimizer, target_value
     )
 
 
-@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3])
+@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_target_format_constraints(data_linear_combination, optimizer, target_value):
     x, x_dot = data_linear_combination
@@ -846,6 +859,41 @@ def test_trapping_inequality_constraints(data_lorenz, params):
     check_is_fitted(model)
 
 
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(target_sparsity=2),
+        dict(target_sparsity=7),
+    ],
+)
+def test_miosr_equality_constraints(data_lorenz, params):
+    x, t = data_lorenz
+    constraint_rhs = np.array([-10.0, 28.0])
+    constraint_matrix = np.zeros((2, 30))
+    constraint_matrix[0, 1] = 1.0
+    constraint_matrix[1, 11] = 1.0
+    feature_names = ["x", "y", "z"]
+
+    opt = MIOSR(
+        constraint_lhs=constraint_matrix,
+        constraint_rhs=constraint_rhs,
+        constraint_order="target",
+        **params,
+    )
+    poly_lib = PolynomialLibrary(degree=2)
+    model = SINDy(
+        optimizer=opt,
+        feature_library=poly_lib,
+        feature_names=feature_names,
+    )
+    model.fit(x, t=t[1] - t[0], unbias=False)
+    assert np.allclose(
+        np.dot(constraint_matrix, (model.coefficients()).flatten()),
+        constraint_rhs,
+        atol=1e-3,
+    )
+
+
 def test_inequality_constraints_reqs():
     constraint_rhs = np.array([-10.0, -2.0])
     constraint_matrix = np.zeros((2, 30))
@@ -870,6 +918,7 @@ def test_inequality_constraints_reqs():
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
 def test_normalize_columns(data_derivative_1d, optimizer):
@@ -895,14 +944,32 @@ def test_normalize_columns(data_derivative_1d, optimizer):
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
-def test_ensemble_odes(data_lorenz, optimizer):
+def test_legacy_ensemble_odes(data_lorenz, optimizer):
     x, t = data_lorenz
     opt = optimizer(normalize_columns=True)
     model = SINDy(optimizer=opt)
     model.fit(x, ensemble=True, n_models=10, n_subset=20)
     assert np.shape(model.coef_list) == (10, 3, 10)
+
+
+@pytest.mark.parametrize(
+    "optimizer_params",
+    (
+        {"library_ensemble": True},
+        {"bagging": True},
+        {"library_ensemble": True, "bagging": True},
+    ),
+)
+def test_ensemble_optimizer(data_lorenz, optimizer_params):
+    x, t = data_lorenz
+    optimizer = EnsembleOptimizer(STLSQ(), **optimizer_params)
+    feature_library = PolynomialLibrary()
+    model = SINDy(feature_library=feature_library, optimizer=optimizer)
+    model.fit(x, t)
+    assert model.coefficients().shape == (3, 10)
 
 
 @pytest.mark.parametrize(
@@ -914,9 +981,10 @@ def test_ensemble_odes(data_lorenz, optimizer):
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
-def test_ensemble_pdes(optimizer):
+def test_legacy_ensemble_pdes(optimizer):
     u = np.random.randn(10, 10, 2)
     t = np.linspace(1, 10, 10)
     x = np.linspace(1, 10, 10)
@@ -963,6 +1031,7 @@ def test_ssr_criteria(data_lorenz):
         SR3,
         ConstrainedSR3,
         TrappingSR3,
+        MIOSR,
     ],
 )
 def test_optimizers_verbose(data_lorenz, optimizer):
@@ -990,3 +1059,11 @@ def test_optimizers_verbose_cvxpy(data_lorenz, optimizer):
     model = optimizer(verbose_cvxpy=True)
     model.fit(x, x_dot)
     check_is_fitted(model)
+
+
+def test_frols_error_linear_dependence():
+    opt = FROLS(normalize_columns=True)
+    x = np.array([[1.0, 1.0]])
+    y = np.array([[1.0, 1.0]])
+    with pytest.raises(ValueError):
+        opt.fit(x, y)

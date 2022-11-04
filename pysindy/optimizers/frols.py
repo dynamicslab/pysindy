@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from sklearn.linear_model import ridge_regression
 
@@ -65,14 +67,14 @@ class FROLS(BaseOptimizer):
     >>> from scipy.integrate import odeint
     >>> from pysindy import SINDy
     >>> from pysindy.optimizers import FROLS
-    >>> lorenz = lambda z,t : [10*(z[1] - z[0]),
-    >>>                        z[0]*(28 - z[2]) - z[1],
-    >>>                        z[0]*z[1] - 8/3*z[2]]
-    >>> t = np.arange(0,2,.002)
-    >>> x = odeint(lorenz, [-8,8,27], t)
+    >>> lorenz = lambda z,t : [10 * (z[1] - z[0]),
+    >>>                        z[0] * (28 - z[2]) - z[1],
+    >>>                        z[0] * z[1] - 8 / 3 * z[2]]
+    >>> t = np.arange(0, 2, .002)
+    >>> x = odeint(lorenz, [-8, 8, 27], t)
     >>> opt = FROLS(threshold=.1, alpha=.5)
     >>> model = SINDy(optimizer=opt)
-    >>> model.fit(x, t=t[1]-t[0])
+    >>> model.fit(x, t=t[1] - t[0])
     >>> model.print()
     x0' = -9.999 1 + 9.999 x0
     x1' = 27.984 1 + -0.996 x0 + -1.000 1 x1
@@ -104,7 +106,14 @@ class FROLS(BaseOptimizer):
         self.verbose = verbose
 
     def _normed_cov(self, a, b):
-        return np.vdot(a, b) / np.vdot(a, a)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=RuntimeWarning)
+            try:
+                return np.vdot(a, b) / np.vdot(a, a)
+            except RuntimeWarning:
+                raise ValueError(
+                    "Trying to orthogonalize linearly dependent columns created NaNs"
+                )
 
     def _select_function(self, x, y, sigma, skip=[]):
         n_features = x.shape[1]
@@ -225,7 +234,7 @@ class FROLS(BaseOptimizer):
                 if self.verbose:
                     coef = self.history_[i, k, :]
                     R2 = np.sum((y[:, k] - np.dot(x, coef).T) ** 2)
-                    L2 = self.alpha * np.sum(coef ** 2)
+                    L2 = self.alpha * np.sum(coef**2)
                     L0 = np.count_nonzero(coef)
                     row = [i, k, R2, L2, L0, l0_penalty * L0, R2 + L2 + l0_penalty * L0]
                     print(

@@ -354,7 +354,7 @@ class TrappingSR3(SR3):
 
     def _set_Ptensors(self, r):
         """Make the projection tensors used for the algorithm."""
-        N = int((r ** 2 + 3 * r) / 2.0)
+        N = int((r**2 + 3 * r) / 2.0)
 
         # delta_{il}delta_{jk}
         PL_tensor = np.zeros((r, r, r, N))
@@ -363,7 +363,7 @@ class TrappingSR3(SR3):
             for j in range(r):
                 for k in range(r):
                     for kk in range(N):
-                        if i == kk and j == k:
+                        if i == k and j == kk:
                             PL_tensor_unsym[i, j, k, kk] = 1.0
 
         # Now symmetrize PL
@@ -512,7 +512,6 @@ class TrappingSR3(SR3):
 
     def _objective(self, x, y, coef_sparse, A, PW, k):
         """Objective function"""
-
         # Compute the errors
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
@@ -526,7 +525,8 @@ class TrappingSR3(SR3):
         alpha_term = 0.5 * np.sum(Qijk ** 2) / self.alpha
         beta_term = 0.5 * np.sum(beta2) / self.beta
 
-        if self.verbose:
+        # convoluted way to print every max_iter / 10 iterations
+        if self.verbose and q % max(1, self.max_iter // 10) == 0:
             row = [
                 k,
                 R2,
@@ -626,7 +626,7 @@ class TrappingSR3(SR3):
         # prox-grad for (A, m)
         # Accelerated prox gradient descent
         if self.accel:
-            tk = (1 + np.sqrt(1 + 4 * tk_previous ** 2)) / 2.0
+            tk = (1 + np.sqrt(1 + 4 * tk_previous**2)) / 2.0
             m_partial = m + (tk_previous - 1.0) / tk * (m - m_prev)
             tk_previous = tk
             mPQ = -np.tensordot(self.PQ_, m_partial, axes=([2], [0])) - np.tensordot(
@@ -678,7 +678,7 @@ class TrappingSR3(SR3):
 
         n_samples, n_features = x.shape
         r = y.shape[1]
-        N = int((r ** 2 + 3 * r) / 2.0)
+        N = int((r**2 + 3 * r) / 2.0)
 
         if self.mod_matrix is None:
             self.mod_matrix = np.eye(r)

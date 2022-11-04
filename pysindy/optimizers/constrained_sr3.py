@@ -1,6 +1,12 @@
 import warnings
 
-import cvxpy as cp
+try:
+    import cvxpy as cp
+
+    cvxpy_flag = True
+except ImportError:
+    cvxpy_flag = False
+    pass
 import numpy as np
 from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
@@ -12,7 +18,7 @@ from .sr3 import SR3
 
 class ConstrainedSR3(SR3):
     """
-    Sparse relaxed regularized regression with linear equality constraints.
+    Sparse relaxed regularized regression with linear (in)equality constraints.
 
     Attempts to minimize the objective function
 
@@ -193,6 +199,11 @@ class ConstrainedSR3(SR3):
             self.unbias = False
             self.constraint_order = constraint_order
 
+        if inequality_constraints and not cvxpy_flag:
+            raise ValueError(
+                "Cannot use inequality constraints without cvxpy installed."
+            )
+
         if inequality_constraints:
             self.max_iter = max(10000, max_iter)  # max iterations for CVXPY
 
@@ -305,7 +316,7 @@ class ConstrainedSR3(SR3):
             R2 *= trimming_array.reshape(x.shape[0], 1)
 
         if self.thresholds is None:
-            regularization = self.reg(coef_full, self.threshold ** 2 / self.nu)
+            regularization = self.reg(coef_full, self.threshold**2 / self.nu)
             if print_ind == 0 and self.verbose:
                 row = [
                     q,
@@ -320,7 +331,7 @@ class ConstrainedSR3(SR3):
                 )
             return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
         else:
-            regularization = self.reg(coef_full, self.thresholds ** 2 / self.nu)
+            regularization = self.reg(coef_full, self.thresholds**2 / self.nu)
             if print_ind == 0 and self.verbose:
                 row = [
                     q,

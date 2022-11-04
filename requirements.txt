@@ -1,6 +1,6 @@
-scikit-learn[alldeps]>=0.23
+scikit-learn>=0.23
 numpy
 scipy
 derivative
-cvxpy
 matplotlib
+cmake

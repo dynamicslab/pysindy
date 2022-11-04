@@ -1,6 +1,8 @@
 """
 Shared pytest fixtures for unit tests.
 """
+from pathlib import Path
+
 import numpy as np
 import pytest
 from scipy.integrate import solve_ivp
@@ -12,12 +14,34 @@ from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import GeneralizedLibrary
 from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
-from pysindy.feature_library import SINDyPILibrary
 from pysindy.utils.odes import logistic_map
 from pysindy.utils.odes import logistic_map_control
 from pysindy.utils.odes import logistic_map_multicontrol
 from pysindy.utils.odes import lorenz
 from pysindy.utils.odes import lorenz_control
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--external-notebook",
+        action="append",
+        default=[],
+        help=(
+            "name of notebook to test.  Only valid if running"
+            " test_notebooks.test_external"
+        ),
+    )
+
+
+def pytest_generate_tests(metafunc):
+    if "external_notebook" in metafunc.fixturenames:
+        metafunc.parametrize(
+            "external_notebook",
+            [
+                Path(f.lstrip('"').rstrip('"'))
+                for f in metafunc.config.getoption("external_notebook")
+            ],
+        )
 
 
 @pytest.fixture
@@ -129,7 +153,7 @@ def data_discrete_time_multiple_trajectories():
 
 @pytest.fixture
 def data_1d_random_pde():
-    n = 10
+    n = 100
     t = np.linspace(0, 10, n)
     dt = t[1] - t[0]
     x = np.linspace(0, 10, n)
@@ -208,7 +232,7 @@ def data_2d_resolved_pde():
 @pytest.fixture
 def data_derivative_1d():
     x = 2 * np.linspace(1, 100, 100)
-    x_dot = 2 * np.ones(100).reshape(-1, 1)
+    x_dot = 2 * np.ones(100)
     return x, x_dot
 
 
@@ -216,7 +240,7 @@ def data_derivative_1d():
 def data_derivative_quasiperiodic_1d():
     t = np.arange(1000) * 2 * np.pi / 1000
     x = 2 * np.sin(t)
-    x_dot = 2 * np.cos(t).reshape(-1, 1)
+    x_dot = 2 * np.cos(t)
     return t, x, x_dot
 
 
@@ -259,7 +283,7 @@ def data_2dspatial():
 def data_custom_library():
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x: 0 * x,
         lambda x, y: x * y,
     ]
@@ -279,7 +303,7 @@ def data_custom_library():
 def data_custom_library_bias():
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x: 0 * x,
         lambda x, y: x * y,
     ]
@@ -302,7 +326,7 @@ def data_quadratic_library():
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
-        lambda x: x ** 2,
+        lambda x: x**2,
     ]
     function_names = [
         lambda x: str(x),
@@ -330,23 +354,22 @@ def data_generalized_library():
 def data_sindypi_library():
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y: x * y,
     ]
-    x_dot_library_functions = [lambda x: x]
     function_names = [
         lambda s: str(s),
         lambda s: str(s) + "^2",
         lambda s, t: str(s) + " " + str(t),
-        lambda s: str(s),
     ]
     t = np.linspace(0, 5, 500)
 
-    return SINDyPILibrary(
+    return PDELibrary(
         library_functions=library_functions,
-        x_dot_library_functions=x_dot_library_functions,
         function_names=function_names,
-        t=t,
+        temporal_grid=t,
+        implicit_terms=True,
+        derivative_order=1,
     )
 
 
@@ -354,7 +377,7 @@ def data_sindypi_library():
 def data_ode_library():
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y: x * y,
     ]
     function_names = [
@@ -371,10 +394,10 @@ def data_ode_library():
 
 @pytest.fixture
 def data_pde_library():
-    spatial_grid = np.linspace(0, 10)
+    spatial_grid = np.linspace(0, 10, 500)
     library_functions = [
         lambda x: x,
-        lambda x: x ** 2,
+        lambda x: x**2,
         lambda x, y: x * y,
     ]
     function_names = [
@@ -441,7 +464,7 @@ def data_lorenz_c_1d():
 @pytest.fixture
 def data_lorenz_c_2d():
     def u_fun(t):
-        return np.column_stack([np.sin(2 * t), t ** 2])
+        return np.column_stack([np.sin(2 * t), t**2])
 
     t = np.linspace(0, 5, 500)
     x0 = [8, 27, -7]

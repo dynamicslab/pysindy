@@ -526,7 +526,7 @@ class TrappingSR3(SR3):
         beta_term = 0.5 * np.sum(beta2) / self.beta
 
         # convoluted way to print every max_iter / 10 iterations
-        if self.verbose and q % max(1, self.max_iter // 10) == 0:
+        if self.verbose and k % max(1, self.max_iter // 10) == 0:
             row = [
                 k,
                 R2,
@@ -562,6 +562,7 @@ class TrappingSR3(SR3):
         elif self.thresholder.lower() == "weighted_l2":
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+
         # new terms minimizing quadratic piece ||P^Q @ xi||_2^2
         Q = np.reshape(self.PQ_, (r * r * r, N * r))
         cost = cost + cp.sum_squares(Q @ xi) / self.alpha

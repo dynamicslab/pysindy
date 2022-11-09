@@ -1,4 +1,5 @@
 import inspect
+import time
 import warnings
 
 import dysts.flows as flows
@@ -6,6 +7,7 @@ import numpy as np
 from dysts.analysis import sample_initial_conditions
 from matplotlib import pyplot as plt
 from scipy.special import comb
+from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_squared_error
 
 import pysindy as ps
@@ -634,6 +636,7 @@ def Pareto_scan_ensembling(
     n_subset=40,
     replace=False,
     weak_form=False,
+    algorithm="STLSQ",
 ):
     """
     Stitch all the training trajectories together and then subsample
@@ -665,7 +668,7 @@ def Pareto_scan_ensembling(
     else:
         dtol = 1e-6
 
-    max_iter = 100
+    max_iter = 1000
     if not weak_form:
         poly_library = ps.PolynomialLibrary(degree=4)
     else:
@@ -707,6 +710,7 @@ def Pareto_scan_ensembling(
     x_dot_tests = []
     x_dot_test_preds = []
     condition_numbers = np.zeros(num_attractors)
+    t_start = time.time()
 
     for i, attractor_name in enumerate(systems_list):
         print(i, " / ", num_attractors, ", System = ", attractor_name)
@@ -747,34 +751,116 @@ def Pareto_scan_ensembling(
                 K=100,
             )
 
-        # Sweep a Pareto front
-        (
-            coef_best,
-            err_best,
-            coef_history,
-            err_history,
-            threshold_best,
-            model,
-            condition_numbers[i],
-        ) = rudy_algorithm2(
-            x_train_list,
-            x_test_list,
-            t_train_list,
-            ode_lib=poly_library,
-            dtol=dtol,
-            optimizer_max_iter=max_iter,
-            tol_iter=tol_iter,
-            change_factor=1.1,
-            l0_pen=l0_penalty,
-            alpha=1e-5,
-            normalize_columns=normalize_columns,
-            t_test=t_test_list,
-            input_names=input_names,
-            ensemble=True,
-            n_models=n_models,
-            n_subset=n_subset,
-            replace=replace,
-        )
+        if algorithm == "MIOSR":
+            # Sweep a Pareto front
+            (
+                coef_best,
+                err_best,
+                coef_history,
+                err_history,
+                threshold_best,
+                model,
+                condition_numbers[i],
+            ) = rudy_algorithm_miosr(
+                x_train_list,
+                x_test_list,
+                t_train_list,
+                ode_lib=poly_library,
+                l0_pen=l0_penalty,
+                alpha=1e-5,
+                normalize_columns=normalize_columns,
+                t_test=t_test_list,
+                input_names=input_names,
+                ensemble=True,
+                n_models=n_models,
+                n_subset=n_subset,
+                replace=replace,
+            )
+        elif algorithm == "SR3":
+            # Sweep a Pareto front
+            (
+                coef_best,
+                err_best,
+                coef_history,
+                err_history,
+                threshold_best,
+                model,
+                condition_numbers[i],
+            ) = rudy_algorithm_sr3(
+                x_train_list,
+                x_test_list,
+                t_train_list,
+                ode_lib=poly_library,
+                dtol=dtol,
+                optimizer_max_iter=max_iter,
+                tol_iter=tol_iter,
+                change_factor=1.1,
+                l0_pen=l0_penalty,
+                normalize_columns=normalize_columns,
+                t_test=t_test_list,
+                input_names=input_names,
+                ensemble=True,
+                n_models=n_models,
+                n_subset=n_subset,
+                replace=replace,
+            )
+        elif algorithm == "Lasso":
+            # Sweep a Pareto front
+            (
+                coef_best,
+                err_best,
+                coef_history,
+                err_history,
+                threshold_best,
+                model,
+                condition_numbers[i],
+            ) = rudy_algorithm_lasso(
+                x_train_list,
+                x_test_list,
+                t_train_list,
+                ode_lib=poly_library,
+                dtol=dtol,
+                optimizer_max_iter=max_iter,
+                tol_iter=tol_iter,
+                change_factor=1.1,
+                l0_pen=l0_penalty,
+                normalize_columns=normalize_columns,
+                t_test=t_test_list,
+                input_names=input_names,
+                ensemble=True,
+                n_models=n_models,
+                n_subset=n_subset,
+                replace=replace,
+            )
+        else:
+            # Sweep a Pareto front
+            (
+                coef_best,
+                err_best,
+                coef_history,
+                err_history,
+                threshold_best,
+                model,
+                condition_numbers[i],
+            ) = rudy_algorithm2(
+                x_train_list,
+                x_test_list,
+                t_train_list,
+                ode_lib=poly_library,
+                dtol=dtol,
+                optimizer_max_iter=max_iter,
+                tol_iter=tol_iter,
+                change_factor=1.1,
+                l0_pen=l0_penalty,
+                alpha=1e-5,
+                normalize_columns=normalize_columns,
+                t_test=t_test_list,
+                input_names=input_names,
+                ensemble=True,
+                n_models=n_models,
+                n_subset=n_subset,
+                replace=replace,
+            )
 
         print(model.get_feature_names())
 
@@ -799,6 +885,8 @@ def Pareto_scan_ensembling(
                 true_coefficients[i], np.mean(coef_best, axis=0)
             )
         )
+    t_end = time.time()
+    print("Total time = ", t_end - t_start)
     return (
         xdot_rmse_errors,
         xdot_coef_errors,
@@ -1257,6 +1345,483 @@ def rudy_algorithm2(
         coef_history_,
         error_history_,
         threshold_best,
+        model_best,
+        condition_number,
+    )
+
+
+def rudy_algorithm_lasso(
+    x_train,
+    x_test,
+    t_train,
+    t_test,
+    ode_lib,
+    dtol,
+    alpha=1e-5,
+    tol_iter=25,
+    change_factor=2,
+    l0_pen=1e-3,
+    normalize_columns=True,
+    optimizer_max_iter=20,
+    input_names=["x", "y", "z"],
+    ensemble=False,
+    n_models=10,
+    n_subset=40,
+    replace=False,
+):
+    """
+    # Algorithm to scan over threshold values during Ridge Regression, and select
+    # highest performing model on the test set
+    """
+
+    n_trajectories = np.array(x_test).shape[0]
+    n_state = np.array(x_test).shape[2]
+    if isinstance(ode_lib, ps.WeakPDELibrary):
+        weak_form = True
+        n_time = ode_lib.K
+    else:
+        weak_form = False
+        n_time = np.array(x_test).shape[1]
+
+    # Do an initial least-squares fit to get an initial guess of the coefficients
+    # start with initial guess that all coefs are zero
+    optimizer = ps.EnsembleOptimizer(
+        opt=Lasso(
+            alpha=0, max_iter=optimizer_max_iter, fit_intercept=False
+        ),  # currently ignoring normalize_columns parameter
+        bagging=ensemble,
+        n_models=n_models,
+        n_subset=n_subset,
+        replace=replace,
+        # ensemble_aggregator=np.mean
+    )
+
+    # Compute initial model
+    model = ps.SINDy(
+        feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+    )
+    model.fit(
+        x_train,
+        t=t_train,
+        quiet=True,
+        multiple_trajectories=True,
+    )
+    condition_number = np.linalg.cond(optimizer.Theta_)
+
+    # Set the L0 penalty based on the condition number of Theta
+    l0_penalty = l0_pen  # * np.linalg.cond(optimizer.Theta_)
+    coef_best = np.array(optimizer.coef_list)
+    optimizer.coef_ = np.mean(coef_best, axis=0)
+    model_best = model
+
+    # For each model, compute x_dot_test and compute the RMSE error
+    error_new = np.zeros(n_models)
+    error_best = np.zeros(n_models)
+
+    for i in range(n_models):
+        optimizer.coef_ = coef_best[i, :, :]
+        x_dot_test = model.differentiate(x_test, t=t_test, multiple_trajectories=True)
+        x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+        error_best[i] = normalized_RMSE(
+            np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
+            np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
+        ) + l0_penalty * np.count_nonzero(coef_best[i, :, :])
+
+    coef_history_ = np.zeros(
+        (n_models, coef_best.shape[1], coef_best.shape[2], 1 + tol_iter)
+    )
+    error_history_ = np.zeros((n_models, 1 + tol_iter))
+    coef_history_[:, :, :, 0] = coef_best
+    error_history_[:, 0] = error_best
+    tol = dtol
+    threshold_best = tol
+
+    # Loop over threshold values, note needs some coding
+    # if not using STLSQ optimizer
+    for i in range(tol_iter):
+        optimizer = ps.EnsembleOptimizer(
+            opt=Lasso(alpha=tol, max_iter=optimizer_max_iter, fit_intercept=False),
+            bagging=ensemble,
+            n_models=n_models,
+            n_subset=n_subset,
+            replace=replace,
+            # ensemble_aggregator=np.mean
+        )
+        model = ps.SINDy(
+            feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+        )
+        model.fit(
+            x_train,
+            t=t_train,
+            quiet=True,
+            multiple_trajectories=True,
+        )
+
+        # For each model, compute x_dot_test and compute the RMSE error
+        coef_new = np.array(optimizer.coef_list)
+        if np.isclose(np.sum(coef_new), 0.0):
+            break
+
+        for j in range(n_models):
+            optimizer.coef_ = np.copy(coef_new[j, :, :])
+            model.optimizer.coef_ = np.copy(coef_new[j, :, :])
+            x_dot_test = model.differentiate(
+                x_test, t=t_test, multiple_trajectories=True
+            )
+            # x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            # x_dot_test_pred = optimizer.Theta_ @ coef_new[j, :, :].T
+            error_new[j] = normalized_RMSE(
+                np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
+                np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
+            ) + l0_penalty * np.count_nonzero(coef_new[j, :, :])
+            # print(j, error_new[j], coef_new[j, :, :])
+        # print(i, error_new)
+
+        coef_history_[:, :, :, i + 1] = coef_new
+        error_history_[:, i + 1] = error_new
+
+        # If error improves, set the new best coefficients
+        # Note < not <= since if all coefficients are zero,
+        # this would still keep increasing the threshold!
+        if np.mean(error_new) < np.mean(error_best):
+            error_best = np.copy(error_new)
+            coef_best = np.copy(coef_new)
+            threshold_best = tol
+            model.optimizer.coef_ = np.median(coef_new, axis=0)
+            # model.optimizer.coef_ = model.optimizer.coef_[abs(model.optimizer.coef_) > 1e-2]
+            model_best = model
+        dtol = dtol * change_factor
+        tol += dtol
+
+    return (
+        coef_best,
+        error_best,
+        coef_history_,
+        error_history_,
+        threshold_best,
+        model_best,
+        condition_number,
+    )
+
+
+def rudy_algorithm_sr3(
+    x_train,
+    x_test,
+    t_train,
+    t_test,
+    ode_lib,
+    dtol,
+    tol_iter=25,
+    change_factor=2,
+    l0_pen=1e-3,
+    normalize_columns=True,
+    optimizer_max_iter=20,
+    input_names=["x", "y", "z"],
+    ensemble=False,
+    n_models=10,
+    n_subset=40,
+    replace=False,
+):
+    """
+    # Algorithm to scan over threshold values during Ridge Regression, and select
+    # highest performing model on the test set
+    """
+
+    n_trajectories = np.array(x_test).shape[0]
+    n_state = np.array(x_test).shape[2]
+    if isinstance(ode_lib, ps.WeakPDELibrary):
+        weak_form = True
+        n_time = ode_lib.K
+    else:
+        weak_form = False
+        n_time = np.array(x_test).shape[1]
+
+    # Do an initial least-squares fit to get an initial guess of the coefficients
+    # start with initial guess that all coefs are zero
+    optimizer = ps.EnsembleOptimizer(
+        opt=ps.SR3(
+            threshold=0,
+            max_iter=optimizer_max_iter,
+            normalize_columns=normalize_columns,
+        ),
+        bagging=ensemble,
+        n_models=n_models,
+        n_subset=n_subset,
+        replace=replace,
+        # ensemble_aggregator=np.mean
+    )
+
+    # Compute initial model
+    model = ps.SINDy(
+        feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+    )
+    model.fit(
+        x_train,
+        t=t_train,
+        quiet=True,
+        multiple_trajectories=True,
+    )
+    condition_number = np.linalg.cond(optimizer.Theta_)
+
+    # Set the L0 penalty based on the condition number of Theta
+    l0_penalty = l0_pen  # * np.linalg.cond(optimizer.Theta_)
+    coef_best = np.array(optimizer.coef_list)
+    optimizer.coef_ = np.mean(coef_best, axis=0)
+    model_best = model
+
+    # For each model, compute x_dot_test and compute the RMSE error
+    error_new = np.zeros(n_models)
+    error_best = np.zeros(n_models)
+
+    for i in range(n_models):
+        optimizer.coef_ = coef_best[i, :, :]
+        x_dot_test = model.differentiate(x_test, t=t_test, multiple_trajectories=True)
+        x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+        error_best[i] = normalized_RMSE(
+            np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
+            np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
+        ) + l0_penalty * np.count_nonzero(coef_best[i, :, :])
+
+    coef_history_ = np.zeros(
+        (n_models, coef_best.shape[1], coef_best.shape[2], 1 + tol_iter)
+    )
+    error_history_ = np.zeros((n_models, 1 + tol_iter))
+    coef_history_[:, :, :, 0] = coef_best
+    error_history_[:, 0] = error_best
+    tol = dtol
+    threshold_best = tol
+
+    # Loop over threshold values, note needs some coding
+    # if not using STLSQ optimizer
+    for i in range(tol_iter):
+        optimizer = ps.EnsembleOptimizer(
+            opt=ps.SR3(
+                threshold=tol,
+                max_iter=optimizer_max_iter,
+                normalize_columns=normalize_columns,
+            ),
+            bagging=ensemble,
+            n_models=n_models,
+            n_subset=n_subset,
+            replace=replace,
+            # ensemble_aggregator=np.mean
+        )
+        model = ps.SINDy(
+            feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+        )
+        model.fit(
+            x_train,
+            t=t_train,
+            quiet=True,
+            multiple_trajectories=True,
+        )
+
+        # For each model, compute x_dot_test and compute the RMSE error
+        coef_new = np.array(optimizer.coef_list)
+        if np.isclose(np.sum(coef_new), 0.0):
+            break
+
+        for j in range(n_models):
+            optimizer.coef_ = np.copy(coef_new[j, :, :])
+            model.optimizer.coef_ = np.copy(coef_new[j, :, :])
+            x_dot_test = model.differentiate(
+                x_test, t=t_test, multiple_trajectories=True
+            )
+            # x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            # x_dot_test_pred = optimizer.Theta_ @ coef_new[j, :, :].T
+            error_new[j] = normalized_RMSE(
+                np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
+                np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
+            ) + l0_penalty * np.count_nonzero(coef_new[j, :, :])
+            # print(j, error_new[j], coef_new[j, :, :])
+        # print(i, error_new)
+
+        coef_history_[:, :, :, i + 1] = coef_new
+        error_history_[:, i + 1] = error_new
+
+        # If error improves, set the new best coefficients
+        # Note < not <= since if all coefficients are zero,
+        # this would still keep increasing the threshold!
+        if np.mean(error_new) < np.mean(error_best):
+            error_best = np.copy(error_new)
+            coef_best = np.copy(coef_new)
+            threshold_best = tol
+            model.optimizer.coef_ = np.median(coef_new, axis=0)
+            # model.optimizer.coef_ = model.optimizer.coef_[abs(model.optimizer.coef_) > 1e-2]
+            model_best = model
+        dtol = dtol * change_factor
+        tol += dtol
+
+    return (
+        coef_best,
+        error_best,
+        coef_history_,
+        error_history_,
+        threshold_best,
+        model_best,
+        condition_number,
+    )
+
+
+def rudy_algorithm_miosr(
+    x_train,
+    x_test,
+    t_train,
+    t_test,
+    ode_lib,
+    alpha=1e-5,
+    l0_pen=1e-3,
+    normalize_columns=True,
+    input_names=["x", "y", "z"],
+    ensemble=False,
+    n_models=10,
+    n_subset=40,
+    replace=False,
+):
+    """
+    # Algorithm to scan over threshold values during Ridge Regression, and select
+    # highest performing model on the test set
+    """
+
+    n_trajectories = np.array(x_test).shape[0]
+    n_state = np.array(x_test).shape[2]
+    if isinstance(ode_lib, ps.WeakPDELibrary):
+        weak_form = True
+        n_time = ode_lib.K
+    else:
+        weak_form = False
+        n_time = np.array(x_test).shape[1]
+
+    # Do an initial least-squares fit to get an initial guess of the coefficients
+    # start with initial guess that all coefs are zero
+    optimizer = ps.EnsembleOptimizer(
+        opt=ps.MIOSR(
+            target_sparsity=1,
+            alpha=alpha,
+            normalize_columns=normalize_columns,
+            regression_timeout=100,
+        ),
+        bagging=ensemble,
+        n_models=n_models,
+        n_subset=n_subset,
+        replace=replace,
+        # ensemble_aggregator=np.mean
+    )
+
+    # Compute initial model
+    model = ps.SINDy(
+        feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+    )
+    model.fit(
+        x_train,
+        t=t_train,
+        quiet=True,
+        multiple_trajectories=True,
+    )
+    condition_number = np.linalg.cond(optimizer.Theta_)
+    print(np.shape(optimizer.Theta_))
+    tol_iter = np.shape(optimizer.Theta_)[1] - 1
+
+    # Set the L0 penalty based on the condition number of Theta
+    l0_penalty = l0_pen  # * np.linalg.cond(optimizer.Theta_)
+    coef_best = np.array(optimizer.coef_list)
+    optimizer.coef_ = np.mean(coef_best, axis=0)
+    model_best = model
+
+    # For each model, compute x_dot_test and compute the RMSE error
+    error_new = np.zeros(n_models)
+    error_best = np.zeros(n_models)
+
+    for i in range(n_models):
+        optimizer.coef_ = coef_best[i, :, :]
+        x_dot_test = model.differentiate(x_test, t=t_test, multiple_trajectories=True)
+        x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+        error_best[i] = normalized_RMSE(
+            np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
+            np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
+        ) + l0_penalty * np.count_nonzero(coef_best[i, :, :])
+
+    coef_history_ = np.zeros(
+        (n_models, coef_best.shape[1], coef_best.shape[2], 1 + tol_iter)
+    )
+    error_history_ = np.zeros((n_models, 1 + tol_iter))
+    coef_history_[:, :, :, 0] = coef_best
+    error_history_[:, 0] = error_best
+    sparsity_best = 0
+
+    # Loop over threshold values, note needs some coding
+    # if not using STLSQ optimizer
+    for i in range(tol_iter):
+        # print(i)
+        optimizer = ps.EnsembleOptimizer(
+            opt=ps.MIOSR(
+                target_sparsity=i + 1,
+                alpha=alpha,
+                normalize_columns=normalize_columns,
+                regression_timeout=0.5,
+            ),
+            bagging=ensemble,
+            n_models=n_models,
+            n_subset=n_subset,
+            replace=replace,
+            # ensemble_aggregator=np.mean
+        )
+        model = ps.SINDy(
+            feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
+        )
+        # t_start = time.time()
+        model.fit(
+            x_train,
+            t=t_train,
+            quiet=True,
+            multiple_trajectories=True,
+        )
+        # t_end = time.time()
+        # print(t_end - t_start)
+
+        # For each model, compute x_dot_test and compute the RMSE error
+        coef_new = np.array(optimizer.coef_list)
+        if np.isclose(np.sum(coef_new), 0.0):
+            break
+
+        for j in range(n_models):
+            optimizer.coef_ = np.copy(coef_new[j, :, :])
+            model.optimizer.coef_ = np.copy(coef_new[j, :, :])
+            x_dot_test = model.differentiate(
+                x_test, t=t_test, multiple_trajectories=True
+            )
+            # x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            # x_dot_test_pred = optimizer.Theta_ @ coef_new[j, :, :].T
+            error_new[j] = normalized_RMSE(
+                np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
+                np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
+            ) + l0_penalty * np.count_nonzero(coef_new[j, :, :])
+            # print(j, error_new[j], coef_new[j, :, :])
+        # print(i, error_new)
+
+        coef_history_[:, :, :, i + 1] = coef_new
+        error_history_[:, i + 1] = error_new
+
+        # If error improves, set the new best coefficients
+        # Note < not <= since if all coefficients are zero,
+        # this would still keep increasing the threshold!
+        if np.mean(error_new) < np.mean(error_best):
+            error_best = np.copy(error_new)
+            coef_best = np.copy(coef_new)
+            sparsity_best = i
+            model.optimizer.coef_ = np.median(coef_new, axis=0)
+            # model.optimizer.coef_ = model.optimizer.coef_[abs(model.optimizer.coef_) > 1e-2]
+            model_best = model
+
+    return (
+        coef_best,
+        error_best,
+        coef_history_,
+        error_history_,
+        sparsity_best,
         model_best,
         condition_number,
     )

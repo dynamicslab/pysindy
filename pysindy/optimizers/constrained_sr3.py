@@ -162,7 +162,9 @@ class ConstrainedSR3(SR3):
         copy_X=True,
         initial_guess=None,
         thresholds=None,
+        equality_constraints=False,
         inequality_constraints=False,
+        constraint_separation_index=0,
         verbose=False,
         verbose_cvxpy=False,
     ):
@@ -198,6 +200,10 @@ class ConstrainedSR3(SR3):
             self.constraint_rhs = constraint_rhs
             self.unbias = False
             self.constraint_order = constraint_order
+
+            if equality_constraints and inequality_constraints:
+                self.constraint_separation_index = constraint_separation_index
+                self.equality_constraints = equality_constraints
 
         if inequality_constraints and not cvxpy_flag:
             raise ValueError(
@@ -250,7 +256,14 @@ class ConstrainedSR3(SR3):
         elif self.thresholder.lower() == "weighted_l2":
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
         if self.use_constraints:
-            if self.inequality_constraints:
+            if self.inequality_constraints and self.equality_constraints:
+                # Process equality constraints then inequality constraints
+                prob = cp.Problem(
+                    cp.Minimize(cost),
+                    [self.constraint_lhs[:self.constraint_separation_index, :] @ xi <= self.constraint_rhs[:self.constraint_separation_index],
+                     self.constraint_lhs[self.constraint_separation_index:, :] @ xi == self.constraint_rhs[self.constraint_separation_index:]],
+                )
+            elif self.inequality_constraints:
                 prob = cp.Problem(
                     cp.Minimize(cost),
                     [self.constraint_lhs @ xi <= self.constraint_rhs],

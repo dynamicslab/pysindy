@@ -8,9 +8,6 @@ from sklearn.utils.validation import check_is_fitted
 
 from .base import BaseOptimizer
 
-warnings.filterwarnings("ignore", category=LinAlgWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-
 
 class STLSQ(BaseOptimizer):
     """Sequentially thresholded least squares algorithm.
@@ -191,20 +188,20 @@ class STLSQ(BaseOptimizer):
 
         for k in range(self.max_iter):
             if np.count_nonzero(ind) == 0:
-                # warnings.warn(
-                #     "Sparsity parameter is too big ({}) and eliminated all "
-                #     "coefficients".format(self.threshold)
-                # )
+                warnings.warn(
+                    "Sparsity parameter is too big ({}) and eliminated all "
+                    "coefficients".format(self.threshold)
+                )
                 coef = np.zeros((n_targets, n_features))
                 break
 
             coef = np.zeros((n_targets, n_features))
             for i in range(n_targets):
                 if np.count_nonzero(ind[i]) == 0:
-                    # warnings.warn(
-                    #    "Sparsity parameter is too big ({}) and eliminated all "
-                    #    "coefficients".format(self.threshold)
-                    # )
+                    warnings.warn(
+                        "Sparsity parameter is too big ({}) and eliminated all "
+                        "coefficients".format(self.threshold)
+                    )
                     continue
                 coef_i = self._regress(x[:, ind[i]], y[:, i])
                 coef_i, ind_i = self._sparse_coefficients(

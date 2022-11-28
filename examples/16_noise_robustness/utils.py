@@ -406,7 +406,6 @@ def Pareto_scan_ensembling(
     all_t_train,
     all_sols_test,
     all_t_test,
-    l0_penalty=1e-5,
     normalize_columns=False,
     error_level=0,  # as a percent of the RMSE of the training data
     tol_iter=300,

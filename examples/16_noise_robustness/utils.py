@@ -4,236 +4,10 @@ import warnings
 import dysts.flows as flows
 import numpy as np
 from dysts.analysis import sample_initial_conditions
-from matplotlib import pyplot as plt
 from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_squared_error
 
 import pysindy as ps
-
-
-def plot_coef_errors(
-    all_sols_train,
-    best_normalized_coef_errors,
-    xdot_rmse_errors,
-    best_threshold_values,
-    scale_list,
-    systems_list,
-    normalize_columns=True,
-):
-    # Count up number of systems that can be successfully identified to 10% total coefficient error
-    num_attractors = len(systems_list)
-    coef_summary = np.zeros(num_attractors)
-    for i, attractor_name in enumerate(all_sols_train):
-        coef_summary[i] = best_normalized_coef_errors[attractor_name][0] < 0.1
-
-    print(
-        "# of dynamical systems that have < 10% coefficient error in the fit, ",
-        "when , error * 100, % Gaussian noise is added to every trajectory point ",
-        int(np.sum(coef_summary)),
-        " / ",
-        len(systems_list),
-    )
-
-    plt.figure(figsize=(20, 2))
-    for i, attractor_name in enumerate(all_sols_train):
-        plt.scatter(
-            i,
-            best_normalized_coef_errors[attractor_name][0],
-            c="r",
-            label="Avg. normalized coef errors",
-        )
-        plt.scatter(
-            i,
-            abs(np.array(xdot_rmse_errors[attractor_name])),
-            c="g",
-            label="Avg. RMSE errors",
-        )
-        plt.scatter(
-            i, best_threshold_values[attractor_name], c="b", label="Avg. best threshold"
-        )
-    plt.grid(True)
-    plt.yscale("log")
-    plt.plot(
-        np.linspace(-0.5, num_attractors + 1, num_attractors),
-        0.1 * np.ones(num_attractors),
-        "k--",
-        label="10% error",
-    )
-    plt.legend(
-        ["10% normalized error", "$E_{coef}$", "$E_{RMSE}$", "Optimal threshold"],
-        framealpha=1.0,
-        ncol=4,
-        fontsize=13,
-    )
-    ax = plt.gca()
-    plt.xticks(np.arange(num_attractors), rotation="vertical", fontsize=16)
-    plt.xlim(-0.5, num_attractors + 1)
-    systems_list_cleaned = []
-    for i, system in enumerate(systems_list):
-        if system == "GuckenheimerHolmes":
-            systems_list_cleaned.append("GuckenHolmes")
-        elif system == "NuclearQuadrupole":
-            systems_list_cleaned.append("NuclearQuad")
-        elif system == "RabinovichFabrikant":
-            systems_list_cleaned.append("RabFabrikant")
-        elif system == "KawczynskiStrizhak":
-            systems_list_cleaned.append("KawcStrizhak")
-        elif system == "RikitakeDynamo":
-            systems_list_cleaned.append("RikiDynamo")
-        elif system == "ShimizuMorioka":
-            systems_list_cleaned.append("ShMorioka")
-        elif system == "HindmarshRose":
-            systems_list_cleaned.append("Hindmarsh")
-        elif system == "RayleighBenard":
-            systems_list_cleaned.append("RayBenard")
-        else:
-            systems_list_cleaned.append(system)
-    ax.set_xticklabels(np.array(systems_list_cleaned))
-    if normalize_columns:
-        plt.ylim(1e-4, 1e4)
-    else:
-        plt.ylim(1e-4, 1e1)
-    plt.yticks(fontsize=20)
-    plt.savefig("model_summary_without_added_noise_Algo3.pdf")
-
-    # Repeat the plot, but reorder things by the amount of scale separation
-    scale_sort = np.argsort(scale_list)
-    scale_list_sorted = np.sort(scale_list)
-    systems_list_sorted = np.array(systems_list)[scale_sort]
-    cerrs = []
-    rmse_errs = []
-    plt.figure(figsize=(20, 2))
-    for i, attractor_name in enumerate(systems_list_sorted):
-        plt.scatter(
-            i,
-            best_normalized_coef_errors[attractor_name][0],
-            c="r",
-            label="Avg. normalized coef errors",
-        )
-        plt.scatter(
-            i,
-            abs(np.array(xdot_rmse_errors[attractor_name])),
-            c="g",
-            label="Avg. RMSE errors",
-        )
-        rmse_errs.append(abs(np.array(xdot_rmse_errors[attractor_name]))[0])
-        cerrs.append(best_normalized_coef_errors[attractor_name][0])
-
-    print(scale_list_sorted, rmse_errs)
-    plt.grid(True)
-    plt.yscale("log")
-    plt.plot(
-        np.linspace(-0.5, num_attractors + 1, num_attractors),
-        0.1 * np.ones(num_attractors),
-        "k--",
-        label="10% error",
-    )
-    plt.legend(
-        ["10% normalized error", "$E_{coef}$"],
-        framealpha=1.0,
-        ncol=4,
-        fontsize=13,
-        loc="upper left",
-    )
-    ax = plt.gca()
-    plt.xticks(np.arange(num_attractors), rotation="vertical", fontsize=16)
-    plt.xlim(-0.5, num_attractors + 1)
-    ax.set_xticklabels(np.array(systems_list_cleaned)[scale_sort])
-    # plt.ylim(1e-4, 1e1)
-    plt.yticks(fontsize=20)
-    plt.savefig("model_summary_scaleSeparation_without_added_noise_Algo3.pdf")
-
-    from scipy.stats import linregress
-
-    slope, intercept, r_value, p_value, std_err = linregress(
-        scale_list_sorted, np.log(rmse_errs)
-    )
-    print(slope, intercept, r_value, p_value, std_err)
-    print("R^2 value = ", r_value**2)
-
-    plt.figure(figsize=(20, 2))
-    for i, attractor_name in enumerate(systems_list_sorted):
-        plt.scatter(
-            scale_list_sorted[i],
-            best_normalized_coef_errors[attractor_name][0],
-            c="r",
-            label="Avg. normalized coef errors",
-        )
-        plt.scatter(
-            scale_list_sorted[i],
-            abs(np.array(xdot_rmse_errors[attractor_name])),
-            c="g",
-            label="Avg. RMSE errors",
-        )
-    plt.plot(scale_list_sorted, np.exp(slope * scale_list_sorted + intercept), "k")
-    plt.yscale("log")
-    plt.xscale("log")
-    plt.grid(True)
-    # plt.yscale('log')
-    # plt.plot(np.linspace(-0.5, num_attractors + 1, num_attractors), 0.1 * np.ones(num_attractors), 'k--', label='10% error')
-    plt.legend(
-        ["Best linear feat", "$E_{coef}$"],
-        loc="lower right",
-        framealpha=1.0,
-        ncol=4,
-        fontsize=13,
-    )
-    ax = plt.gca()
-    # plt.xticks(np.arange(num_attractors), rotation='vertical', fontsize=16)
-    # plt.xlim(-0.5, num_attractors + 1)
-    # ax.set_xticklabels(np.array(systems_list_cleaned)[scale_sort])
-    # plt.ylim(1e-4, 1e1)
-    plt.yticks(fontsize=20)
-    plt.savefig("model_summary_scaleSeparation_without_added_noise.pdf")
-    plt.show()
-
-
-def plot_individual_coef_errors(
-    all_sols_train,
-    predicted_coefficients,
-    true_coefficients,
-    dimension_list,
-    systems_list,
-    models,
-):
-    poly_library = ps.PolynomialLibrary(degree=4)
-    colors = ["r", "b", "g", "m"]
-    labels = ["xdot", "ydot", "zdot", "wdot"]
-
-    for i, system in enumerate(systems_list):
-        x_train = all_sols_train[system]
-        plt.figure(figsize=(20, 2))
-        if dimension_list[i] == 3:
-            feature_names = poly_library.fit(x_train).get_feature_names(["x", "y", "z"])
-        else:
-            feature_names = poly_library.fit(x_train).get_feature_names(
-                ["x", "y", "z", "w"]
-            )
-        for k in range(dimension_list[i]):
-            plt.grid(True)
-            plt.scatter(
-                feature_names,
-                np.mean(np.array(predicted_coefficients[system])[:, k, :], 0),
-                color=colors[k],
-                label=labels[k],
-                s=100,
-            )
-            plt.scatter(
-                feature_names,
-                np.array(true_coefficients[i][k, :]),
-                color="k",
-                label="True " + labels[k],
-                s=50,
-            )
-        if dimension_list[i] == 3:
-            plt.legend(loc="upper right", framealpha=1.0, ncol=6)
-        else:
-            plt.legend(loc="upper right", framealpha=1.0, ncol=8)
-        plt.title(system)
-        # plt.yscale('symlog', linthreshy=1e-3)
-        plt.legend(loc="upper right", framealpha=1.0, ncol=6)
-        print(system)
-        models[i].print()
 
 
 def load_data(
@@ -243,8 +17,56 @@ def load_data(
     pts_per_period=20,
     random_bump=False,
     include_transients=False,
-    n_trajectories=1,
+    n_trajectories=20,
 ):
+    """
+    Function for generating n_trajectories of training and testing data
+    for each dynamical system in the systems_list.
+
+    Parameters
+    ----------
+    systems_list : list of strings, shape (num_systems)
+        List of the dynamical systems.
+    all_properties : dictionary of dictionaries
+        Dictionary containing the parameters for each dynamical system.
+    n : integer, optional (default 200)
+        Number of points to generate for each testing trajectory.
+    pts_per_period : integer, optional (default 20)
+        Number of points sample each "period" of the dynamical system.
+    random_bump : bool, optional (default False)
+        Whether to start with an initial condition slightly off of the
+        chaotic attractor.
+    include_transients : bool, optional (default False)
+        Whether to disregard the pts_per_period parameter and sample at
+        high-resolution by doing so proportional to the smallest
+        significant timescale defined through the 'dt'
+        parameter in the all_properties variable.
+    n_trajectories : integer, optional (default 20)
+        The number of trajectories to make.
+
+    Returns
+    ---------
+    all_sols_train : dictionary of 3D numpy arrays,
+            shape (n_trajectories, num_sample_points, dimension_list[i])
+        Dictionary containing all the training trajectories for each
+        dynamical system, each entry has shape
+        (n_trajectories, num_sample_points, dimension_list[i]).
+    all_t_train : dictionary of 2D numpy arrays,
+            shape (n_trajectories, num_sample_points)
+        Dictionary containing all the training trajectory timebases
+        for each dynamical system, each entry has shape
+        (n_trajectories, num_sample_points).
+    all_sols_test : dictionary of 3D numpy arrays,
+            shape (n_trajectories, num_sample_points, dimension_list[i])
+        Dictionary containing all the testing trajectories for each
+        dynamical system, each entry has shape
+        (n_trajectories, num_sample_points, dimension_list[i]).
+    all_t_test : dictionary of 2D numpy arrays,
+            shape (n_trajectories, num_sample_points)
+        Dictionary containing all the testing trajectory timebases
+        for each dynamical system, each entry has shape
+        (n_trajectories, num_sample_points).
+    """
     all_sols_train = dict()
     all_sols_test = dict()
     all_t_train = dict()
@@ -265,10 +87,8 @@ def load_data(
 
             # Kick it off the attractor by random bump with, at most, 1% of the norm of the IC
             if random_bump:
-                print(ic_train)
                 ic_train += (np.random.rand(len(ic_train)) - 0.5) * abs(ic_train) / 50
                 ic_test += (np.random.rand(len(ic_test)) - 0.5) * abs(ic_test) / 50
-                print(ic_train)
 
             # Sample at roughly the smallest time scale!!
             if include_transients:
@@ -305,9 +125,46 @@ def make_test_trajectories(
     pts_per_period=20,
     random_bump=False,
     include_transients=False,
-    approximate_center=0.0,  # approximate center of the attractor
     n_trajectories=20,
 ):
+    """
+    Function for generating n_trajectories of testing data
+    for each dynamical system in the systems_list.
+
+    Parameters
+    ----------
+    systems_list : list of strings, shape (num_systems)
+        List of the dynamical systems.
+    all_properties : dictionary of dictionaries
+        Dictionary containing the parameters for each dynamical system.
+    n : integer, optional (default 200)
+        Number of points to generate for each testing trajectory.
+    pts_per_period : integer, optional (default 20)
+        Number of points sample each "period" of the dynamical system.
+    random_bump : bool, optional (default False)
+        Whether to start with an initial condition slightly off of the
+        chaotic attractor.
+    include_transients : bool, optional (default False)
+        Whether to disregard the pts_per_period parameter and sample at
+        high-resolution by doing so proportional to the smallest
+        significant timescale defined through the 'dt'
+        parameter in the all_properties variable.
+    n_trajectories : integer, optional (default 20)
+        The number of trajectories to make.
+
+    Returns
+    ---------
+    all_sols_test : dictionary of 3D numpy arrays,
+            shape (n_trajectories, num_sample_points, dimension_list[i])
+        Dictionary containing all the testing trajectories for each
+        dynamical system, each entry has shape
+        (n_trajectories, num_sample_points, dimension_list[i]).
+    all_t_test : dictionary of 2D numpy arrays,
+            shape (n_trajectories, num_sample_points)
+        Dictionary containing all the testing trajectory timebases
+        for each dynamical system, each entry has shape
+        (n_trajectories, num_sample_points).
+    """
     all_sols_test = dict()
     all_t_test = dict()
 
@@ -349,33 +206,106 @@ def make_test_trajectories(
 
 
 def normalized_RMSE(x_dot_true, x_dot_pred):
-    return np.linalg.norm(x_dot_true - x_dot_pred, ord=2) / np.linalg.norm(
+    """
+    Compute the normalized RMSE error between the Xdot from the real data
+    and the Xdot from a SINDy model. Usually done only for a set of
+    testing trajectories.
+
+    Parameters
+    ----------
+    x_dot_true : 2D numpy array of floats,
+                 shape (num_sample_points, state_size)
+        True x_dot trajectory(s).
+    x_dot_pred : 2D numpy array of floats,
+                 shape (num_sample_points, state_size)
+        Predicted x_dot trajectory(s).
+
+    Returns
+    ---------
+    errors : float
+        Total normalized X_dot RMSE errors.
+    """
+    errors = np.linalg.norm(x_dot_true - x_dot_pred, ord=2) / np.linalg.norm(
         x_dot_true, ord=2
     )
+    return errors
 
 
-def AIC_c(x_dot_true, x_dot_pred, coef_pred):
+def AIC_c(x_dot_true, x_dot_pred, xi_pred):
+    """
+    Compute the finite-sample-corrected AIC criteria, as in
+    Mangan & Brunton 2017.
+
+    Parameters
+    ----------
+    x_dot_true : 2D numpy array of floats,
+                 shape (num_sample_points, state_size)
+        True x_dot trajectory(s).
+    x_dot_pred : 2D numpy array of floats,
+                 shape (num_sample_points, state_size)
+        Predicted x_dot trajectory(s).
+
+    xi_pred : 2D numpy array of floats, shape (state_size, n_features)
+        Predicted equation coefficients.
+
+    Returns
+    ---------
+    AIC : float
+        Finite-sample-size-corrected Akaike Information Criteria.
+    """
     N = x_dot_true.shape[0]
-    k = np.count_nonzero(coef_pred)
+    k = np.count_nonzero(xi_pred)
     if (N - k - 1) == 0:
-        return N * np.log(np.linalg.norm(x_dot_true - x_dot_pred, ord=2) ** 2) + 2 * k
+        AIC = N * np.log(np.linalg.norm(x_dot_true - x_dot_pred, ord=2) ** 2) + 2 * k
     else:
-        return (
+        AIC = (
             N * np.log(np.linalg.norm(x_dot_true - x_dot_pred, ord=2) ** 2)
             + 2 * k
             + 2 * k * (k + 1) / (N - k - 1)
         )
+    return AIC
 
 
 def total_coefficient_error_normalized(xi_true, xi_pred):
-    return np.linalg.norm(xi_true - xi_pred, ord=2) / np.linalg.norm(xi_true, ord=2)
+    """
+    Compute the TOTAL normalized coefficient error between the true
+    coefficients of the underlying equations (assuming they are known)
+    and the coefficients identified by the SINDy model.
 
+    Parameters
+    ----------
+    xi_true : 2D numpy array of floats, shape (state_size, n_features)
+        True equation coefficients.
+    xi_pred : 2D numpy array of floats, shape (state_size, n_features)
+        Predicted equation coefficients.
 
-def total_mean_coefficient_error_normalized(xi_true, xi_pred):
-    return np.mean(abs(xi_true - xi_pred) / abs(xi_true))
+    Returns
+    ---------
+    errors : float
+        Total normalized coefficient error.
+    """
+    errors = np.linalg.norm(xi_true - xi_pred, ord=2) / np.linalg.norm(xi_true, ord=2)
+    return errors
 
 
 def coefficient_errors(xi_true, xi_pred):
+    """
+    Compute the INDIVIDUAL normalized coefficient errors between the true
+    coefficients of the underlying equations (assuming they are known)
+    and the coefficients identified by the SINDy model.
+
+    Parameters
+    ----------
+    xi_true : 2D numpy array of floats, shape (state_size, n_features)
+        True equation coefficients.
+    xi_pred : 2D numpy array of floats, shape (state_size, n_features)
+        Predicted equation coefficients.
+
+    Returns
+    ---------
+    errors : 2D numpy array of floats, shape (state_size, n_features)
+        Normalized coefficient errors for each term in the equations.
+    """
     errors = np.zeros(xi_true.shape)
     for i in range(xi_true.shape[0]):
         for j in range(xi_true.shape[1]):
@@ -386,15 +316,25 @@ def coefficient_errors(xi_true, xi_pred):
     return errors
 
 
-def total_coefficient_error(xi_true, xi_pred):
-    errors = np.zeros(xi_true.shape)
-    for i in range(xi_true.shape[0]):
-        for j in range(xi_true.shape[1]):
-            errors[i, j] = xi_true[i, j] - xi_pred[i, j]
-    return np.linalg.norm(errors, ord=2)
-
-
 def success_rate(xi_true, xi_pred):
+    """
+    Compute the success or recovery rate, i.e. 0 or 1 is returned for each
+    identified coefficient that matches the correct coefficient to some
+    error tolerance threshold.
+
+    Parameters
+    ----------
+    xi_true : 2D numpy array of floats, shape (state_size, n_features)
+        True equation coefficients.
+    xi_pred : 2D numpy array of floats, shape (state_size, n_features)
+        Predicted equation coefficients.
+
+    Returns
+    ---------
+    success_rate : 2D numpy array of bools, shape (state_size, n_features)
+        Success/recovery rate for each coefficient in the governing
+        equations.
+    """
     print("to do")
 
 
@@ -407,7 +347,7 @@ def Pareto_scan_ensembling(
     all_sols_test,
     all_t_test,
     normalize_columns=False,
-    error_level=0,  # as a percent of the RMSE of the training data
+    noise_level=0,
     tol_iter=300,
     n_models=10,
     n_subset=40,
@@ -416,9 +356,94 @@ def Pareto_scan_ensembling(
     algorithm="STLSQ",
 ):
     """
-    Stitch all the training trajectories together and then subsample
-    them to make n_models SINDy models. Pareto optimal is determined
-    by computing the minimum average RMSE error in x_dot.
+    Very general function for performing hyperparameter scans. This
+    function stiches all the training trajectories together and then
+    subsamples them to make n_models SINDy models.
+    The Pareto optimal model is
+    determined by computing the minimum average AIC metric.
+
+    Parameters
+    ----------
+    systems_list : list of strings, shape (num_systems)
+        List of the dynamical systems.
+    dimension_list : list or numpy array of integers, shape (num_systems)
+        List of the state space dimension of each dynamical system.
+    true_coefficients : list of 2D numpy arrays,
+            shape (num_systems, dimension_list[i], n_features)
+        List of the true coefficient matrices of each dynamical system.
+    all_sols_train : dictionary of 3D numpy arrays,
+            shape (n_trajectories, num_sample_points, dimension_list[i])
+        Dictionary containing all the training trajectories for each
+        dynamical system, each entry has shape
+        (n_trajectories, num_sample_points, dimension_list[i]).
+    all_t_train : dictionary of 2D numpy arrays,
+            shape (n_trajectories, num_sample_points)
+        Dictionary containing all the training trajectory timebases
+        for each dynamical system, each entry has shape
+        (n_trajectories, num_sample_points).
+    all_sols_test : dictionary of 3D numpy arrays,
+            shape (n_trajectories, num_sample_points, dimension_list[i])
+        Dictionary containing all the testing trajectories for each
+        dynamical system, each entry has shape
+        (n_trajectories, num_sample_points, dimension_list[i]).
+    all_t_test : dictionary of 2D numpy arrays,
+            shape (n_trajectories, num_sample_points)
+        Dictionary containing all the testing trajectory timebases
+        for each dynamical system, each entry has shape
+        (n_trajectories, num_sample_points).
+    normalize_columns : bool, optional (default False)
+        Flag to normalize the columns in the SINDy feature library.
+    noise_level : float, optional (default 0.0)
+        Amount (standard deviation) of zero-mean Gaussian noise to add
+        to every point in all the training data. This number should be
+        interpreted as a percent of the RMSE of the training data.
+    tol_iter : integer, optional (default 300)
+        Number of hyperparameter values to try during the Pareto scan.
+    n_models : integer, optional (default 10)
+        Number of models to generate when building the ensemble of models.
+    n_subset : integer, optional (default 40)
+        Number of time points to subsample when building the ensemble
+        of models.
+    replace : bool, optional (default False)
+        Whether to subsample with replacement or not.
+    weak_form : bool, optional (default False)
+        Whether to use the weak formulation of the SINDy library.
+    algorithm : string, optional (default STLSQ)
+        The SINDy optimization algorithm that is used in the hyperparameter
+        scan.
+
+    Returns
+    -------
+    xdot_rmse_errors : dictionary of 1D numpy arrays, shape (n_models)
+        Normalized RMSE errors between the true and predicted Xdot values
+        on all the testing data, using the Pareto-optimal SINDy model.
+    xdot_coef_errors : dictionary of 1D numpy arrays, shape (n_models)
+        Normalized coefficient errors between the true and predicted
+        coefficients, using the Pareto-optimal SINDy model.
+    AIC : dictionary of 1D numpy arrays, shape (n_models)
+        Finite-sample-size-corrected AIC values computed using the
+        Pareto-optimal SINDy model.
+    x_dot_tests : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot testing trajectories.
+    x_dot_test_preds : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot trajectories predicted using the Pareto
+        optimal SINDy model.
+    predicted_coefficients : dictionary of 3D numpy arrays, each of shape
+                  (n_models, dimension_list[i], n_features).
+        Coefficients determined for each system from the
+        Pareto-optimal model.
+    best_threshold_values : dictionary of floats, shape (num_systems)
+        Best hyperparameter value determined by the hyperparameter scan.
+        For STLSQ this is the l0 threshold, for MIOSR this is the number
+        of nonzero terms.
+    models : list of PySINDy models, shape (num_systems)
+        Best SINDy models for each dynamical system, determined by
+        the hyperparameter scan.
+    condition_numbers : numpy array of floats, shape (num_systems)
+        Condition number of the PySINDy feature library, using the
+        full training data, for each system.
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -428,7 +453,6 @@ def Pareto_scan_ensembling(
     xdot_coef_errors = {}
     predicted_coefficients = {}
     best_threshold_values = {}
-    best_normalized_coef_errors = {}
     AIC = {}
 
     # initialize structures
@@ -438,14 +462,16 @@ def Pareto_scan_ensembling(
         xdot_coef_errors[system] = list()
         predicted_coefficients[system] = list()
         best_threshold_values[system] = list()
-        best_normalized_coef_errors[system] = list()
         AIC[system] = list()
 
-    # iterate over all systems and noise levels
+    # beware ... initial hyperparameter value is initial_hyperparam
+    # and this is hard-coded here!
     if normalize_columns:
-        dtol = 1e-2  # threshold values will be higher if feature library is normalized
+        initial_hyperparam = (
+            1e-2  # threshold values will be higher if feature library is normalized
+        )
     else:
-        dtol = 1e-6
+        initial_hyperparam = 1e-6
 
     max_iter = 1000
     if not weak_form:
@@ -504,22 +530,19 @@ def Pareto_scan_ensembling(
                 x_train[j], np.zeros(x_train[j].shape), squared=False
             )
             x_train_noisy = x_train[j] + np.random.normal(
-                0, rmse / 100.0 * error_level, x_train[j].shape
+                0, rmse / 100.0 * noise_level, x_train[j].shape
             )
             x_train_list.append(x_train_noisy)
             x_test_list.append(all_sols_test[attractor_name][j])
             t_train_list.append(all_t_train[attractor_name][j])
             t_test_list.append(all_t_test[attractor_name][j])
-        # x_test = all_sols_test[attractor_name]
-        # t_test = all_t_test[attractor_name]
+
         if dimension_list[i] == 3:
             input_names = ["x", "y", "z"]
         else:
             input_names = ["x", "y", "z", "w"]
 
-        # feature_names = poly_library.fit(x_train).get_feature_names(input_names)
-
-        # Critical step for the weak form -- change the grid to match the system!
+        # Critical step for the weak form -- change the grid for each system!
         if weak_form:
             poly_library = ps.WeakPDELibrary(
                 library_functions=library_functions,
@@ -530,18 +553,18 @@ def Pareto_scan_ensembling(
                 K=200,
             )
 
+        # Sweep a Pareto front depending on the algorithm
         if algorithm == "MIOSR":
-            # Sweep a Pareto front
             (
                 coef_best,
                 err_best,
                 err_rmse,
                 coef_history,
-                err_history,
+                AIC_history,
                 threshold_best,
                 model,
                 condition_numbers[i],
-            ) = rudy_algorithm_miosr(
+            ) = hyperparameter_scan_miosr(
                 x_train_list,
                 x_test_list,
                 t_train_list,
@@ -550,101 +573,98 @@ def Pareto_scan_ensembling(
                 normalize_columns=normalize_columns,
                 t_test=t_test_list,
                 input_names=input_names,
-                ensemble=True,
                 n_models=n_models,
                 n_subset=n_subset,
                 replace=replace,
             )
         elif algorithm == "SR3":
-            # Sweep a Pareto front
             (
                 coef_best,
                 err_best,
                 err_rmse,
                 coef_history,
-                err_history,
+                AIC_history,
                 threshold_best,
                 model,
                 condition_numbers[i],
-            ) = rudy_algorithm_sr3(
+            ) = hyperparameter_scan_sr3(
                 x_train_list,
                 x_test_list,
                 t_train_list,
                 ode_lib=poly_library,
-                dtol=dtol,
-                optimizer_max_iter=max_iter,
+                initial_hyperparam=initial_hyperparam,
+                max_iter=max_iter,
                 tol_iter=tol_iter,
                 change_factor=1.1,
                 normalize_columns=normalize_columns,
                 t_test=t_test_list,
                 input_names=input_names,
-                ensemble=True,
                 n_models=n_models,
                 n_subset=n_subset,
                 replace=replace,
             )
         elif algorithm == "Lasso":
-            # Sweep a Pareto front
             (
                 coef_best,
                 err_best,
                 err_rmse,
                 coef_history,
-                err_history,
+                AIC_history,
                 threshold_best,
                 model,
                 condition_numbers[i],
-            ) = rudy_algorithm_lasso(
+            ) = hyperparameter_scan_lasso(
                 x_train_list,
                 x_test_list,
                 t_train_list,
                 ode_lib=poly_library,
-                dtol=dtol,
-                optimizer_max_iter=max_iter,
+                initial_hyperparam=initial_hyperparam,
+                max_iter=max_iter,
                 tol_iter=tol_iter,
                 change_factor=1.1,
                 normalize_columns=normalize_columns,
                 t_test=t_test_list,
                 input_names=input_names,
-                ensemble=True,
                 n_models=n_models,
                 n_subset=n_subset,
                 replace=replace,
             )
         else:
-            # Sweep a Pareto front
             (
                 coef_best,
                 err_best,
                 err_rmse,
                 coef_history,
-                err_history,
+                AIC_history,
                 threshold_best,
                 model,
                 condition_numbers[i],
-            ) = rudy_algorithm2(
+            ) = hyperparameter_scan_stlsq(
                 x_train_list,
                 x_test_list,
                 t_train_list,
                 ode_lib=poly_library,
-                dtol=dtol,
-                optimizer_max_iter=max_iter,
+                initial_hyperparam=initial_hyperparam,
+                max_iter=max_iter,
                 tol_iter=tol_iter,
                 change_factor=1.1,
                 alpha=1e-5,
                 normalize_columns=normalize_columns,
                 t_test=t_test_list,
                 input_names=input_names,
-                ensemble=True,
                 n_models=n_models,
                 n_subset=n_subset,
                 replace=replace,
             )
 
+        # Using the Pareto-optimal model, compute true x_dot
         x_dot_test = model.differentiate(
             x_test_list, t=t_test_list, multiple_trajectories=True
         )
+        # Using the Pareto-optimal model, compute predicted x_dot
         x_dot_test_pred = model.predict(x_test_list, multiple_trajectories=True)
+
+        # record all the important quantities
         models.append(model)
         x_dot_tests.append(x_dot_test)
         x_dot_test_preds.append(x_dot_test_pred)
@@ -655,11 +675,7 @@ def Pareto_scan_ensembling(
             coefficient_errors(true_coefficients[i], np.mean(coef_best, axis=0))
         )
         predicted_coefficients[attractor_name].append(coef_best)
-        best_normalized_coef_errors[attractor_name].append(
-            total_coefficient_error_normalized(
-                true_coefficients[i], np.mean(coef_best, axis=0)
-            )
-        )
+
     t_end = time.time()
     print("Total time = ", t_end - t_start)
     return (
@@ -670,33 +686,118 @@ def Pareto_scan_ensembling(
         x_dot_test_preds,
         predicted_coefficients,
         best_threshold_values,
-        best_normalized_coef_errors,
         models,
         condition_numbers,
     )
 
 
-def rudy_algorithm2(
+def hyperparameter_scan_stlsq(
     x_train,
     x_test,
     t_train,
     t_test,
     ode_lib,
-    dtol,
+    initial_hyperparam,
     alpha=1e-5,
     tol_iter=25,
     change_factor=2,
     normalize_columns=True,
-    optimizer_max_iter=20,
+    max_iter=20,
     input_names=["x", "y", "z"],
-    ensemble=False,
     n_models=10,
     n_subset=40,
     replace=False,
 ):
     """
-    # Algorithm to scan over threshold values during Ridge Regression, and select
-    # highest performing model on the test set
+    Algorithm to scan over threshold values during STLSQ with Ridge
+    Regression, and then select the highest performing model on the
+    test set by computing the AIC.
+
+    Parameters
+    ----------
+    x_train : 3D numpy array,
+              shape (n_trajectories, num_sample_points, dimension_list[i])
+        All the training trajectories for a dynamical system.
+    t_train : 2D numpy array,
+              shape (n_trajectories, num_sample_points)
+        All the training trajectory timebases for a dynamical system.
+    x_test : 3D numpy array,
+              shape (n_trajectories, num_sample_points, dimension_list[i])
+        All the testing trajectories for a dynamical system.
+    t_test : 2D numpy array,
+              shape (n_trajectories, num_sample_points)
+        All the testing trajectory timebases for a dynamical system.
+    ode_lib : PySINDy library
+        Pre-defined PySINDy library to use for the SINDy fits.
+    initial_hyperparam : float
+        Initial value for the hyperparameter before the scan begins. This
+        value should be very small, because it will only increase
+        substantially during the hyperparameter scan.
+    alpha: float, optional (default 1e-5)
+        Hyperparameter determining the strength of ridge regularization
+        in the STLSQ optimizer. Not optimized in this code.
+    tol_iter : integer, optional (default 300)
+        Number of hyperparameter values to try during the Pareto scan.
+    change_factor : float, optional (default = 2)
+        During each step of the hyperparameter scan, the next value of the
+        hyperparameter = hyperparameter * change_factor.
+    normalize_columns : bool, optional (default False)
+        Flag to normalize the columns in the SINDy feature library.
+    max_iter : integer, optional, (default 20)
+        Maximum number of iterations to perform with the optimizer, at
+        each fixed value of the hyperparameter (i.e. during every
+        model fit).
+    input_names : list of strings, optional, shape (state_size),
+                  (default ["x", "y", "z"])
+        List of strings representing variable names to use for the
+        SINDy models.
+    n_models : integer, optional (default 10)
+        Number of models to generate when building the ensemble of models.
+    n_subset : integer, optional (default 40)
+        Number of time points to subsample when building the ensemble
+        of models.
+    replace : bool, optional (default False)
+        Whether to subsample with replacement or not.
+
+    Returns
+    -------
+    coef_best : 1D numpy arrays, shape (n_models)
+        Normalized coefficient errors between the true and predicted
+        coefficients, using the Pareto-optimal SINDy model.
+    AIC_best : 1D numpy arrays, shape (n_models)
+        Finite-sample-size-corrected AIC values computed using the
+        Pareto-optimal SINDy model.
+    error_rmse : 1D numpy arrays, shape (n_models)
+        Normalized RMSE errors between the true and predicted Xdot values
+        on all the testing data, using the Pareto-optimal SINDy model.
+    xdot_coef_errors : dictionary of 1D numpy arrays, shape (n_models)
+        Normalized coefficient errors between the true and predicted
+        coefficients, using the Pareto-optimal SINDy model.
+    x_dot_tests : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot testing trajectories.
+    x_dot_test_preds : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot trajectories predicted using the Pareto
+        optimal SINDy model.
+    predicted_coefficients : dictionary of 3D numpy arrays, each of shape
+                  (n_models, dimension_list[i], n_features).
+        Coefficients determined for each system from the
+        Pareto-optimal model.
+    coef_history_ : list of coefficient values
+            shape (n_models, dimension_list[i], n_features, tol_iter)
+        Coefficients determined at each step of the hyperparameter scan.
+    AIC_history_ : list of AIC values, shape (tol_iter)
+        Average AIC determined at each step of the hyperparameter scan.
+    threshold_best : float
+        Best hyperparameter value determined by the hyperparameter scan.
+        For STLSQ this is the l0 threshold, for MIOSR this is the number
+        of nonzero terms.
+    model_best : PySINDy model
+        Best SINDy model for a dynamical system, determined by
+        the hyperparameter scan.
+    condition_number : float
+        Condition number of the PySINDy feature library.
     """
 
     n_trajectories = np.array(x_test).shape[0]
@@ -712,11 +813,11 @@ def rudy_algorithm2(
         opt=ps.STLSQ(
             threshold=0,
             alpha=alpha,
-            max_iter=optimizer_max_iter,
+            max_iter=max_iter,
             normalize_columns=normalize_columns,
             ridge_kw={"tol": 1e-10},
         ),
-        bagging=ensemble,
+        bagging=True,
         n_models=n_models,
         n_subset=n_subset,
         replace=replace,
@@ -741,8 +842,8 @@ def rudy_algorithm2(
     model_best = model
 
     # For each model, compute x_dot_test and compute the RMSE error
-    error_new = np.zeros(n_models)
-    error_best = np.zeros(n_models)
+    AIC_new = np.zeros(n_models)
+    AIC_best = np.zeros(n_models)
     error_rmse_new = np.zeros(n_models)
     error_rmse = np.zeros(n_models)
 
@@ -752,7 +853,7 @@ def rudy_algorithm2(
         x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
         dx_test = np.array(x_dot_test).reshape(n_trajectories * n_time, n_state)
         dx_pred = np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state)
-        error_best[i] = AIC_c(dx_test, dx_pred, coef_best[i, :, :])
+        AIC_best[i] = AIC_c(dx_test, dx_pred, coef_best[i, :, :])
         error_rmse[i] = normalized_RMSE(
             dx_test,
             dx_pred,
@@ -761,10 +862,10 @@ def rudy_algorithm2(
     coef_history_ = np.zeros(
         (n_models, coef_best.shape[1], coef_best.shape[2], 1 + tol_iter)
     )
-    error_history_ = np.zeros((n_models, 1 + tol_iter))
+    AIC_history_ = np.zeros((n_models, 1 + tol_iter))
     coef_history_[:, :, :, 0] = coef_best
-    error_history_[:, 0] = error_best
-    tol = dtol
+    AIC_history_[:, 0] = AIC_best
+    tol = initial_hyperparam
     threshold_best = tol
 
     # Loop over threshold values, note needs some coding
@@ -774,11 +875,11 @@ def rudy_algorithm2(
             opt=ps.STLSQ(
                 threshold=tol,
                 alpha=alpha,
-                max_iter=optimizer_max_iter,
+                max_iter=max_iter,
                 normalize_columns=normalize_columns,
                 ridge_kw={"tol": 1e-10},
             ),
-            bagging=ensemble,
+            bagging=True,
             n_models=n_models,
             n_subset=n_subset,
             replace=replace,
@@ -805,10 +906,8 @@ def rudy_algorithm2(
             x_dot_test = model.differentiate(
                 x_test, t=t_test, multiple_trajectories=True
             )
-            # x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
             x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
-            # x_dot_test_pred = optimizer.Theta_ @ coef_new[j, :, :].T
-            error_new[j] = AIC_c(
+            AIC_new[j] = AIC_c(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
                 coef_new[j, :, :],
@@ -817,59 +916,138 @@ def rudy_algorithm2(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
             )
-            # print(j, error_new[j], coef_new[j, :, :])
-        # print(i, error_new)
 
         coef_history_[:, :, :, i + 1] = coef_new
-        error_history_[:, i + 1] = error_new
+        AIC_history_[:, i + 1] = AIC_new
 
         # If error improves, set the new best coefficients
         # Note < not <= since if all coefficients are zero,
         # this would still keep increasing the threshold!
-        if np.mean(error_new) < np.mean(error_best):
-            error_best = np.copy(error_new)
+        if np.mean(AIC_new) < np.mean(AIC_best):
+            AIC_best = np.copy(AIC_new)
             error_rmse = np.copy(error_rmse_new)
             coef_best = np.copy(coef_new)
             threshold_best = tol
             model.optimizer.coef_ = np.median(coef_new, axis=0)
-            # model.optimizer.coef_ = model.optimizer.coef_[abs(model.optimizer.coef_) > 1e-2]
             model_best = model
-        dtol = dtol * change_factor
-        tol += dtol
+        initial_hyperparam = initial_hyperparam * change_factor
+        tol += initial_hyperparam
 
     return (
         coef_best,
-        error_best,
+        AIC_best,
         error_rmse,
         coef_history_,
-        error_history_,
+        AIC_history_,
         threshold_best,
         model_best,
         condition_number,
     )
 
 
-def rudy_algorithm_lasso(
+def hyperparameter_scan_lasso(
     x_train,
     x_test,
     t_train,
     t_test,
     ode_lib,
-    dtol,
-    alpha=1e-5,
-    tol_iter=25,
+    initial_hyperparam,
+    tol_iter=300,
     change_factor=2,
     normalize_columns=True,
-    optimizer_max_iter=20,
+    max_iter=20,
     input_names=["x", "y", "z"],
-    ensemble=False,
     n_models=10,
     n_subset=40,
     replace=False,
 ):
     """
-    # Algorithm to scan over threshold values during Ridge Regression, and select
-    # highest performing model on the test set
+    Algorithm to scan over threshold values using the Lasso,
+    and then select the highest performing model on the
+    test set by computing the AIC.
+
+    Parameters
+    ----------
+    x_train : 3D numpy array,
+              shape (n_trajectories, num_sample_points, dimension_list[i])
+        All the training trajectories for a dynamical system.
+    t_train : 2D numpy array,
+              shape (n_trajectories, num_sample_points)
+        All the training trajectory timebases for a dynamical system.
+    x_test : 3D numpy array,
+              shape (n_trajectories, num_sample_points, dimension_list[i])
+        All the testing trajectories for a dynamical system.
+    t_test : 2D numpy array,
+              shape (n_trajectories, num_sample_points)
+        All the testing trajectory timebases for a dynamical system.
+    ode_lib : PySINDy library
+        Pre-defined PySINDy library to use for the SINDy fits.
+    initial_hyperparam : float
+        Initial value for the hyperparameter before the scan begins. This
+        value should be very small, because it will only increase
+        substantially during the hyperparameter scan.
+    tol_iter : integer, optional (default 300)
+        Number of hyperparameter values to try during the Pareto scan.
+    change_factor : float, optional (default = 2)
+        During each step of the hyperparameter scan, the next value of the
+        hyperparameter = hyperparameter * change_factor.
+    normalize_columns : bool, optional (default False)
+        Flag to normalize the columns in the SINDy feature library.
+    max_iter : integer, optional, (default 20)
+        Maximum number of iterations to perform with the optimizer, at
+        each fixed value of the hyperparameter (i.e. during every
+        model fit).
+    input_names : list of strings, optional, shape (state_size),
+                  (default ["x", "y", "z"])
+        List of strings representing variable names to use for the
+        SINDy models.
+    n_models : integer, optional (default 10)
+        Number of models to generate when building the ensemble of models.
+    n_subset : integer, optional (default 40)
+        Number of time points to subsample when building the ensemble
+        of models.
+    replace : bool, optional (default False)
+        Whether to subsample with replacement or not.
+
+    Returns
+    -------
+    coef_best : 1D numpy arrays, shape (n_models)
+        Normalized coefficient errors between the true and predicted
+        coefficients, using the Pareto-optimal SINDy model.
+    AIC_best : 1D numpy arrays, shape (n_models)
+        Finite-sample-size-corrected AIC values computed using the
+        Pareto-optimal SINDy model.
+    error_rmse : 1D numpy arrays, shape (n_models)
+        Normalized RMSE errors between the true and predicted Xdot values
+        on all the testing data, using the Pareto-optimal SINDy model.
+    xdot_coef_errors : dictionary of 1D numpy arrays, shape (n_models)
+        Normalized coefficient errors between the true and predicted
+        coefficients, using the Pareto-optimal SINDy model.
+    x_dot_tests : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot testing trajectories.
+    x_dot_test_preds : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot trajectories predicted using the Pareto
+        optimal SINDy model.
+    predicted_coefficients : dictionary of 3D numpy arrays, each of shape
+                  (n_models, dimension_list[i], n_features).
+        Coefficients determined for each system from the
+        Pareto-optimal model.
+    coef_history_ : list of coefficient values
+            shape (n_models, dimension_list[i], n_features, tol_iter)
+        Coefficients determined at each step of the hyperparameter scan.
+    AIC_history_ : list of AIC values, shape (tol_iter)
+        Average AIC determined at each step of the hyperparameter scan.
+    threshold_best : float
+        Best hyperparameter value determined by the hyperparameter scan.
+        For STLSQ this is the l0 threshold, for MIOSR this is the number
+        of nonzero terms.
+    model_best : PySINDy model
+        Best SINDy model for a dynamical system, determined by
+        the hyperparameter scan.
+    condition_number : float
+        Condition number of the PySINDy feature library.
     """
 
     n_trajectories = np.array(x_test).shape[0]
@@ -883,9 +1061,9 @@ def rudy_algorithm_lasso(
     # start with initial guess that all coefs are zero
     optimizer = ps.EnsembleOptimizer(
         opt=Lasso(
-            alpha=0, max_iter=optimizer_max_iter, fit_intercept=False
+            alpha=0, max_iter=max_iter, fit_intercept=False
         ),  # currently ignoring normalize_columns parameter
-        bagging=ensemble,
+        bagging=True,
         n_models=n_models,
         n_subset=n_subset,
         replace=replace,
@@ -910,8 +1088,8 @@ def rudy_algorithm_lasso(
     model_best = model
 
     # For each model, compute x_dot_test and compute the RMSE error
-    error_new = np.zeros(n_models)
-    error_best = np.zeros(n_models)
+    AIC_new = np.zeros(n_models)
+    AIC_best = np.zeros(n_models)
     error_rmse_new = np.zeros(n_models)
     error_rmse = np.zeros(n_models)
 
@@ -921,7 +1099,7 @@ def rudy_algorithm_lasso(
         x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
         dx_test = np.array(x_dot_test).reshape(n_trajectories * n_time, n_state)
         dx_pred = np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state)
-        error_best[i] = AIC_c(dx_test, dx_pred, coef_best[i, :, :])
+        AIC_best[i] = AIC_c(dx_test, dx_pred, coef_best[i, :, :])
         error_rmse[i] = normalized_RMSE(
             dx_test,
             dx_pred,
@@ -930,18 +1108,18 @@ def rudy_algorithm_lasso(
     coef_history_ = np.zeros(
         (n_models, coef_best.shape[1], coef_best.shape[2], 1 + tol_iter)
     )
-    error_history_ = np.zeros((n_models, 1 + tol_iter))
+    AIC_history_ = np.zeros((n_models, 1 + tol_iter))
     coef_history_[:, :, :, 0] = coef_best
-    error_history_[:, 0] = error_best
-    tol = dtol
+    AIC_history_[:, 0] = AIC_best
+    tol = initial_hyperparam
     threshold_best = tol
 
     # Loop over threshold values, note needs some coding
     # if not using STLSQ optimizer
     for i in range(tol_iter):
         optimizer = ps.EnsembleOptimizer(
-            opt=Lasso(alpha=tol, max_iter=optimizer_max_iter, fit_intercept=False),
-            bagging=ensemble,
+            opt=Lasso(alpha=tol, max_iter=max_iter, fit_intercept=False),
+            bagging=True,
             n_models=n_models,
             n_subset=n_subset,
             replace=replace,
@@ -968,10 +1146,8 @@ def rudy_algorithm_lasso(
             x_dot_test = model.differentiate(
                 x_test, t=t_test, multiple_trajectories=True
             )
-            # x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
             x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
-            # x_dot_test_pred = optimizer.Theta_ @ coef_new[j, :, :].T
-            error_new[j] = AIC_c(
+            AIC_new[j] = AIC_c(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
                 coef_new[j, :, :],
@@ -980,60 +1156,138 @@ def rudy_algorithm_lasso(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
             )
-            # print(j, error_new[j], coef_new[j, :, :])
-        # print(i, error_new)
 
         coef_history_[:, :, :, i + 1] = coef_new
-        error_history_[:, i + 1] = error_new
+        AIC_history_[:, i + 1] = AIC_new
 
         # If error improves, set the new best coefficients
         # Note < not <= since if all coefficients are zero,
         # this would still keep increasing the threshold!
-        if np.mean(error_new) < np.mean(error_best):
-            error_best = np.copy(error_new)
+        if np.mean(AIC_new) < np.mean(AIC_best):
+            AIC_best = np.copy(AIC_new)
             error_rmse = np.copy(error_rmse_new)
             coef_best = np.copy(coef_new)
             threshold_best = tol
             model.optimizer.coef_ = np.median(coef_new, axis=0)
-            # model.optimizer.coef_ = model.optimizer.coef_[abs(model.optimizer.coef_) > 1e-2]
             model_best = model
-        dtol = dtol * change_factor
-        tol += dtol
+        initial_hyperparam = initial_hyperparam * change_factor
+        tol += initial_hyperparam
 
     return (
         coef_best,
-        error_best,
+        AIC_best,
         error_rmse,
         coef_history_,
-        error_history_,
+        AIC_history_,
         threshold_best,
         model_best,
         condition_number,
     )
 
 
-def rudy_algorithm_sr3(
+def hyperparameter_scan_sr3(
     x_train,
     x_test,
     t_train,
     t_test,
     ode_lib,
-    dtol,
-    tol_iter=25,
+    initial_hyperparam,
+    tol_iter=300,
     change_factor=2,
     normalize_columns=True,
-    optimizer_max_iter=20,
+    max_iter=20,
     input_names=["x", "y", "z"],
-    ensemble=False,
     n_models=10,
     n_subset=40,
     replace=False,
 ):
     """
-    # Algorithm to scan over threshold values during Ridge Regression, and select
-    # highest performing model on the test set
-    """
+    Algorithm to scan over threshold values with SR3, and then select
+    the highest performing model on the test set by computing the AIC.
 
+    Parameters
+    ----------
+    x_train : 3D numpy array,
+              shape (n_trajectories, num_sample_points, dimension_list[i])
+        All the training trajectories for a dynamical system.
+    t_train : 2D numpy array,
+              shape (n_trajectories, num_sample_points)
+        All the training trajectory timebases for a dynamical system.
+    x_test : 3D numpy array,
+              shape (n_trajectories, num_sample_points, dimension_list[i])
+        All the testing trajectories for a dynamical system.
+    t_test : 2D numpy array,
+              shape (n_trajectories, num_sample_points)
+        All the testing trajectory timebases for a dynamical system.
+    ode_lib : PySINDy library
+        Pre-defined PySINDy library to use for the SINDy fits.
+    initial_hyperparam : float
+        Initial value for the hyperparameter before the scan begins. This
+        value should be very small, because it will only increase
+        substantially during the hyperparameter scan.
+    tol_iter : integer, optional (default 300)
+        Number of hyperparameter values to try during the Pareto scan.
+    change_factor : float, optional (default = 2)
+        During each step of the hyperparameter scan, the next value of the
+        hyperparameter = hyperparameter * change_factor.
+    normalize_columns : bool, optional (default False)
+        Flag to normalize the columns in the SINDy feature library.
+    max_iter : integer, optional, (default 20)
+        Maximum number of iterations to perform with the optimizer, at
+        each fixed value of the hyperparameter (i.e. during every
+        model fit).
+    input_names : list of strings, optional, shape (state_size),
+                  (default ["x", "y", "z"])
+        List of strings representing variable names to use for the
+        SINDy models.
+    n_models : integer, optional (default 10)
+        Number of models to generate when building the ensemble of models.
+    n_subset : integer, optional (default 40)
+        Number of time points to subsample when building the ensemble
+        of models.
+    replace : bool, optional (default False)
+        Whether to subsample with replacement or not.
+
+    Returns
+    -------
+    coef_best : 1D numpy arrays, shape (n_models)
+        Normalized coefficient errors between the true and predicted
+        coefficients, using the Pareto-optimal SINDy model.
+    AIC_best : 1D numpy arrays, shape (n_models)
+        Finite-sample-size-corrected AIC values computed using the
+        Pareto-optimal SINDy model.
+    error_rmse : 1D numpy arrays, shape (n_models)
+        Normalized RMSE errors between the true and predicted Xdot values
+        on all the testing data, using the Pareto-optimal SINDy model.
+    xdot_coef_errors : dictionary of 1D numpy arrays, shape (n_models)
+        Normalized coefficient errors between the true and predicted
+        coefficients, using the Pareto-optimal SINDy model.
+    x_dot_tests : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot testing trajectories.
+    x_dot_test_preds : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot trajectories predicted using the Pareto
+        optimal SINDy model.
+    predicted_coefficients : dictionary of 3D numpy arrays, each of shape
+                  (n_models, dimension_list[i], n_features).
+        Coefficients determined for each system from the
+        Pareto-optimal model.
+    coef_history_ : list of coefficient values
+            shape (n_models, dimension_list[i], n_features, tol_iter)
+        Coefficients determined at each step of the hyperparameter scan.
+    AIC_history_ : list of AIC values, shape (tol_iter)
+        Average AIC determined at each step of the hyperparameter scan.
+    threshold_best : float
+        Best hyperparameter value determined by the hyperparameter scan.
+        For STLSQ this is the l0 threshold, for MIOSR this is the number
+        of nonzero terms.
+    model_best : PySINDy model
+        Best SINDy model for a dynamical system, determined by
+        the hyperparameter scan.
+    condition_number : float
+        Condition number of the PySINDy feature library.
+    """
     n_trajectories = np.array(x_test).shape[0]
     n_state = np.array(x_test).shape[2]
     if isinstance(ode_lib, ps.WeakPDELibrary):
@@ -1046,11 +1300,11 @@ def rudy_algorithm_sr3(
     optimizer = ps.EnsembleOptimizer(
         opt=ps.SR3(
             threshold=0,
-            max_iter=optimizer_max_iter,
+            max_iter=max_iter,
             normalize_columns=normalize_columns,
             nu=0.1,
         ),
-        bagging=ensemble,
+        bagging=True,
         n_models=n_models,
         n_subset=n_subset,
         replace=replace,
@@ -1075,8 +1329,8 @@ def rudy_algorithm_sr3(
     model_best = model
 
     # For each model, compute x_dot_test and compute the RMSE error
-    error_new = np.zeros(n_models)
-    error_best = np.zeros(n_models)
+    AIC_new = np.zeros(n_models)
+    AIC_best = np.zeros(n_models)
     error_rmse_new = np.zeros(n_models)
     error_rmse = np.zeros(n_models)
 
@@ -1084,7 +1338,7 @@ def rudy_algorithm_sr3(
         optimizer.coef_ = coef_best[i, :, :]
         x_dot_test = model.differentiate(x_test, t=t_test, multiple_trajectories=True)
         x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
-        error_best[i] = AIC_c(
+        AIC_best[i] = AIC_c(
             np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
             np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
             coef_best[i, :, :],
@@ -1097,10 +1351,10 @@ def rudy_algorithm_sr3(
     coef_history_ = np.zeros(
         (n_models, coef_best.shape[1], coef_best.shape[2], 1 + tol_iter)
     )
-    error_history_ = np.zeros((n_models, 1 + tol_iter))
+    AIC_history_ = np.zeros((n_models, 1 + tol_iter))
     coef_history_[:, :, :, 0] = coef_best
-    error_history_[:, 0] = error_best
-    tol = dtol
+    AIC_history_[:, 0] = AIC_best
+    tol = initial_hyperparam
     threshold_best = tol
 
     # Loop over threshold values, note needs some coding
@@ -1109,11 +1363,11 @@ def rudy_algorithm_sr3(
         optimizer = ps.EnsembleOptimizer(
             opt=ps.SR3(
                 threshold=tol,
-                max_iter=optimizer_max_iter,
+                max_iter=max_iter,
                 normalize_columns=normalize_columns,
                 nu=0.1,
             ),
-            bagging=ensemble,
+            bagging=True,
             n_models=n_models,
             n_subset=n_subset,
             replace=replace,
@@ -1140,10 +1394,8 @@ def rudy_algorithm_sr3(
             x_dot_test = model.differentiate(
                 x_test, t=t_test, multiple_trajectories=True
             )
-            # x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
             x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
-            # x_dot_test_pred = optimizer.Theta_ @ coef_new[j, :, :].T
-            error_new[j] = AIC_c(
+            AIC_new[j] = AIC_c(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
                 coef_new[j, :, :],
@@ -1152,39 +1404,36 @@ def rudy_algorithm_sr3(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
             )
-            # print(j, error_new[j], coef_new[j, :, :])
-        # print(i, error_new)
 
         coef_history_[:, :, :, i + 1] = coef_new
-        error_history_[:, i + 1] = error_new
+        AIC_history_[:, i + 1] = AIC_new
 
         # If error improves, set the new best coefficients
         # Note < not <= since if all coefficients are zero,
         # this would still keep increasing the threshold!
-        if np.mean(error_new) < np.mean(error_best):
-            error_best = np.copy(error_new)
+        if np.mean(AIC_new) < np.mean(AIC_best):
+            AIC_best = np.copy(AIC_new)
             error_rmse = np.copy(error_rmse_new)
             coef_best = np.copy(coef_new)
             threshold_best = tol
             model.optimizer.coef_ = np.median(coef_new, axis=0)
-            # model.optimizer.coef_ = model.optimizer.coef_[abs(model.optimizer.coef_) > 1e-2]
             model_best = model
-        dtol = dtol * change_factor
-        tol += dtol
+        initial_hyperparam = initial_hyperparam * change_factor
+        tol += initial_hyperparam
 
     return (
         coef_best,
-        error_best,
+        AIC_best,
         error_rmse,
         coef_history_,
-        error_history_,
+        AIC_history_,
         threshold_best,
         model_best,
         condition_number,
     )
 
 
-def rudy_algorithm_miosr(
+def hyperparameter_scan_miosr(
     x_train,
     x_test,
     t_train,
@@ -1193,14 +1442,97 @@ def rudy_algorithm_miosr(
     alpha=1e-5,
     normalize_columns=True,
     input_names=["x", "y", "z"],
-    ensemble=False,
     n_models=10,
     n_subset=40,
     replace=False,
 ):
     """
-    # Algorithm to scan over threshold values during Ridge Regression, and select
-    # highest performing model on the test set
+    Algorithm to scan over sparsity values during the mixed-integer
+    optimization algorithm (MIOSR) with optional Ridge
+    Regression, and then select the highest performing model on the
+    test set by computing the AIC. Note that there is no max_iter,
+    tol_iter, or change_factor parameters, as in other scans. This is
+    because MIOSR does not have an explicit threshold, instead the user
+    chooses how many nonzero terms to use. So the hyperparameter scan is
+    done by simplying trying to fit the model with all the coefficients
+    nonzero, all the way until all the coefficients are zero.
+
+    Parameters
+    ----------
+    x_train : 3D numpy array,
+              shape (n_trajectories, num_sample_points, dimension_list[i])
+        All the training trajectories for a dynamical system.
+    t_train : 2D numpy array,
+              shape (n_trajectories, num_sample_points)
+        All the training trajectory timebases for a dynamical system.
+    x_test : 3D numpy array,
+              shape (n_trajectories, num_sample_points, dimension_list[i])
+        All the testing trajectories for a dynamical system.
+    t_test : 2D numpy array,
+              shape (n_trajectories, num_sample_points)
+        All the testing trajectory timebases for a dynamical system.
+    ode_lib : PySINDy library
+        Pre-defined PySINDy library to use for the SINDy fits.
+    initial_hyperparam : float
+        Initial value for the hyperparameter before the scan begins. This
+        value should be very small, because it will only increase
+        substantially during the hyperparameter scan.
+    alpha: float, optional (default 1e-5)
+        Hyperparameter determining the strength of ridge regularization
+        in the STLSQ optimizer. Not optimized in this code.
+    normalize_columns : bool, optional (default False)
+        Flag to normalize the columns in the SINDy feature library.
+    input_names : list of strings, optional, shape (state_size),
+                  (default ["x", "y", "z"])
+        List of strings representing variable names to use for the
+        SINDy models.
+    n_models : integer, optional (default 10)
+        Number of models to generate when building the ensemble of models.
+    n_subset : integer, optional (default 40)
+        Number of time points to subsample when building the ensemble
+        of models.
+    replace : bool, optional (default False)
+        Whether to subsample with replacement or not.
+
+    Returns
+    -------
+    coef_best : 1D numpy arrays, shape (n_models)
+        Normalized coefficient errors between the true and predicted
+        coefficients, using the Pareto-optimal SINDy model.
+    AIC_best : 1D numpy arrays, shape (n_models)
+        Finite-sample-size-corrected AIC values computed using the
+        Pareto-optimal SINDy model.
+    error_rmse : 1D numpy arrays, shape (n_models)
+        Normalized RMSE errors between the true and predicted Xdot values
+        on all the testing data, using the Pareto-optimal SINDy model.
+    xdot_coef_errors : dictionary of 1D numpy arrays, shape (n_models)
+        Normalized coefficient errors between the true and predicted
+        coefficients, using the Pareto-optimal SINDy model.
+    x_dot_tests : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot testing trajectories.
+    x_dot_test_preds : list of 3D numpy arrays, each of shape
+                  (n_trajectories, num_sample_points, dimension_list[i]).
+        List of all the x_dot trajectories predicted using the Pareto
+        optimal SINDy model.
+    predicted_coefficients : dictionary of 3D numpy arrays, each of shape
+                  (n_models, dimension_list[i], n_features).
+        Coefficients determined for each system from the
+        Pareto-optimal model.
+    coef_history_ : list of coefficient values
+            shape (n_models, dimension_list[i], n_features, tol_iter)
+        Coefficients determined at each step of the hyperparameter scan.
+    AIC_history_ : list of AIC values, shape (tol_iter)
+        Average AIC determined at each step of the hyperparameter scan.
+    threshold_best : float
+        Best hyperparameter value determined by the hyperparameter scan.
+        For STLSQ this is the l0 threshold, for MIOSR this is the number
+        of nonzero terms.
+    model_best : PySINDy model
+        Best SINDy model for a dynamical system, determined by
+        the hyperparameter scan.
+    condition_number : float
+        Condition number of the PySINDy feature library.
     """
 
     n_trajectories = np.array(x_test).shape[0]
@@ -1219,7 +1551,7 @@ def rudy_algorithm_miosr(
             normalize_columns=normalize_columns,
             regression_timeout=100,
         ),
-        bagging=ensemble,
+        bagging=True,
         n_models=n_models,
         n_subset=n_subset,
         replace=replace,
@@ -1246,8 +1578,8 @@ def rudy_algorithm_miosr(
     model_best = model
 
     # For each model, compute x_dot_test and compute the RMSE error
-    error_new = np.zeros(n_models)
-    error_best = np.zeros(n_models)
+    AIC_new = np.zeros(n_models)
+    AIC_best = np.zeros(n_models)
     error_rmse_new = np.zeros(n_models)
     error_rmse = np.zeros(n_models)
 
@@ -1259,7 +1591,7 @@ def rudy_algorithm_miosr(
             np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
             np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
         )
-        error_best[i] = AIC_c(
+        AIC_best[i] = AIC_c(
             np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
             np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
             coef_best[i, :, :],
@@ -1268,15 +1600,14 @@ def rudy_algorithm_miosr(
     coef_history_ = np.zeros(
         (n_models, coef_best.shape[1], coef_best.shape[2], 1 + tol_iter)
     )
-    error_history_ = np.zeros((n_models, 1 + tol_iter))
+    AIC_history_ = np.zeros((n_models, 1 + tol_iter))
     coef_history_[:, :, :, 0] = coef_best
-    error_history_[:, 0] = error_best
+    AIC_history_[:, 0] = AIC_best
     sparsity_best = 0
 
     # Loop over threshold values, note needs some coding
     # if not using STLSQ optimizer
     for i in range(tol_iter):
-        # print(i)
         optimizer = ps.EnsembleOptimizer(
             opt=ps.MIOSR(
                 target_sparsity=i + 1,
@@ -1284,7 +1615,7 @@ def rudy_algorithm_miosr(
                 normalize_columns=normalize_columns,
                 regression_timeout=5,
             ),
-            bagging=ensemble,
+            bagging=True,
             n_models=n_models,
             n_subset=n_subset,
             replace=replace,
@@ -1293,15 +1624,12 @@ def rudy_algorithm_miosr(
         model = ps.SINDy(
             feature_library=ode_lib, optimizer=optimizer, feature_names=input_names
         )
-        # t_start = time.time()
         model.fit(
             x_train,
             t=t_train,
             quiet=True,
             multiple_trajectories=True,
         )
-        # t_end = time.time()
-        # print(t_end - t_start)
 
         # For each model, compute x_dot_test and compute the RMSE error
         coef_new = np.array(optimizer.coef_list)
@@ -1314,10 +1642,8 @@ def rudy_algorithm_miosr(
             x_dot_test = model.differentiate(
                 x_test, t=t_test, multiple_trajectories=True
             )
-            # x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
             x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
-            # x_dot_test_pred = optimizer.Theta_ @ coef_new[j, :, :].T
-            error_new[j] = AIC_c(
+            AIC_new[j] = AIC_c(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
                 coef_new[j, :, :],
@@ -1326,30 +1652,27 @@ def rudy_algorithm_miosr(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
             )
-            # print(j, error_new[j], coef_new[j, :, :])
-        # print(i, error_new)
 
         coef_history_[:, :, :, i + 1] = coef_new
-        error_history_[:, i + 1] = error_new
+        AIC_history_[:, i + 1] = AIC_new
 
         # If error improves, set the new best coefficients
         # Note < not <= since if all coefficients are zero,
         # this would still keep increasing the threshold!
-        if np.mean(error_new) < np.mean(error_best):
-            error_best = np.copy(error_new)
+        if np.mean(AIC_new) < np.mean(AIC_best):
+            AIC_best = np.copy(AIC_new)
             error_rmse = np.copy(error_rmse_new)
             coef_best = np.copy(coef_new)
             sparsity_best = i
             model.optimizer.coef_ = np.median(coef_new, axis=0)
-            # model.optimizer.coef_ = model.optimizer.coef_[abs(model.optimizer.coef_) > 1e-2]
             model_best = model
 
     return (
         coef_best,
-        error_best,
+        AIC_best,
         error_rmse,
         coef_history_,
-        error_history_,
+        AIC_history_,
         sparsity_best,
         model_best,
         condition_number,

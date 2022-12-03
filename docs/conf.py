@@ -25,6 +25,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
+    "IPython.sphinxext.ipython_console_highlighting",
 ]
 nb_execution_mode = "off"
 
@@ -43,7 +44,7 @@ here = Path(__file__).parent.resolve()
 if (here / "static/custom.css").exists():
     html_static_path = ["static"]
 
-exclude_patterns = ["build", "_build", "Youtube"]
+exclude_patterns = ["build", "_build", "Youtube", "**.ipynb_checkpoints"]
 # pygments_style = "sphinx"
 
 add_module_names = True

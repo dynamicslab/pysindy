@@ -114,7 +114,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         If True, assume the grid is periodic in all spatial directions.
 
     num_pts_per_domain : int, deprecated (default None)
-        Included here to retain backwards compatability with older code
+        Included here to retain backwards compatibility with older code
         that uses this parameter. However, it merely raises a
         DeprecationWarning and then is ignored.
 
@@ -175,6 +175,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         multiindices=None,
         differentiation_method=FiniteDifference,
         diff_kwargs={},
+        is_uniform=False,
+        periodic=False,
     ):
         super(WeakPDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -831,28 +833,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         """
         check_is_fitted(self)
 
-        # x = check_array(x)
-        #
-        # n_samples_original_full, n_features = x.shape
-        # n_samples_original = n_samples_original_full // self.num_trajectories
-        #
-        # if float(__version__[:3]) >= 1.0:
-        #     if n_features != self.n_features_in_:
-        #         raise ValueError("x shape does not match training shape")
-        # else:
-        #     if n_features != self.n_input_features_:
-        #         raise ValueError("x shape does not match training shape")
-        #
-        # if self.spatiotemporal_grid is not None:
-        #     n_samples = self.K
-        #     n_samples_full = self.K * self.num_trajectories
-        #
-        # xp_full = np.empty(
-        #     (self.num_trajectories, n_samples, self.n_output_features_), dtype=x.dtype
-        # )
-        # x_full = np.reshape(
-        #     x, np.concatenate([[self.num_trajectories], self.grid_dims, [n_features]])
-        # )
         xp_full = []
         for x in x_full:
             n_features = x.shape[x.ax_coord]
@@ -871,12 +851,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
             library_functions = np.empty((self.K, n_library_terms), dtype=x.dtype)
 
             # Evaluate the functions on the indices of domain cells
-            # x_shaped = np.reshape(
-            #     x,
-            #     np.concatenate([self.spatiotemporal_grid.shape[:-1], [x.shape[-1]]]),
-            # )
-            # dims = np.array(x_shaped.shape)
-            # dims[-1] = n_library_terms
             funcs = np.zeros((*x.shape[:-1], n_library_terms))
             func_idx = 0
             for f in self.functions:

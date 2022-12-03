@@ -13,13 +13,12 @@ from sklearn.base import TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
-from ..utils import DefaultShapedInputsMixin
+from ..utils import comprehend_axes
 from ..utils import validate_no_reshape
 from ..utils import wrap_axes
-from ..utils.axes import ax_time_to_ax_sample
 
 
-class BaseFeatureLibrary(DefaultShapedInputsMixin, TransformerMixin):
+class BaseFeatureLibrary(TransformerMixin):
     """
     Base class for feature libraries.
 
@@ -187,17 +186,12 @@ def x_sequence_or_item(wrapped_func):
             return wrapped_func(self, x, *args, **kwargs)
         else:
             if not sparse.issparse(x):
-                x = AxesArray(x, self.comprehend_axes(x))
-                x = ax_time_to_ax_sample(x)
+                x = AxesArray(x, comprehend_axes(x))
                 reconstructor = np.array
             else:  # sparse arrays
                 reconstructor = type(x)
-                axes = self.comprehend_axes(x)
-                wrap_axes(axes)(x)
-                # Can't use x = ax_time_to_ax_sample(x) b/c that creates
-                # an AxesArray
-                x.ax_sample = x.ax_time
-                x.ax_time = None
+                axes = comprehend_axes(x)
+                wrap_axes(axes, x)
             result = wrapped_func(self, [x], *args, **kwargs)
             if isinstance(result, Sequence):  # e.g. transform() returns x
                 return reconstructor(result[0])
@@ -320,7 +314,20 @@ class ConcatLibrary(BaseFeatureLibrary):
                 xp_i = self.libraries_[i].transform([x])[0]
                 xp = np.concatenate([xp, xp_i], axis=xp_i.ax_coord)
 
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(np.array(xp)))]
+            current_feat = 0
+            for lib in self.libraries_:
+
+                # retrieve num features from lib
+                lib_n_output_features = lib.n_output_features_
+
+                start_feature_index = current_feat
+                end_feature_index = start_feature_index + lib_n_output_features
+
+                xp[..., start_feature_index:end_feature_index] = lib.transform([x])[0]
+
+                current_feat += lib_n_output_features
+            xp = AxesArray(xp, comprehend_axes(xp))
+            xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full
@@ -536,7 +543,10 @@ class TensoredLibrary(BaseFeatureLibrary):
                     for xp_ij in self._combinations(xp_i, xp_j):
                         xp.append(xp_ij)
 
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(np.array(xp)))]
+                    # current_feat += lib_i_n_output_features * lib_j_n_output_features
+
+            xp = AxesArray(xp, comprehend_axes(xp))
+            xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

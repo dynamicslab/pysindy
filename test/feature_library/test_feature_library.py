@@ -232,9 +232,6 @@ def test_sindypi_library_bad_params(params):
         pytest.lazy_fixture("data_custom_library_bias"),
         pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
-        # pytest.lazy_fixture("data_pde_library"),
-        # we should not use this library for lorenz data,
-        # since spatiotemporal grid determines derivative order
         pytest.lazy_fixture("data_sindypi_library"),
     ],
 )
@@ -279,9 +276,6 @@ def test_change_in_data_shape(data_lorenz, library):
         (pytest.lazy_fixture("data_custom_library"), 12),
         (pytest.lazy_fixture("data_generalized_library"), 76),
         (pytest.lazy_fixture("data_ode_library"), 9),
-        # (pytest.lazy_fixture("data_pde_library"), 129),
-        # we should not use this library for lorenz data,
-        # since spatiotemporal grid determines derivative order
         (pytest.lazy_fixture("data_sindypi_library"), 39),
     ],
 )
@@ -305,9 +299,6 @@ def test_output_shape(data_lorenz, library, shape):
         pytest.lazy_fixture("data_custom_library_bias"),
         pytest.lazy_fixture("data_generalized_library"),
         pytest.lazy_fixture("data_ode_library"),
-        # pytest.lazy_fixture("data_pde_library"),
-        # we should not use this library for lorenz data,
-        # since spatiotemporal grid determines derivative order
         pytest.lazy_fixture("data_sindypi_library"),
     ],
 )

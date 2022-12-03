@@ -19,10 +19,16 @@ from .differentiation import FiniteDifference
 from .feature_library import PolynomialLibrary
 from .optimizers import EnsembleOptimizer
 from .optimizers import SINDyOptimizer
-from .optimizers import SINDyPI
+
+try:  # Waiting on PEP 690 to lazy import CVXPY
+    from .optimizers import SINDyPI
+
+    sindy_pi_flag = True
+except ImportError:
+    sindy_pi_flag = False
 from .optimizers import STLSQ
-from .utils import ax_time_to_ax_sample
 from .utils import AxesArray
+from .utils import comprehend_axes
 from .utils import concat_sample_axis
 from .utils import drop_nan_samples
 from .utils import equations
@@ -325,50 +331,36 @@ class SINDy(BaseEstimator):
         if (n_subset is not None) and n_subset <= 0:
             raise ValueError("n_subset must be a positive integer")
 
-        x_dot_None = False  # flag for discrete time functionality
-        if self.discrete_time:
-            if x_dot is None:
-                x_dot_None = True  # set the flag
-
-        x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
         if u is None:
             self.n_control_features_ = 0
         else:
-            trim_last_point = self.discrete_time and x_dot_None
             u = validate_control_variables(
                 x,
                 u,
-                multiple_trajectories=multiple_trajectories,
-                trim_last_point=trim_last_point,
+                trim_last_point=(self.discrete_time and x_dot is None),
             )
             self.n_control_features_ = u[0].shape[u[0].ax_coord]
+        x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
 
         # Set ensemble variables
         self.ensemble = ensemble
         self.library_ensemble = library_ensemble
-        if ensemble and n_subset is None:
-            if x[0].ndim == 1:
-                raise ValueError("This shouldn't happen anymore")
-                n_subset = x[0].shape[0]
-            else:
-                n_subset = x[0].shape[x[0].ax_time]
 
         # Append control variables
         if u is not None:
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
-        x = [ax_time_to_ax_sample(xi) for xi in x]
-        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
-
         if hasattr(self.optimizer, "unbias"):
             unbias = self.optimizer.unbias
 
         # backwards compatibility for ensemble options
+        if ensemble and n_subset is None:
+            n_subset = x[0].shape[x[0].ax_time]
         if library_ensemble:
             self.feature_library.library_ensemble = False
         if ensemble and not library_ensemble:
             if n_subset is None:
-                n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
+                n_sample_tot = np.sum([xi.shape[xi.ax_time] for xi in x])
                 n_subset = int(0.6 * n_sample_tot)
             optimizer = SINDyOptimizer(
                 EnsembleOptimizer(
@@ -392,7 +384,7 @@ class SINDy(BaseEstimator):
             self.coef_list = optimizer.optimizer.coef_list
         elif ensemble and library_ensemble:
             if n_subset is None:
-                n_sample_tot = np.sum([xi.shape[xi.ax_sample] for xi in x])
+                n_sample_tot = np.sum([xi.shape[xi.ax_time] for xi in x])
                 n_subset = int(0.6 * n_sample_tot)
             optimizer = SINDyOptimizer(
                 EnsembleOptimizer(
@@ -482,14 +474,13 @@ class SINDy(BaseEstimator):
         if u is not None:
             u = validate_control_variables(x, u)
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
-        x = [ax_time_to_ax_sample(xi) for xi in x]
         result = [self.model.predict([xi]) for xi in x]
         result = [
             self.feature_library.reshape_samples_to_spatial_grid(pred)
             for pred in result
         ]
 
-        # Kept for backwards compatability.
+        # Kept for backwards compatibility.
         if not multiple_trajectories:
             return result[0]
         return result
@@ -528,13 +519,13 @@ class SINDy(BaseEstimator):
         ----------
         lhs: list of strings, optional (default None)
             List of variables to print on the left-hand sides of the learned equations.
-            By defualt :code:`self.input_features` are used.
+            By default :code:`self.input_features` are used.
 
         precision: int, optional (default 3)
             Precision to be used when printing out model coefficients.
         """
         eqns = self.equations(precision)
-        if isinstance(self.optimizer, SINDyPI):
+        if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
             feature_names = self.get_feature_names()
         else:
             feature_names = self.feature_names
@@ -543,7 +534,7 @@ class SINDy(BaseEstimator):
                 names = "(" + feature_names[i] + ")"
                 print(names + "[k+1] = " + eqn)
             elif lhs is None:
-                if not isinstance(self.optimizer, SINDyPI):
+                if not sindy_pi_flag or not isinstance(self.optimizer, SINDyPI):
                     names = "(" + feature_names[i] + ")"
                     print(names + "' = " + eqn)
                 else:
@@ -626,9 +617,6 @@ class SINDy(BaseEstimator):
             x_dot_predict = [xd[:-1] for xd in x_dot_predict]
 
         x, x_dot = self._process_multiple_trajectories(x, t, x_dot)
-        x = [ax_time_to_ax_sample(xi) for xi in x]
-        x_dot = [ax_time_to_ax_sample(xdoti) for xdoti in x_dot]
-        x_dot_predict = [ax_time_to_ax_sample(xdip) for xdip in x_dot_predict]
 
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)
@@ -638,11 +626,7 @@ class SINDy(BaseEstimator):
 
     def _process_multiple_trajectories(self, x, t, x_dot):
         """
-        Handle input data that contains multiple trajectories by doing the
-        necessary validation, reshaping, and computation of derivatives.
-
-        This method essentially just loops over elements of each list in parallel,
-        validates them, and (optionally) concatenates them together.
+        Calculate derivatives of input data, iterating through trajectories.
 
         Parameters
         ----------
@@ -651,18 +635,15 @@ class SINDy(BaseEstimator):
             trajectory.
 
         t: list of np.ndarray or int
-            List of time points for different trajectories.
-            If a list of ints is passed, each entry is assumed to be the timestep
-            for the corresponding trajectory in x.
+            List of time points for different trajectories.  If a list of ints
+            is passed, each entry is assumed to be the timestep for the
+            corresponding trajectory in x.  If np.ndarray is passed, it is
+            used for each trajectory.
 
         x_dot: list of np.ndarray
             List of derivative measurements, with each entry corresponding to a
             different trajectory. If None, the derivatives will be approximated
             from x.
-
-        return_array: boolean, optional (default True)
-            Whether to return concatenated np.ndarrays.
-            If False, the outputs will be lists with an entry for each trajectory.
 
         Returns
         -------
@@ -676,51 +657,17 @@ class SINDy(BaseEstimator):
             will be an np.ndarray of concatenated trajectories.
             If False, x_out will be a list.
         """
-        if not isinstance(x, Sequence):
-            raise TypeError("Input x must be a list")
-
-        if self.discrete_time:
-            x = [validate_input(xi) for xi in x]
-            if x_dot is None:
+        if x_dot is None:
+            if self.discrete_time:
                 x_dot = [xi[1:] for xi in x]
                 x = [xi[:-1] for xi in x]
             else:
-                if not isinstance(x_dot, Sequence):
-                    raise TypeError(
-                        "x_dot must be a list if used with x of list type "
-                        "(i.e. for multiple trajectories)"
-                    )
-                x_dot = [validate_input(xd) for xd in x_dot]
-        else:
-            if x_dot is None:
-                x = [
-                    self.feature_library.validate_input(xi, ti)
-                    for xi, ti in _zip_like_sequence(x, t)
-                ]
                 x_dot = [
                     self.feature_library.calc_trajectory(
                         self.differentiation_method, xi, ti
                     )
                     for xi, ti in _zip_like_sequence(x, t)
                 ]
-            else:
-                if not isinstance(x_dot, Sequence):
-                    raise TypeError(
-                        "x_dot must be a list if used with x of list type "
-                        "(i.e. for multiple trajectories)"
-                    )
-                if isinstance(t, Sequence):
-                    x = [
-                        self.feature_library.validate_input(xi, ti)
-                        for xi, ti in zip(x, t)
-                    ]
-                    x_dot = [
-                        self.feature_library.validate_input(xd, ti)
-                        for xd, ti in zip(x_dot, t)
-                    ]
-                else:
-                    x = [self.feature_library.validate_input(xi, t) for xi in x]
-                    x_dot = [self.feature_library.validate_input(xd, t) for xd in x_dot]
         return x, x_dot
 
     def differentiate(self, x, t=None, multiple_trajectories=False):
@@ -1002,7 +949,7 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
     """Validate input types, reshape arrays, and label axes"""
 
     def comprehend_and_validate(arr, t):
-        arr = AxesArray(arr, feature_library.comprehend_axes(arr))
+        arr = AxesArray(arr, comprehend_axes(arr))
         arr = feature_library.correct_shape(arr)
         return validate_no_reshape(arr, t)
 

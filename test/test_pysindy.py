@@ -179,8 +179,7 @@ def test_t_default(data):
     np.testing.assert_allclose(model.coefficients(), model_t_default.coefficients())
     np.testing.assert_almost_equal(model.score(x, t=dt), model_t_default.score(x))
     np.testing.assert_almost_equal(
-        np.asarray(model.differentiate(x, t=dt)),
-        np.asarray(model_t_default.differentiate(x)),
+        model.differentiate(x, t=dt), model_t_default.differentiate(x)
     )
 
 
@@ -313,6 +312,7 @@ def test_score_pde(data_1d_random_pde):
         derivative_order=4,
         spatial_grid=x,
         include_bias=True,
+        is_uniform=True,
     )
     model = SINDy(feature_library=pde_lib).fit(
         u,
@@ -335,6 +335,7 @@ def test_score_pde(data_1d_random_pde):
         derivative_order=4,
         spatiotemporal_grid=XT,
         include_bias=True,
+        is_uniform=False,
     )
     model = SINDy(feature_library=weak_lib).fit(
         u,
@@ -579,21 +580,6 @@ def test_complexity(data_lorenz):
     assert model.complexity < 10
 
 
-def test_multiple_trajectories_errors(data_multiple_trajctories, data_discrete_time):
-    x, t = data_multiple_trajctories
-
-    model = SINDy()
-    with pytest.raises(TypeError):
-        model._process_multiple_trajectories(np.array(x, dtype=object), t, x)
-    with pytest.raises(TypeError):
-        model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
-
-    x = data_discrete_time
-    model = SINDy(discrete_time=True)
-    with pytest.raises(TypeError):
-        model._process_multiple_trajectories(x, t, np.array(x, dtype=object))
-
-
 def test_simulate_errors(data_lorenz):
     x, t = data_lorenz
     model = SINDy()
@@ -716,6 +702,7 @@ def test_ensemble_pdes(data_1d_random_pde):
         derivative_order=4,
         spatial_grid=spatial_grid,
         include_bias=True,
+        is_uniform=True,
     )
     model = SINDy(feature_library=pde_lib).fit(
         u, t, ensemble=True, n_models=10, n_subset=len(t) // 2
@@ -739,6 +726,7 @@ def test_ensemble_weak_pdes(data_1d_random_pde):
         derivative_order=4,
         spatiotemporal_grid=XT,
         include_bias=True,
+        is_uniform=False,
     )
     model = SINDy(feature_library=weak_lib).fit(
         u, t=t, ensemble=True, n_models=2, n_subset=len(t) // 2
@@ -769,6 +757,7 @@ def test_library_ensemble_pde(data_1d_random_pde):
         derivative_order=4,
         spatial_grid=spatial_grid,
         include_bias=True,
+        is_uniform=True,
     )
     model = SINDy(feature_library=pde_lib).fit(
         u, t=t, library_ensemble=True, n_models=10
@@ -792,6 +781,7 @@ def test_library_ensemble_weak_pde(data_1d_random_pde):
         derivative_order=4,
         spatiotemporal_grid=XT,
         include_bias=True,
+        is_uniform=False,
     )
     model = SINDy(feature_library=weak_lib).fit(
         u, t=t, library_ensemble=True, n_models=10
@@ -823,6 +813,7 @@ def test_both_ensemble_pde(data_1d_random_pde):
         derivative_order=4,
         spatial_grid=spatial_grid,
         include_bias=True,
+        is_uniform=True,
     )
     model = SINDy(feature_library=pde_lib).fit(
         u, t=t, ensemble=True, library_ensemble=True, n_models=2
@@ -846,6 +837,7 @@ def test_both_ensemble_weak_pde(data_1d_random_pde):
         derivative_order=4,
         spatiotemporal_grid=XT,
         include_bias=True,
+        is_uniform=False,
     )
     model = SINDy(feature_library=weak_lib).fit(
         u, t=t, ensemble=True, library_ensemble=True, n_models=2
@@ -915,6 +907,7 @@ def test_multiple_trajectories_and_ensemble(diffuse_multiple_trajectories):
         function_names=library_function_names,
         derivative_order=2,
         spatial_grid=x,
+        is_uniform=True,
     )
 
     X, T = np.meshgrid(x, t, indexing="ij")
@@ -926,6 +919,7 @@ def test_multiple_trajectories_and_ensemble(diffuse_multiple_trajectories):
         derivative_order=2,
         spatiotemporal_grid=XT,
         K=100,
+        is_uniform=False,
     )
 
     optimizer = STLSQ(threshold=0.1, alpha=1e-5, normalize_columns=False)

@@ -7,6 +7,7 @@ from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
+from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
 from pysindy.differentiation import FiniteDifference
@@ -118,6 +119,8 @@ class PDELibrary(BaseFeatureLibrary):
         multiindices=None,
         differentiation_method=FiniteDifference,
         diff_kwargs={},
+        is_uniform=False,
+        periodic=False,
     ):
         super(PDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -197,10 +200,6 @@ class PDELibrary(BaseFeatureLibrary):
             spatiotemporal_grid = np.reshape(
                 spatiotemporal_grid, (len(spatiotemporal_grid), 1)
             )
-        self.grid_dims = spatiotemporal_grid.shape[:-1]
-        self.spatial_grid_dims = self.spatial_grid.shape[:-1]
-        self.grid_ndim = len(spatiotemporal_grid.shape[:-1])
-        self.spatial_grid_ndim = len(self.spatial_grid_dims)
 
         # if want to include temporal terms -> range(len(dims))
         if self.implicit_terms:
@@ -222,7 +221,9 @@ class PDELibrary(BaseFeatureLibrary):
 
         self.num_derivatives = num_derivatives
         self.multiindices = multiindices
-        self.spatiotemporal_grid = spatiotemporal_grid
+        self.spatiotemporal_grid = AxesArray(
+            spatiotemporal_grid, comprehend_axes(spatiotemporal_grid)
+        )
 
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
@@ -276,7 +277,13 @@ class PDELibrary(BaseFeatureLibrary):
         def derivative_string(multiindex):
             ret = ""
             for axis in range(self.ind_range):
-                if (axis == self.grid_ndim - 1) and self.implicit_terms:
+                if self.implicit_terms and (
+                    axis
+                    in [
+                        self.spatiotemporal_grid.ax_time,
+                        self.spatiotemporal_grid.ax_sample,
+                    ]
+                ):
                     str_deriv = "t"
                 else:
                     str_deriv = str(axis + 1)
@@ -392,11 +399,11 @@ class PDELibrary(BaseFeatureLibrary):
             library_derivatives = np.empty(shape, dtype=x.dtype)
             library_idx = 0
             for multiindex in self.multiindices:
-                derivs = x.copy()
+                derivs = x
                 for axis in range(self.ind_range):
                     if multiindex[axis] > 0:
                         s = [0 for dim in self.spatiotemporal_grid.shape]
-                        s[axis] = slice(self.grid_dims[axis])
+                        s[axis] = slice(self.spatiotemporal_grid.shape[axis])
                         s[-1] = axis
 
                         derivs = self.differentiation_method(
@@ -458,7 +465,8 @@ class PDELibrary(BaseFeatureLibrary):
                     shape,
                 )
                 library_idx += n_library_terms * self.num_derivatives * n_features
-            xp_full = xp_full + [AxesArray(xp, self.comprehend_axes(xp))]
+            xp = AxesArray(xp, comprehend_axes(xp))
+            xp_full.append(xp)
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full

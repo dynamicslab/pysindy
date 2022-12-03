@@ -1,5 +1,3 @@
-from typing import Type
-
 import numpy as np
 from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
@@ -131,12 +129,12 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             if weak_libraries:
                 self.validate_input = libraries[weak_libraries].validate_input
                 # self.calc_trajectory = libraries[weak_libraries].calc_trajectory
-                self.comprehend_axes = libraries[weak_libraries].comprehend_axes
+                # self.comprehend_axes = libraries[weak_libraries].comprehend_axes
                 self.spatiotemporal_grid = libraries[weak_libraries].spatiotemporal_grid
             elif pde_libraries:
                 self.validate_input = libraries[pde_libraries].validate_input
                 # self.calc_trajectory = libraries[pde_libraries].calc_trajectory
-                self.comprehend_axes = libraries[pde_libraries].comprehend_axes
+                # self.comprehend_axes = libraries[pde_libraries].comprehend_axes
                 self.spatial_grid = libraries[pde_libraries].spatial_grid
         else:
             raise ValueError(
@@ -252,23 +250,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self.libraries_full_ = fitted_libs
 
         return self
-
-    def has_type(self, libtype: Type, exclusively=False) -> bool:
-        """Checks whether this library has a specific library type.
-
-        Parameters
-        ----------
-        libtype : A type of feature library
-        exclusively: whether to check all libraries
-
-        Returns
-        -------
-        Bool indicating whether specific library type is present
-        """
-        has_inst = map(lambda lib: isinstance(lib, libtype), self.libraries_)
-        if exclusively:
-            return all(has_inst)
-        return any(has_inst)
 
     @x_sequence_or_item
     def transform(self, x_full):

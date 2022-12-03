@@ -463,6 +463,12 @@ def test_fit_warn(data_lorenz_c_1d, params, warning):
         except AssertionError:
             break
 
+    while True:
+        try:
+            warn_record.pop(DeprecationWarning)
+        except AssertionError:
+            break
+
     assert len(warn_record) == 0
 
 

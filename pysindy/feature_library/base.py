@@ -314,18 +314,6 @@ class ConcatLibrary(BaseFeatureLibrary):
                 xp_i = self.libraries_[i].transform([x])[0]
                 xp = np.concatenate([xp, xp_i], axis=xp_i.ax_coord)
 
-            current_feat = 0
-            for lib in self.libraries_:
-
-                # retrieve num features from lib
-                lib_n_output_features = lib.n_output_features_
-
-                start_feature_index = current_feat
-                end_feature_index = start_feature_index + lib_n_output_features
-
-                xp[..., start_feature_index:end_feature_index] = lib.transform([x])[0]
-
-                current_feat += lib_n_output_features
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
         if self.library_ensemble:
@@ -543,8 +531,7 @@ class TensoredLibrary(BaseFeatureLibrary):
                     for xp_ij in self._combinations(xp_i, xp_j):
                         xp.append(xp_ij)
 
-                    # current_feat += lib_i_n_output_features * lib_j_n_output_features
-
+            xp = np.array(xp)
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
         if self.library_ensemble:

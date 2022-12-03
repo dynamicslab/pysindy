@@ -1022,8 +1022,8 @@ def test_legacy_ensemble_pdes(optimizer):
     u_dot = np.zeros(u.shape)
     for i in range(len(x)):
         u_dot[i, :, :] = FiniteDifference()._differentiate(u[i, :, :], t=dt)
-    u_flattened = np.reshape(u, (len(x) * len(t), 2))
-    u_dot_flattened = np.reshape(u_dot, (len(x) * len(t), 2))
+    # u_flattened = np.reshape(u, (len(x) * len(t), 2))
+    # u_dot_flattened = np.reshape(u_dot, (len(x) * len(t), 2))
 
     library_functions = [lambda x: x, lambda x: x * x]
     library_function_names = [lambda x: x, lambda x: x + x]
@@ -1037,9 +1037,10 @@ def test_legacy_ensemble_pdes(optimizer):
     )
     opt = optimizer(normalize_columns=True)
     model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(
-        u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10, n_subset=20
-    )
+    # model.fit(
+    #     u_flattened, x_dot=u_dot_flattened, ensemble=True, n_models=10, n_subset=20
+    # )
+    model.fit(u, x_dot=u_dot, ensemble=True, n_models=10, n_subset=20)
     n_features = len(model.get_feature_names())
     assert np.shape(model.coef_list) == (10, 2, n_features)
 

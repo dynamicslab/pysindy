@@ -23,4 +23,4 @@ pandas
 seaborn
 ipython
 scs<=2.1.4
-gurobipy>=9.5.1
+gurobipy>=9.5.1,<10.0

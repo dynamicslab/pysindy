@@ -195,6 +195,10 @@ class StableLinearSR3(ConstrainedSR3):
         self.alpha_A = nu
         self.max_iter = max_iter
         self.unbias = False
+        warnings.warn(
+            "This optimizer is set up to only be used with a purely linear"
+            " library in the variables. No constant or nonlinear terms!"
+        )
 
     def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])

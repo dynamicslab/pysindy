@@ -26,6 +26,7 @@ from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import SR3
 from pysindy.optimizers import SSR
+from pysindy.optimizers import StableLinearSR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.utils import supports_multiple_targets
@@ -72,6 +73,7 @@ class DummyModelNoCoef(BaseEstimator):
         (FROLS, True),
         (SR3, True),
         (ConstrainedSR3, True),
+        (StableLinearSR3, True),
         (TrappingSR3, True),
         (DummyLinearModel, False),
     ],
@@ -94,6 +96,7 @@ def data(request):
         FROLS(),
         SR3(),
         ConstrainedSR3(),
+        StableLinearSR3(),
         TrappingSR3(),
         Lasso(fit_intercept=False),
         ElasticNet(fit_intercept=False),
@@ -157,6 +160,7 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
         FROLS,
         SR3,
         ConstrainedSR3,
+        StableLinearSR3,
         TrappingSR3,
         MIOSR,
     ],
@@ -181,14 +185,14 @@ def test_sample_weight_optimizers(data_lorenz, optimizer):
     check_is_fitted(model)
 
 
-@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3])
+@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3, StableLinearSR3])
 @pytest.mark.parametrize("params", [dict(threshold=-1), dict(max_iter=0)])
 def test_general_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
         optimizer(**params)
 
 
-@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3, StableLinearSR3])
 @pytest.mark.parametrize(
     "params",
     [
@@ -419,6 +423,54 @@ def test_constrained_sr3_quadratic_library(params):
 
 
 @pytest.mark.parametrize(
+    "params",
+    [
+        dict(thresholder="l1", threshold=0),
+        dict(thresholder="l1", threshold=1e-5),
+        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 3))),
+        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 3))),
+        dict(thresholder="l2", threshold=0),
+        dict(thresholder="l2", threshold=1e-5),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 3))),
+        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 3))),
+    ],
+)
+def test_stable_linear_sr3_linear_library(params):
+    x = np.random.standard_normal((100, 3))
+    library_functions = [
+        lambda x: x,
+    ]
+    library_function_names = [
+        lambda x: str(x),
+    ]
+    sindy_library = CustomLibrary(
+        library_functions=library_functions, function_names=library_function_names
+    )
+
+    # Test stable linear SR3 without constraints
+    opt = StableLinearSR3(**params)
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    check_is_fitted(model)
+
+    # rerun with identity constraints
+    r = 3
+    N = 3
+    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
+    constraint_rhs = np.zeros(p)
+    constraint_matrix = np.eye(p, r * N)
+
+    # Test stable linear SR3 with constraints
+    opt = StableLinearSR3(
+        constraint_lhs=constraint_matrix, constraint_rhs=constraint_rhs, **params
+    )
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    check_is_fitted(model)
+    assert np.allclose((model.coefficients().flatten())[:p], 0.0)
+
+
+@pytest.mark.parametrize(
     "trapping_sr3_params",
     [
         dict(),
@@ -519,6 +571,7 @@ def test_trapping_cubic_library():
         (ValueError, FROLS, dict(max_iter=-1)),
         (NotImplementedError, SR3, dict(thresholder="l3")),
         (NotImplementedError, ConstrainedSR3, dict(thresholder="l3")),
+        (NotImplementedError, StableLinearSR3, dict(thresholder="l3")),
         (
             ValueError,
             ConstrainedSR3,
@@ -571,7 +624,7 @@ def test_bad_optimizers(data_derivative_1d):
         opt.fit(x, x_dot)
 
 
-@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3, StableLinearSR3])
 def test_initial_guess_sr3(optimizer):
     x = np.random.standard_normal((10, 3))
     x_dot = np.random.standard_normal((10, 2))
@@ -722,7 +775,9 @@ def test_sr3_enable_trimming(optimizer, data_linear_oscillator_corrupted):
     np.testing.assert_allclose(model_plain.coef_, model_trimming.coef_)
 
 
-@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3, TrappingSR3])
+@pytest.mark.parametrize(
+    "optimizer", [SR3, ConstrainedSR3, StableLinearSR3, TrappingSR3]
+)
 def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
     x, x_dot, _ = data_linear_oscillator_corrupted
     model = optimizer(max_iter=1, tol=1e-10)
@@ -737,6 +792,7 @@ def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
         STLSQ(max_iter=1),
         SR3(max_iter=1),
         ConstrainedSR3(max_iter=1),
+        StableLinearSR3(max_iter=1),
         TrappingSR3(max_iter=1),
     ],
 )
@@ -748,7 +804,9 @@ def test_fit_warn(data_derivative_1d, optimizer):
         optimizer.fit(x, x_dot)
 
 
-@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
+@pytest.mark.parametrize(
+    "optimizer", [ConstrainedSR3, StableLinearSR3, TrappingSR3, MIOSR]
+)
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_row_format_constraints(data_linear_combination, optimizer, target_value):
     # Solution is x_dot = x.dot(np.array([[1, 1, 0], [0, 1, 1]]))
@@ -773,7 +831,9 @@ def test_row_format_constraints(data_linear_combination, optimizer, target_value
     )
 
 
-@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
+@pytest.mark.parametrize(
+    "optimizer", [ConstrainedSR3, StableLinearSR3, TrappingSR3, MIOSR]
+)
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_target_format_constraints(data_linear_combination, optimizer, target_value):
     x, x_dot = data_linear_combination
@@ -947,6 +1007,7 @@ def test_inequality_constraints_reqs():
         FROLS,
         SR3,
         ConstrainedSR3,
+        StableLinearSR3,
         TrappingSR3,
         MIOSR,
     ],
@@ -973,6 +1034,7 @@ def test_normalize_columns(data_derivative_1d, optimizer):
         FROLS,
         SR3,
         ConstrainedSR3,
+        StableLinearSR3,
         TrappingSR3,
         MIOSR,
     ],
@@ -1010,6 +1072,7 @@ def test_ensemble_optimizer(data_lorenz, optimizer_params):
         FROLS,
         SR3,
         ConstrainedSR3,
+        StableLinearSR3,
         TrappingSR3,
         MIOSR,
     ],
@@ -1060,6 +1123,7 @@ def test_ssr_criteria(data_lorenz):
         FROLS,
         SR3,
         ConstrainedSR3,
+        StableLinearSR3,
         TrappingSR3,
         MIOSR,
     ],
@@ -1078,6 +1142,7 @@ def test_optimizers_verbose(data_lorenz, optimizer):
     [
         SINDyPI,
         ConstrainedSR3,
+        StableLinearSR3,
         TrappingSR3,
     ],
 )

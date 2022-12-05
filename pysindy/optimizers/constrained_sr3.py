@@ -190,6 +190,18 @@ class ConstrainedSR3(SR3):
             constraint_rhs is not None
         )
 
+        if (
+            self.use_constraints
+            and not equality_constraints
+            and not inequality_constraints
+        ):
+            warnings.warn(
+                "constraint_lhs and constraint_rhs passed to the optimizer, "
+                " but user did not specify if the constraints were equality or"
+                " inequality constraints. Assuming equality constraints."
+            )
+            self.equality_constraints = True
+
         if self.use_constraints:
             if constraint_order not in ("feature", "target"):
                 raise ValueError(
@@ -210,9 +222,6 @@ class ConstrainedSR3(SR3):
                 "Cannot use inequality constraints without cvxpy installed."
             )
 
-        if inequality_constraints:
-            self.max_iter = max(10000, max_iter)  # max iterations for CVXPY
-
         if inequality_constraints and not self.use_constraints:
             raise ValueError(
                 "Use of inequality constraints requires constraint_lhs and "
@@ -229,6 +238,7 @@ class ConstrainedSR3(SR3):
                 "Use of inequality constraints requires a convex regularizer."
             )
         self.inequality_constraints = inequality_constraints
+        self.equality_constraints = equality_constraints
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
         g = x_transpose_y + coef_sparse / self.nu
@@ -257,11 +267,15 @@ class ConstrainedSR3(SR3):
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
         if self.use_constraints:
             if self.inequality_constraints and self.equality_constraints:
-                # Process equality constraints then inequality constraints
+                # Process inequality constraints then equality constraints
                 prob = cp.Problem(
                     cp.Minimize(cost),
-                    [self.constraint_lhs[:self.constraint_separation_index, :] @ xi <= self.constraint_rhs[:self.constraint_separation_index],
-                     self.constraint_lhs[self.constraint_separation_index:, :] @ xi == self.constraint_rhs[self.constraint_separation_index:]],
+                    [
+                        self.constraint_lhs[: self.constraint_separation_index, :] @ xi
+                        <= self.constraint_rhs[: self.constraint_separation_index],
+                        self.constraint_lhs[self.constraint_separation_index :, :] @ xi
+                        == self.constraint_rhs[self.constraint_separation_index :],
+                    ],
                 )
             elif self.inequality_constraints:
                 prob = cp.Problem(

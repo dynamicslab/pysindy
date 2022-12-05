@@ -624,7 +624,7 @@ def test_bad_optimizers(data_derivative_1d):
         opt.fit(x, x_dot)
 
 
-@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3, StableLinearSR3])
+@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
 def test_initial_guess_sr3(optimizer):
     x = np.random.standard_normal((10, 3))
     x_dot = np.random.standard_normal((10, 2))
@@ -804,9 +804,7 @@ def test_fit_warn(data_derivative_1d, optimizer):
         optimizer.fit(x, x_dot)
 
 
-@pytest.mark.parametrize(
-    "optimizer", [ConstrainedSR3, StableLinearSR3, TrappingSR3, MIOSR]
-)
+@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_row_format_constraints(data_linear_combination, optimizer, target_value):
     # Solution is x_dot = x.dot(np.array([[1, 1, 0], [0, 1, 1]]))
@@ -891,17 +889,17 @@ def test_constrained_inequality_constraints(data_lorenz, params):
     "params",
     [
         dict(thresholder="l1", threshold=0.0005),
-        dict(thresholder="weighted_l1", thresholds=0.0005 * np.ones((3, 10))),
+        dict(thresholder="weighted_l1", thresholds=0.0005 * np.ones((3, 9))),
         dict(thresholder="l2", threshold=0.0005),
-        dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 10))),
+        dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 9))),
     ],
 )
 def test_trapping_inequality_constraints(data_lorenz, params):
     x, t = data_lorenz
     constraint_rhs = np.array([-10.0, 28.0])
-    constraint_matrix = np.zeros((2, 30))
-    constraint_matrix[0, 1] = 1.0
-    constraint_matrix[1, 11] = 1.0
+    constraint_matrix = np.zeros((2, 27))
+    constraint_matrix[0, 0] = 1.0
+    constraint_matrix[1, 10] = 1.0
     feature_names = ["x", "y", "z"]
 
     # Run Trapping SR3 without CVXPY for the m solve
@@ -913,7 +911,7 @@ def test_trapping_inequality_constraints(data_lorenz, params):
         relax_optim=True,
         **params,
     )
-    poly_lib = PolynomialLibrary(degree=2)
+    poly_lib = PolynomialLibrary(degree=2, include_bias=False)
     model = SINDy(
         optimizer=opt,
         feature_library=poly_lib,

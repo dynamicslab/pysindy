@@ -186,6 +186,9 @@ class ConstrainedSR3(SR3):
 
         self.verbose_cvxpy = verbose_cvxpy
         self.reg = get_regularization(thresholder)
+        self.constraint_lhs = constraint_lhs
+        self.constraint_rhs = constraint_rhs
+        self.constraint_order = constraint_order
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
         )
@@ -208,14 +211,7 @@ class ConstrainedSR3(SR3):
                     "constraint_order must be either 'feature' or 'target'"
                 )
 
-            self.constraint_lhs = constraint_lhs
-            self.constraint_rhs = constraint_rhs
             self.unbias = False
-            self.constraint_order = constraint_order
-
-            if equality_constraints and inequality_constraints:
-                self.constraint_separation_index = constraint_separation_index
-                self.equality_constraints = equality_constraints
 
         if inequality_constraints and not cvxpy_flag:
             raise ValueError(
@@ -239,6 +235,7 @@ class ConstrainedSR3(SR3):
             )
         self.inequality_constraints = inequality_constraints
         self.equality_constraints = equality_constraints
+        self.constraint_separation_index = constraint_separation_index
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
         g = x_transpose_y + coef_sparse / self.nu
@@ -469,7 +466,6 @@ class ConstrainedSR3(SR3):
                     ),
                     ConvergenceWarning,
                 )
-
         if self.use_constraints and self.constraint_order.lower() == "target":
             self.constraint_lhs = reorder_constraints(
                 self.constraint_lhs, n_features, output_order="target"

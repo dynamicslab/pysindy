@@ -717,7 +717,7 @@ def Pareto_scan_ensembling(
                 replace=replace,
                 strong_rmse=strong_rmse,
             )
-        # Using the Pareto-optimal model, compute true x_dot (with median ensemble agregator)
+        # Using the Pareto-optimal model, compute true x_dot (with median ensemble aggregator)
         x_dot_test_pred = [np.median(coef_best, axis=0).dot(mat.T).T for mat in mats]
 
         models.append(model)

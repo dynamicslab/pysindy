@@ -556,15 +556,54 @@ def Pareto_scan_ensembling(
 
         # pre-calculate the test trajectory derivatives and library matrices
         if isinstance(poly_library, ps.WeakPDELibrary) and strong_rmse:
-            lib2=ps.PolynomialLibrary(degree=4).fit([ps.AxesArray(xt,axes={'ax_time':0,'ax_coord':1}) for xt in x_test_list])
-            x_dot_test = [lib2.calc_trajectory(ps.FiniteDifference(axis=-2), ps.AxesArray(x_test_list[i],axes={'ax_time':0,'ax_coord':1}), t_test_list[i]) for i in range(len(x_test_list))]
-            mats=lib2.fit_transform([ps.AxesArray(xt,axes={'ax_time':0,'ax_coord':1}) for xt in x_test_list])
-            poly_library.fit([ps.AxesArray(xt,axes={'ax_time':0,'ax_coord':1}) for xt in x_test_list])
-            order=np.array([np.where(name==np.array(lib2.get_feature_names()))[0] for name in poly_library.get_feature_names()])[:,0]
-            mats=[mat[:,order] for mat in mats]
+            lib2 = ps.PolynomialLibrary(degree=4).fit(
+                [
+                    ps.AxesArray(xt, axes={"ax_time": 0, "ax_coord": 1})
+                    for xt in x_test_list
+                ]
+            )
+            x_dot_test = [
+                lib2.calc_trajectory(
+                    ps.FiniteDifference(axis=-2),
+                    ps.AxesArray(x_test_list[i], axes={"ax_time": 0, "ax_coord": 1}),
+                    t_test_list[i],
+                )
+                for i in range(len(x_test_list))
+            ]
+            mats = lib2.fit_transform(
+                [
+                    ps.AxesArray(xt, axes={"ax_time": 0, "ax_coord": 1})
+                    for xt in x_test_list
+                ]
+            )
+            poly_library.fit(
+                [
+                    ps.AxesArray(xt, axes={"ax_time": 0, "ax_coord": 1})
+                    for xt in x_test_list
+                ]
+            )
+            order = np.array(
+                [
+                    np.where(name == np.array(lib2.get_feature_names()))[0]
+                    for name in poly_library.get_feature_names()
+                ]
+            )[:, 0]
+            mats = [mat[:, order] for mat in mats]
         else:
-            x_dot_test = [poly_library.calc_trajectory(ps.FiniteDifference(axis=-2), ps.AxesArray(x_test_list[i],axes={'ax_time':0,'ax_coord':1}), t_test_list[i]) for i in range(len(x_test_list))]
-            mats=poly_library.fit_transform([ps.AxesArray(xt,axes={'ax_time':0,'ax_coord':1}) for xt in x_test_list])
+            x_dot_test = [
+                poly_library.calc_trajectory(
+                    ps.FiniteDifference(axis=-2),
+                    ps.AxesArray(x_test_list[i], axes={"ax_time": 0, "ax_coord": 1}),
+                    t_test_list[i],
+                )
+                for i in range(len(x_test_list))
+            ]
+            mats = poly_library.fit_transform(
+                [
+                    ps.AxesArray(xt, axes={"ax_time": 0, "ax_coord": 1})
+                    for xt in x_test_list
+                ]
+            )
 
         # Sweep a Pareto front depending on the algorithm
         if algorithm == "MIOSR":
@@ -679,7 +718,7 @@ def Pareto_scan_ensembling(
                 strong_rmse=strong_rmse,
             )
         # Using the Pareto-optimal model, compute true x_dot (with median ensemble agregator)
-        x_dot_test_pred = [np.median(coef_best,axis=0).dot(mat.T).T for mat in mats]
+        x_dot_test_pred = [np.median(coef_best, axis=0).dot(mat.T).T for mat in mats]
 
         models.append(model)
         x_dot_tests.append(x_dot_test)
@@ -941,7 +980,6 @@ def hyperparameter_scan_stlsq(
             model_best = model
         initial_hyperparam = initial_hyperparam * change_factor
         tol += initial_hyperparam
-
 
     return (
         coef_best,

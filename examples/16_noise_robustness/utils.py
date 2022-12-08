@@ -353,6 +353,7 @@ def Pareto_scan_ensembling(
     n_subset=40,
     replace=False,
     weak_form=False,
+    strong_rmse=False,
     algorithm="STLSQ",
 ):
     """
@@ -553,6 +554,18 @@ def Pareto_scan_ensembling(
                 K=200,
             )
 
+        # pre-calculate the test trajectory derivatives and library matrices
+        if isinstance(poly_library, ps.WeakPDELibrary) and strong_rmse:
+            lib2=ps.PolynomialLibrary(degree=4).fit([ps.AxesArray(xt,axes={'ax_time':0,'ax_coord':1}) for xt in x_test_list])
+            x_dot_test = [lib2.calc_trajectory(ps.FiniteDifference(axis=-2), ps.AxesArray(x_test_list[i],axes={'ax_time':0,'ax_coord':1}), t_test_list[i]) for i in range(len(x_test_list))]
+            mats=lib2.fit_transform([ps.AxesArray(xt,axes={'ax_time':0,'ax_coord':1}) for xt in x_test_list])
+            poly_library.fit([ps.AxesArray(xt,axes={'ax_time':0,'ax_coord':1}) for xt in x_test_list])
+            order=np.array([np.where(name==np.array(lib2.get_feature_names()))[0] for name in poly_library.get_feature_names()])[:,0]
+            mats=[mat[:,order] for mat in mats]
+        else:
+            x_dot_test = [poly_library.calc_trajectory(ps.FiniteDifference(axis=-2), ps.AxesArray(x_test_list[i],axes={'ax_time':0,'ax_coord':1}), t_test_list[i]) for i in range(len(x_test_list))]
+            mats=poly_library.fit_transform([ps.AxesArray(xt,axes={'ax_time':0,'ax_coord':1}) for xt in x_test_list])
+
         # Sweep a Pareto front depending on the algorithm
         if algorithm == "MIOSR":
             (
@@ -568,10 +581,12 @@ def Pareto_scan_ensembling(
                 x_train_list,
                 x_test_list,
                 t_train_list,
+                t_test_list,
+                x_dot_test,
+                mats,
                 ode_lib=poly_library,
                 alpha=1e-5,
                 normalize_columns=normalize_columns,
-                t_test=t_test_list,
                 input_names=input_names,
                 n_models=n_models,
                 n_subset=n_subset,
@@ -591,13 +606,15 @@ def Pareto_scan_ensembling(
                 x_train_list,
                 x_test_list,
                 t_train_list,
+                t_test_list,
+                x_dot_test,
+                mats,
                 ode_lib=poly_library,
                 initial_hyperparam=initial_hyperparam,
                 max_iter=max_iter,
                 tol_iter=tol_iter,
                 change_factor=1.1,
                 normalize_columns=normalize_columns,
-                t_test=t_test_list,
                 input_names=input_names,
                 n_models=n_models,
                 n_subset=n_subset,
@@ -617,13 +634,15 @@ def Pareto_scan_ensembling(
                 x_train_list,
                 x_test_list,
                 t_train_list,
+                t_test_list,
+                x_dot_test,
+                mats,
                 ode_lib=poly_library,
                 initial_hyperparam=initial_hyperparam,
                 max_iter=max_iter,
                 tol_iter=tol_iter,
                 change_factor=1.1,
                 normalize_columns=normalize_columns,
-                t_test=t_test_list,
                 input_names=input_names,
                 n_models=n_models,
                 n_subset=n_subset,
@@ -643,6 +662,9 @@ def Pareto_scan_ensembling(
                 x_train_list,
                 x_test_list,
                 t_train_list,
+                t_test_list,
+                x_dot_test,
+                mats,
                 ode_lib=poly_library,
                 initial_hyperparam=initial_hyperparam,
                 max_iter=max_iter,
@@ -650,21 +672,15 @@ def Pareto_scan_ensembling(
                 change_factor=1.1,
                 alpha=1e-5,
                 normalize_columns=normalize_columns,
-                t_test=t_test_list,
                 input_names=input_names,
                 n_models=n_models,
                 n_subset=n_subset,
                 replace=replace,
+                strong_rmse=strong_rmse,
             )
+        # Using the Pareto-optimal model, compute true x_dot (with median ensemble agregator)
+        x_dot_test_pred = [np.median(coef_best,axis=0).dot(mat.T).T for mat in mats]
 
-        # Using the Pareto-optimal model, compute true x_dot
-        x_dot_test = model.differentiate(
-            x_test_list, t=t_test_list, multiple_trajectories=True
-        )
-        # Using the Pareto-optimal model, compute predicted x_dot
-        x_dot_test_pred = model.predict(x_test_list, multiple_trajectories=True)
-
-        # record all the important quantities
         models.append(model)
         x_dot_tests.append(x_dot_test)
         x_dot_test_preds.append(x_dot_test_pred)
@@ -696,6 +712,8 @@ def hyperparameter_scan_stlsq(
     x_test,
     t_train,
     t_test,
+    x_dot_test,
+    mats,
     ode_lib,
     initial_hyperparam,
     alpha=1e-5,
@@ -707,6 +725,7 @@ def hyperparameter_scan_stlsq(
     n_models=10,
     n_subset=40,
     replace=False,
+    strong_rmse=False,
 ):
     """
     Algorithm to scan over threshold values during STLSQ with Ridge
@@ -802,10 +821,7 @@ def hyperparameter_scan_stlsq(
 
     n_trajectories = np.array(x_test).shape[0]
     n_state = np.array(x_test).shape[2]
-    if isinstance(ode_lib, ps.WeakPDELibrary):
-        n_time = ode_lib.K
-    else:
-        n_time = np.array(x_test).shape[1]
+    n_time = np.array(x_dot_test).shape[1]
 
     # Do an initial least-squares fit to get an initial guess of the coefficients
     # start with initial guess that all coefs are zero
@@ -848,9 +864,7 @@ def hyperparameter_scan_stlsq(
     error_rmse = np.zeros(n_models)
 
     for i in range(n_models):
-        optimizer.coef_ = coef_best[i, :, :]
-        x_dot_test = model.differentiate(x_test, t=t_test, multiple_trajectories=True)
-        x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+        x_dot_test_pred = [coef_best[i].dot(mat.T).T for mat in mats]
         dx_test = np.array(x_dot_test).reshape(n_trajectories * n_time, n_state)
         dx_pred = np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state)
         AIC_best[i] = AIC_c(dx_test, dx_pred, coef_best[i, :, :])
@@ -858,7 +872,6 @@ def hyperparameter_scan_stlsq(
             dx_test,
             dx_pred,
         )
-
     coef_history_ = np.zeros(
         (n_models, coef_best.shape[1], coef_best.shape[2], 1 + tol_iter)
     )
@@ -901,12 +914,8 @@ def hyperparameter_scan_stlsq(
             break
 
         for j in range(n_models):
-            optimizer.coef_ = np.copy(coef_new[j, :, :])
-            model.optimizer.coef_ = np.copy(coef_new[j, :, :])
-            x_dot_test = model.differentiate(
-                x_test, t=t_test, multiple_trajectories=True
-            )
-            x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            x_dot_test_pred = [coef_new[j].dot(mat.T).T for mat in mats]
+
             AIC_new[j] = AIC_c(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
@@ -933,6 +942,7 @@ def hyperparameter_scan_stlsq(
         initial_hyperparam = initial_hyperparam * change_factor
         tol += initial_hyperparam
 
+
     return (
         coef_best,
         AIC_best,
@@ -950,6 +960,8 @@ def hyperparameter_scan_lasso(
     x_test,
     t_train,
     t_test,
+    x_dot_test,
+    mats,
     ode_lib,
     initial_hyperparam,
     tol_iter=300,
@@ -1094,9 +1106,8 @@ def hyperparameter_scan_lasso(
     error_rmse = np.zeros(n_models)
 
     for i in range(n_models):
-        optimizer.coef_ = coef_best[i, :, :]
-        x_dot_test = model.differentiate(x_test, t=t_test, multiple_trajectories=True)
-        x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+        x_dot_test_pred = [coef_best[i].dot(mat.T).T for mat in mats]
+
         dx_test = np.array(x_dot_test).reshape(n_trajectories * n_time, n_state)
         dx_pred = np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state)
         AIC_best[i] = AIC_c(dx_test, dx_pred, coef_best[i, :, :])
@@ -1141,12 +1152,7 @@ def hyperparameter_scan_lasso(
             break
 
         for j in range(n_models):
-            optimizer.coef_ = np.copy(coef_new[j, :, :])
-            model.optimizer.coef_ = np.copy(coef_new[j, :, :])
-            x_dot_test = model.differentiate(
-                x_test, t=t_test, multiple_trajectories=True
-            )
-            x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            x_dot_test_pred = [coef_new[j].dot(mat.T).T for mat in mats]
             AIC_new[j] = AIC_c(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
@@ -1190,6 +1196,8 @@ def hyperparameter_scan_sr3(
     x_test,
     t_train,
     t_test,
+    x_dot_test,
+    mats,
     ode_lib,
     initial_hyperparam,
     tol_iter=300,
@@ -1335,9 +1343,7 @@ def hyperparameter_scan_sr3(
     error_rmse = np.zeros(n_models)
 
     for i in range(n_models):
-        optimizer.coef_ = coef_best[i, :, :]
-        x_dot_test = model.differentiate(x_test, t=t_test, multiple_trajectories=True)
-        x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+        x_dot_test_pred = [coef_best[i].dot(mat.T).T for mat in mats]
         AIC_best[i] = AIC_c(
             np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
             np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
@@ -1389,12 +1395,7 @@ def hyperparameter_scan_sr3(
             break
 
         for j in range(n_models):
-            optimizer.coef_ = np.copy(coef_new[j, :, :])
-            model.optimizer.coef_ = np.copy(coef_new[j, :, :])
-            x_dot_test = model.differentiate(
-                x_test, t=t_test, multiple_trajectories=True
-            )
-            x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            x_dot_test_pred = [coef_new[j].dot(mat.T).T for mat in mats]
             AIC_new[j] = AIC_c(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
@@ -1438,6 +1439,8 @@ def hyperparameter_scan_miosr(
     x_test,
     t_train,
     t_test,
+    x_dot_test,
+    mats,
     ode_lib,
     alpha=1e-5,
     normalize_columns=True,
@@ -1584,9 +1587,7 @@ def hyperparameter_scan_miosr(
     error_rmse = np.zeros(n_models)
 
     for i in range(n_models):
-        optimizer.coef_ = coef_best[i, :, :]
-        x_dot_test = model.differentiate(x_test, t=t_test, multiple_trajectories=True)
-        x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+        x_dot_test_pred = [coef_best[i].dot(mat.T).T for mat in mats]
         error_rmse[i] = normalized_RMSE(
             np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
             np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),
@@ -1637,12 +1638,7 @@ def hyperparameter_scan_miosr(
             break
 
         for j in range(n_models):
-            optimizer.coef_ = np.copy(coef_new[j, :, :])
-            model.optimizer.coef_ = np.copy(coef_new[j, :, :])
-            x_dot_test = model.differentiate(
-                x_test, t=t_test, multiple_trajectories=True
-            )
-            x_dot_test_pred = model.predict(x_test, multiple_trajectories=True)
+            x_dot_test_pred = [coef_new[j].dot(mat.T).T for mat in mats]
             AIC_new[j] = AIC_c(
                 np.array(x_dot_test).reshape(n_trajectories * n_time, n_state),
                 np.array(x_dot_test_pred).reshape(n_trajectories * n_time, n_state),

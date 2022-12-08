@@ -555,22 +555,20 @@ def Pareto_scan_ensembling(
             )
 
         # pre-calculate the test trajectory derivatives and library matrices
-        if isinstance(poly_library, ps.WeakPDELibrary) and strong_rmse:
-            lib2 = ps.PolynomialLibrary(degree=4).fit(
-                [
-                    ps.AxesArray(xt, axes={"ax_time": 0, "ax_coord": 1})
-                    for xt in x_test_list
-                ]
+        x_dot_test = [
+            poly_library.calc_trajectory(
+                ps.FiniteDifference(axis=-2),
+                ps.AxesArray(x_test_list[i], axes={"ax_time": 0, "ax_coord": 1}),
+                t_test_list[i],
             )
-            x_dot_test = [
-                lib2.calc_trajectory(
-                    ps.FiniteDifference(axis=-2),
-                    ps.AxesArray(x_test_list[i], axes={"ax_time": 0, "ax_coord": 1}),
-                    t_test_list[i],
-                )
-                for i in range(len(x_test_list))
-            ]
-            mats = lib2.fit_transform(
+            for i in range(len(x_test_list))
+        ]
+        mats = poly_library.fit_transform(
+            [ps.AxesArray(xt, axes={"ax_time": 0, "ax_coord": 1}) for xt in x_test_list]
+        )
+        order = np.arange(mats[0].shape[-1])
+        if isinstance(poly_library, ps.WeakPDELibrary):
+            lib2 = ps.PolynomialLibrary(degree=4).fit(
                 [
                     ps.AxesArray(xt, axes={"ax_time": 0, "ax_coord": 1})
                     for xt in x_test_list
@@ -588,22 +586,24 @@ def Pareto_scan_ensembling(
                     for name in poly_library.get_feature_names()
                 ]
             )[:, 0]
-            mats = [mat[:, order] for mat in mats]
-        else:
-            x_dot_test = [
-                poly_library.calc_trajectory(
-                    ps.FiniteDifference(axis=-2),
-                    ps.AxesArray(x_test_list[i], axes={"ax_time": 0, "ax_coord": 1}),
-                    t_test_list[i],
-                )
-                for i in range(len(x_test_list))
-            ]
-            mats = poly_library.fit_transform(
-                [
-                    ps.AxesArray(xt, axes={"ax_time": 0, "ax_coord": 1})
-                    for xt in x_test_list
+            if strong_rmse:
+                x_dot_test = [
+                    lib2.calc_trajectory(
+                        ps.FiniteDifference(axis=-2),
+                        ps.AxesArray(
+                            x_test_list[i], axes={"ax_time": 0, "ax_coord": 1}
+                        ),
+                        t_test_list[i],
+                    )
+                    for i in range(len(x_test_list))
                 ]
-            )
+                mats = lib2.fit_transform(
+                    [
+                        ps.AxesArray(xt, axes={"ax_time": 0, "ax_coord": 1})
+                        for xt in x_test_list
+                    ]
+                )
+                mats = [mat[:, order] for mat in mats]
 
         # Sweep a Pareto front depending on the algorithm
         if algorithm == "MIOSR":
@@ -727,9 +727,13 @@ def Pareto_scan_ensembling(
         xdot_rmse_errors[attractor_name].append(err_rmse)
         AIC[attractor_name].append(err_best)
         xdot_coef_errors[attractor_name].append(
-            coefficient_errors(true_coefficients[i], np.mean(coef_best, axis=0))
+            coefficient_errors(
+                true_coefficients[i], np.mean(coef_best, axis=0)[:, np.argsort(order)]
+            )
         )
-        predicted_coefficients[attractor_name].append(coef_best)
+        predicted_coefficients[attractor_name].append(
+            coef_best[:, :, np.argsort(order)]
+        )
 
     t_end = time.time()
     print("Total time = ", t_end - t_start)

@@ -83,10 +83,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         will consist of only pure no-derivative terms and pure derivative
         terms, with no mixed terms.
 
-    is_uniform : boolean, optional (default True)
-        If True, assume the grid is uniform in all spatial directions, so
-        can use uniform grid spacing for the derivative calculations.
-
     K : int, optional (default 100)
         Number of domain centers, corresponding to subdomain squares of length
         Hxt. If K is not
@@ -110,13 +106,26 @@ class WeakPDELibrary(BaseFeatureLibrary):
     ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library.
 
-    periodic : boolean, optional (default False)
-        If True, assume the grid is periodic in all spatial directions.
-
     num_pts_per_domain : int, deprecated (default None)
         Included here to retain backwards compatibility with older code
         that uses this parameter. However, it merely raises a
         DeprecationWarning and then is ignored.
+
+    implicit_terms : boolean
+        Flag to indicate if SINDy-PI (temporal derivatives) is being used
+        for the right-hand side of the SINDy fit.
+
+    multiindices : list of integer arrays,  (default None)
+        Overrides the derivative_order to customize the included derivative
+        orders. Each integer array indicates the order of differentiation
+        along the corresponding axis for each derivative term.
+
+    differentiation_method : callable,  (default FiniteDifference)
+        Spatial differentiation method.
+
+     diff_kwargs: dictionary,  (default {})
+        Keyword options to supply to differtiantion_method.
+
 
     Attributes
     ----------
@@ -136,10 +145,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         The total number of output features. The number of output features
         is the product of the number of library functions and the number of
         input features.
-
-    implicit_terms : boolean
-        Flag to indicate if SINDy-PI (temporal derivatives) is being used
-        for the right-hand side of the SINDy fit.
 
     Examples
     --------
@@ -175,8 +180,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         multiindices=None,
         differentiation_method=FiniteDifference,
         diff_kwargs={},
-        is_uniform=False,
-        periodic=False,
+        is_uniform=None,
+        periodic=None,
     ):
         super(WeakPDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -214,6 +219,13 @@ class WeakPDELibrary(BaseFeatureLibrary):
             warnings.warn(
                 "The parameter num_pts_per_domain is now deprecated. This "
                 "value will be ignored by the library."
+            )
+        if is_uniform is not None or periodic is not None:
+            # DeprecationWarning are ignored by default...
+            warnings.warn(
+                "is_uniform and periodic have been deprecated."
+                "in favor of differetiation_method and diff_kwargs.",
+                UserWarning,
             )
 
         # list of integrals

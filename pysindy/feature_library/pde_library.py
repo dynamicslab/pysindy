@@ -1,3 +1,4 @@
+import warnings
 from itertools import combinations
 from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
@@ -63,16 +64,27 @@ class PDELibrary(BaseFeatureLibrary):
         will consist of only pure no-derivative terms and pure derivative
         terms, with no mixed terms.
 
-    is_uniform : boolean, optional (default True)
-        If True, assume the grid is uniform in all spatial directions, so
-        can use uniform grid spacing for the derivative calculations.
-
     library_ensemble : boolean, optional (default False)
         Whether or not to use library bagging (regress on subset of the
         candidate terms in the library)
 
     ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library.
+
+    implicit_terms : boolean
+        Flag to indicate if SINDy-PI (temporal derivatives) is being used
+        for the right-hand side of the SINDy fit.
+
+    multiindices : list of integer arrays,  (default None)
+        Overrides the derivative_order to customize the included derivative
+        orders. Each integer array indicates the order of differentiation
+        along the corresponding axis for each derivative term.
+
+    differentiation_method : callable,  (default FiniteDifference)
+        Spatial differentiation method.
+
+     diff_kwargs: dictionary,  (default {})
+        Keyword options to supply to differtiantion_method.
 
     Attributes
     ----------
@@ -92,10 +104,6 @@ class PDELibrary(BaseFeatureLibrary):
         The total number of output features. The number of output features
         is the product of the number of library functions and the number of
         input features.
-
-    implicit_terms : boolean
-        Flag to indicate if SINDy-PI (temporal derivatives) is being used
-        for the right-hand side of the SINDy fit.
 
     Examples
     --------
@@ -119,8 +127,8 @@ class PDELibrary(BaseFeatureLibrary):
         multiindices=None,
         differentiation_method=FiniteDifference,
         diff_kwargs={},
-        is_uniform=False,
-        periodic=False,
+        is_uniform=None,
+        periodic=None,
     ):
         super(PDELibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
@@ -143,6 +151,14 @@ class PDELibrary(BaseFeatureLibrary):
             )
         if derivative_order < 0:
             raise ValueError("The derivative order must be >0")
+
+        if is_uniform is not None or periodic is not None:
+            # DeprecationWarning are ignored by default...
+            warnings.warn(
+                "is_uniform and periodic have been deprecated."
+                "in favor of differetiation_method and diff_kwargs.",
+                UserWarning,
+            )
 
         if (spatial_grid is not None and derivative_order == 0) or (
             spatial_grid is None and derivative_order != 0 and temporal_grid is None
@@ -470,3 +486,6 @@ class PDELibrary(BaseFeatureLibrary):
         if self.library_ensemble:
             xp_full = self._ensemble(xp_full)
         return xp_full
+
+    def get_spatial_grid(self):
+        return self.spatial_grid

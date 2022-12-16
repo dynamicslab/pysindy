@@ -651,14 +651,12 @@ def test_parameterized_library(diffuse_multiple_trajectories):
         function_names=library_function_names,
         derivative_order=2,
         spatial_grid=spatial_grid,
-        is_uniform=True,
     )
 
     parameter_lib = PDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
         derivative_order=0,
-        is_uniform=True,
         include_bias=True,
     )
 
@@ -679,7 +677,6 @@ def test_parameterized_library(diffuse_multiple_trajectories):
         derivative_order=2,
         spatiotemporal_grid=XT,
         K=100,
-        is_uniform=False,
     )
     np.random.seed(100)
     weak_parameter_lib = WeakPDELibrary(
@@ -688,7 +685,6 @@ def test_parameterized_library(diffuse_multiple_trajectories):
         derivative_order=0,
         spatiotemporal_grid=XT,
         K=100,
-        is_uniform=False,
         include_bias=True,
     )
 
@@ -704,7 +700,6 @@ def test_parameterized_library(diffuse_multiple_trajectories):
         feature_library=pde_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
     model.fit(xs, u=us, multiple_trajectories=True, t=t, ensemble=False)
-    print(model.coefficients(), model.coefficients()[0][-1])
     assert abs(model.coefficients()[0][4] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:4] == 0)
     assert np.all(model.coefficients()[0][5:] == 0)
@@ -714,7 +709,6 @@ def test_parameterized_library(diffuse_multiple_trajectories):
         feature_library=weak_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
     model.fit(xs, u=us, multiple_trajectories=True, t=t, ensemble=False)
-    print(model.coefficients(), model.coefficients()[0][-1])
     assert abs(model.coefficients()[0][4] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:4] == 0)
     assert np.all(model.coefficients()[0][5:] == 0)

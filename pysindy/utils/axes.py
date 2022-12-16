@@ -22,7 +22,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         AxesWarning if axes does not match shape of input_array
     """
 
-    def __new__(cls, input_array, axes=None):
+    def __new__(cls, input_array, axes):
         obj = np.asarray(input_array).view(cls)
         defaults = {
             "ax_time": None,
@@ -30,10 +30,8 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             "ax_sample": None,
             "ax_spatial": [],
         }
-
         if axes is None:
-            axes = comprehend_axes(input_array)
-
+            return obj
         obj.__dict__.update({**defaults, **axes})
         return obj
 

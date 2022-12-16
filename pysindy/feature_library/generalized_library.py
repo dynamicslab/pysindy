@@ -5,7 +5,6 @@ from sklearn.utils.validation import check_is_fitted
 from ..utils import AxesArray
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
-from .pde_library import PDELibrary
 from .weak_pde_library import WeakPDELibrary
 
 
@@ -109,29 +108,14 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         )
         if len(libraries) > 0:
             self.libraries_ = libraries
-            weak_libraries = False
-            pde_libraries = False
-            nonweak_libraries = False
-            for k, lib in enumerate(self.libraries_):
-                if isinstance(lib, WeakPDELibrary):
-                    weak_libraries = k
-                else:
-                    nonweak_libraries = True
-                    if isinstance(lib, PDELibrary):
-                        pde_libraries = k
-            if weak_libraries and nonweak_libraries:
+
+            if has_weak(self) and has_nonweak(self):
                 raise ValueError(
                     "At least one of the libraries is a weak form library, "
                     "and at least one of the libraries is not, which will "
                     "result in a nonsensical optimization problem. Please use "
                     "all weak form libraries or no weak form libraries."
                 )
-            if weak_libraries:
-                self.validate_input = libraries[weak_libraries].validate_input
-                self.spatiotemporal_grid = libraries[weak_libraries].spatiotemporal_grid
-            elif pde_libraries:
-                self.validate_input = libraries[pde_libraries].validate_input
-                self.spatial_grid = libraries[pde_libraries].spatial_grid
         else:
             raise ValueError(
                 "Empty or nonsensical library list passed to this library."
@@ -236,10 +220,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
         # Calculate the sum of output features
         self.n_output_features_ = sum(
-            [
-                fitted_libs[i].n_output_features_
-                for i in np.setdiff1d(np.arange(len(fitted_libs)), self.exclude_libs_)
-            ]
+            lib.n_output_features_
+            for lib in fitted_libs
+            if lib not in self.exclude_libs_
         )
 
         # Save fitted libs
@@ -333,3 +316,29 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
     def calc_trajectory(self, diff_method, x, t):
         return self.libraries_[0].calc_trajectory(diff_method, x, t)
+
+    def get_spatial_grid(self):
+        for lib_k in self.libraries_:
+            spatial_grid = lib_k.get_spatial_grid()
+            if spatial_grid is not None:
+                return spatial_grid
+
+
+def has_weak(lib):
+    if isinstance(lib, WeakPDELibrary):
+        return True
+    elif hasattr(lib, "libraries_"):
+        for lib_k in lib.libraries_:
+            if has_weak(lib_k):
+                return True
+    return False
+
+
+def has_nonweak(lib):
+    if hasattr(lib, "libraries_"):
+        for lib_k in lib.libraries_:
+            if has_nonweak(lib_k):
+                return True
+    elif not isinstance(lib, WeakPDELibrary):
+        return True
+    return False

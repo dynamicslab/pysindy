@@ -8,6 +8,7 @@ except ImportError:
     cvxpy_flag = False
     pass
 import numpy as np
+from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import reorder_constraints
@@ -167,7 +168,7 @@ class StableLinearSR3(ConstrainedSR3):
         constraint_separation_index=0,
         verbose=False,
         verbose_cvxpy=False,
-        gamma=-1e-10,
+        gamma=-1e-8,
     ):
         super(StableLinearSR3, self).__init__(
             threshold=threshold,
@@ -199,6 +200,12 @@ class StableLinearSR3(ConstrainedSR3):
             "This optimizer is set up to only be used with a purely linear"
             " library in the variables. No constant or nonlinear terms!"
         )
+        if not np.isclose(threshold, 0.0):
+            warnings.warn(
+                "This optimizer uses CVXPY if the threshold is nonzero, "
+                " meaning the optimization will be much slower for large "
+                "datasets."
+            )
 
     def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
@@ -366,6 +373,10 @@ class StableLinearSR3(ConstrainedSR3):
             self.constraint_lhs = reorder_constraints(self.constraint_lhs, n_features)
 
         # Precompute some objects for optimization
+        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
+        x_transpose_y = np.dot(x.T, y)
+        if not self.use_constraints:
+            cho = cho_factor(H)
         x_expanded = np.zeros((n_samples, n_targets, n_features, n_targets))
         for i in range(n_targets):
             x_expanded[:, i, :, i] = x
@@ -390,9 +401,14 @@ class StableLinearSR3(ConstrainedSR3):
         eigs_history = []
         coef_history = []
         for k in range(self.max_iter):
-            coef_sparse = self._update_coef_cvxpy(
-                x_expanded, y, coef_sparse, coef_negative_definite
-            )
+            if not np.isclose(self.threshold, 0.0) or self.use_constraints:
+                coef_sparse = self._update_coef_cvxpy(
+                    x_expanded, y, coef_sparse, coef_negative_definite
+                )
+            else:
+                coef_sparse = self._update_full_coef(
+                    cho, x_transpose_y, coef_negative_definite
+                )
             coef_negative_definite = self._update_A(
                 coef_negative_definite
                 - self.alpha_A * (coef_negative_definite - coef_sparse) / self.nu,

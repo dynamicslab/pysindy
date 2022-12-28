@@ -208,6 +208,10 @@ class StableLinearSR3(ConstrainedSR3):
             )
 
     def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
+        """
+        Update the coefficients using CVXPY. This function is called if
+        the sparsity threshold is nonzero or constraints are used.
+        """
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
         cost = cost + cp.sum_squares(xi - coef_negative_definite.flatten()) / (
@@ -279,7 +283,8 @@ class StableLinearSR3(ConstrainedSR3):
 
     def _update_A(self, A_old, coef_sparse):
         """
-        Update the symmetrized A matrix. Taken and slightly altered
+        Update the auxiliary variable that approximates the coefficients
+        (which is a matrix of linear coefficients). Taken and slightly altered
         from the TrappingOptimizer code.
         """
         r = A_old.shape[1]

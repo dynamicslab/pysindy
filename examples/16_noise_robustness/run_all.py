@@ -228,6 +228,9 @@ all_sols_train, all_t_train, all_sols_test, all_t_test = load_data(
 )
 t2 = time.time()
 print("Took ", t2 - t1, " seconds to load the systems")
+print("# of training trajectories = ", n_trajectories)
+print("# of points per period = ", pts_per_period)
+print("# of points per trajectory = ", n)
 
 num_attractors = len(systems_list)
 

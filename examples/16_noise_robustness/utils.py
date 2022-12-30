@@ -175,7 +175,7 @@ def make_test_trajectories(
         all_t_test[equation_name] = np.zeros((n, n_trajectories))
 
         eq = getattr(flows, equation_name)()
-        print(i, eq)
+        # print(i, eq)
 
         ic_test = sample_initial_conditions(
             eq, n_trajectories, traj_length=1000, pts_per_period=30
@@ -631,7 +631,11 @@ def Pareto_scan_ensembling(
                 n_subset=n_subset,
                 replace=replace,
             )
-        elif algorithm == "SR3":
+        elif "SR3" in algorithm:
+            if algorithm == "SR3 ($\nu = 0.1$)":
+                nu = 0.1
+            else:
+                nu = 1.0
             (
                 coef_best,
                 err_best,
@@ -658,6 +662,7 @@ def Pareto_scan_ensembling(
                 n_models=n_models,
                 n_subset=n_subset,
                 replace=replace,
+                nu=nu,
             )
         elif algorithm == "Lasso":
             (
@@ -1250,6 +1255,7 @@ def hyperparameter_scan_sr3(
     n_models=10,
     n_subset=40,
     replace=False,
+    nu=1.0,
 ):
     """
     Algorithm to scan over threshold values with SR3, and then select
@@ -1297,6 +1303,8 @@ def hyperparameter_scan_sr3(
         of models.
     replace : bool, optional (default False)
         Whether to subsample with replacement or not.
+    nu : float, optional (default 1.0)
+        SR3 hyperparameter to determine the strength of the relaxation.
 
     Returns
     -------
@@ -1352,7 +1360,7 @@ def hyperparameter_scan_sr3(
             threshold=0,
             max_iter=max_iter,
             normalize_columns=normalize_columns,
-            nu=0.1,
+            nu=nu,
         ),
         bagging=True,
         n_models=n_models,
@@ -1413,7 +1421,7 @@ def hyperparameter_scan_sr3(
                 threshold=tol,
                 max_iter=max_iter,
                 normalize_columns=normalize_columns,
-                nu=0.1,
+                nu=nu,
             ),
             bagging=True,
             n_models=n_models,
@@ -1614,7 +1622,6 @@ def hyperparameter_scan_miosr(
         multiple_trajectories=True,
     )
     condition_number = np.linalg.cond(optimizer.Theta_)
-    print(np.shape(optimizer.Theta_))
     tol_iter = np.shape(optimizer.Theta_)[1] - 1
 
     # Set the L0 penalty based on the condition number of Theta
@@ -1715,3 +1722,136 @@ def hyperparameter_scan_miosr(
         model_best,
         condition_number,
     )
+
+
+def weakform_reorder_coefficients(systems_list, dimension_list, true_coefficients):
+    """
+    This function reorders the true model coefficients if using the weak
+    formulation, in order to compare with the weak formulation of the SINDy
+    library, which is in a different order than the PolynomialLibrary
+    with degree = 4.
+    """
+    # reordering to use if system is 3D
+    reorder1 = np.array(
+        [
+            0,
+            1,
+            2,
+            3,
+            4,
+            7,
+            9,
+            5,
+            6,
+            8,
+            10,
+            16,
+            19,
+            11,
+            12,
+            17,
+            13,
+            15,
+            18,
+            14,
+            20,
+            30,
+            34,
+            21,
+            22,
+            31,
+            26,
+            29,
+            33,
+            23,
+            25,
+            32,
+            27,
+            28,
+            24,
+        ],
+        dtype=int,
+    )
+
+    # reordering to use if system is 4D
+    reorder2 = np.array(
+        [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            9,
+            12,
+            14,
+            6,
+            7,
+            8,
+            10,
+            11,
+            13,
+            15,
+            25,
+            31,
+            34,
+            16,
+            17,
+            18,
+            26,
+            27,
+            32,
+            19,
+            22,
+            24,
+            28,
+            30,
+            33,
+            20,
+            21,
+            23,
+            29,
+            35,
+            55,
+            65,
+            69,
+            36,
+            37,
+            38,
+            56,
+            57,
+            66,
+            45,
+            51,
+            54,
+            61,
+            64,
+            68,
+            39,
+            42,
+            44,
+            58,
+            60,
+            67,
+            46,
+            47,
+            52,
+            62,
+            48,
+            50,
+            53,
+            63,
+            40,
+            41,
+            43,
+            59,
+            49,
+        ],
+        dtype=int,
+    )
+    for i, system in enumerate(systems_list):
+        if dimension_list[i] == 3:
+            true_coefficients[i] = true_coefficients[i][:, reorder1]
+        else:
+            true_coefficients[i] = true_coefficients[i][:, reorder2]
+    return true_coefficients

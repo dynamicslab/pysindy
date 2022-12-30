@@ -358,7 +358,7 @@ for weak_form in weak_form_flags:
         for noise_level in noise_levels:
             print("Algorithm: ", algorithm)
             print("Weak form: ", weak_form)
-            print("Noise Level: ", noise_level * 100, "%")
+            print("Noise Level: ", noise_level, "%")
             t1 = time.time()
 
             # Note, defaults to using the AIC to decide the Pareto-optimal model

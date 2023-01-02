@@ -353,8 +353,8 @@ def Pareto_scan_ensembling(
     n_subset=40,
     replace=False,
     weak_form=False,
-    strong_rmse=False,
     algorithm="STLSQ",
+    strong_rmse=False,
 ):
     """
     Very general function for performing hyperparameter scans. This
@@ -412,6 +412,12 @@ def Pareto_scan_ensembling(
     algorithm : string, optional (default STLSQ)
         The SINDy optimization algorithm that is used in the hyperparameter
         scan.
+    strong_rmse : bool, optional (default False)
+        If weak_form = False, this parameter does nothing.
+        If weak_form = True and strong_rmse = True use the original RMSE error,
+        calculated without the weak form, for determining the
+        hyperparameter scan. If weak_form = True and strong_rmse = False, use the weak
+        form of the RMSE error for determining the hyperparameter scan.
 
     Returns
     -------
@@ -720,7 +726,6 @@ def Pareto_scan_ensembling(
                 n_models=n_models,
                 n_subset=n_subset,
                 replace=replace,
-                strong_rmse=strong_rmse,
             )
         # Using the Pareto-optimal model, compute true x_dot (with median ensemble aggregator)
         x_dot_test_pred = [np.median(coef_best, axis=0).dot(mat.T).T for mat in mats]
@@ -773,7 +778,6 @@ def hyperparameter_scan_stlsq(
     n_models=10,
     n_subset=40,
     replace=False,
-    strong_rmse=False,
 ):
     """
     Algorithm to scan over threshold values during STLSQ with Ridge
@@ -885,7 +889,6 @@ def hyperparameter_scan_stlsq(
         n_models=n_models,
         n_subset=n_subset,
         replace=replace,
-        # ensemble_aggregator=np.mean
     )
 
     # Compute initial model
@@ -900,7 +903,6 @@ def hyperparameter_scan_stlsq(
     )
     condition_number = np.linalg.cond(optimizer.Theta_)
 
-    # Set the L0 penalty based on the condition number of Theta
     coef_best = np.array(optimizer.coef_list)
     optimizer.coef_ = np.mean(coef_best, axis=0)
     model_best = model
@@ -1108,13 +1110,9 @@ def hyperparameter_scan_lasso(
     condition_number : float
         Condition number of the PySINDy feature library.
     """
-
     n_trajectories = np.array(x_test).shape[0]
     n_state = np.array(x_test).shape[2]
-    if isinstance(ode_lib, ps.WeakPDELibrary):
-        n_time = ode_lib.K
-    else:
-        n_time = np.array(x_test).shape[1]
+    n_time = np.array(x_dot_test).shape[1]
 
     # Do an initial least-squares fit to get an initial guess of the coefficients
     # start with initial guess that all coefs are zero
@@ -1348,10 +1346,7 @@ def hyperparameter_scan_sr3(
     """
     n_trajectories = np.array(x_test).shape[0]
     n_state = np.array(x_test).shape[2]
-    if isinstance(ode_lib, ps.WeakPDELibrary):
-        n_time = ode_lib.K
-    else:
-        n_time = np.array(x_test).shape[1]
+    n_time = np.array(x_dot_test).shape[1]
 
     # Do an initial least-squares fit to get an initial guess of the coefficients
     # start with initial guess that all coefs are zero
@@ -1587,13 +1582,9 @@ def hyperparameter_scan_miosr(
     condition_number : float
         Condition number of the PySINDy feature library.
     """
-
     n_trajectories = np.array(x_test).shape[0]
     n_state = np.array(x_test).shape[2]
-    if isinstance(ode_lib, ps.WeakPDELibrary):
-        n_time = ode_lib.K
-    else:
-        n_time = np.array(x_test).shape[1]
+    n_time = np.array(x_dot_test).shape[1]
 
     # Do an initial least-squares fit to get an initial guess of the coefficients
     # start with initial guess that all coefs are zero

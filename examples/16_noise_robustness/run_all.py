@@ -2,7 +2,6 @@ import time
 import warnings
 
 import dysts.flows as flows
-import matplotlib.pyplot as plt
 import numpy as np
 from dysts.equation_utils import compute_medl
 from dysts.equation_utils import make_dysts_true_coefficients
@@ -308,35 +307,9 @@ for i, system in enumerate(systems_list):
     else:
         systems_list_cleaned.append(system)
 
-# Make two summary plots of all the dynamical system properties
 medl_levels = np.logspace(1, 3, 40)
 lyap_levels = np.logspace(-2, 2, 40)
 scale_levels = np.logspace(2, 5, 40)
-
-plt.figure()
-plt.hist(lyap_list, bins=lyap_levels, ec="k")
-plt.hist(scale_list_avg, bins=scale_levels, ec="k")
-plt.hist(medl_list, bins=medl_levels, ec="k")
-plt.xlabel("")
-plt.ylabel("# of systems")
-plt.legend(
-    ["Max Lyapunov exponent", "Scale separation", "Description length"], framealpha=1.0
-)
-plt.xscale("log")
-plt.grid(True)
-ax = plt.gca()
-ax.set_axisbelow(True)
-
-plt.figure(figsize=(30, 6))
-plt.imshow(nonlinearities.T, aspect="equal", origin="lower", cmap="Oranges")
-plt.xticks(np.arange(num_attractors), rotation="vertical", fontsize=20)
-ax = plt.gca()
-plt.xlim(-0.5, num_attractors - 0.5)
-ax.set_xticklabels(np.array(systems_list_cleaned))
-plt.yticks(np.arange(5), fontsize=22)
-plt.colorbar(shrink=0.3, pad=0.01).ax.tick_params(labelsize=16)
-plt.ylabel("Poly\n order", rotation=0, fontsize=22)
-ax.yaxis.set_label_coords(-0.045, 0.3)
 
 # if using the weak form, this makes the Pareto curve based on the "strong"
 # or regular RMSE error instead of the RMSE error of the weak formulation.
@@ -346,18 +319,18 @@ strong_rmse = True
 # a Gurobipy license (free license available via pip), and the academic
 # license (free, but requires making an account on Gurobi) is required
 # for doing the large-scale runs here.
-algorithms = ["Lasso", "MIOSR"]
-# algorithms = ["STLSQ", "SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
+algorithms = ["STLSQ", "SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
 # algorithms = ["MIOSR"]
 noise_levels = [0.0, 0.1, 1.0]
-weak_form_flags = [True]
+weak_form_flags = [False, True]
 
 for weak_form in weak_form_flags:
     # if weak_form = True, need to reorder the coefficients because the
     # weak form uses a library with different term ordering
-    true_coefficients = weakform_reorder_coefficients(
-        systems_list, dimension_list, true_coefficients
-    )
+    if weak_form:
+        true_coefficients = weakform_reorder_coefficients(
+            systems_list, dimension_list, true_coefficients
+        )
 
     for algorithm in algorithms:
         for noise_level in noise_levels:
@@ -419,10 +392,8 @@ for weak_form in weak_form_flags:
                 best_thresholds[i] = best_threshold_values[attractor_name][0]
 
             if weak_form:
-                rmse_error_strong = {}
-
-                for system in systems_list:
-                    rmse_error_strong[system] = list()
+                avg_rmse_error_strong = []
+                std_rmse_error_strong = []
 
                 # Compute the "strong" RMSE errors using a non-weak model, since otherwise
                 # the RMSE from the weak model is computed from the subdomains. This is
@@ -478,37 +449,38 @@ for weak_form in weak_form_flags:
                                 ),
                             )
                         ]
-                    rmse_error_strong[attractor_name].append(np.mean(rmses))
-
-            np.savetxt(
-                "data/avg_coef_errors_"
-                + algorithm
-                + "_noise{0:.2f}".format(noise_level)
-                + "_weakform"
-                + str(weak_form),
-                np.mean(coef_avg_error, axis=-1),
-            )
-            np.savetxt(
-                "data/std_coef_errors_"
-                + algorithm
-                + "_noise{0:.2f}".format(noise_level)
-                + "_weakform"
-                + str(weak_form),
-                np.std(coef_avg_error, axis=-1),
-            )
-            np.savetxt(
-                "data/avg_rmse_errors_"
-                + algorithm
-                + "_noise{0:.2f}".format(noise_level)
-                + "_weakform"
-                + str(weak_form),
-                avg_rmse_error,
-            )
-            np.savetxt(
-                "data/std_rmse_errors_"
-                + algorithm
-                + "_noise{0:.2f}".format(noise_level)
-                + "_weakform"
-                + str(weak_form),
-                std_rmse_error,
-            )
+                    avg_rmse_error_strong.append(np.mean(rmses))
+                    std_rmse_error_strong.append(np.std(rmses))
+                np.savetxt(
+                    "data/errors_"
+                    + algorithm
+                    + "_noise{0:.2f}".format(noise_level)
+                    + "_weakform"
+                    + str(weak_form),
+                    np.array(
+                        [
+                            np.mean(coef_avg_error, axis=-1),
+                            np.std(coef_avg_error, axis=-1),
+                            avg_rmse_error,
+                            std_rmse_error,
+                            avg_rmse_error_strong,
+                            std_rmse_error_strong,
+                        ]
+                    ).T,
+                )
+            else:
+                np.savetxt(
+                    "data/errors_"
+                    + algorithm
+                    + "_noise{0:.2f}".format(noise_level)
+                    + "_weakform"
+                    + str(weak_form),
+                    np.array(
+                        [
+                            np.mean(coef_avg_error, axis=-1),
+                            np.std(coef_avg_error, axis=-1),
+                            avg_rmse_error,
+                            std_rmse_error,
+                        ]
+                    ).T,
+                )

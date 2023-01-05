@@ -304,7 +304,7 @@ def cgle_noise_sweeps():
         cs = np.random.normal(1.0, 0.25, size=num_trajectories)
         us_random = [[bs[i], cs[i]] for i in range(len(bs))]
         xs_random = [
-            np.load("data/cgle/cgle_random_x" + str(i) + ".npy") for i in range(4)
+            np.load("data/cgle/cgle_random_x" + str(i) + ".npy") for i in range(len(bs))
         ]
 
     # sweep with training on original data
@@ -1033,6 +1033,154 @@ def get_homogeneous_oregonator_trajectory(b, t1, dt):
     return X, Y, Z
 
 
+def get_normal_form_parameters(model, bs):
+    """
+    Calculate the nonlinear transformation to compute the normal form parameters.
+    Parameters:
+        model: A fit SINDy model for the Oregonator model with a ParameterizedLibrary.
+        bs: Values of the b parameter to calculate the normal-form parameters
+    """
+    lib = model.feature_library
+    opt = model.optimizer
+
+    Xts = np.where(
+        [
+            feat.split(" ")[1] == "X_t"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    Yts = np.where(
+        [
+            feat.split(" ")[1] == "Y_t"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    Xs = np.where(
+        [feat.split(" ")[1] == "X" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    Ys = np.where(
+        [feat.split(" ")[1] == "Y" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    XXs = np.where(
+        [feat.split(" ")[1] == "XX" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    XYs = np.where(
+        [feat.split(" ")[1] == "XY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    YYs = np.where(
+        [feat.split(" ")[1] == "YY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    XXXs = np.where(
+        [
+            feat.split(" ")[1] == "XXX"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    XXYs = np.where(
+        [
+            feat.split(" ")[1] == "XXY"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    XYYs = np.where(
+        [
+            feat.split(" ")[1] == "XYY"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    YYYs = np.where(
+        [
+            feat.split(" ")[1] == "YYY"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    X11s = np.where(
+        [
+            feat.split(" ")[1] == "X_11"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    Y11s = np.where(
+        [
+            feat.split(" ")[1] == "Y_11"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+
+    mus = (1 - bs)[np.newaxis, :] ** (np.arange(len(Xs))[:, np.newaxis] * 0.5)
+
+    D = np.zeros((len(bs), 2, 2))
+    D[:, :, 0] = mus.T.dot(opt.coef_[:, X11s].T)
+    D[:, :, 1] = mus.T.dot(opt.coef_[:, Y11s].T)
+
+    A = np.zeros((len(bs), 2, 2))
+    A[:, :, 0] = [1, 0] - (mus.T.dot(opt.coef_[:, Xts].T))
+    A[:, :, 1] = [0, 1] - (mus.T.dot(opt.coef_[:, Yts].T))
+
+    J = np.zeros((len(bs), 2, 2))
+    Fxx = np.zeros((len(bs), 2, 2, 2))
+    Fxxx = np.zeros((len(bs), 2, 2, 2, 2))
+    J[:, :, 0] = mus.T.dot(opt.coef_[:, Xs].T)
+    J[:, :, 1] = mus.T.dot(opt.coef_[:, Ys].T)
+    Fxx[:, :, 0, 0] = (mus.T.dot(opt.coef_[:, XXs].T)) * 2
+    Fxx[:, :, 0, 1] = mus.T.dot(opt.coef_[:, XYs].T)
+    Fxx[:, :, 1, 0] = mus.T.dot(opt.coef_[:, XYs].T)
+    Fxx[:, :, 1, 1] = (mus.T.dot(opt.coef_[:, YYs].T)) * 2
+    Fxxx[:, :, 0, 0, 0] = (mus.T.dot(opt.coef_[:, XXXs].T)) * 6
+    Fxxx[:, :, 0, 0, 1] = (mus.T.dot(opt.coef_[:, XXYs].T)) * 2
+    Fxxx[:, :, 0, 1, 0] = (mus.T.dot(opt.coef_[:, XXYs].T)) * 2
+    Fxxx[:, :, 1, 0, 0] = (mus.T.dot(opt.coef_[:, XXYs].T)) * 2
+    Fxxx[:, :, 0, 1, 1] = (mus.T.dot(opt.coef_[:, XYYs].T)) * 2
+    Fxxx[:, :, 1, 0, 1] = (mus.T.dot(opt.coef_[:, XYYs].T)) * 2
+    Fxxx[:, :, 1, 1, 0] = (mus.T.dot(opt.coef_[:, XYYs].T)) * 2
+    Fxxx[:, :, 1, 1, 1] = (mus.T.dot(opt.coef_[:, YYYs].T)) * 6
+
+    lambdas, Us = np.linalg.eig(np.einsum("aij,ajk->aik", np.linalg.inv(A), J))
+
+    u = Us[:, :, 0]
+    ubar = np.conjugate(u)
+    ut = np.linalg.inv(Us)[:, 0, :]
+    a = np.einsum(
+        "ni,nip,npjk,nj,nkl,nlmo,nm,no->n",
+        ut,
+        np.linalg.inv(A),
+        Fxx,
+        u,
+        np.linalg.inv(J),
+        Fxx,
+        u,
+        ubar,
+    )
+    b = (
+        np.einsum(
+            "ni,nip,npjk,nj,nkl,nlmo,nm,no->n",
+            ut,
+            np.linalg.inv(A),
+            Fxx,
+            ubar,
+            np.linalg.inv(
+                J
+                - (
+                    (lambdas[:, 0] - lambdas[:, 1])[:, np.newaxis, np.newaxis]
+                    * np.eye(2)[np.newaxis, :, :]
+                )
+            ),
+            Fxx,
+            u,
+            u,
+        )
+        / 2
+    )
+    c = (
+        np.einsum("ni,nip,npjkl,nj,nk,nl->n", ut, np.linalg.inv(A), Fxxx, u, u, ubar)
+        / 2
+    )
+    alphas = a + b - c
+    betas = np.einsum("ni,nij,njk,nk->n", ut, np.linalg.inv(A), D, u)
+
+    return -np.imag(alphas) / np.real(alphas), np.imag(betas) / np.real(betas)
+
+
 def animate_oregonator():
     """
     Save an animation for the oregonator model
@@ -1069,10 +1217,8 @@ def animate_clge(xs, us):
     """
     if not os.path.exists("animation"):
         os.mkdir("animation")
-    xs = [np.load("data/cgle/cgle_x" + str(i) + ".npy") for i in range(4)]
-    us = [np.load("data/cgle/cgle_u" + str(i) + ".npy") for i in range(4)]
-    bs = [us[i][0, 0, 0, 0] for i in range(4)]
-    cs = [us[i][0, 0, 0, 1] for i in range(4)]
+    bs = [us[i][0] for i in range(4)]
+    cs = [us[i][1] for i in range(4)]
     nx = 128
     ny = 128
     L = 16
@@ -1095,7 +1241,7 @@ def animate_clge(xs, us):
 
     for i in range(len(bs)):
         x0 = xs[i][:, :, -1, 0] + 1j * xs[i][:, :, -1, 1]
-        x = get_cgle_trajectory(x0, bs[i], cs[i], t1, t3, dt, spatial_grid)
+        x = get_cgle_trajectory(bs[i], cs[i], x0, t1, t3, dt, spatial_grid)
         xs_animation.append(x)
 
     if not os.path.exists("animation"):

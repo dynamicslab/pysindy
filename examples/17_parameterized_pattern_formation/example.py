@@ -42,10 +42,6 @@ for r in rs:
         x = r * x * (1 - x)
     xss = xss + [xs]
 
-
-# In[3]:
-
-
 plt.figure(figsize=(4, 4), dpi=100)
 for ind in range(num):
     plt.plot(np.ones(N) * rs[ind], xss[ind], ",", alpha=0.1, c="black", rasterized=True)
@@ -57,7 +53,7 @@ plt.show()
 
 # Generate data for four trajectories with differing values of $r=3.6,3.7,3.8,3.9$.
 
-# In[4]:
+# In[3]:
 
 
 N = 1000
@@ -77,7 +73,7 @@ for r in rs:
 
 # Create a SINDyCP library, with a polynomial degree 3 feature library and a polynomial degree 1 parameter library. The library terms in a SINDyCP library consists of products of the features in the feature library and the parameter library. We input specify the parameter values for each trajectory using the control input, which must be the same shape as the input data.
 
-# In[5]:
+# In[4]:
 
 
 feature_lib = ps.PolynomialLibrary(degree=3, include_bias=True)
@@ -104,7 +100,7 @@ model.print()
 # $$ \dot{z} = x y - \beta z. $$
 # depend on 3 parameters, $\sigma$, $\rho$, and $\beta$. We generate 10 trajectories with different parameter values.
 
-# In[6]:
+# In[5]:
 
 
 num_trajectories = 5
@@ -139,7 +135,7 @@ plt.show()
 
 # Fitting any one trajectory gives the equation corresponding to a specific set of parameter values. Can we discover the parameterized equations given all the trajectories?
 
-# In[7]:
+# In[6]:
 
 
 lib = ps.PolynomialLibrary()
@@ -161,7 +157,7 @@ print(lib.get_feature_names(["x", "y", "z", "sigma", "rho", "beta"]))
 
 # Fitting a PolynomialLibrary with multiple_trajectories=True gives the correct model, but note that the same library functions are applied to the input features and the control input.
 
-# In[8]:
+# In[7]:
 
 
 u_trains = [[sigmas[i], rhos[i], betas[i]] for i in range(len(sigmas))]
@@ -179,7 +175,7 @@ print(lib.get_feature_names(["x", "y", "z", "sigma", "rho", "beta"]))
 
 # The ParameterizedLibrary enables different libraries to be applied to the control input and input features. In this case, the result is the same, but different libraries are required for the PDE case, as shown below.
 
-# In[9]:
+# In[8]:
 
 
 feature_library = ps.PolynomialLibrary(degree=2)
@@ -205,7 +201,7 @@ print(lib.get_feature_names(["x", "y", "z", "sigma", "rho", "beta"]))
 # $$ \dot{A} = A + (1+ib)\nabla^2 A - (1-ic)|A|^2A$$
 # describes the evolution of the mode amplitude $A$ for pattern formation in a long-wavelength, supercritical Hopf bifurcation. It depends on two parameters $b$ and $c$. We generate 4 trajectories with different values of the parameters. (Note: this will take a few minutes on the first run, but trajectories are saved and reloaded if present)
 
-# In[10]:
+# In[31]:
 
 
 nx = 128
@@ -229,7 +225,7 @@ spatiotemporal_grid[:, :, :, :2] = spatial_grid[:, :, np.newaxis, :]
 spatiotemporal_grid[:, :, :, 2] = dt * np.arange(nt)
 
 
-# In[11]:
+# In[32]:
 
 
 bs = [2.0, 2.0, 0.5, 1.0]
@@ -258,11 +254,12 @@ else:
             if not os.path.exists("data/cgle"):
                 os.mkdir("data/cgle")
             np.save("data/cgle/cgle_x" + str(i), xs[i])
+# utils.animate_clge(xs,us)
 
 
 # Depending on the parameter values and initial conditions, the system exhibits different dynamical phases.
 
-# In[12]:
+# In[11]:
 
 
 fig, axs = plt.subplots(2, 2, figsize=(5, 4), constrained_layout=True)
@@ -297,7 +294,7 @@ plt.show()
 
 # Fitting any one trajectory gives the equation corresponding to a specific set of parameter values. Can we discover the parameterized equations given all the trajectories?
 
-# In[13]:
+# In[12]:
 
 
 start = timeit.default_timer()
@@ -329,7 +326,7 @@ print(stop - start)
 
 # Try a SINDy model with multiple trajectories using the ParameterizedLibrary. Use a PDELibrary for the feature_library with second-order derivatives and library functions that include the relevant cubic term. Use a PDELibrary for the parameter_library with zeroth-order derivatives and linear library functions. The fit is very good!
 
-# In[14]:
+# In[13]:
 
 
 start = timeit.default_timer()
@@ -378,7 +375,7 @@ print(lib.get_feature_names(["x", "y", "b", "c"]))
 
 # Modifying PDELibrary to accept spectral derivatives improves the fit a bit
 
-# In[15]:
+# In[14]:
 
 
 start = timeit.default_timer()
@@ -428,7 +425,7 @@ print(lib.get_feature_names(["x", "y", "b", "c"]))
 
 # If we ensure the same domain cells are used in the feature library and the parameter library (by reseeding np.random), the WeakLibrary can be used with the ParameterLibrary. (In this case, the parameters need to be constants, so that the tensor product of two WeakLibrary corresponds to the correct weak features.) The fit is perfect and super fast!
 
-# In[16]:
+# In[15]:
 
 
 start = timeit.default_timer()
@@ -494,7 +491,7 @@ print(lib.get_feature_names(["x", "y", "b", "c"]))
 #
 # which constitute the classical Oregonator model for the BZ chemical reaction. We fix all parameters except $C_b=C_b^c(1 - \mu)$, and a supercritical Hopf bifurcation occurs at $\mu=0$. In the spatially homogeneous case, a small, stable limit cycle initially emerges for $\mu>0$, but this limit cycle rapid expands in a canard explosion around $\mu\approx 0.15$.
 
-# In[17]:
+# In[2]:
 
 
 bs3 = np.linspace(0.84, 0.98, 8)
@@ -533,9 +530,9 @@ plt.savefig("fig2b.pdf")
 plt.show()
 
 
-# Integrate six trajectories with varying bs. This will take several hours to generate the data for the first time.
+# Integrate six trajectories with varying bs. This will take several hours to generate and save the data for the first time, but it will reload the files if they are present from a previous run.
 
-# In[18]:
+# In[48]:
 
 
 bs = np.linspace(0.88, 0.98, 6)
@@ -590,9 +587,9 @@ if not np.all(
 xs = [np.load("data/oregonator/oregonator_" + str(i) + ".npy") for i in range(len(bs))]
 
 
-# The SINDyCP fit reveals variations in the normal-form parameter that correct the weakly-nonlinear theory away from the instability, and these variations become extreme at the canard explosion.
+# The SINDyCP fit reveals variations in the normal-form parameter that correct the weakly-nonlinear theory away from the instability, and these variations become extreme at the canard explosion.  First, split the trajectories into training and test data and define a quadrative parameter and a quintic feature libraries.
 
-# In[19]:
+# In[14]:
 
 
 xs_train = []
@@ -602,15 +599,11 @@ for i in range(len(bs)):
     U = xs[i][:, :, 2 * Nt // 5 :, [0, 2]]
     U = U - np.mean(U, axis=(0, 1, 2))
     U = U / np.mean(U**2, axis=(0, 1, 2)) ** 0.5
+    xs_train = xs_train + [U[:, :, : Nt // 20]]
+    xs_test = xs_test + [U[:, :, -Nt // 20 :]]
     #     #Using more data for a better fit requires a lot of memory (>100gb)
     #     xs_train=xs_train+[U[:,:,:2*Nt//5]]
     #     xs_test=xs_test+[U[:,:,2*Nt//5:]]
-    xs_train = xs_train + [U[:, :, : Nt // 20]]
-    xs_test = xs_test + [U[:, :, -Nt // 20 :]]
-
-
-# In[20]:
-
 
 # rescale to a single time step and spatial_grid over all trajectories
 spatial_grid = np.zeros((n, n, 2))
@@ -682,6 +675,13 @@ lib = ps.ParameterizedLibrary(
     num_parameters=1,
     num_features=2,
 )
+
+
+# We run the fit with a constrained SR3 optimizer, which allows us to ensure that the derivative terms remain rotationally invariant. Then we evaluate the scores on the test data.
+
+# In[15]:
+
+
 shape = np.array(xs_train[0].shape)
 shape[-1] = 1
 lib.fit(np.concatenate([xs_train[0], us[0] * np.ones(shape)], axis=-1))
@@ -762,147 +762,13 @@ for i in range(len(xs_train)):
     ]
 
 
-# Apply the nonlinear transformation to discover the normal-form parameters.
+# Plot the normal-form parameters as a function of $\varepsilon$. The fit agrees with the weakly nonlinear prediction in the $\mu\to 0$ limit, and the variation with $\mu$ represents a correction to the theory. The variations become extreme around the canard explosion that occurs above $\mu^{1/2}=0.35$.
 
-# In[21]:
-
-
-Xts = np.where(
-    [feat.split(" ")[1] == "X_t" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-Yts = np.where(
-    [feat.split(" ")[1] == "Y_t" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-Xs = np.where(
-    [feat.split(" ")[1] == "X" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-Ys = np.where(
-    [feat.split(" ")[1] == "Y" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-XXs = np.where(
-    [feat.split(" ")[1] == "XX" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-XYs = np.where(
-    [feat.split(" ")[1] == "XY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-YYs = np.where(
-    [feat.split(" ")[1] == "YY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-XXXs = np.where(
-    [feat.split(" ")[1] == "XXX" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-XXYs = np.where(
-    [feat.split(" ")[1] == "XXY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-XYYs = np.where(
-    [feat.split(" ")[1] == "XYY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-YYYs = np.where(
-    [feat.split(" ")[1] == "YYY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-X11s = np.where(
-    [feat.split(" ")[1] == "X_11" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-X12s = np.where(
-    [feat.split(" ")[1] == "X_12" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-X22s = np.where(
-    [feat.split(" ")[1] == "X_22" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-Y11s = np.where(
-    [feat.split(" ")[1] == "Y_11" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-Y12s = np.where(
-    [feat.split(" ")[1] == "Y_12" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-Y22s = np.where(
-    [feat.split(" ")[1] == "Y_22" for feat in lib.get_feature_names(["X", "Y", "mu"])]
-)[0]
-
-
-# In[22]:
+# In[29]:
 
 
 bs2 = np.linspace(0.85, 0.995, 1000)
-mus = (1 - bs2)[np.newaxis, :] ** (np.arange(len(Xs))[:, np.newaxis] * 0.5)
-
-D = np.zeros((len(bs2), 2, 2))
-D[:, :, 0] = mus.T.dot(opt.coef_[:, X11s].T)
-D[:, :, 1] = mus.T.dot(opt.coef_[:, Y11s].T)
-
-L = np.zeros((len(bs2), 2, 2))
-L[:, :, 0] = [1, 0] - (mus.T.dot(opt.coef_[:, Xts].T))
-L[:, :, 1] = [0, 1] - (mus.T.dot(opt.coef_[:, Yts].T))
-
-J = np.zeros((len(bs2), 2, 2))
-Fxx = np.zeros((len(bs2), 2, 2, 2))
-Fxxx = np.zeros((len(bs2), 2, 2, 2, 2))
-J[:, :, 0] = mus.T.dot(opt.coef_[:, Xs].T)
-J[:, :, 1] = mus.T.dot(opt.coef_[:, Ys].T)
-Fxx[:, :, 0, 0] = (mus.T.dot(opt.coef_[:, XXs].T)) * 2
-Fxx[:, :, 0, 1] = mus.T.dot(opt.coef_[:, XYs].T)
-Fxx[:, :, 1, 0] = mus.T.dot(opt.coef_[:, XYs].T)
-Fxx[:, :, 1, 1] = (mus.T.dot(opt.coef_[:, YYs].T)) * 2
-Fxxx[:, :, 0, 0, 0] = (mus.T.dot(opt.coef_[:, XXXs].T)) * 6
-Fxxx[:, :, 0, 0, 1] = (mus.T.dot(opt.coef_[:, XXYs].T)) * 2
-Fxxx[:, :, 0, 1, 0] = (mus.T.dot(opt.coef_[:, XXYs].T)) * 2
-Fxxx[:, :, 1, 0, 0] = (mus.T.dot(opt.coef_[:, XXYs].T)) * 2
-Fxxx[:, :, 0, 1, 1] = (mus.T.dot(opt.coef_[:, XYYs].T)) * 2
-Fxxx[:, :, 1, 0, 1] = (mus.T.dot(opt.coef_[:, XYYs].T)) * 2
-Fxxx[:, :, 1, 1, 0] = (mus.T.dot(opt.coef_[:, XYYs].T)) * 2
-Fxxx[:, :, 1, 1, 1] = (mus.T.dot(opt.coef_[:, YYYs].T)) * 6
-
-lambdas, Us = np.linalg.eig(np.einsum("aij,ajk->aik", np.linalg.inv(L), J))
-
-
-# In[23]:
-
-
-u = Us[:, :, 0]
-ubar = np.conjugate(u)
-ut = np.linalg.inv(Us)[:, 0, :]
-a = np.einsum(
-    "ni,nip,npjk,nj,nkl,nlmo,nm,no->n",
-    ut,
-    np.linalg.inv(L),
-    Fxx,
-    u,
-    np.linalg.inv(J),
-    Fxx,
-    u,
-    ubar,
-)
-b = (
-    np.einsum(
-        "ni,nip,npjk,nj,nkl,nlmo,nm,no->n",
-        ut,
-        np.linalg.inv(L),
-        Fxx,
-        ubar,
-        np.linalg.inv(
-            J
-            - (
-                (lambdas[:, 0] - lambdas[:, 1])[:, np.newaxis, np.newaxis]
-                * np.eye(2)[np.newaxis, :, :]
-            )
-        ),
-        Fxx,
-        u,
-        u,
-    )
-    / 2
-)
-c = np.einsum("ni,nip,npjkl,nj,nk,nl->n", ut, np.linalg.inv(L), Fxxx, u, u, ubar) / 2
-alphas = a + b - c
-alphas = -np.imag(alphas) / np.real(alphas)
-print(alphas[0], alphas[-1])
-betas = np.einsum("ni,nij,njk,nk->n", ut, np.linalg.inv(L), D, u)
-betas = np.imag(betas) / np.real(betas)
-print(betas[0], betas[-1])
-
-
-# In[24]:
-
+alphas, betas = utils.get_normal_form_parameters(model, bs2)
 
 plt.subplots(2, 1, figsize=(5, 4))
 
@@ -927,9 +793,9 @@ plt.savefig("fig2.pdf")
 plt.show()
 
 
-# pattern formation above the canard explosion
+# Calculate a finely resolved trajectory above the canard explosion, with $\mu=0.16$. The dynamics exhibit more extreme spatiotemporal variations than exhibited by the CGLE.
 
-# In[25]:
+# In[11]:
 
 
 bs = [0.84]
@@ -981,7 +847,7 @@ if not np.all(
             print(stop - start)
 
 
-# In[26]:
+# In[12]:
 
 
 plt.figure(figsize=(3, 4))
@@ -1000,13 +866,14 @@ plt.xticks([])
 plt.yticks([])
 plt.savefig("fig2d.pdf")
 plt.show()
+# utils.animate_oregonator()
 
 
 # ### Effects of noise on CGLE fits
 
 # Here we perform both differential and weak SINDyCP fits on the four previous trajectories with various intensities of injected noise. We generate two new test trajectories to assess the performance of the fits. We also generate five new training trajectories with random parameter values in the amplitude turbulence parameter regime and perform the SINDyCP fits on noisy data with a varying number of length of trajectories. Since these fits take a while, we use previously saved score results here if they are present.
 
-# In[27]:
+# In[30]:
 
 
 utils.cgle_weak_noise_sweeps()
@@ -1015,7 +882,7 @@ utils.cgle_noise_sweeps()
 
 # Plot results
 
-# In[28]:
+# In[3]:
 
 
 colors = [
@@ -1133,7 +1000,7 @@ plt.show()
 #
 # which is a model pattern formation equation for studying nonlinear dynamics including defect formations. Depending on the values of the parameters $r$, $b_3$ and $b_5$, the system can relax to either a uniform steady state, a periodic steady state, or a symmetry-broken steady state exhibiting localized states. We demonstrate the potential for SINDyCP to extrapolate by predicting the existence of localized states from training data collected when only the uniform state is stable.
 
-# In[29]:
+# In[4]:
 
 
 nx = 256
@@ -1157,7 +1024,7 @@ spatiotemporal_grid[:, :, 1] = dt * np.arange(int(t1 / dt))
 
 # Randomly generate a relationship between the normal-form parameters $(r, b_3, b_5)$ and an experimental control parameter $\varepsilon$
 
-# In[30]:
+# In[5]:
 
 
 np.random.seed(66)
@@ -1206,7 +1073,7 @@ plt.ylabel("Normal form\n parameters")
 plt.show()
 
 
-# In[31]:
+# In[6]:
 
 
 num_trajectories = 3
@@ -1229,7 +1096,7 @@ for i in range(len(rs)):
 
 # Fit the data with weak SINDyCP
 
-# In[32]:
+# In[7]:
 
 
 start = timeit.default_timer()
@@ -1287,7 +1154,7 @@ print(model.score(xs, u=epsilons_train.tolist(), t=dt, multiple_trajectories=Tru
 
 # Define some functions to store the fit results
 
-# In[33]:
+# In[8]:
 
 
 uxcoeff_fit = np.array(
@@ -1436,7 +1303,7 @@ def b5_func_fit(epsilons):
 
 # Stability of continuation orbits. The solutions have been continued with auto07p and their stability determined and saved.
 
-# In[34]:
+# In[9]:
 
 
 i = 0
@@ -1496,7 +1363,7 @@ while os.path.exists("data/auto/periodic/stable_" + str(i) + ".npy"):
 
 # Plot the normal form parameters and continuation results
 
-# In[35]:
+# In[10]:
 
 
 colors = [
@@ -1584,7 +1451,7 @@ plt.show()
 
 # Extrapolate the model to parameters with twentry random initial conditions. The fit correctly predicts the localized states!
 
-# In[36]:
+# In[11]:
 
 
 def sh_fit(t, u, epsilon):
@@ -1651,7 +1518,7 @@ for i in seeds:
     xs_test.append(np.transpose(us)[:, :, np.newaxis])
 
 
-# In[37]:
+# In[12]:
 
 
 plt.subplots(2, 1, figsize=(3, 4))

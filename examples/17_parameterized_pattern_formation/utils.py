@@ -288,15 +288,24 @@ def cgle_noise_sweeps():
         save_cgle_test_trajectories()
         save_cgle_random_trajectories()
 
-    bs = [2.0, 2.0, 0.5, 1.0]
-    cs = [1.0, 0.75, 0.5, 0.75]
-    us = [[bs[i], cs[i]] for i in range(len(bs))]
-    xs = [np.load("data/cgle/cgle_x" + str(i) + ".npy") for i in range(4)]
+        bs = [2.0, 2.0, 0.5, 1.0]
+        cs = [1.0, 0.75, 0.5, 0.75]
+        us = [[bs[i], cs[i]] for i in range(len(bs))]
+        xs = [np.load("data/cgle/cgle_x" + str(i) + ".npy") for i in range(4)]
 
-    bs = [2.0, 1.5]
-    cs = [1.5, 1.0]
-    us_test = [[bs[i], cs[i]] for i in range(len(bs))]
-    xs_test = [np.load("data/cgle/cgle_test_x" + str(i) + ".npy") for i in range(2)]
+        bs = [2.0, 1.5]
+        cs = [1.5, 1.0]
+        us_test = [[bs[i], cs[i]] for i in range(len(bs))]
+        xs_test = [np.load("data/cgle/cgle_test_x" + str(i) + ".npy") for i in range(2)]
+
+        np.random.seed(100)
+        num_trajectories = 5
+        bs = np.random.normal(1.5, 0.5, size=num_trajectories)
+        cs = np.random.normal(1.0, 0.25, size=num_trajectories)
+        us_random = [[bs[i], cs[i]] for i in range(len(bs))]
+        xs_random = [
+            np.load("data/cgle/cgle_random_x" + str(i) + ".npy") for i in range(4)
+        ]
 
     # sweep with training on original data
     nscores = []
@@ -365,13 +374,6 @@ def cgle_noise_sweeps():
         np.save("data/cgle/cgle_scores0", scores0)
 
     # sweep with training on random data
-    np.random.seed(100)
-    num_trajectories = 5
-    bs = np.random.normal(1.5, 0.5, size=num_trajectories)
-    cs = np.random.normal(1.0, 0.25, size=num_trajectories)
-    us_random = [[bs[i], cs[i]] for i in range(len(bs))]
-    xs_random = [np.load("data/cgle/cgle_random_x" + str(i) + ".npy") for i in range(4)]
-
     nscores = []
 
     if not os.path.exists("data/cgle/cgle_scores1.npy"):
@@ -567,19 +569,25 @@ def cgle_weak_noise_sweeps():
         save_cgle_test_trajectories()
         save_cgle_random_trajectories()
 
-    bs = [2.0, 2.0, 0.5, 1.0]
-    cs = [1.0, 0.75, 0.5, 0.75]
-    us = [[bs[i], cs[i]] for i in range(len(bs))]
-    xs = [np.load("data/cgle/cgle_x" + str(i) + ".npy") for i in range(len(bs))]
-    bs = [2.0, 1.5]
-    cs = [1.5, 1.0]
-    us_test = [[bs[i], cs[i]] for i in range(len(bs))]
-    xs_test = [np.load("data/cgle/cgle_test_x" + str(i) + ".npy") for i in range(2)]
+        bs = [2.0, 2.0, 0.5, 1.0]
+        cs = [1.0, 0.75, 0.5, 0.75]
+        us = [[bs[i], cs[i]] for i in range(len(bs))]
+        xs = [np.load("data/cgle/cgle_x" + str(i) + ".npy") for i in range(len(bs))]
 
-    bs = [2.0, 1.5]
-    cs = [1.5, 1.0]
-    us_test = [[bs[i], cs[i]] for i in range(len(bs))]
-    xs_test = [np.load("data/cgle/cgle_test_x" + str(i) + ".npy") for i in range(2)]
+        bs = [2.0, 1.5]
+        cs = [1.5, 1.0]
+        us_test = [[bs[i], cs[i]] for i in range(len(bs))]
+        xs_test = [np.load("data/cgle/cgle_test_x" + str(i) + ".npy") for i in range(2)]
+
+        np.random.seed(100)
+        num_trajectories = 5
+        bs = np.random.normal(1.5, 0.5, size=num_trajectories)
+        cs = np.random.normal(1.0, 0.25, size=num_trajectories)
+        us_random = [[bs[i], cs[i]] for i in range(len(bs))]
+        xs_random = [
+            np.load("data/cgle/cgle_random_x" + str(i) + ".npy") for i in range(len(bs))
+        ]
+
     # sweep with training on original data
     nscores_weak = []
 
@@ -660,14 +668,6 @@ def cgle_weak_noise_sweeps():
         weak_scores0 = np.load("data/cgle/cgle_weak_scores0.npy")
 
     # sweep with training on random data
-    np.random.seed(100)
-    num_trajectories = 5
-    bs = np.random.normal(1.5, 0.5, size=num_trajectories)
-    cs = np.random.normal(1.0, 0.25, size=num_trajectories)
-    us_random = [[bs[i], cs[i]] for i in range(len(bs))]
-    xs_random = [
-        np.load("data/cgle/cgle_random_x" + str(i) + ".npy") for i in range(len(bs))
-    ]
 
     nscores_weak = []
 

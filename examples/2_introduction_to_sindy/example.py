@@ -1,9 +1,8 @@
-# %% [markdown]
+#!/usr/bin/env python
+# coding: utf-8
 # # An introduction to Sparse Identification of Nonlinear Dynamical systems (SINDy)
 # This notebook gives an overview of the Sparse Identification of Nonlinear Dynamical systems (SINDy) method and discusses the relationship between SINDy and PySINDy. It also includes a brief example showing how different objects in the SINDy method are represented in PySINDy.
-# %% [markdown]
 # [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dynamicslab/pysindy/v1.7?filepath=examples/2_introduction_to_sindy.ipynb)
-# %% [markdown]
 # ## Main ideas
 # Suppose we have a set of measurements $x(t)\in \mathbb{R}^n$ from some physical system at different points in time $t$. SINDy seeks to represent the time evolution of $x(t)$ in terms of a nonlinear function $f$:
 #
@@ -22,7 +21,6 @@
 # is sparse with respect to the set of polynomials of two variables in the sense that if we were to write an expansion of the component functions of $f$ in this basis (e.g. $f_{1}(x) = \sum_{i=0}^\infty\sum_{j=0}^\infty a_{i,j}x_1^ix_2^j$), only a small number of coefficients ($a_{i,j}$) would be nonzero.
 #
 # SINDy employs **sparse regression** to find a linear combination of basis functions that best capture the dynamic behavior of the physical system.
-# %% [markdown]
 # ## Approximation problem
 # To apply SINDy in practice one needs a set of measurement data collected at times $t_1, t_2, \dots, t_n$, and the time derivatives of these measurements (either measured directly or numerically approximated). These data are aggregated into the matrices $X$ and $\dot X$, respectively
 #
@@ -77,7 +75,6 @@
 # With each of the objects $X$, $\dot X$, $\Theta(X)$, and $\Xi$ being defined, we are ready to write down the approximation problem underlying SINDy:
 #
 # $$ \dot X \approx \Theta(X)\Xi. $$
-# %% [markdown]
 # ## Structure of PySINDy
 # The submodules of PySINDy are each aligned with one of the terms in the aforementioned approximation equation
 #
@@ -90,7 +87,6 @@
 # The `SINDy` object encapsulates one class object from each of these three submodules and uses them, along with a user-supplied data matrix, to find a governing dynamical system.
 #
 # Let's walk through an example showing how this works using a toy dataset.
-# %% [markdown]
 # ## Example
 # Suppose we have measurements of the position of a particle obeying the following dynamical system at different points in time:
 #
@@ -104,7 +100,7 @@
 # Note that this system of differential equations decouples into two differential equations whose solutions are simply $x(t) = x_0e^{-2t}$ and $y(t) = y_0e^t$, where $x_0 = x(0)$ and $y_0=y(0)$ are the initial conditions.
 #
 # Using the initial conditions $x_0 = 3$ and $y_0 = \tfrac{1}{2}$, we construct the data matrix $X$.
-# %%
+# In[1]:
 import numpy as np
 
 import pysindy as ps
@@ -117,40 +113,50 @@ else:
     from mock_data import gen_data2
 
 
-# %%
+# In[2]:
+
+
 t, x, y = gen_data1()
 X = np.stack((x, y), axis=-1)  # First column is x, second is y
 
-# %% [markdown]
+
 # We can select a differentiation method from the `differentiation` submodule.
 
-# %%
+# In[3]:
+
+
 differentiation_method = ps.FiniteDifference(order=2)
 
 # We could instead call ps.differentiation.FiniteDifference(order=2)
 
-# %% [markdown]
+
 # While we could use this method to compute $\dot X$ "by hand," it is often more convenient to pass it into the `SINDy` object and let the computation of $\dot X$ be handled automatically.
 #
 # The candidate library can be specified with an object from the `feature_library` submodule, which will also be passed into the `SINDy` object.
 
-# %%
+# In[4]:
+
+
 feature_library = ps.PolynomialLibrary(degree=3)
 
 # Note: We could instead call ps.feature_library.PolynomialLibrary(degree=3)
 
-# %% [markdown]
+
 # Next we select which optimizer should be used.
 
-# %%
+# In[5]:
+
+
 optimizer = ps.STLSQ(threshold=0.2)
 
 # Note: We could instead call ps.optimizers.STLSQ(threshold=0.2)
 
-# %% [markdown]
+
 # Finally, we bring these three components together in one `SINDy` object.
 
-# %%
+# In[6]:
+
+
 model = ps.SINDy(
     differentiation_method=differentiation_method,
     feature_library=feature_library,
@@ -158,27 +164,38 @@ model = ps.SINDy(
     feature_names=["x", "y"],
 )
 
-# %% [markdown]
+
 # Following the `scikit-learn` workflow, we first instantiate a `SINDy` class object with the desired properties, then fit it to the data in separate step.
 
-# %%
+# In[7]:
+
+
 model.fit(X, t=t)
 
-# %% [markdown]
+
 # We can inspect the governing equations discovered by the model and check whether they seem reasonable with the `print` function.
 
-# %%
+# In[8]:
+
+
 model.print()
 
-# %% [markdown]
+
 # Once the SINDy model has been fit we can use it to evolve new initial conditions forward in time with the `simulate` function.
 
-# %%
+# In[9]:
+
+
 x0, y0, t_test, x_test, y_test = gen_data2()
 sim = model.simulate([x0, y0], t=t_test)
 
-# %%
+
+# In[10]:
+
+
 import matplotlib.pyplot as plt
+
+plt.ion()
 
 plt.figure()
 plt.plot(x0, y0, "ro", label="Initial condition", alpha=0.6, markersize=8)
@@ -189,10 +206,12 @@ plt.ylabel("y")
 plt.legend()
 plt.show()
 
-# %% [markdown]
+
 # Note that if the library we had chosen had been inappropriate for the problem at hand (i.e. if the dynamics could not be well-approximated as a sparse linear combination of library functions), then SINDy would have failed to produce a reasonable model. For example, if we solve the same problem, but using sines and cosines as our basis functions, SINDy is unable to find a sparse model for the dynamics:
 
-# %%
+# In[11]:
+
+
 # Populate the library with trigonometric functions
 feature_library = ps.FourierLibrary()
 

@@ -1,0 +1,21 @@
+import numpy as np
+import os
+
+periodic=run('snaking_E_T',c='periodic_E')
+sols=[]
+pars=[]
+for i in range(len(periodic[0])):
+    u=periodic(i+1)['U(1)']
+    t=periodic(i+1)['t']
+    e=periodic(i+1)['PAR(1)']
+    r=periodic(i+1)['PAR(2)']
+    b=periodic(i+1)['PAR(3)']
+    c=periodic(i+1)['PAR(4)']
+    T=periodic(i+1)['PAR(11)']
+    norm=periodic(i+1)['L2-NORM']
+    sols=sols+[np.vstack([t,u]).T]
+    pars=pars+[[e,r,b,c,T,norm]]
+
+np.save('periodic_sols.npy',sols)
+np.save('periodic_pars.npy',pars)
+cl()

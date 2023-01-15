@@ -313,24 +313,25 @@ scale_levels = np.logspace(2, 5, 40)
 
 # if using the weak form, this makes the Pareto curve based on the "strong"
 # or regular RMSE error instead of the RMSE error of the weak formulation.
-strong_rmse = True
+strong_rmse = False
 
 # List of algorithms and noise levels to sweep through, MIOSR requires
 # a Gurobipy license (free license available via pip), and the academic
 # license (free, but requires making an account on Gurobi) is required
 # for doing the large-scale runs here.
-# algorithms = ["STLSQ", "SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
-algorithms = ["MIOSR"]
+algorithms = ["STLSQ"]  # , "SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
+#algorithms = ["STLSQ"]
 noise_levels = [0.0, 0.1, 1.0]
-weak_form_flags = [False, True]
+weak_form_flags = [True]
 
 for weak_form in weak_form_flags:
     # if weak_form = True, need to reorder the coefficients because the
     # weak form uses a library with different term ordering
-    if weak_form:
-        true_coefficients = weakform_reorder_coefficients(
-            systems_list, dimension_list, true_coefficients
-        )
+    
+    #if weak_form:
+    #    true_coefficients = weakform_reorder_coefficients(
+    #        systems_list, dimension_list, true_coefficients
+    #    )
 
     for algorithm in algorithms:
         for noise_level in noise_levels:
@@ -383,6 +384,8 @@ for weak_form in weak_form_flags:
                         true_coefficients[i],
                         np.array(predicted_coefficients[attractor_name])[0, j, :, :],
                     )
+                print(i, attractor_name, true_coefficients[i], np.array(predicted_coefficients[attractor_name])[0, 0, :, :])
+                print(coef_avg_error[i, :])
                 avg_rmse_error[i] = np.mean(
                     np.ravel(abs(np.array(xdot_rmse_errors[attractor_name])))
                 )

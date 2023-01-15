@@ -592,6 +592,7 @@ def Pareto_scan_ensembling(
                     for name in poly_library.get_feature_names()
                 ]
             )[:, 0]
+            print(order)
             if strong_rmse:
                 x_dot_test = [
                     lib2.calc_trajectory(

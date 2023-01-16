@@ -10,7 +10,6 @@ from utils import load_data
 from utils import normalized_RMSE
 from utils import Pareto_scan_ensembling
 from utils import total_coefficient_error_normalized
-from utils import weakform_reorder_coefficients
 
 import pysindy as ps
 
@@ -319,16 +318,16 @@ strong_rmse = False
 # a Gurobipy license (free license available via pip), and the academic
 # license (free, but requires making an account on Gurobi) is required
 # for doing the large-scale runs here.
-algorithms = ["STLSQ"]  # , "SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
-#algorithms = ["STLSQ"]
+algorithms = ["SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
+# algorithms = ["STLSQ"]
 noise_levels = [0.0, 0.1, 1.0]
 weak_form_flags = [True]
 
 for weak_form in weak_form_flags:
     # if weak_form = True, need to reorder the coefficients because the
     # weak form uses a library with different term ordering
-    
-    #if weak_form:
+
+    # if weak_form:
     #    true_coefficients = weakform_reorder_coefficients(
     #        systems_list, dimension_list, true_coefficients
     #    )
@@ -384,7 +383,12 @@ for weak_form in weak_form_flags:
                         true_coefficients[i],
                         np.array(predicted_coefficients[attractor_name])[0, j, :, :],
                     )
-                print(i, attractor_name, true_coefficients[i], np.array(predicted_coefficients[attractor_name])[0, 0, :, :])
+                print(
+                    i,
+                    attractor_name,
+                    true_coefficients[i],
+                    np.array(predicted_coefficients[attractor_name])[0, 0, :, :],
+                )
                 print(coef_avg_error[i, :])
                 avg_rmse_error[i] = np.mean(
                     np.ravel(abs(np.array(xdot_rmse_errors[attractor_name])))

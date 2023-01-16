@@ -355,6 +355,7 @@ def Pareto_scan_ensembling(
     weak_form=False,
     algorithm="STLSQ",
     strong_rmse=False,
+    K=200,
 ):
     """
     Very general function for performing hyperparameter scans. This
@@ -418,6 +419,10 @@ def Pareto_scan_ensembling(
         calculated without the weak form, for determining the
         hyperparameter scan. If weak_form = True and strong_rmse = False, use the weak
         form of the RMSE error for determining the hyperparameter scan.
+    K : int, optional (default 200)
+        If weak_form = False, this parameter does nothing.
+        If weak_form = True, this determines the number of points in the weak form
+        version of the regression problem, so K increasing improves the performance.
 
     Returns
     -------
@@ -557,7 +562,7 @@ def Pareto_scan_ensembling(
                 spatiotemporal_grid=all_t_train[attractor_name][0],
                 is_uniform=True,
                 include_bias=True,
-                K=200,
+                K=K,
             )
 
         # pre-calculate the test trajectory derivatives and library matrices

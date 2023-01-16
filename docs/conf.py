@@ -27,6 +27,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "IPython.sphinxext.ipython_console_highlighting",
 ]
+
 nb_execution_mode = "off"
 
 apidoc_module_dir = f"../{project}"

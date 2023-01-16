@@ -1,8 +1,8 @@
 """
 Unit tests for SINDy class.
 
-Note: all tests should be encapsulated in functions whose
-names start with "test_"
+Note: all tests should be encapsulated in functions with
+names starting with "test_"
 
 To run all tests for this package, navigate to the top-level
 directory and execute the following command:
@@ -33,8 +33,6 @@ from pysindy.feature_library import WeakPDELibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
-
-# from pysindy.utils import convert_u_dot_integral
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -608,10 +606,10 @@ def test_fit_warn(data_lorenz, params, warning):
     model = SINDy(optimizer=STLSQ(**params))
 
     with pytest.warns(warning):
-        model.fit(x, t)
+        model.fit(x, t=t)
 
     with pytest.warns(None) as warn_record:
-        model.fit(x, t, quiet=True)
+        model.fit(x, t=t, quiet=True)
 
     while True:
         try:

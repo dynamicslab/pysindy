@@ -21,5 +21,6 @@ nbsphinx
 jupyter_contrib_nbextensions
 pandas
 seaborn
+ipython
 scs<=2.1.4
-gurobipy==9.5.2
+gurobipy>=9.5.1,<10.0

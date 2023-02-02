@@ -266,6 +266,13 @@ def AIC_c(x_dot_true, x_dot_pred, xi_pred):
     return AIC
 
 
+def true_positive_ratio(xi_true, xi_pred):
+    bools = np.array(np.isclose(xi_true, xi_pred, rtol=1e-1, atol=1e-2), dtype=int)
+    # print(bools, xi_true, xi_pred)
+    # number of correctly identified coefficients / (total number of coefficients + any falsely identified coefficients)
+    return np.sum(bools) / (len(np.ravel(xi_true)) + np.sum(abs(bools - 1)))
+
+
 def total_coefficient_error_normalized(xi_true, xi_pred):
     """
     Compute the TOTAL normalized coefficient error between the true

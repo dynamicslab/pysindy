@@ -10,6 +10,7 @@ from utils import load_data
 from utils import normalized_RMSE
 from utils import Pareto_scan_ensembling
 from utils import total_coefficient_error_normalized
+from utils import true_positive_ratio
 
 import pysindy as ps
 
@@ -318,10 +319,13 @@ strong_rmse = False
 # a Gurobipy license (free license available via pip), and the academic
 # license (free, but requires making an account on Gurobi) is required
 # for doing the large-scale runs here.
-algorithms = ["SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
+algorithms = ["STLSQ", "SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
 # algorithms = ["STLSQ"]
+# algorithms = ["MIOSR"]
 noise_levels = [0.0, 0.1, 1.0]
-weak_form_flags = [True]
+# noise_levels = [0.0, 0.1, 1.0]
+weak_form_flags = [False]
+# weak_form_flags = [True]
 
 for weak_form in weak_form_flags:
     # if weak_form = True, need to reorder the coefficients because the
@@ -363,7 +367,7 @@ for weak_form in weak_form_flags:
                 noise_level=noise_level,  # amount of noise to add to the training data
                 n_models=n_models,  # number of models to train using EnsemblingOptimizer functionality
                 n_subset=int(
-                    0.5 * len(all_t_train["HyperBao"][0])
+                    0.5 * len(all_t_train["Aizawa"][0])
                 ),  # subsample 50% of the training data for each model
                 replace=False,  # Do the subsampling without replacement
                 weak_form=weak_form,  # use the weak form or not
@@ -376,20 +380,28 @@ for weak_form in weak_form_flags:
             avg_rmse_error = np.zeros(num_attractors)
             std_rmse_error = np.zeros(num_attractors)
             coef_avg_error = np.zeros((num_attractors, n_models))
+            tprs = np.zeros((num_attractors, n_models))
             best_thresholds = np.zeros(num_attractors)
+            avg_tprs = np.zeros(num_attractors)
+            std_tprs = np.zeros(num_attractors)
             for i, attractor_name in enumerate(systems_list):
                 for j in range(n_models):
                     coef_avg_error[i, j] = total_coefficient_error_normalized(
                         true_coefficients[i],
                         np.array(predicted_coefficients[attractor_name])[0, j, :, :],
                     )
-                print(
-                    i,
-                    attractor_name,
-                    true_coefficients[i],
-                    np.array(predicted_coefficients[attractor_name])[0, 0, :, :],
-                )
-                print(coef_avg_error[i, :])
+                    tprs[i, j] = true_positive_ratio(
+                        true_coefficients[i],
+                        np.array(predicted_coefficients[attractor_name])[0, j, :, :],
+                    )
+                    # print(i, j, tprs[i, j])
+                # print(
+                #    i,
+                #    attractor_name,
+                #    true_coefficients[i],
+                #    np.array(predicted_coefficients[attractor_name])[0, 0, :, :],
+                # )
+                # print(coef_avg_error[i, :])
                 avg_rmse_error[i] = np.mean(
                     np.ravel(abs(np.array(xdot_rmse_errors[attractor_name])))
                 )
@@ -397,6 +409,8 @@ for weak_form in weak_form_flags:
                     np.ravel(abs(np.array(xdot_rmse_errors[attractor_name])))
                 )
                 best_thresholds[i] = best_threshold_values[attractor_name][0]
+                avg_tprs[i] = np.mean(tprs[i, :], axis=-1)
+                std_tprs[i] = np.std(tprs[i, :], axis=-1)
 
             if weak_form:
                 avg_rmse_error_strong = []
@@ -472,6 +486,8 @@ for weak_form in weak_form_flags:
                             std_rmse_error,
                             avg_rmse_error_strong,
                             std_rmse_error_strong,
+                            avg_tprs,
+                            std_tprs,
                         ]
                     ).T,
                 )
@@ -488,6 +504,8 @@ for weak_form in weak_form_flags:
                             np.std(coef_avg_error, axis=-1),
                             avg_rmse_error,
                             std_rmse_error,
+                            avg_tprs,
+                            std_tprs,
                         ]
                     ).T,
                 )

@@ -22,7 +22,7 @@ class TrappingSR3(SR3):
 
         0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(w)
         + 0.5\\|Pw-A\\|^2_2/\\eta + \\delta_0(Cw-d)
-        + \\delta_{\\Lambda}(A)} + \\alpha \\|Qijk\\|
+        + \\delta_{\\Lambda}(A) + \\alpha \\|Qijk\\|
         + \\beta \\|Q_{ijk} + Q_{jik} + Q_{kij}\\|
 
     where :math:`R(w)` is a regularization function, C is a constraint matrix
@@ -202,6 +202,11 @@ class TrappingSR3(SR3):
                             n_targets, n_targets, n_features)
         Quadratic coefficient part of the P matrix in ||Pw - A||^2
 
+    PT_ : np.ndarray, shape (n_targets, n_targets,
+                            n_targets, n_targets, n_features)
+        Transpose of 1st dimension and 2nd dimension of quadratic coefficient
+        part of the P matrix
+
     Examples
     --------
     >>> import numpy as np
@@ -375,41 +380,54 @@ class TrappingSR3(SR3):
 
         # if j == k, delta_{il}delta_{N-r+j,n}
         # if j != k, delta_{il}delta_{r+j+k-1,n}
+        # if j != k, delta_{il}delta_{r+j*(2*r-j-3)/2+k-1,n}  if j<k; swap j & k
+        # in the second delta operator if j>k
         PQ_tensor = np.zeros((r, r, r, r, N))
         for i in range(r):
             for j in range(r):
                 for k in range(r):
                     for kk in range(r):
                         for n in range(N):
-                            if (j == k) and (n == N - r + j) and (i == kk):
-                                PQ_tensor[i, j, k, kk, n] = 1.0
-        running_ind = 0
-        for i in range(r):
-            for j in range(r - 1):
-                if j > 0:
-                    running_ind += r - j
-                else:
-                    running_ind = 0
-                for k in range(j + 1, r):
-                    for kk in range(r):
-                        for n in range(N):
+                            # if (j == k) and (n == N - r + j) and (i == kk):
+                            #     PQ_tensor[i, j, k, kk, n] = 1.0
                             # if (j != k) and (n == r + j + k - 1) and (i == kk):
                             #     PQ_tensor[i, j, k, kk, n] = 1 / 2
-                            if (n == r + running_ind + k - 1 - j) and (i == kk):
-                                PQ_tensor[i, j, k, kk, n] = 1
-        PQ_tensor = (PQ_tensor + np.transpose(PQ_tensor, [0, 2, 1, 3, 4])) / 2.0
-        return PL_tensor_unsym, PL_tensor, PQ_tensor
+                            if (j == k) and (n == N - r + j) and (i == kk):
+                                PQ_tensor[i, j, k, kk, n] = 1.0
+                            if (j != k) and \
+                                (n == r + np.min([j, k])*(2*r-np.min([j, k])-3)/2 + np.max([j, k]) - 1) and \
+                                (i == kk):
+                                PQ_tensor[i, j, k, kk, n] = 1 / 2
+
+        # PT projects out the transpose of the 1st dimension and 2nd dimension of Q
+        PT_tensor = np.zeros((r, r, r, r, N))
+        for i in range(r):
+            for j in range(r):
+                for k in range(r):
+                    for kk in range(r):
+                        for n in range(N):
+                            if (j == k) and (n == N - r + j) and (i == kk):
+                                PT_tensor[j, i, k, kk, n] = 1.0
+                            if (j != k) and \
+                                (n == r + np.min([j, k])*(2*r-np.min([j, k])-3)/2 + np.max([j, k]) - 1) and \
+                                (i == kk):
+                                PT_tensor[j, i, k, kk, n] = 1 / 2
+
+        PQ_tensor = (PQ_tensor + PT_tensor) / 2.0
+        return PL_tensor_unsym, PL_tensor, PQ_tensor #, PT_tensor?
 
     def _bad_PL(self, PL):
         """Check if PL tensor is properly defined"""
         tol = 1e-10
         return np.any((np.transpose(PL, [1, 0, 2, 3]) - PL) > tol)
 
+    # TODO: PQ is not symmetric in 2nd and 3rd dimension any longer if not energy-preserving
     def _bad_PQ(self, PQ):
         """Check if PQ tensor is properly defined"""
         tol = 1e-10
         return np.any((np.transpose(PQ, [0, 2, 1, 3, 4]) - PQ) > tol)
 
+    # TODO: we should probably rewrite this since PQ_ is not symmetric in 2nd and 3rd dimension any more
     def _check_P_matrix(self, r, n_features, N):
         """Check if P tensor is properly defined"""
         # If these tensors are not passed, or incorrect shape, assume zeros
@@ -471,6 +489,8 @@ class TrappingSR3(SR3):
             self.PL_ = np.zeros((r, r, r, n_features))
             self.PQ_ = np.zeros((r, r, r, r, n_features))
 
+    # TODO: now we have As = PL @ \ksi + (1/2) * PQ @ \ksi @ m
+    # notice that PQ contains PT part
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
         """Solves the coefficient update analytically if threshold = 0"""
         g = x_transpose_y + P_transpose_A / self.eta

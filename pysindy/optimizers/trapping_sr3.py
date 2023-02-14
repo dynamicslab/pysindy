@@ -394,9 +394,17 @@ class TrappingSR3(SR3):
                             #     PQ_tensor[i, j, k, kk, n] = 1 / 2
                             if (j == k) and (n == N - r + j) and (i == kk):
                                 PQ_tensor[i, j, k, kk, n] = 1.0
-                            if (j != k) and \
-                                (n == r + np.min([j, k])*(2*r-np.min([j, k])-3)/2 + np.max([j, k]) - 1) and \
-                                (i == kk):
+                            if (
+                                (j != k)
+                                and (
+                                    n
+                                    == r
+                                    + np.min([j, k]) * (2 * r - np.min([j, k]) - 3) / 2
+                                    + np.max([j, k])
+                                    - 1
+                                )
+                                and (i == kk)
+                            ):
                                 PQ_tensor[i, j, k, kk, n] = 1 / 2
 
         # PT projects out the transpose of the 1st dimension and 2nd dimension of Q
@@ -408,13 +416,21 @@ class TrappingSR3(SR3):
                         for n in range(N):
                             if (j == k) and (n == N - r + j) and (i == kk):
                                 PT_tensor[j, i, k, kk, n] = 1.0
-                            if (j != k) and \
-                                (n == r + np.min([j, k])*(2*r-np.min([j, k])-3)/2 + np.max([j, k]) - 1) and \
-                                (i == kk):
+                            if (
+                                (j != k)
+                                and (
+                                    n
+                                    == r
+                                    + np.min([j, k]) * (2 * r - np.min([j, k]) - 3) / 2
+                                    + np.max([j, k])
+                                    - 1
+                                )
+                                and (i == kk)
+                            ):
                                 PT_tensor[j, i, k, kk, n] = 1 / 2
 
-        PQ_tensor = (PQ_tensor + PT_tensor) / 2.0
-        return PL_tensor_unsym, PL_tensor, PQ_tensor #, PT_tensor?
+        # PQ_tensor = (PQ_tensor + PT_tensor) / 2.0
+        return PL_tensor_unsym, PL_tensor, PQ_tensor  # , PT_tensor?
 
     def _bad_PL(self, PL):
         """Check if PL tensor is properly defined"""
@@ -542,7 +558,7 @@ class TrappingSR3(SR3):
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
         R2 = 0.5 * np.sum(R2)
         stability_term = 0.5 * np.sum(A2) / self.eta
-        alpha_term = 0.5 * np.sum(Qijk ** 2) / self.alpha
+        alpha_term = 0.5 * np.sum(Qijk**2) / self.alpha
         beta_term = 0.5 * np.sum(beta2) / self.beta
 
         # convoluted way to print every max_iter / 10 iterations

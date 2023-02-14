@@ -319,12 +319,12 @@ strong_rmse = False
 # a Gurobipy license (free license available via pip), and the academic
 # license (free, but requires making an account on Gurobi) is required
 # for doing the large-scale runs here.
-algorithms = ["STLSQ", "SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
+# algorithms = ["STLSQ", "SR3", r"SR3 ($\nu = 0.1$)", "Lasso"]
 # algorithms = ["STLSQ"]
-# algorithms = ["MIOSR"]
+algorithms = ["MIOSR"]
+# noise_levels = [0.0] 
 noise_levels = [0.0, 0.1, 1.0]
-# noise_levels = [0.0, 0.1, 1.0]
-weak_form_flags = [False]
+weak_form_flags = [True]
 # weak_form_flags = [True]
 
 for weak_form in weak_form_flags:

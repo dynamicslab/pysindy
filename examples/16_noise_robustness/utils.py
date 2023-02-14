@@ -1667,7 +1667,7 @@ def hyperparameter_scan_miosr(
                 target_sparsity=i + 1,
                 alpha=alpha,
                 normalize_columns=normalize_columns,
-                regression_timeout=5,
+                regression_timeout=20,
             ),
             bagging=True,
             n_models=n_models,

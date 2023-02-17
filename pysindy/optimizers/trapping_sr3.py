@@ -556,7 +556,7 @@ class TrappingSR3(SR3):
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
         R2 = 0.5 * np.sum(R2)
         stability_term = 0.5 * np.sum(A2) / self.eta
-        alpha_term = 0.5 * np.sum(Qijk ** 2) / self.alpha
+        alpha_term = 0.5 * np.sum(Qijk**2) / self.alpha
         beta_term = 0.5 * np.sum(beta2) / self.beta
 
         # convoluted way to print every max_iter / 10 iterations

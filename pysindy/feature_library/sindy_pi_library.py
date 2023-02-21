@@ -367,7 +367,6 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-
             if self.x_dot_functions is not None:
                 x_dot = nan_to_num(self.differentiation_method(x, self.t))
 

@@ -1,0 +1,21 @@
+import numpy as np
+import os
+
+even=run('snaking_E',c='cycle_even')
+sols=[]
+pars=[]
+for i in range(len(even[0])):
+    u=even(i+1)['U(1)']
+    t=even(i+1)['t']
+    e=even(i+1)['PAR(1)']
+    r=even(i+1)['PAR(2)']
+    b=even(i+1)['PAR(3)']
+    c=even(i+1)['PAR(4)']
+    T=even(i+1)['PAR(11)']
+    norm=even(i+1)['L2-NORM']
+    sols=sols+[np.vstack([t,u]).T]
+    pars=pars+[[e,r,b,c,T,norm]]
+
+np.save('even_sols.npy',sols)
+np.save('even_pars.npy',pars)
+cl()

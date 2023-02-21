@@ -1,0 +1,12 @@
+dat='periodic.dat'
+NDIM=   4, IPS =   4, IRS =   0, ILP =   1
+ICP =  [1,11,2,3,4]
+PAR={1:-1,11:6.283185307179586}
+NTST=  35, NCOL=   4, IAD =   1, ISP =   1, ISW = 1, IPLT= 0, NBC= 4, NINT= 0
+NMX=   1000, NPR=   1, MXBF=   0, IID =   2, ITMX=  10, ITNW= 7, NWTN= 3, JAC= 0
+EPSL= 1e-07, EPSU = 1e-07, EPSS = 1e-05
+DS  =  1e-6, DSMIN=1e-20, DSMAX=  1e-2, IADS=   1
+NPAR = 4, THL =  {}, THU =  {2:0,3:0,4:0}
+UZR =  {1: [-1,0,2.5,5,7.5,10.0]}
+RL0=-2.0
+RL1=10.1

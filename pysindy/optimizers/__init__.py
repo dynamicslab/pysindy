@@ -15,6 +15,10 @@ try:  # Waiting on PEP 690 to lazy import cvxpy
     from .sindy_pi import SINDyPI
 except ImportError:
     pass
+try:  # Waiting on PEP 690 to lazy import cvxpy
+    from .stable_linear_sr3 import StableLinearSR3
+except ImportError:
+    pass
 from .sindy_optimizer import SINDyOptimizer
 from .sr3 import SR3
 from .ssr import SSR
@@ -28,6 +32,7 @@ __all__ = [
     "SR3",
     "STLSQ",
     "ConstrainedSR3",
+    "StableLinearSR3",
     "TrappingSR3",
     "SSR",
     "FROLS",

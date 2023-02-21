@@ -417,7 +417,6 @@ class TrappingSR3(SR3):
         tol = 1e-10
         return np.any((np.transpose(PT, [2, 1, 0, 3, 4])) > tol)
 
-    # TODO: we should probably rewrite this since PQ_ is not symmetric in 2nd and 3rd dimension any more
     def _check_P_matrix(self, r, n_features, N):
         """Check if P tensor is properly defined"""
         # If these tensors are not passed, or incorrect shape, assume zeros
@@ -503,8 +502,7 @@ class TrappingSR3(SR3):
             self.PQ_ = np.zeros((r, r, r, r, n_features))
             self.PT_ = np.zeros((r, r, r, r, n_features))
 
-    # TODO: now we have As = PL @ \xi + (PQ + PT) @ \xi @ m
-    # notice that PQ contains PT part
+    # TODO: check if definition of P has been corrected
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
         """Solves the coefficient update analytically if threshold = 0"""
         g = x_transpose_y + P_transpose_A / self.eta
@@ -544,6 +542,7 @@ class TrappingSR3(SR3):
         """Calculate the convergence criterion for the optimization over m"""
         return np.sum(np.abs(self.m_history_[-2] - self.m_history_[-1]))
 
+    # TODO: should check the old PQ still holds for this optimization problem
     def _objective(self, x, y, coef_sparse, A, PW, k):
         """Objective function"""
         # Compute the errors
@@ -583,6 +582,7 @@ class TrappingSR3(SR3):
                 )
         return R2 + stability_term + L1 + alpha_term + beta_term
 
+    # TODO: replace Q with PQ and PT
     def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
         """Solve coefficient update with CVXPY if threshold != 0"""
         xi = cp.Variable(N * r)
@@ -653,6 +653,7 @@ class TrappingSR3(SR3):
         coef_sparse = (xi.value).reshape(coef_prev.shape)
         return coef_sparse
 
+    # TODO: fix P with the new equation
     def _solve_m_relax_and_split(self, r, N, m_prev, m, A, coef_sparse, tk_previous):
         """
         If using the relaxation formulation of trapping SINDy, solves the
@@ -704,6 +705,7 @@ class TrappingSR3(SR3):
             )
         return coef_sparse
 
+    # TODO: Implement PT_ here and replace all PQ with PQ & PT if needed
     def _reduce(self, x, y):
         """
         Perform at most ``self.max_iter`` iterations of the
@@ -718,9 +720,9 @@ class TrappingSR3(SR3):
         if self.mod_matrix is None:
             self.mod_matrix = np.eye(r)
 
-        # Define PL and PQ tensors, only relevant if the stability term in
+        # Define PL PQ and PT tensors, only relevant if the stability term in
         # trapping SINDy is turned on.
-        self.PL_unsym_, self.PL_, self.PQ_ = self._set_Ptensors(r)
+        self.PL_unsym_, self.PL_, self.PQ_, self.PT_ = self._set_Ptensors(r)
         # make sure dimensions/symmetries are correct
         self._check_P_matrix(r, n_features, N)
 

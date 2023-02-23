@@ -419,7 +419,7 @@ class TrappingSR3(SR3):
     def _bad_PT(self, PT):
         """Check if PT tensor is properly defined"""
         tol = 1e-10
-        return np.any((np.transpose(PT, [2, 1, 0, 3, 4])) > tol)
+        return np.any((np.transpose(PT, [2, 1, 0, 3, 4]) - PT) > tol)
 
     def _check_P_matrix(self, r, n_features, N):
         """Check if P tensor is properly defined"""

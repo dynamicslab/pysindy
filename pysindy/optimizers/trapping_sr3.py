@@ -392,12 +392,17 @@ class TrappingSR3(SR3):
                             if (j == k) and (n == N - r + j) and (i == kk):
                                 PQ_tensor[i, j, k, kk, n] = 1.0
                                 PT_tensor[j, i, k, kk, n] = 1.0
-                            if (j != k) and \
-                                (n == \
-                                 r \
-                                 + np.min([j, k]) * (2 * r -np.min([j, k]) - 3) / 2 \
-                                 + np.max([j, k]) - 1) \
-                                and (i == kk):
+                            if (
+                                (j != k)
+                                and (
+                                    n
+                                    == r
+                                    + np.min([j, k]) * (2 * r - np.min([j, k]) - 3) / 2
+                                    + np.max([j, k])
+                                    - 1
+                                )
+                                and (i == kk)
+                            ):
                                 PQ_tensor[i, j, k, kk, n] = 1 / 2.0
                                 PT_tensor[j, i, k, kk, n] = 1 / 2.0
 
@@ -449,8 +454,8 @@ class TrappingSR3(SR3):
             warnings.warn(
                 "The PT tensor (a requirement for the stability promotion) was"
                 " not set, so setting this tensor to all zeros. "
-                )
-        elif (self.PT_).shape!= (r, r, r, r, n_features) and (self.PT_).shape != (
+            )
+        elif (self.PT_).shape != (r, r, r, r, n_features) and (self.PT_).shape != (
             r,
             r,
             r,
@@ -494,8 +499,11 @@ class TrappingSR3(SR3):
 
         # If PL/PQ/PT finite and correct, so trapping theorem is being used,
         # then make sure library is quadratic and correct shape
-        if (np.any(self.PL_ != 0.0) or np.any(self.PQ_ != 0.0) or np.any(self.PT_ != 0.0)) \
-            and n_features != N:
+        if (
+            np.any(self.PL_ != 0.0)
+            or np.any(self.PQ_ != 0.0)
+            or np.any(self.PT_ != 0.0)
+        ) and n_features != N:
             print(
                 "The feature library is the wrong shape or not quadratic, "
                 "so please correct this if you are attempting to use the "

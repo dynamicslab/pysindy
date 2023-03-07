@@ -268,6 +268,9 @@ class EnsembleOptimizer(BaseOptimizer):
         replace: bool = True,
         ensemble_aggregator: Callable = None,
     ):
+        if not hasattr(opt, "initial_guess"):
+            opt.initial_guess = None
+
         super(EnsembleOptimizer, self).__init__(
             max_iter=opt.max_iter,
             fit_intercept=opt.fit_intercept,

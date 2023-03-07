@@ -15,6 +15,7 @@ from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import GeneralizedLibrary
 from pysindy.feature_library import IdentityLibrary
+from pysindy.feature_library import ParameterizedLibrary
 from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
@@ -190,6 +191,22 @@ def test_weak_pde_library_bad_parameters(params):
 def test_generalized_library_bad_parameters(data_lorenz, params):
     with pytest.raises(ValueError):
         lib = GeneralizedLibrary(**params)
+        x, t = data_lorenz
+        lib.fit(x)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(num_parameters=0, num_features=1),
+        dict(num_parameters=1, num_features=0),
+        dict(feature_library=None),
+        dict(parameter_library=None),
+    ],
+)
+def test_parametrized_library_bad_parameters(data_lorenz, params):
+    with pytest.raises(ValueError):
+        lib = ParameterizedLibrary(**params)
         x, t = data_lorenz
         lib.fit(x)
 
@@ -564,7 +581,6 @@ def test_generalized_library_pde(data_1d_random_pde):
         derivative_order=2,
         spatial_grid=x,
         include_bias=True,
-        is_uniform=True,
     )
 
     # First try without tensor libraries and subset of the input variables
@@ -594,7 +610,6 @@ def test_generalized_library_weak_pde(data_1d_random_pde):
         derivative_order=2,
         spatiotemporal_grid=XT,
         include_bias=True,
-        is_uniform=True,
     )
     library_functions = [lambda x: x * x * x]
     library_function_names = [lambda x: x + x + x]
@@ -603,7 +618,6 @@ def test_generalized_library_weak_pde(data_1d_random_pde):
         function_names=library_function_names,
         derivative_order=0,
         spatiotemporal_grid=XT,
-        is_uniform=True,
     )
 
     # First try without tensor libraries and subset of the input variables
@@ -619,6 +633,84 @@ def test_generalized_library_weak_pde(data_1d_random_pde):
     model.print()
     model.get_feature_names()
     assert len(model.get_feature_names()) == 10
+
+
+def test_parameterized_library(diffuse_multiple_trajectories):
+    t, spatial_grid, xs = diffuse_multiple_trajectories
+    us = []
+    for i in range(len(xs)):
+        u = np.zeros(xs[0].shape)
+        us = us + [u]
+
+    library_functions = [lambda x: x]
+    library_function_names = [lambda x: x]
+
+    feature_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatial_grid=spatial_grid,
+    )
+
+    parameter_lib = PDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=0,
+        include_bias=True,
+    )
+
+    pde_lib = ParameterizedLibrary(
+        feature_library=feature_lib,
+        parameter_library=parameter_lib,
+        num_features=1,
+        num_parameters=1,
+    )
+
+    X, T = np.meshgrid(spatial_grid, t, indexing="ij")
+    XT = np.transpose([X, T], [1, 2, 0])
+
+    np.random.seed(100)
+    weak_feature_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatiotemporal_grid=XT,
+        K=100,
+    )
+    np.random.seed(100)
+    weak_parameter_lib = WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=0,
+        spatiotemporal_grid=XT,
+        K=100,
+        include_bias=True,
+    )
+
+    weak_lib = ParameterizedLibrary(
+        feature_library=weak_feature_lib,
+        parameter_library=weak_parameter_lib,
+        num_features=1,
+        num_parameters=1,
+    )
+
+    optimizer = STLSQ(threshold=0.5, alpha=1e-8, normalize_columns=False)
+    model = SINDy(
+        feature_library=pde_lib, optimizer=optimizer, feature_names=["u", "c"]
+    )
+    model.fit(xs, u=us, multiple_trajectories=True, t=t, ensemble=False)
+    assert abs(model.coefficients()[0][4] - 1) < 1e-2
+    assert np.all(model.coefficients()[0][:4] == 0)
+    assert np.all(model.coefficients()[0][5:] == 0)
+
+    optimizer = STLSQ(threshold=0.5, alpha=1e-8, normalize_columns=False)
+    model = SINDy(
+        feature_library=weak_lib, optimizer=optimizer, feature_names=["u", "c"]
+    )
+    model.fit(xs, u=us, multiple_trajectories=True, t=t, ensemble=False)
+    assert abs(model.coefficients()[0][4] - 1) < 1e-2
+    assert np.all(model.coefficients()[0][:4] == 0)
+    assert np.all(model.coefficients()[0][5:] == 0)
 
 
 # Helper function for testing PDE libraries
@@ -646,7 +738,6 @@ def test_1D_pdes(data_1d_random_pde):
         derivative_order=4,
         spatial_grid=spatial_grid,
         include_bias=True,
-        is_uniform=True,
     )
     pde_library_helper(pde_lib, u, 1)
 
@@ -661,7 +752,6 @@ def test_2D_pdes(data_2d_random_pde):
         derivative_order=2,
         spatial_grid=spatial_grid,
         include_bias=True,
-        is_uniform=True,
     )
     pde_library_helper(pde_lib, u, 2)
 
@@ -676,7 +766,6 @@ def test_3D_pdes(data_3d_random_pde):
         derivative_order=2,
         spatial_grid=spatial_grid,
         include_bias=True,
-        is_uniform=True,
     )
     pde_library_helper(pde_lib, u, 2)
 
@@ -691,7 +780,6 @@ def test_5D_pdes(data_5d_random_pde):
         derivative_order=2,
         spatial_grid=spatial_grid,
         include_bias=True,
-        is_uniform=True,
     )
     pde_library_helper(pde_lib, u, 2)
 
@@ -713,7 +801,6 @@ def test_1D_weak_pdes():
         spatiotemporal_grid=spatiotemporal_grid,
         H_xt=2,
         include_bias=True,
-        is_uniform=False,
     )
     pde_library_helper(pde_lib, u, 1)
 
@@ -737,7 +824,6 @@ def test_2D_weak_pdes():
         H_xt=4,
         K=10,
         include_bias=True,
-        is_uniform=False,
     )
     pde_library_helper(pde_lib, u, 1)
 
@@ -762,7 +848,6 @@ def test_3D_weak_pdes():
         H_xt=4,
         K=10,
         include_bias=True,
-        is_uniform=False,
     )
     pde_library_helper(pde_lib, u, 2)
 
@@ -789,7 +874,6 @@ def test_5D_weak_pdes():
         H_xt=4,
         K=10,
         include_bias=True,
-        is_uniform=False,
     )
     pde_library_helper(pde_lib, u, 2)
 

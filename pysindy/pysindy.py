@@ -960,6 +960,39 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
             for xdoti, ti in _zip_like_sequence(x_dot, t)
         ]
     if u is not None:
+        reshape_control = False
+        for i in range(len(x)):
+            if len(x[i].shape) != len(np.array(u[i]).shape):
+                reshape_control = True
+        if reshape_control:
+            try:
+                shape = np.array(x[0].shape)
+                shape[x[0].ax_coord] = -1
+                u = [np.reshape(u[i], shape) for i in range(len(x))]
+            except Exception:
+                try:
+                    if np.isscalar(u[0]):
+                        shape[x[0].ax_coord] = 1
+                    else:
+                        shape[x[0].ax_coord] = len(u[0])
+                    u = [np.broadcast_to(u[i], shape) for i in range(len(x))]
+                except Exception:
+                    raise (
+                        ValueError(
+                            "Could not reshape control input to match the input data."
+                        )
+                    )
+        correct_shape = True
+        for i in range(len(x)):
+            for axis in range(x[i].ndim):
+                if (
+                    axis != x[i].ax_coord
+                    and x[i].shape[axis] != np.array(u[i]).shape[axis]
+                ):
+                    correct_shape = False
+        if not correct_shape:
+            raise (
+                ValueError("Could not reshape control input to match the input data.")
+            )
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
-
     return x, x_dot, u

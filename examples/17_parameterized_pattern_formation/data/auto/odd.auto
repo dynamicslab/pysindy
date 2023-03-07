@@ -1,0 +1,21 @@
+import numpy as np
+import os
+
+odd=run('snaking_E',c='cycle_odd')
+sols=[]
+pars=[]
+for i in range(len(odd[0])):
+    u=odd(i+1)['U(1)']
+    t=odd(i+1)['t']
+    e=odd(i+1)['PAR(1)']
+    r=odd(i+1)['PAR(2)']
+    b=odd(i+1)['PAR(3)']
+    c=odd(i+1)['PAR(4)']
+    T=odd(i+1)['PAR(11)']
+    norm=odd(i+1)['L2-NORM']
+    sols=sols+[np.vstack([t,u]).T]
+    pars=pars+[[e,r,b,c,T,norm]]
+
+np.save('odd_sols.npy',sols)
+np.save('odd_pars.npy',pars)
+cl()

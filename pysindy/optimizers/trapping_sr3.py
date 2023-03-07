@@ -392,15 +392,24 @@ class TrappingSR3(SR3):
                             if (j == k) and (n == N - r + j) and (i == kk):
                                 PQ_tensor[i, j, k, kk, n] = 1.0
                                 PT_tensor[j, i, k, kk, n] = 1.0
-                            if (j != k) and \
-                                (n == r \
-                                + np.min([j, k]) * (2 * r -np.min([j, k]) - 3) / 2 \
-                                + np.max([j, k]) - 1) \
-                                and (i == kk):
+                            if (
+                                (j != k)
+                                and (
+                                    n
+                                    == r
+                                    + np.min([j, k]) * (2 * r - np.min([j, k]) - 3) / 2
+                                    + np.max([j, k])
+                                    - 1
+                                )
+                                and (i == kk)
+                            ):
                                 PQ_tensor[i, j, k, kk, n] = 1 / 2.0
                                 PT_tensor[j, i, k, kk, n] = 1 / 2.0
 
-        return PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor
+        # PM is the sum of PQ and PQ which projects out the sum of Qijk and Qjik
+        PM_tensor = PQ_tensor + PT_tensor
+
+        return PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
 
     def _bad_PL(self, PL):
         """Check if PL tensor is properly defined"""
@@ -415,9 +424,8 @@ class TrappingSR3(SR3):
     def _bad_PT(self, PT):
         """Check if PT tensor is properly defined"""
         tol = 1e-10
-        return np.any((np.transpose(PT, [2, 1, 0, 3, 4])) > tol)
+        return np.any((np.transpose(PT, [2, 1, 0, 3, 4]) - PT) > tol)
 
-    # TODO: we should probably rewrite this since PQ_ is not symmetric in 2nd and 3rd dimension any more
     def _check_P_matrix(self, r, n_features, N):
         """Check if P tensor is properly defined"""
         # If these tensors are not passed, or incorrect shape, assume zeros
@@ -446,8 +454,8 @@ class TrappingSR3(SR3):
             warnings.warn(
                 "The PT tensor (a requirement for the stability promotion) was"
                 " not set, so setting this tensor to all zeros. "
-                )
-        elif (self.PT_).shape!= (r, r, r, r, n_features) and (self.PT_).shape != (
+            )
+        elif (self.PT_).shape != (r, r, r, r, n_features) and (self.PT_).shape != (
             r,
             r,
             r,
@@ -491,8 +499,11 @@ class TrappingSR3(SR3):
 
         # If PL/PQ/PT finite and correct, so trapping theorem is being used,
         # then make sure library is quadratic and correct shape
-        if (np.any(self.PL_ != 0.0) or np.any(self.PQ_ != 0.0) or np.any(self.PT_ != 0.0)) \
-            and n_features != N:
+        if (
+            np.any(self.PL_ != 0.0)
+            or np.any(self.PQ_ != 0.0)
+            or np.any(self.PT_ != 0.0)
+        ) and n_features != N:
             print(
                 "The feature library is the wrong shape or not quadratic, "
                 "so please correct this if you are attempting to use the "
@@ -503,8 +514,7 @@ class TrappingSR3(SR3):
             self.PQ_ = np.zeros((r, r, r, r, n_features))
             self.PT_ = np.zeros((r, r, r, r, n_features))
 
-    # TODO: now we have As = PL @ \xi + (PQ + PT) @ \xi @ m
-    # notice that PQ contains PT part
+    # TODO: check if definition of P has been corrected
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
         """Solves the coefficient update analytically if threshold = 0"""
         g = x_transpose_y + P_transpose_A / self.eta
@@ -544,6 +554,7 @@ class TrappingSR3(SR3):
         """Calculate the convergence criterion for the optimization over m"""
         return np.sum(np.abs(self.m_history_[-2] - self.m_history_[-1]))
 
+    # TODO: should check the old PQ still holds for this optimization problem
     def _objective(self, x, y, coef_sparse, A, PW, k):
         """Objective function"""
         # Compute the errors
@@ -583,6 +594,7 @@ class TrappingSR3(SR3):
                 )
         return R2 + stability_term + L1 + alpha_term + beta_term
 
+    # TODO: replace Q with PQ and PT
     def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
         """Solve coefficient update with CVXPY if threshold != 0"""
         xi = cp.Variable(N * r)
@@ -653,6 +665,7 @@ class TrappingSR3(SR3):
         coef_sparse = (xi.value).reshape(coef_prev.shape)
         return coef_sparse
 
+    # TODO: fix P with the new equation
     def _solve_m_relax_and_split(self, r, N, m_prev, m, A, coef_sparse, tk_previous):
         """
         If using the relaxation formulation of trapping SINDy, solves the
@@ -664,27 +677,34 @@ class TrappingSR3(SR3):
             tk = (1 + np.sqrt(1 + 4 * tk_previous**2)) / 2.0
             m_partial = m + (tk_previous - 1.0) / tk * (m - m_prev)
             tk_previous = tk
-            mPQ = -np.tensordot(self.PQ_, m_partial, axes=([2], [0])) - np.tensordot(
-                np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
-                m_partial,
-                axes=([1], [0]),
-            )
+            # mPQ = -np.tensordot(self.PQ_, m_partial, axes=([2], [0])) - np.tensordot(
+            #     np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
+            #     m_partial,
+            #     axes=([1], [0]),
+            # )
+            mPM = np.tensordot(self.PM_, m_partial, axes=([2], [0]))
         else:
-            mPQ = -np.tensordot(self.PQ_, m, axes=([2], [0])) - np.tensordot(
-                np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
-                m,
-                axes=([1], [0]),
-            )
-        mPQ = (mPQ + np.transpose(mPQ, [1, 0, 2, 3])) / 2.0
-        p = np.tensordot(self.mod_matrix, self.PL_ - mPQ, axes=([1], [0]))
+            # mPQ = -np.tensordot(self.PQ_, m, axes=([2], [0])) - np.tensordot(
+            #     np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
+            #     m,
+            #     axes=([1], [0]),
+            # )
+            mPM = np.tensordot(self.PM_, m, axes=([2], [0]))
+        # mPQ = (mPQ + np.transpose(mPQ, [1, 0, 2, 3])) / 2.0
+        # p = np.tensordot(self.mod_matrix, self.PL_ - mPQ, axes=([1], [0]))
+        p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
         PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
-        PQW = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
+        # PQW = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
+        PMW = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
         A_b = (A - PW) / self.eta
-        PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
+        # PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
+        PMT_PW = np.tensordot(PMW, A_b, axes=([2, 1], [0, 1]))
         if self.accel:
-            m_new = m_partial - self.alpha_m * PQWT_PW
+            # m_new = m_partial - self.alpha_m * PQWT_PW
+            m_new = m_partial - self.alpha_m * PMT_PW
         else:
-            m_new = m_prev - self.alpha_m * PQWT_PW
+            # m_new = m_prev - self.alpha_m * PQWT_PW
+            m_new = m_prev - self.alpha_m * PMT_PW
         m_current = m_new
 
         # Update A
@@ -704,6 +724,7 @@ class TrappingSR3(SR3):
             )
         return coef_sparse
 
+    # TODO: Implement PT_ here and replace all PQ with PQ & PT if needed
     def _reduce(self, x, y):
         """
         Perform at most ``self.max_iter`` iterations of the
@@ -718,9 +739,9 @@ class TrappingSR3(SR3):
         if self.mod_matrix is None:
             self.mod_matrix = np.eye(r)
 
-        # Define PL and PQ tensors, only relevant if the stability term in
+        # Define PL, PQ, PT and PM tensors, only relevant if the stability term in
         # trapping SINDy is turned on.
-        self.PL_unsym_, self.PL_, self.PQ_ = self._set_Ptensors(r)
+        self.PL_unsym_, self.PL_, self.PQ_, self.PT_, self.PM_ = self._set_Ptensors(r)
         # make sure dimensions/symmetries are correct
         self._check_P_matrix(r, n_features, N)
 
@@ -750,7 +771,7 @@ class TrappingSR3(SR3):
         # initial A
         if self.A0 is not None:
             A = self.A0
-        elif np.any(self.PQ_ != 0.0):
+        elif np.any(self.PM_ != 0.0):
             A = np.diag(self.gamma * np.ones(r))
         else:
             A = np.diag(np.zeros(r))
@@ -781,13 +802,16 @@ class TrappingSR3(SR3):
         for k in range(self.max_iter):
 
             # update P tensor from the newest m
-            mPQ = -np.tensordot(self.PQ_, m, axes=([2], [0])) - np.tensordot(
-                np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
-                m,
-                axes=([1], [0]),
-            )
-            mPQ = (mPQ + np.transpose(mPQ, [1, 0, 2, 3])) / 2.0
-            p = np.tensordot(self.mod_matrix, self.PL_ - mPQ, axes=([1], [0]))
+            # mPQ = -np.tensordot(self.PQ_, m, axes=([2], [0])) - np.tensordot(
+            #     np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
+            #     m,
+            #     axes=([1], [0]),
+            # )
+            # mPQ = (mPQ + np.transpose(mPQ, [1, 0, 2, 3])) / 2.0
+            # p = np.tensordot(self.mod_matrix, self.PL_ - mPQ, axes=([1], [0]))
+            # Pmatrix = p.reshape(r * r, r * n_features)
+            mPM = np.tensordot(self.PM_, m, axes=([2], [0]))
+            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
             Pmatrix = p.reshape(r * r, r * n_features)
 
             # update w
@@ -839,13 +863,15 @@ class TrappingSR3(SR3):
             self.PW_history_.append(PW)
             self.PWeigs_history_.append(np.sort(eigvals))
 
-            mPQ = -np.tensordot(self.PQ_, m, axes=([2], [0])) - np.tensordot(
-                np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
-                m,
-                axes=([1], [0]),
-            )
-            mPQ = (mPQ + np.transpose(mPQ, [1, 0, 2, 3])) / 2.0
-            p = np.tensordot(self.mod_matrix, self.PL_ - mPQ, axes=([1], [0]))
+            # mPQ = -np.tensordot(self.PQ_, m, axes=([2], [0])) - np.tensordot(
+            #     np.transpose(self.PQ_, [0, 2, 1, 3, 4]),
+            #     m,
+            #     axes=([1], [0]),
+            # )
+            # mPQ = (mPQ + np.transpose(mPQ, [1, 0, 2, 3])) / 2.0
+            # p = np.tensordot(self.mod_matrix, self.PL_ - mPQ, axes=([1], [0]))
+            mPM = np.tensordot(self.PM_, m, axes=([2], [0]))
+            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
             self.p_history_.append(p)
 
             # update objective

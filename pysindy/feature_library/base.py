@@ -52,10 +52,11 @@ class BaseFeatureLibrary(TransformerMixin):
 
     def reshape_samples_to_spatial_grid(self, x: np.ndarray) -> AxesArray:
         """Adapt predictions to fitted spatial grid."""
-        if not hasattr(self, "spatial_grid"):
+        spatial_grid = self.get_spatial_grid()
+        if spatial_grid is None:
             return AxesArray(x, {"ax_sample": 0, "ax_coord": 1})
         # PDELibrary can have a zero spatial dimension for SINDyPI.
-        shape = [dim for dim in self.spatial_grid.shape[:-1] if dim != 0]
+        shape = [dim for dim in self.get_spatial_grid().shape[:-1] if dim != 0]
         x = np.reshape(x, (*shape, -1, x.shape[-1]))
         return AxesArray(
             x,
@@ -85,6 +86,9 @@ class BaseFeatureLibrary(TransformerMixin):
         axes = x.__dict__
         x_dot = diff_method(x, t=t)
         return AxesArray(x_dot, axes)
+
+    def get_spatial_grid(self):
+        return None
 
     # Force subclasses to implement this
     @abc.abstractmethod
@@ -183,11 +187,18 @@ def x_sequence_or_item(wrapped_func):
     @wraps(wrapped_func)
     def func(self, x, *args, **kwargs):
         if isinstance(x, Sequence):
-            return wrapped_func(self, x, *args, **kwargs)
+            xs = [AxesArray(xi, comprehend_axes(xi)) for xi in x]
+            result = wrapped_func(self, xs, *args, **kwargs)
+            if isinstance(result, Sequence):  # e.g. transform() returns x
+                return [AxesArray(xp, comprehend_axes(xp)) for xp in result]
+            return result  # e.g. fit() returns self
         else:
             if not sparse.issparse(x):
                 x = AxesArray(x, comprehend_axes(x))
-                reconstructor = np.array
+
+                def reconstructor(x):
+                    return x
+
             else:  # sparse arrays
                 reconstructor = type(x)
                 axes = comprehend_axes(x)
@@ -309,23 +320,9 @@ class ConcatLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            # preallocate matrix
-            shape = np.array(x.shape)
-            shape[-1] = self.n_output_features_
-            xp = np.zeros(shape)
+            feature_sets = [lib.transform([x])[0] for lib in self.libraries_]
+            xp = np.concatenate(feature_sets, axis=feature_sets[0].ax_coord)
 
-            current_feat = 0
-            for lib in self.libraries_:
-
-                # retrieve num features from lib
-                lib_n_output_features = lib.n_output_features_
-
-                start_feature_index = current_feat
-                end_feature_index = start_feature_index + lib_n_output_features
-
-                xp[..., start_feature_index:end_feature_index] = lib.transform([x])[0]
-
-                current_feat += lib_n_output_features
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
         if self.library_ensemble:
@@ -350,6 +347,9 @@ class ConcatLibrary(BaseFeatureLibrary):
             lib_feat_names = lib.get_feature_names(input_features)
             feature_names += lib_feat_names
         return feature_names
+
+    def calc_trajectory(self, diff_method, x, t):
+        return self.libraries_[0].calc_trajectory(diff_method, x, t)
 
 
 class TensoredLibrary(BaseFeatureLibrary):
@@ -415,11 +415,6 @@ class TensoredLibrary(BaseFeatureLibrary):
         )
         self.libraries_ = libraries
         self.inputs_per_library_ = inputs_per_library
-        for lib in self.libraries_:
-            if hasattr(lib, "H_xt"):
-                if lib.spatiotemporal_grid is not None:
-                    self.n_samples = lib.K
-                    self.spatiotemporal_grid = lib.spatiotemporal_grid
 
     def _combinations(self, lib_i, lib_j):
         """
@@ -429,8 +424,11 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         lib_full : All combinations of the numerical library terms.
         """
+        # the shape here should be fixed with ax_coord....
         shape = np.array(lib_i.shape)
-        shape[-1] = lib_i.shape[-1] * lib_j.shape[-1]
+        shape[lib_i.ax_coord] = (
+            lib_i.shape[lib_i.ax_coord] * lib_j.shape[lib_j.ax_coord]
+        )
         lib_full = np.reshape(
             lib_i[..., :, np.newaxis] * lib_j[..., np.newaxis, :],
             shape,
@@ -525,40 +523,25 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            # preallocate matrix
-            shape = np.array(x.shape)
-            shape[-1] = self.n_output_features_
-            xp = np.zeros(shape)
-
-            current_feat = 0
+            xp = []
             for i in range(len(self.libraries_)):
                 lib_i = self.libraries_[i]
-                lib_i_n_output_features = lib_i.n_output_features_
                 if self.inputs_per_library_ is None:
                     xp_i = lib_i.transform([x])[0]
                 else:
                     xp_i = lib_i.transform(
                         [x[..., np.unique(self.inputs_per_library_[i, :])]]
                     )[0]
+
                 for j in range(i + 1, len(self.libraries_)):
                     lib_j = self.libraries_[j]
-                    lib_j_n_output_features = lib_j.n_output_features_
                     xp_j = lib_j.transform(
                         [x[..., np.unique(self.inputs_per_library_[j, :])]]
                     )[0]
 
-                    start_feature_index = current_feat
-                    end_feature_index = (
-                        start_feature_index
-                        + lib_i_n_output_features * lib_j_n_output_features
-                    )
+                    xp.append(self._combinations(xp_i, xp_j))
 
-                    xp[..., start_feature_index:end_feature_index] = self._combinations(
-                        xp_i, xp_j
-                    )
-
-                    current_feat += lib_i_n_output_features * lib_j_n_output_features
-
+            xp = np.concatenate(xp, axis=xp[0].ax_coord)
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
         if self.library_ensemble:
@@ -605,3 +588,6 @@ class TensoredLibrary(BaseFeatureLibrary):
                     lib_i_feat_names, lib_j_feat_names
                 )
         return feature_names
+
+    def calc_trajectory(self, diff_method, x, t):
+        return self.libraries_[0].calc_trajectory(diff_method, x, t)

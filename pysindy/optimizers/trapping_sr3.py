@@ -825,13 +825,13 @@ class TrappingSR3(SR3):
                     pTp = np.dot(Pmatrix.T, Pmatrix)
                     Q = np.reshape(self.PQ_, (r * r * r, r * n_features))
                     PQTPQ = np.dot(Q.T, Q)
-                    Q = np.reshape(self.PQ_, (r, r, r, N * r))
+                    Q = np.reshape(self.PQ_, (r, r, r, r * n_features))
                     Q_ep = (
                         Q
                         + np.transpose(Q, [1, 2, 0, 3])
                         + np.transpose(Q, [2, 0, 1, 3])
                     )
-                    Q_ep = np.reshape(Q_ep, (r * r * r, N * r))
+                    Q_ep = np.reshape(Q_ep, (r * r * r, r * n_features))
                     PQTPQ_ep = np.dot(Q_ep.T, Q_ep)
                     H = xTx + pTp / self.eta + PQTPQ / self.alpha + PQTPQ_ep / self.beta
                     P_transpose_A = np.dot(Pmatrix.T, A.flatten())

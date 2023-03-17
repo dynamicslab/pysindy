@@ -343,7 +343,7 @@ def test_score_pde(data_1d_random_pde):
     assert model.score(u, t) <= 1
 
 
-def test_fit_multiple_trajectores(data_multiple_trajctories):
+def test_fit_multiple_trajectories(data_multiple_trajctories):
     x, t = data_multiple_trajctories
     model = SINDy()
 
@@ -367,7 +367,7 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
 
     # Test validate_input
     t[0] = None
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         model.fit(x, t=t, multiple_trajectories=True)
 
 

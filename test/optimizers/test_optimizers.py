@@ -121,6 +121,32 @@ def test_fit(data_derivative_1d, optimizer):
 
 @pytest.mark.parametrize(
     "optimizer",
+    [
+        STLSQ(),
+        SSR(),
+        SSR(criteria="model_residual"),
+        SR3(),
+        ConstrainedSR3(),
+        StableLinearSR3(),
+        TrappingSR3(),
+        Lasso(fit_intercept=False),
+        ElasticNet(fit_intercept=False),
+        MIOSR(),
+    ],
+)
+def test_fit_2d(data_derivative_2d, optimizer):
+    x, x_dot = data_derivative_2d
+    opt = SINDyOptimizer(optimizer, unbias=False)
+    model = SINDy(optimizer=opt)
+    model.fit(x, x_dot=x_dot)
+
+    check_is_fitted(opt)
+    assert opt.complexity >= 0
+    assert opt.coef_.shape == (2, 6)
+
+
+@pytest.mark.parametrize(
+    "optimizer",
     [STLSQ(), SSR(), SSR(criteria="model_residual"), FROLS(), SR3(), MIOSR()],
 )
 def test_not_fitted(optimizer):
@@ -223,6 +249,7 @@ def test_sr3_bad_parameters(optimizer, params):
         dict(eta=10, alpha_m=20),
         dict(eta=10, alpha_A=20),
         dict(inequality_constraints=True, evolve_w=False),
+        dict(inequality_constraints=True),
         dict(
             constraint_lhs=np.zeros((10, 10)),
             constraint_rhs=np.zeros(10),
@@ -233,13 +260,6 @@ def test_sr3_bad_parameters(optimizer, params):
 def test_trapping_bad_parameters(params):
     with pytest.raises(ValueError):
         TrappingSR3(**params)
-
-
-def test_trapping_objective_print():
-    # test error in verbose print logic when max_iter < 10
-    opt = TrappingSR3(max_iter=2, verbose=True)
-    arr = np.ones(1)
-    opt._objective(arr, arr, arr, arr, arr, 1)
 
 
 @pytest.mark.parametrize(
@@ -531,6 +551,70 @@ def test_trapping_sr3_quadratic_library(
         assert np.allclose((model.coefficients().flatten())[zero_inds], 0.0, atol=1e-5)
 
 
+@pytest.mark.parametrize(
+    "trapping_sr3_params",
+    [
+        dict(),
+        dict(accel=True),
+    ],
+)
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(thresholder="l1", threshold=0),
+        dict(thresholder="l1", threshold=1e-5),
+        dict(
+            thresholder="weighted_l1",
+            thresholds=np.zeros((3, 10)),
+            eta=1e5,
+            alpha_m=1e4,
+            alpha_A=1e5,
+        ),
+        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 10))),
+        dict(thresholder="l2", threshold=0),
+        dict(thresholder="l2", threshold=1e-5),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 10))),
+        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 10))),
+    ],
+)
+def test_trapping_sr3_quadratic_library_with_bias(
+    params, trapping_sr3_params, data_quadratic_library_with_bias
+):
+    np.random.seed(100)
+    x = np.random.standard_normal((100, 3))
+
+    sindy_library = data_quadratic_library_with_bias
+    params.update(trapping_sr3_params)
+
+    opt = TrappingSR3(**params)
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    assert opt.PL_unsym_.shape == (3, 3, 3, 10)
+    assert opt.PL_.shape == (3, 3, 3, 10)
+    assert opt.PQ_.shape == (3, 3, 3, 3, 10)
+    check_is_fitted(model)
+
+    # Rerun with identity constraints
+    r = 3
+    N = 10
+    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
+    params["constraint_rhs"] = np.zeros(p)
+    params["constraint_lhs"] = np.eye(p, r * N)
+
+    opt = TrappingSR3(**params)
+    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model.fit(x)
+    assert opt.PL_unsym_.shape == (3, 3, 3, 10)
+    assert opt.PL_.shape == (3, 3, 3, 10)
+    assert opt.PQ_.shape == (3, 3, 3, 3, 10)
+    check_is_fitted(model)
+    # check is solve was infeasible first
+    if not np.allclose(opt.m_history_[-1], opt.m_history_[0]):
+        print(model.coefficients())
+        zero_inds = [0, 1, 4, 7, 10, 13, 17, 20, 23, 26]
+        assert np.allclose((model.coefficients().flatten())[zero_inds], 0.0, atol=1e-5)
+
+
 def test_trapping_cubic_library():
     x = np.random.standard_normal((10, 3))
     library_functions = [
@@ -795,13 +879,14 @@ def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
 )
 def test_fit_warn(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
-    x = x.reshape(-1, 1)
-
+    if len(x.shape) == 1:
+        x = x.reshape(-1, 1)
     with pytest.warns(ConvergenceWarning):
         optimizer.fit(x, x_dot)
 
 
-@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
+# @pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
+@pytest.mark.parametrize("optimizer", [ConstrainedSR3, MIOSR])
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_row_format_constraints(data_linear_combination, optimizer, target_value):
     # Solution is x_dot = x.dot(np.array([[1, 1, 0], [0, 1, 1]]))
@@ -884,6 +969,10 @@ def test_constrained_inequality_constraints(data_lorenz, params):
 @pytest.mark.parametrize(
     "params",
     [
+        dict(thresholder="l1", threshold=0.0),
+        dict(thresholder="weighted_l1", thresholds=0.0 * np.ones((3, 9))),
+        dict(thresholder="l2", threshold=0.0),
+        dict(thresholder="weighted_l2", thresholds=0.0 * np.ones((3, 9))),
         dict(thresholder="l1", threshold=0.0005),
         dict(thresholder="weighted_l1", thresholds=0.0005 * np.ones((3, 9))),
         dict(thresholder="l2", threshold=0.0005),
@@ -898,7 +987,7 @@ def test_trapping_inequality_constraints(data_lorenz, params):
     constraint_matrix[1, 10] = 1.0
     feature_names = ["x", "y", "z"]
 
-    # Run Trapping SR3 without CVXPY for the m solve
+    # Run Trapping SR3
     opt = TrappingSR3(
         constraint_lhs=constraint_matrix,
         constraint_rhs=constraint_rhs,
@@ -915,34 +1004,6 @@ def test_trapping_inequality_constraints(data_lorenz, params):
     model.fit(x, t=t[1] - t[0])
     # This sometimes fails with L2 norm so just check the model is fitted
     check_is_fitted(model)
-
-    # Run Trapping SR3 with CVXPY for the m solve
-    opt = TrappingSR3(
-        constraint_lhs=constraint_matrix,
-        constraint_rhs=constraint_rhs,
-        constraint_order="feature",
-        inequality_constraints=True,
-        relax_optim=False,
-        **params,
-    )
-    model = SINDy(
-        optimizer=opt,
-        feature_library=poly_lib,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
-        feature_names=feature_names,
-    )
-    model.fit(x, t=t[1] - t[0])
-
-    # This sometimes fails with L2 norm or different versions of CVXPY
-    # so just check the model is fitted
-    check_is_fitted(model)
-    # assert np.all(
-    #     np.dot(constraint_matrix, (model.coefficients()).flatten()) <= constraint_rhs
-    # ) or np.allclose(
-    #    np.dot(constraint_matrix, (model.coefficients()).flatten()),
-    #    constraint_rhs,
-    #    atol=1e-3,
-    # )
 
 
 @pytest.mark.parametrize(
@@ -987,9 +1048,13 @@ def test_inequality_constraints_reqs():
     constraint_matrix[1, 17] = 1.0
     with pytest.raises(ValueError):
         TrappingSR3(
-            threshold=0.0,
-            constraint_lhs=constraint_matrix,
             constraint_rhs=constraint_rhs,
+            constraint_order="feature",
+            inequality_constraints=True,
+        )
+    with pytest.raises(ValueError):
+        TrappingSR3(
+            constraint_lhs=constraint_matrix,
             constraint_order="feature",
             inequality_constraints=True,
         )

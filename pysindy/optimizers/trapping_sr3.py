@@ -334,7 +334,7 @@ class TrappingSR3(SR3):
         self.PWeigs_history_ = []
         self.history_ = []
         self.objective_history = objective_history
-        self.unbias = False
+        self.unbias = False  # unused variable
         self.verbose_cvxpy = verbose_cvxpy
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
@@ -372,6 +372,13 @@ class TrappingSR3(SR3):
         else:
             offset = 0
 
+        # If bias term is not included, make it zero
+        PC_tensor = np.zeros((r, r, N))
+        if offset:
+            for i in range(r):
+                for j in range(r):
+                    PC_tensor[i, j, 0] = 1
+
         # delta_{il}delta_{jk}
         PL_tensor = np.zeros((r, r, r, N))
         PL_tensor_unsym = np.zeros((r, r, r, N))
@@ -391,7 +398,7 @@ class TrappingSR3(SR3):
 
         # if j == k, delta_{il}delta_{N-r+j,n}
         # if j != k, delta_{il}delta_{r+j*(2*r-j-3)/2+k-1,n} if j<k; swap j & k
-        # in the second delta operator if j>k
+        # in the second delta operator if j > k
         # PT projects out the transpose of the 1st dimension and 2nd dimension of Q
         PQ_tensor = np.zeros((r, r, r, r, N))
         PT_tensor = np.zeros((r, r, r, r, N))
@@ -420,7 +427,7 @@ class TrappingSR3(SR3):
         # PM is the sum of PQ and PQ which projects out the sum of Qijk and Qjik
         PM_tensor = PQ_tensor + PT_tensor
 
-        return PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
+        return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
 
     def _bad_PL(self, PL):
         """Check if PL tensor is properly defined"""
@@ -736,7 +743,14 @@ class TrappingSR3(SR3):
 
         # Define PL, PQ, PT and PM tensors, only relevant if the stability term in
         # trapping SINDy is turned on.
-        self.PL_unsym_, self.PL_, self.PQ_, self.PT_, self.PM_ = self._set_Ptensors(r)
+        (
+            self.PC_,
+            self.PL_unsym_,
+            self.PL_,
+            self.PQ_,
+            self.PT_,
+            self.PM_,
+        ) = self._set_Ptensors(r)
         # make sure dimensions/symmetries are correct
         self._check_P_matrix(r, n_features, N)
 

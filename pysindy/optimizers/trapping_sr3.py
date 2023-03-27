@@ -376,8 +376,7 @@ class TrappingSR3(SR3):
         PC_tensor = np.zeros((r, r, N))
         if offset:
             for i in range(r):
-                for j in range(r):
-                    PC_tensor[i, j, 0] = 1
+                PC_tensor[i, i, 0] = 1.0
 
         # delta_{il}delta_{jk}
         PL_tensor = np.zeros((r, r, r, N))

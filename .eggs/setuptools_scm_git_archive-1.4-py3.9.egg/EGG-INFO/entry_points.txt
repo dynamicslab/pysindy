@@ -1,0 +1,5 @@
+[setuptools_scm.parse_scm]
+.git_archival.txt = setuptools_scm_git_archive:parse
+
+[setuptools_scm.parse_scm_fallback]
+.git_archival.txt = setuptools_scm_git_archive:parse

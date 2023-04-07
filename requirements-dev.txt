@@ -12,7 +12,7 @@ setuptools_scm_git_archive
 jupyter
 jupytext
 notebook
-sphinx >= 2
+sphinx==5.3.0
 sphinxcontrib-apidoc
 sphinx_rtd_theme
 pre-commit
@@ -20,6 +20,7 @@ hypothesis
 nbsphinx
 jupyter_contrib_nbextensions
 pandas
+pandoc
 seaborn
 ipython
 gurobipy>=9.5.1,<10.0

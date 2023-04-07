@@ -204,6 +204,14 @@ you can run the following to automatically reformat your staged code
 
 Note that you will then need to re-stage any changes ``pre-commit`` made to your code.
 
+Building documentation requires [pandoc](https://pandoc.org/installing.html) as a separate install.  Once installed, run
+
+.. code-block:: bash
+
+    python -m sphinx -TEb html -d _build/doctrees -D language=en . ./build
+
+Or check the build step in the most recent CI run or [RTD build](https://readthedocs.org/projects/pysindy/builds/).
+
 There are a number of SINDy variants and advanced functionality that would be great to implement in future releases:
 
 1. Bayesian SINDy, for instance that from Hirsh, Seth M., David A. Barajas-Solano, and J. Nathan Kutz. "Sparsifying Priors for Bayesian Uncertainty Quantification in Model Discovery." arXiv preprint arXiv:2107.02107 (2021).

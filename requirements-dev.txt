@@ -1,6 +1,6 @@
 -e .
 -r requirements.txt
-pytest~=6.0.0
+pytest>=6.2.4
 black
 pytest-cov
 pytest-lazy-fixture

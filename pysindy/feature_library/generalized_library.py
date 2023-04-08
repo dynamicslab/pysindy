@@ -5,7 +5,6 @@ from sklearn.utils.validation import check_is_fitted
 from ..utils import AxesArray
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
-from .pde_library import PDELibrary
 from .weak_pde_library import WeakPDELibrary
 
 
@@ -102,37 +101,21 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         inputs_per_library=None,
         library_ensemble=False,
         ensemble_indices=[0],
+        exclude_libraries=[],
     ):
         super(GeneralizedLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
         )
         if len(libraries) > 0:
             self.libraries_ = libraries
-            weak_libraries = False
-            pde_libraries = False
-            nonweak_libraries = False
-            for k, lib in enumerate(self.libraries_):
-                if isinstance(lib, WeakPDELibrary):
-                    weak_libraries = k
-                else:
-                    nonweak_libraries = True
-                    if isinstance(lib, PDELibrary):
-                        pde_libraries = k
-            if weak_libraries and nonweak_libraries:
+
+            if has_weak(self) and has_nonweak(self):
                 raise ValueError(
                     "At least one of the libraries is a weak form library, "
                     "and at least one of the libraries is not, which will "
                     "result in a nonsensical optimization problem. Please use "
                     "all weak form libraries or no weak form libraries."
                 )
-            if weak_libraries:
-                self.validate_input = libraries[weak_libraries].validate_input
-                self.calc_trajectory = libraries[weak_libraries].calc_trajectory
-                self.spatiotemporal_grid = libraries[weak_libraries].spatiotemporal_grid
-            elif pde_libraries:
-                self.validate_input = libraries[pde_libraries].validate_input
-                self.calc_trajectory = libraries[pde_libraries].calc_trajectory
-                self.spatial_grid = libraries[pde_libraries].spatial_grid
         else:
             raise ValueError(
                 "Empty or nonsensical library list passed to this library."
@@ -177,6 +160,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self.tensor_array_ = tensor_array
         self.inputs_per_library_ = inputs_per_library
         self.libraries_full_ = self.libraries_
+        self.exclude_libs_ = exclude_libraries
+        self.calc_trajectory = self.libraries_[0].calc_trajectory
 
     @x_sequence_or_item
     def fit(self, x_full, y=None):
@@ -235,7 +220,11 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 fitted_libs.append(library_full)
 
         # Calculate the sum of output features
-        self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
+        self.n_output_features_ = sum(
+            lib.n_output_features_
+            for lib in fitted_libs
+            if lib not in self.exclude_libs_
+        )
 
         # Save fitted libs
         self.libraries_full_ = fitted_libs
@@ -263,7 +252,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         xp_full = []
         for x in x_full:
             n_features = x.shape[x.ax_coord]
-            shape = np.array(x.shape)
 
             if float(__version__[:3]) >= 1.0:
                 n_input_features = self.n_features_in_
@@ -272,17 +260,15 @@ class GeneralizedLibrary(BaseFeatureLibrary):
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 
-            # preallocate matrix
-            shape[-1] = self.n_output_features_
             xps = []
-
             for i, lib in enumerate(self.libraries_full_):
                 if i < self.inputs_per_library_.shape[0]:
-                    xps.append(
-                        lib.transform(
-                            [x[..., np.unique(self.inputs_per_library_[i, :])]]
-                        )[0]
-                    )
+                    if i not in self.exclude_libs_:
+                        xps.append(
+                            lib.transform(
+                                [x[..., np.unique(self.inputs_per_library_[i, :])]]
+                            )[0]
+                        )
                 else:
                     xps.append(lib.transform([x])[0])
 
@@ -307,23 +293,50 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         """
         feature_names = list()
         for i, lib in enumerate(self.libraries_full_):
-            if i < self.inputs_per_library_.shape[0]:
-                if input_features is None:
-                    input_features_i = [
-                        "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
-                    ]
+            if i not in self.exclude_libs_:
+                if i < self.inputs_per_library_.shape[0]:
+                    if input_features is None:
+                        input_features_i = [
+                            "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
+                        ]
+                    else:
+                        input_features_i = np.asarray(input_features)[
+                            np.unique(self.inputs_per_library_[i, :])
+                        ].tolist()
                 else:
-                    input_features_i = np.asarray(input_features)[
-                        np.unique(self.inputs_per_library_[i, :])
-                    ].tolist()
-            else:
-                # Tensor libraries need all the inputs and then internally
-                # handle the subsampling of the input variables
-                if input_features is None:
-                    input_features_i = [
-                        "x%d" % k for k in range(self.inputs_per_library_.shape[1])
-                    ]
-                else:
-                    input_features_i = input_features
-            feature_names += lib.get_feature_names(input_features_i)
+                    # Tensor libraries need all the inputs and then internally
+                    # handle the subsampling of the input variables
+                    if input_features is None:
+                        input_features_i = [
+                            "x%d" % k for k in range(self.inputs_per_library_.shape[1])
+                        ]
+                    else:
+                        input_features_i = input_features
+                feature_names += lib.get_feature_names(input_features_i)
         return feature_names
+
+    def get_spatial_grid(self):
+        for lib_k in self.libraries_:
+            spatial_grid = lib_k.get_spatial_grid()
+            if spatial_grid is not None:
+                return spatial_grid
+
+
+def has_weak(lib):
+    if isinstance(lib, WeakPDELibrary):
+        return True
+    elif hasattr(lib, "libraries_"):
+        for lib_k in lib.libraries_:
+            if has_weak(lib_k):
+                return True
+    return False
+
+
+def has_nonweak(lib):
+    if hasattr(lib, "libraries_"):
+        for lib_k in lib.libraries_:
+            if has_nonweak(lib_k):
+                return True
+    elif not isinstance(lib, WeakPDELibrary):
+        return True
+    return False

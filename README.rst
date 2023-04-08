@@ -148,7 +148,7 @@ PySINDy implements a lot of advanced functionality that may be overwhelming for 
 
 .. image:: https://github.com/dynamicslab/pysindy/blob/master/docs/JOSS2/Fig3.png
 
-This flow chart summarizes how `PySINDy` users can start with a dataset and systematically choose the proper candidate library and sparse regression optimizer that are tailored for a specific scientific task. The `GeneralizedLibrary` class allows for tensoring, concatenating, and otherwise combining many different candidate libraries.
+This flow chart summarizes how ``PySINDy`` users can start with a dataset and systematically choose the proper candidate library and sparse regression optimizer that are tailored for a specific scientific task. The ``GeneralizedLibrary`` class allows for tensoring, concatenating, and otherwise combining many different candidate libraries.
 
 Community guidelines
 --------------------
@@ -167,9 +167,14 @@ At a minimum, we need to be able to run the example notebooks in the normal mode
    |-example_data.py # has functions to create/load data
    |-mock_data.py # has functions with same name as in example_data.py which create/load smaller datasets
    |-example.ipynb # run python examples/publish_notebook/<name_of_example> to generate this.  Needs packages in requirements-dev.txt
-   |-other files, if required (helper module, data, etc)
+   |-utils.py (Any other names example.py needs to import.  Any additional local modules imported by example.py need to be submodules of utils.py, e.g. utils.plotting)
 
-You can optimize your notebook for testing by checking ``__name__``.  When our tests run ``example.py`` they set the ``__name__`` global to ``"testing"``.  For instance, your notebook should determine whether to import from ``mock_data`` or ``example_data`` using this method.
+You can optimize your notebook for testing by checking ``__name__``.  When our tests run ``example.py`` they set the ``__name__`` global to ``"testing"``.  For instance, your notebook should determine whether to import from ``mock_data`` or ``example_data`` using this method (another example: you could also use this method to set ``max_iter``).  It's a bit arbitrary, but try to make your examples run in under ten seconds using the mock data.  You can use our test to verify your example in testing mode:
+
+.. code-block::
+
+   pytest -k test_external --external-notebook="path/to/<name_of_example>"
+
 
 Contributing code
 ^^^^^^^^^^^^^^^^^
@@ -199,6 +204,14 @@ you can run the following to automatically reformat your staged code
 
 Note that you will then need to re-stage any changes ``pre-commit`` made to your code.
 
+Building documentation requires [pandoc](https://pandoc.org/installing.html) as a separate install.  Once installed, run
+
+.. code-block:: bash
+
+    python -m sphinx -TEb html -d _build/doctrees -D language=en . ./build
+
+Or check the build step in the most recent CI run or [RTD build](https://readthedocs.org/projects/pysindy/builds/).
+
 There are a number of SINDy variants and advanced functionality that would be great to implement in future releases:
 
 1. Bayesian SINDy, for instance that from Hirsh, Seth M., David A. Barajas-Solano, and J. Nathan Kutz. "Sparsifying Priors for Bayesian Uncertainty Quantification in Model Discovery." arXiv preprint arXiv:2107.02107 (2021).
@@ -209,7 +222,7 @@ There are a number of SINDy variants and advanced functionality that would be gr
 
 4. Integration of PySINDy with a Python model-predictive control (MPC) code.
 
-5. The PySINDy weak formulation is based on the work in Reinbold, Patrick AK, Daniel R. Gurevich, and Roman O. Grigoriev. "Using noisy or incomplete data to discover models of spatiotemporal dynamics." Physical Review E 101.1 (2020): 010203. It might be useful to additionally implement the weak formulation from Messenger, Daniel A., and David M. Bortz. "Weak SINDy for partial differential equations." Journal of Computational Physics (2021): 110525. The weak formulation in PySINDy is also fairly slow and computationally intensive, so finding ways to speed up the code would be great. 
+5. The PySINDy weak formulation is based on the work in Reinbold, Patrick AK, Daniel R. Gurevich, and Roman O. Grigoriev. "Using noisy or incomplete data to discover models of spatiotemporal dynamics." Physical Review E 101.1 (2020): 010203. It might be useful to additionally implement the weak formulation from Messenger, Daniel A., and David M. Bortz. "Weak SINDy for partial differential equations." Journal of Computational Physics (2021): 110525. The weak formulation in PySINDy is also fairly slow and computationally intensive, so finding ways to speed up the code would be great.
 
 6. The blended conditional gradients (BCG) algorithm for solving the constrained LASSO problem, Carderera, Alejandro, et al. "CINDy: Conditional gradient-based Identification of Non-linear Dynamics--Noise-robust recovery." arXiv preprint arXiv:2101.02630 (2021).
 
@@ -252,18 +265,18 @@ Bibtex:
 
 .. code-block:: text
 
-      @article{Kaptanoglu2022,
-  	doi = {10.21105/joss.03994},
-  	url = {https://doi.org/10.21105/joss.03994},
-  	year = {2022},
-  	publisher = {The Open Journal},
-  	volume = {7},
-  	number = {69},
-  	pages = {3994},
-  	author = {Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Andy J. Goldschmidt and Jared Callaham and Charles B. Delahunt and Zachary G. Nicolaou and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
-  	title = {PySINDy: A comprehensive Python package for robust sparse system identification},
-  	journal = {Journal of Open Source Software}
-	}
+    @article{Kaptanoglu2022,
+    doi = {10.21105/joss.03994},
+    url = {https://doi.org/10.21105/joss.03994},
+    year = {2022},
+    publisher = {The Open Journal},
+    volume = {7},
+    number = {69},
+    pages = {3994},
+    author = {Alan A. Kaptanoglu and Brian M. de Silva and Urban Fasel and Kadierdan Kaheman and Andy J. Goldschmidt and Jared Callaham and Charles B. Delahunt and Zachary G. Nicolaou and Kathleen Champion and Jean-Christophe Loiseau and J. Nathan Kutz and Steven L. Brunton},
+    title = {PySINDy: A comprehensive Python package for robust sparse system identification},
+    journal = {Journal of Open Source Software}
+    }
 
 
 References
@@ -275,7 +288,7 @@ References
    `[arXiv] <https://arxiv.org/abs/2004.08424>`__
 
 -  Kaptanoglu, Alan A., Brian M. de Silva, Urban Fasel, Kadierdan Kaheman, Andy J. Goldschmidt
-   Jared L. Callaham, Charles B. Delahunt, Zachary G. Nicolaou, Kathleen Champion, 
+   Jared L. Callaham, Charles B. Delahunt, Zachary G. Nicolaou, Kathleen Champion,
    Jean-Christophe Loiseau, J. Nathan Kutz, and Steven L. Brunton.
    *PySINDy: A comprehensive Python package for robust sparse system identification.*
    arXiv preprint arXiv:2111.08481 (2021).
@@ -314,6 +327,7 @@ Related packages
 * `PyDMD <https://github.com/mathLab/PyDMD/>`_ - A Python package using the Dynamic Mode Decomposition (DMD) for a data-driven model simplification based on spatiotemporal coherent structures. DMD is a great alternative to SINDy.
 * `PySINDyGUI <https://github.com/hyumo/pysindy-gui>`_ - A slick-looking GUI for PySINDy.
 * `SEED <https://github.com/M-Vause/SEED2.0>`_ - Software for the Extraction of Equations from Data: a GUI for many of the methods provided by PySINDy.
+* `SymINDy <https://github.com/andreikitaitsev/SymINDy/>`_ - A Python package combining SINDy with genetic programming-based symbolic regression, used for the functions library optimization.
 
 Contributors
 ------------
@@ -344,7 +358,7 @@ Thanks to the members of the community who have contributed to PySINDy!
 
 .. |JOSS1| image:: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644/status.svg
     :target: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644
-    
+
 .. |JOSS2| image:: https://joss.theoj.org/papers/10.21105/joss.03994/status.svg
     :target: https://doi.org/10.21105/joss.03994
 

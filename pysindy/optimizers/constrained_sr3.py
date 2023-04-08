@@ -1,6 +1,12 @@
 import warnings
 
-import cvxpy as cp
+try:
+    import cvxpy as cp
+
+    cvxpy_flag = True
+except ImportError:
+    cvxpy_flag = False
+    pass
 import numpy as np
 from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
@@ -156,7 +162,9 @@ class ConstrainedSR3(SR3):
         copy_X=True,
         initial_guess=None,
         thresholds=None,
+        equality_constraints=False,
         inequality_constraints=False,
+        constraint_separation_index=0,
         verbose=False,
         verbose_cvxpy=False,
     ):
@@ -178,9 +186,24 @@ class ConstrainedSR3(SR3):
 
         self.verbose_cvxpy = verbose_cvxpy
         self.reg = get_regularization(thresholder)
+        self.constraint_lhs = constraint_lhs
+        self.constraint_rhs = constraint_rhs
+        self.constraint_order = constraint_order
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
         )
+
+        if (
+            self.use_constraints
+            and not equality_constraints
+            and not inequality_constraints
+        ):
+            warnings.warn(
+                "constraint_lhs and constraint_rhs passed to the optimizer, "
+                " but user did not specify if the constraints were equality or"
+                " inequality constraints. Assuming equality constraints."
+            )
+            self.equality_constraints = True
 
         if self.use_constraints:
             if constraint_order not in ("feature", "target"):
@@ -188,13 +211,12 @@ class ConstrainedSR3(SR3):
                     "constraint_order must be either 'feature' or 'target'"
                 )
 
-            self.constraint_lhs = constraint_lhs
-            self.constraint_rhs = constraint_rhs
             self.unbias = False
-            self.constraint_order = constraint_order
 
-        if inequality_constraints:
-            self.max_iter = max(10000, max_iter)  # max iterations for CVXPY
+        if inequality_constraints and not cvxpy_flag:
+            raise ValueError(
+                "Cannot use inequality constraints without cvxpy installed."
+            )
 
         if inequality_constraints and not self.use_constraints:
             raise ValueError(
@@ -212,6 +234,8 @@ class ConstrainedSR3(SR3):
                 "Use of inequality constraints requires a convex regularizer."
             )
         self.inequality_constraints = inequality_constraints
+        self.equality_constraints = equality_constraints
+        self.constraint_separation_index = constraint_separation_index
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
         g = x_transpose_y + coef_sparse / self.nu
@@ -239,7 +263,18 @@ class ConstrainedSR3(SR3):
         elif self.thresholder.lower() == "weighted_l2":
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
         if self.use_constraints:
-            if self.inequality_constraints:
+            if self.inequality_constraints and self.equality_constraints:
+                # Process inequality constraints then equality constraints
+                prob = cp.Problem(
+                    cp.Minimize(cost),
+                    [
+                        self.constraint_lhs[: self.constraint_separation_index, :] @ xi
+                        <= self.constraint_rhs[: self.constraint_separation_index],
+                        self.constraint_lhs[self.constraint_separation_index :, :] @ xi
+                        == self.constraint_rhs[self.constraint_separation_index :],
+                    ],
+                )
+            elif self.inequality_constraints:
                 prob = cp.Problem(
                     cp.Minimize(cost),
                     [self.constraint_lhs @ xi <= self.constraint_rhs],
@@ -431,7 +466,6 @@ class ConstrainedSR3(SR3):
                     ),
                     ConvergenceWarning,
                 )
-
         if self.use_constraints and self.constraint_order.lower() == "target":
             self.constraint_lhs = reorder_constraints(
                 self.constraint_lhs, n_features, output_order="target"

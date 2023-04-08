@@ -1,6 +1,7 @@
 import warnings
 
 import numpy as np
+from scipy.linalg import LinAlgWarning
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ridge_regression
 from sklearn.utils.validation import check_is_fitted
@@ -136,7 +137,14 @@ class STLSQ(BaseOptimizer):
     def _regress(self, x, y):
         """Perform the ridge regression"""
         kw = self.ridge_kw or {}
-        coef = ridge_regression(x, y, self.alpha, **kw)
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=LinAlgWarning)
+            try:
+                coef = ridge_regression(x, y, self.alpha, **kw)
+            except LinAlgWarning:
+                # increase alpha until warning stops
+                self.alpha = 2 * self.alpha
         self.iters += 1
         return coef
 

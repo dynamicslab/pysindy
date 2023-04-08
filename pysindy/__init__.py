@@ -28,15 +28,31 @@ from .feature_library import PolynomialLibrary
 from .feature_library import PDELibrary
 from .feature_library import WeakPDELibrary
 from .feature_library import SINDyPILibrary
+from .feature_library import ParameterizedLibrary
 from .optimizers import BaseOptimizer
 from .optimizers import ConstrainedSR3
 from .optimizers import FROLS
+
+try:  # Waiting on PEP 690 to lazy import gurobipy
+    from .optimizers import MIOSR
+except ImportError:
+    pass
+try:  # Waiting on PEP 690 to lazy import CVXPY
+    from .optimizers import SINDyPI
+except ImportError:
+    pass
+try:  # Waiting on PEP 690 to lazy import CVXPY
+    from .optimizers import TrappingSR3
+except ImportError:
+    pass
+try:  # Waiting on PEP 690 to lazy import CVXPY
+    from .optimizers import StableLinearSR3
+except ImportError:
+    pass
 from .optimizers import SINDyOptimizer
 from .optimizers import SR3
 from .optimizers import SSR
 from .optimizers import STLSQ
-from .optimizers import SINDyPI
-from .optimizers import TrappingSR3
 from .optimizers import EnsembleOptimizer
 
 

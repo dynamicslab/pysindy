@@ -18,6 +18,8 @@ CLASSIFIERS = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -46,6 +48,7 @@ setup(
     packages=find_packages(exclude=["test", "examples"]),
     install_requires=REQUIRED,
     python_requires=PYTHON,
+    extras_require={"miosr": ["gurobipy"]},
     license=LICENSE,
     classifiers=CLASSIFIERS,
 )

@@ -14,7 +14,7 @@ class BaseDifferentiation(BaseEstimator):
     ``_differentiate`` function.
 
     Attributes:
-        smoothed_x: Methods that smooth x before differentiating save
+        smoothed_x_: Methods that smooth x before differentiating save
             that value here.  Methods that do not simply save x here.
     """
 

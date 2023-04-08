@@ -22,7 +22,7 @@ class SmoothedFiniteDifference(FiniteDifference):
         Whether to save the smoothed coordinate values or not.
 
     **kwargs: kwargs
-        Addtional parameters passed to the :meth:`pysindy.FiniteDifference.__init__`
+        Additional parameters passed to the :meth:`pysindy.FiniteDifference.__init__`
         function.
 
     Examples

@@ -19,7 +19,13 @@ from .differentiation import FiniteDifference
 from .feature_library import PolynomialLibrary
 from .optimizers import EnsembleOptimizer
 from .optimizers import SINDyOptimizer
-from .optimizers import SINDyPI
+
+try:  # Waiting on PEP 690 to lazy import CVXPY
+    from .optimizers import SINDyPI
+
+    sindy_pi_flag = True
+except ImportError:
+    sindy_pi_flag = False
 from .optimizers import STLSQ
 from .utils import AxesArray
 from .utils import comprehend_axes
@@ -474,7 +480,7 @@ class SINDy(BaseEstimator):
             for pred in result
         ]
 
-        # Kept for backwards compatability.
+        # Kept for backwards compatibility.
         if not multiple_trajectories:
             return result[0]
         return result
@@ -513,13 +519,13 @@ class SINDy(BaseEstimator):
         ----------
         lhs: list of strings, optional (default None)
             List of variables to print on the left-hand sides of the learned equations.
-            By defualt :code:`self.input_features` are used.
+            By default :code:`self.input_features` are used.
 
         precision: int, optional (default 3)
             Precision to be used when printing out model coefficients.
         """
         eqns = self.equations(precision)
-        if isinstance(self.optimizer, SINDyPI):
+        if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
             feature_names = self.get_feature_names()
         else:
             feature_names = self.feature_names
@@ -528,7 +534,7 @@ class SINDy(BaseEstimator):
                 names = "(" + feature_names[i] + ")"
                 print(names + "[k+1] = " + eqn)
             elif lhs is None:
-                if not isinstance(self.optimizer, SINDyPI):
+                if not sindy_pi_flag or not isinstance(self.optimizer, SINDyPI):
                     names = "(" + feature_names[i] + ")"
                     print(names + "' = " + eqn)
                 else:
@@ -956,6 +962,39 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
             for xdoti, ti in _zip_like_sequence(x_dot, t)
         ]
     if u is not None:
+        reshape_control = False
+        for i in range(len(x)):
+            if len(x[i].shape) != len(np.array(u[i]).shape):
+                reshape_control = True
+        if reshape_control:
+            try:
+                shape = np.array(x[0].shape)
+                shape[x[0].ax_coord] = -1
+                u = [np.reshape(u[i], shape) for i in range(len(x))]
+            except Exception:
+                try:
+                    if np.isscalar(u[0]):
+                        shape[x[0].ax_coord] = 1
+                    else:
+                        shape[x[0].ax_coord] = len(u[0])
+                    u = [np.broadcast_to(u[i], shape) for i in range(len(x))]
+                except Exception:
+                    raise (
+                        ValueError(
+                            "Could not reshape control input to match the input data."
+                        )
+                    )
+        correct_shape = True
+        for i in range(len(x)):
+            for axis in range(x[i].ndim):
+                if (
+                    axis != x[i].ax_coord
+                    and x[i].shape[axis] != np.array(u[i]).shape[axis]
+                ):
+                    correct_shape = False
+        if not correct_shape:
+            raise (
+                ValueError("Could not reshape control input to match the input data.")
+            )
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
-
     return x, x_dot, u

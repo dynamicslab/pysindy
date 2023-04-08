@@ -14,8 +14,37 @@ repos:
   rev: 22.3.0
   hooks:
     - id: black
-- repo: https://gitlab.com/pycqa/flake8
-  rev: 3.9.2
+- repo: https://github.com/PyCQA/flake8
+  rev: 5.0.4
   hooks:
     - id: flake8
       args: ["--config=setup.cfg"]
+-   repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.9.0
+    hooks:
+      - id: rst-backticks
+      - id: rst-directive-colons
+        types: [text]  # overwrite types: [rst]
+        types_or: [python, rst]
+      - id: rst-inline-touching-normal
+        types: [text]  # overwrite types: [rst]
+        types_or: [python, rst]
+-   repo: https://github.com/sphinx-contrib/sphinx-lint
+    rev: v0.6.1
+    hooks:
+    - id: sphinx-lint
+-   repo: https://github.com/codespell-project/codespell
+    rev: v2.1.0
+    hooks:
+    -   id: codespell
+        types_or: [python, rst, markdown]
+        args: ["-L hist"]
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+    -   id: end-of-file-fixer
+        exclude: (.txt|^docs/JOSS1|^docs/JOSS2|^examples/data/)
+        stages: [commit, merge-commit, push, prepare-commit-msg, commit-msg, post-checkout, post-commit, post-merge, post-rewrite]
+    -   id: trailing-whitespace
+        stages: [commit, merge-commit, push, prepare-commit-msg, commit-msg, post-checkout, post-commit, post-merge, post-rewrite]
+        exclude: (.txt|^docs/JOSS1|^docs/JOSS2|^examples/data/)

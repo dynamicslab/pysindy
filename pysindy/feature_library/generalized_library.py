@@ -161,7 +161,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self.inputs_per_library_ = inputs_per_library
         self.libraries_full_ = self.libraries_
         self.exclude_libs_ = exclude_libraries
-        self.calc_trajectory = self.libraries_[0].calc_trajectory
 
     @x_sequence_or_item
     def fit(self, x_full, y=None):
@@ -314,6 +313,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                         input_features_i = input_features
                 feature_names += lib.get_feature_names(input_features_i)
         return feature_names
+
+    def calc_trajectory(self, diff_method, x, t):
+        return self.libraries_[0].calc_trajectory(diff_method, x, t)
 
     def get_spatial_grid(self):
         for lib_k in self.libraries_:

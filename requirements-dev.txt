@@ -5,7 +5,6 @@ black
 pytest-cov
 pytest-lazy-fixture
 flake8-builtins-unleashed
-codecov
 cvxpy
 setuptools_scm
 setuptools_scm_git_archive

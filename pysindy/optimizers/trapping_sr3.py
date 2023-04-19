@@ -334,7 +334,7 @@ class TrappingSR3(SR3):
         self.PWeigs_history_ = []
         self.history_ = []
         self.objective_history = objective_history
-        self.unbias = False  # unused variable
+        self.unbias = False
         self.verbose_cvxpy = verbose_cvxpy
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
@@ -531,7 +531,6 @@ class TrappingSR3(SR3):
             self.PQ_ = np.zeros((r, r, r, r, n_features))
             self.PT_ = np.zeros((r, r, r, r, n_features))
 
-    # TODO: check if definition of P has been corrected
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
         """Solves the coefficient update analytically if threshold = 0"""
         g = x_transpose_y + P_transpose_A / self.eta
@@ -571,7 +570,6 @@ class TrappingSR3(SR3):
         """Calculate the convergence criterion for the optimization over m"""
         return np.sum(np.abs(self.m_history_[-2] - self.m_history_[-1]))
 
-    # TODO: should check the old PQ still holds for this optimization problem
     def _objective(self, x, y, coef_sparse, A, PW, k):
         """Objective function"""
         # Compute the errors
@@ -611,7 +609,6 @@ class TrappingSR3(SR3):
                 )
         return R2 + stability_term + L1 + alpha_term + beta_term
 
-    # TODO: replace Q with PQ and PT
     def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
         """Solve coefficient update with CVXPY if threshold != 0"""
         xi = cp.Variable(N * r)
@@ -724,7 +721,6 @@ class TrappingSR3(SR3):
             )
         return coef_sparse
 
-    # TODO: Implement PT_ here and replace all PQ with PQ & PT if needed
     def _reduce(self, x, y):
         """
         Perform at most ``self.max_iter`` iterations of the

@@ -762,13 +762,13 @@ class WeakPDELibrary(BaseFeatureLibrary):
             # Include mixed non-derivative + integral terms
             if self.include_interaction:
                 for k in range(self.num_derivatives):
-                    for i, f in enumerate(self.functions):
-                        for c in self._combinations(
-                            n_features,
-                            f.__code__.co_argcount,
-                            self.interaction_only,
-                        ):
-                            for jj in range(n_features):
+                    for jj in range(n_features):
+                        for i, f in enumerate(self.functions):
+                            for c in self._combinations(
+                                n_features,
+                                f.__code__.co_argcount,
+                                self.interaction_only,
+                            ):
                                 feature_names.append(
                                     self.function_names[i](
                                         *[input_features[j] for j in c]

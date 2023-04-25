@@ -319,7 +319,11 @@ class PDELibrary(BaseFeatureLibrary):
         feature_names = feature_names + derivative_feature_names
 
         # Include mixed non-derivative + derivative terms
-        if self.include_interaction:
+        if (
+            self.include_interaction
+            and len(function_feature_names) > 0
+            and len(derivative_feature_names) > 0
+        ):
             feature_names = (
                 feature_names
                 + np.char.add(

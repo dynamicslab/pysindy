@@ -5,6 +5,7 @@ from numpy.testing import assert_equal
 from numpy.testing import assert_raises
 
 from pysindy import AxesArray
+from pysindy.utils.axes import AxesWarning
 
 
 def test_reduce_mean_noinf_recursion():
@@ -137,3 +138,22 @@ def test_n_elements():
     with pytest.raises(IndexError):
         assert arr3.n_coord == 1
     assert arr3.n_sample == 1
+
+
+def test_warn_bad_axes():
+    axes = {"ax_time": 1, "ax_coord": 2}
+    with pytest.warns(AxesWarning):
+        AxesArray(np.ones(8).reshape((2, 2, 2)), axes)
+    with pytest.warns(AxesWarning):
+        AxesArray(np.ones(2), axes)
+
+
+def test_fancy_indexing_modifies_axes():
+    axes = {"ax_time": 1, "ax_coord": 2}
+    arr = AxesArray(np.ones(4).reshape((2, 2)), axes)
+    slim = arr[1, :]
+    fat = arr[[[0, 1], [0, 1]]]
+    assert slim.ax_time is None
+    assert slim.ax_coord == 1
+    assert fat.ax_time == [0, 1]
+    assert fat.ax_coord == 2

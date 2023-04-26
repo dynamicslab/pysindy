@@ -696,6 +696,7 @@ class TrappingSR3(SR3):
         p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
         PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
         PMW = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
+        PMW = np.tensordot(self.mod_matrix, PMW, axes=([1], [0]))
         A_b = (A - PW) / self.eta
         PMT_PW = np.tensordot(PMW, A_b, axes=([2, 1], [0, 1]))
         if self.accel:
@@ -823,7 +824,8 @@ class TrappingSR3(SR3):
                     # which is coded up here separately
                     pTp = np.dot(Pmatrix.T, Pmatrix)
                     # notice reshaping PQ here requires fortran-ordering
-                    PQ = np.reshape(self.PQ_, (r * r * r, r * n_features), "F")
+                    PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
+                    PQ = np.reshape(PQ, (r * r * r, r * n_features), "F")
                     PQTPQ = np.dot(PQ.T, PQ)
                     PQ = np.reshape(self.PQ_, (r, r, r, r * n_features), "F")
                     PQ_ep = (
@@ -831,6 +833,7 @@ class TrappingSR3(SR3):
                         + np.transpose(PQ, [1, 2, 0, 3])
                         + np.transpose(PQ, [2, 0, 1, 3])
                     )
+                    PQ_ep = np.tensordot(self.mod_matrix, PQ_ep, axes=([1], [0]))
                     PQ_ep = np.reshape(PQ_ep, (r * r * r, r * n_features), "F")
                     PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
                     H = xTx + pTp / self.eta + PQTPQ / self.alpha + PQTPQ_ep / self.beta

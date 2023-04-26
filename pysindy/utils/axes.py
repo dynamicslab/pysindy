@@ -1,9 +1,15 @@
+import copy
+import warnings
+from typing import Collection
 from typing import List
+from typing import Sequence
 
 import numpy as np
 from sklearn.base import TransformerMixin
 
 HANDLED_FUNCTIONS = {}
+
+AxesWarning = type("AxesWarning", (SyntaxWarning,), {})
 
 
 class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
@@ -30,14 +36,62 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             "ax_sample": None,
             "ax_spatial": [],
         }
+        n_axes = sum(1 for k, v in axes.items() if v)
         if axes is None:
             return obj
-        obj.__dict__.update({**defaults, **axes})
+        in_ndim = len(input_array.shape)
+        if n_axes != in_ndim:
+            warnings.warn(
+                f"{n_axes} axes labeled for array with {in_ndim} axes", AxesWarning
+            )
+        axes = {**defaults, **axes}
+        listed_axes = [
+            el for k, v in axes.items() if isinstance(v, Collection) for el in v
+        ]
+        listed_axes += [
+            v
+            for k, v in axes.items()
+            if not isinstance(v, Collection) and v is not None
+        ]
+        _reverse_map = {}
+        for axis in listed_axes:
+            if axis >= in_ndim:
+                raise ValueError(
+                    f"Assigned definition to axis {axis}, but array only has"
+                    f" {in_ndim} axes"
+                )
+            ax_names = [ax_name for ax_name in axes if axes[ax_name] == axis]
+            if len(ax_names) > 1:
+                raise ValueError(f"Assigned multiple definitions to axis {axis}")
+            _reverse_map[axis] = ax_names[0]
+        obj.__dict__.update({**axes})
+        obj.__dict__["_reverse_map"] = _reverse_map
         return obj
+
+    def __getitem__(self, key, /):
+        remove_axes = []
+        if isinstance(key, int):
+            remove_axes.append(key)
+        if isinstance(key, Sequence):
+            for axis, k in enumerate(key):
+                if isinstance(k, int):
+                    remove_axes.append(axis)
+        new_item = super().__getitem__(key)
+        if not isinstance(new_item, AxesArray):
+            return new_item
+        for axis in remove_axes:
+            ax_name = self._reverse_map[axis]
+            if isinstance(new_item.__dict__[ax_name], int):
+                new_item.__dict__[ax_name] = None
+            else:
+                new_item.__dict__[ax_name].remove(axis)
+            new_item._reverse_map.pop(axis)
+        return new_item
 
     def __array_finalize__(self, obj) -> None:
         if obj is None:
             return
+        self._reverse_map = copy.deepcopy(getattr(obj, "_reverse_map", {}))
         self.ax_time = getattr(obj, "ax_time", None)
         self.ax_coord = getattr(obj, "ax_coord", None)
         self.ax_sample = getattr(obj, "ax_sample", None)
@@ -58,6 +112,10 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
     @property
     def n_coord(self):
         return self.shape[self.ax_coord] if self.ax_coord is not None else 1
+
+    @property
+    def shape(self):
+        return super().shape
 
     def __array_ufunc__(
         self, ufunc, method, *inputs, out=None, **kwargs

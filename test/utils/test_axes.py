@@ -140,16 +140,20 @@ def test_n_elements():
     assert arr3.n_sample == 1
 
 
-def test_warn_bad_axes():
-    axes = {"ax_time": 1, "ax_coord": 2}
+def test_warn_toofew_axes():
+    axes = {"ax_time": 0, "ax_coord": 1}
     with pytest.warns(AxesWarning):
         AxesArray(np.ones(8).reshape((2, 2, 2)), axes)
-    with pytest.warns(AxesWarning):
-        AxesArray(np.ones(2), axes)
+
+
+def test_toomany_axes():
+    axes = {"ax_time": 0, "ax_coord": 2}
+    with pytest.raises(ValueError):
+        AxesArray(np.ones(4).reshape((2, 2)), axes)
 
 
 def test_fancy_indexing_modifies_axes():
-    axes = {"ax_time": 1, "ax_coord": 2}
+    axes = {"ax_time": 0, "ax_coord": 1}
     arr = AxesArray(np.ones(4).reshape((2, 2)), axes)
     slim = arr[1, :]
     fat = arr[[[0, 1], [0, 1]]]

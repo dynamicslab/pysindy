@@ -38,6 +38,7 @@ jobs:
     - name: Build the docs
       # Not exactly how RTD does it, but close.
       run: |
+        sudo apt-get update -y
         sudo apt-get install pandoc
         cd docs
         python -m sphinx -T -E -W -b html -d _build/doctrees . _build/html

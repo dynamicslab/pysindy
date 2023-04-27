@@ -167,18 +167,17 @@ def check_stability_new(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     C = np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
     L = np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
     Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
-    Q_sum = np.max(
+    eps_Q = np.max(
         np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))
     )
     d = C + np.dot(L, opt_m) + np.dot(np.tensordot(Q, opt_m, axes=([2], [0])), opt_m)
     d = mod_matrix @ d
-    eps_Q = np.max(np.abs(Q_sum))
-    Rm, DA = get_trapping_radius(max_eigval, eps_Q, r, d)
+    Rm, R_ls = get_trapping_radius(max_eigval, eps_Q, r, d)
     Reff = Rm / mean_val
     print("Estimate of trapping region size, Rm = ", Rm)
     print("Normalized trapping region size, Reff = ", Reff)
-    print("Local stability size, DA = ", DA)
-    return Rm, DA
+    print("Local stability size, R_ls= ", R_ls)
+    return Rm, R_ls
 
 
 # use optimal m, calculate and plot the stability radius when the third-order
@@ -196,12 +195,10 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
     rhos_minus = []
     for i in range(len(eigs)):
         if eigs[i][-1] < 0:
-            # Q = np.tensordot(sindy_opt.PQ_, coef_history[i], axes=([4, 3], [1, 0]))
-            # Q_sum = Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])
             C = np.tensordot(PC_tensor, coef_history[i], axes=([2, 1], [1, 0]))
             L = np.tensordot(PL_tensor_unsym, coef_history[i], axes=([3, 2], [1, 0]))
             Q = np.tensordot(PQ_tensor, coef_history[i], axes=([4, 3], [1, 0]))
-            Q_sum = np.max(
+            eps_Q = np.max(
                 np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))
             )
             d = (
@@ -210,7 +207,6 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
                 + np.dot(np.tensordot(Q, ms[i], axes=([2], [0])), ms[i])
             )
             d = mod_matrix @ d
-            eps_Q = np.max(np.abs(Q_sum))
             delta = (
                 eigs[i][-1] ** 2
                 - 4 * np.sqrt(r**3) * eps_Q * np.linalg.norm(d, 2) / 3

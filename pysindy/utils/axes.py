@@ -241,7 +241,9 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
     def __array_function__(self, func, types, args, kwargs):
         if func not in HANDLED_FUNCTIONS:
             arr = super(AxesArray, self).__array_function__(func, types, args, kwargs)
-            if isinstance(arr, np.ndarray):
+            if isinstance(arr, AxesArray):
+                return arr
+            elif isinstance(arr, np.ndarray):
                 return AxesArray(arr, axes=self.axes)
             elif arr is not None:
                 return arr

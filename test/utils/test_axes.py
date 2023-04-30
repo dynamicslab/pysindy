@@ -5,11 +5,12 @@ from numpy.testing import assert_equal
 from numpy.testing import assert_raises
 
 from pysindy import AxesArray
+from pysindy.utils.axes import _AxisMapping
 from pysindy.utils.axes import AxesWarning
 
 
 def test_reduce_mean_noinf_recursion():
-    arr = AxesArray(np.array([[1]]), {})
+    arr = AxesArray(np.array([[1]]), {"ax_a": [0, 1]})
     np.mean(arr, axis=0)
 
 
@@ -26,31 +27,31 @@ def test_ufunc_override():
 
     d = np.arange(5.0)
     # 1 input, 1 output
-    a = AxesArray(d, {})
+    a = AxesArray(d, {"ax_time": 0})
     b = np.sin(a)
     check = np.sin(d)
     assert_(np.all(check == b))
     b = np.sin(d, out=(a,))
     assert_(np.all(check == b))
     assert_(b is a)
-    a = AxesArray(np.arange(5.0), {})
+    a = AxesArray(np.arange(5.0), {"ax_time": 0})
     b = np.sin(a, out=a)
     assert_(np.all(check == b))
 
     # 1 input, 2 outputs
-    a = AxesArray(np.arange(5.0), {})
+    a = AxesArray(np.arange(5.0), {"ax_time": 0})
     b1, b2 = np.modf(a)
     b1, b2 = np.modf(d, out=(None, a))
     assert_(b2 is a)
-    a = AxesArray(np.arange(5.0), {})
-    b = AxesArray(np.arange(5.0), {})
+    a = AxesArray(np.arange(5.0), {"ax_time": 0})
+    b = AxesArray(np.arange(5.0), {"ax_time": 0})
     c1, c2 = np.modf(a, out=(a, b))
     assert_(c1 is a)
     assert_(c2 is b)
 
     # 2 input, 1 output
-    a = AxesArray(np.arange(5.0), {})
-    b = AxesArray(np.arange(5.0), {})
+    a = AxesArray(np.arange(5.0), {"ax_time": 0})
+    b = AxesArray(np.arange(5.0), {"ax_time": 0})
     c = np.add(a, b, out=a)
     assert_(c is a)
     # some tests with a non-ndarray subclass
@@ -59,13 +60,13 @@ def test_ufunc_override():
     assert_(a.__array_ufunc__(np.add, "__call__", a, b) is NotImplemented)
     assert_(b.__array_ufunc__(np.add, "__call__", a, b) is NotImplemented)
     assert_raises(TypeError, np.add, a, b)
-    a = AxesArray(a, {})
+    a = AxesArray(a, {"ax_time": 0})
     assert_(a.__array_ufunc__(np.add, "__call__", a, b) is NotImplemented)
     assert_(b.__array_ufunc__(np.add, "__call__", a, b) == "A!")
     assert_(np.add(a, b) == "A!")
     # regression check for gh-9102 -- tests ufunc.reduce implicitly.
     d = np.array([[1, 2, 3], [1, 2, 3]])
-    a = AxesArray(d, {})
+    a = AxesArray(d, {"ax_time": [0, 1]})
     c = a.any()
     check = d.any()
     assert_equal(c, check)
@@ -89,6 +90,11 @@ def test_ufunc_override():
     c = np.add.reduce(a, 1, None, b)
     assert_equal(c, check)
     assert_(c is b)
+
+
+def test_ufunc_override_accumulate():
+    d = np.array([[1, 2, 3], [1, 2, 3]])
+    a = AxesArray(d, {"ax_time": [0, 1]})
     check = np.add.accumulate(d, axis=0)
     c = np.add.accumulate(a, axis=0)
     assert_equal(c, check)
@@ -123,14 +129,16 @@ def test_n_elements():
     assert arr.n_spatial == (1, 2)
     assert arr.n_time == 3
     assert arr.n_coord == 4
-    assert arr.n_sample == 1
 
     arr2 = np.concatenate((arr, arr), axis=arr.ax_time)
     assert arr2.n_spatial == (1, 2)
     assert arr2.n_time == 6
     assert arr2.n_coord == 4
-    assert arr2.n_sample == 1
 
+
+def test_limited_slice():
+    arr = np.empty(np.arange(1, 5))
+    arr = AxesArray(arr, {"ax_spatial": [0, 1], "ax_time": 2, "ax_coord": 3})
     arr3 = arr[..., :2, 0]
     assert arr3.n_spatial == (1, 2)
     assert arr3.n_time == 2
@@ -152,6 +160,13 @@ def test_toomany_axes():
         AxesArray(np.ones(4).reshape((2, 2)), axes)
 
 
+def test_conflicting_axes_defn():
+    axes = {"ax_time": 0, "ax_coord": 0}
+    with pytest.raises(ValueError):
+        AxesArray(np.ones(4), axes)
+
+
+# @pytest.mark.skip("giving error")
 def test_fancy_indexing_modifies_axes():
     axes = {"ax_time": 0, "ax_coord": 1}
     arr = AxesArray(np.ones(4).reshape((2, 2)), axes)
@@ -161,3 +176,24 @@ def test_fancy_indexing_modifies_axes():
     assert slim.ax_coord == 1
     assert fat.ax_time == [0, 1]
     assert fat.ax_coord == 2
+
+
+def test_reduce_AxisMapping():
+    ax_map = _AxisMapping(
+        {
+            "ax_a": [0, 1],
+            "ax_b": 2,
+            "ax_c": 3,
+            "ax_d": 4,
+            "ax_e": [5, 6],
+        },
+        7,
+    )
+    result = ax_map.reduce(3)
+    expected = {
+        "ax_a": [0, 1],
+        "ax_b": 2,
+        "ax_d": 3,
+        "ax_e": [4, 5],
+    }
+    assert result == expected

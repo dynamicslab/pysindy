@@ -142,9 +142,33 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             return shape
         raise AttributeError(f"'{type(self)}' object has no attribute '{name}'")
 
-    # def __getitem__(self, key, /):
-    #     pass
-    #     return super().__getitem__(self, key)
+    def __getitem__(self, key, /):
+        output = super().__getitem__(key)
+        # determine axes of output
+        in_dim = self.shape  # noqa
+        out_dim = output.shape  # noqa
+        remove_dims = []  # noqa
+        basic_indexer = Union[slice, int, type(Ellipsis), np.newaxis, type(None)]
+        if any(  # basic indexing
+            isinstance(key, basic_indexer),
+            isinstance(key, tuple) and all(isinstance(k, basic_indexer) for k in key),
+        ):
+            pass
+        if any(  # fancy indexing
+            isinstance(key, Sequence) and not isinstance(key, tuple),
+            isinstance(key, np.ndarray),
+            isinstance(key, tuple) and any(isinstance(k, Sequence) for k in key),
+            isinstance(key, tuple) and any(isinstance(k, np.ndarray) for k in key),  # ?
+        ):
+            # check if integer or boolean indexing
+            # if integer, check which dimensions get broadcast where
+            # if multiple, axes are merged.  If adjacent, merged inplace, otherwise moved to beginning
+            pass
+        else:
+            raise TypeError(f"AxisArray {self} does not know how to slice with {key}")
+        # mulligan structured arrays, etc.
+        return output
+
     # def __getitem__(self, key, /):
     #     remove_axes = []
     #     if isinstance(key, int):

@@ -99,7 +99,7 @@ def test_ufunc_override():
     assert_(c is b)
 
 
-@pytest.mark.skip("Expected error")
+# @pytest.mark.skip("Expected error")
 def test_ufunc_override_accumulate():
     d = np.array([[1, 2, 3], [1, 2, 3]])
     a = AxesArray(d, {"ax_time": [0, 1]})

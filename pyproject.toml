@@ -1,23 +1,74 @@
-[build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4", "setuptools_scm_git_archive"]
-build-backend = "setuptools.build_meta:__legacy__"
+[tool.poetry]
+name = "pysindy"
+description = "Sparse Identification of Nonlinear Dynamics"
+authors = [
+    "Brian de Silva <bdesilva@uw.edu>",
+    "Kathleen Champion <kpchamp@uw.edu>",
+    "Markus Quade <info@markusqua.de>",
+    "Alan Kaptanoglu <akaptano@uw.edu>"
+]
+license = "MIT"
+version = "1.7.5"
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+readme = "README.rst"
+packages = [{include = "pysindy"}]
 
-[tool.setuptools_scm]
-write_to = "pysindy/version.py"
+[tool.poetry.dependencies]
+python = ">=3.8, <3.12"
+scikit-learn = "^1.2.2"
+derivative = "^0.6.0"
+cmake = "^3.26.3"
+scs = "^3.2.3"
+
+[tool.poetry.group.dev.dependencies]
+matplotlib = "^3.7.1"
+
+
+#[tool.setuptools_scm]
+#write_to = "pysindy/version.py"  # How does this translate?
+
+#[flake8]
+#exclude =
+#    .git,
+#    .venv,
+#    dist,
+#    build,
+#    site-packages,
+#    bin,
+#    __pycache__
+#ignore =
+#    W503         # Line break before binary operator - Conflicts black
+#    E203         # Whitespace before ':' - Conflicts black
+#per-file-ignores =
+#    __init__.py:F401,F403
+#    examples/**:E402,E501
+#max-line-length = 88
+#import-order-style = smarkets
+#statistics = True
+#count = True
+#verbose = 1
 
 [tool.black]
 line-length = 88
-extend-exclude = '''
-/(
+force-exclude = '''
     \.git
-  | \.mypy_cache
-  | \.venv
-  | .vscode
-  | version.py
-  | build
-  | dist
-  | env
-)/
+    \.mypy_cache
+    \.venv
+    .vscode
+    version.py
+    build
+    dist
+    env
 '''
 
 [tool.pytest.ini_options]
@@ -26,3 +77,10 @@ filterwarnings = [
   "ignore::UserWarning",]
 addopts = '-m "not slow"'
 markers = ["slow"]
+
+#[codespell]
+#ignore-words-list = pres,nd
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

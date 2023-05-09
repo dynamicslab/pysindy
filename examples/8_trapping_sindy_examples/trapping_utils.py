@@ -147,7 +147,7 @@ def get_trapping_radius(max_eigval, eps_Q, r, d):
     return rad_trap, rad_stab
 
 
-def check_stability_new(r, Xi, sindy_opt, mean_val, mod_matrix=None):
+def check_local_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     if mod_matrix is None:
         mod_matrix = np.eye(r)
     opt_m = sindy_opt.m_history_[-1]

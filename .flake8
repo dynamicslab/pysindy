@@ -1,0 +1,20 @@
+[flake8]
+exclude =
+    .git,
+    .venv,
+    dist,
+    build,
+    site-packages,
+    bin,
+    __pycache__
+ignore =
+    W503         # Line break before binary operator - Conflicts black
+    E203         # Whitespace before ':' - Conflicts black
+per-file-ignores =
+    __init__.py:F401,F403
+    examples/**:E402,E501
+max-line-length = 88
+import-order-style = smarkets
+statistics = True
+count = True
+verbose = 1

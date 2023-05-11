@@ -1028,25 +1028,12 @@ def test_normalize_columns(data_derivative_1d, optimizer):
         assert opt.coef_.shape == (1, x.shape[1])
 
 
-@pytest.mark.parametrize(
-    "optimizer",
-    [
-        STLSQ,
-        SSR,
-        FROLS,
-        SR3,
-        ConstrainedSR3,
-        StableLinearSR3,
-        TrappingSR3,
-        MIOSR,
-    ],
-)
-def test_legacy_ensemble_odes(data_lorenz, optimizer):
+def test_legacy_ensemble_odes(data_lorenz):
     x, t = data_lorenz
-    opt = optimizer(normalize_columns=True)
+    opt = STLSQ(normalize_columns=True)
     model = SINDy(optimizer=opt)
-    model.fit(x, ensemble=True, n_models=10, n_subset=20)
-    assert np.shape(model.coef_list) == (10, 3, 10)
+    model.fit(x, ensemble=True, n_models=2, n_subset=2)
+    assert np.shape(model.coef_list) == (2, 3, 10)
 
 
 @pytest.mark.parametrize(

@@ -15,14 +15,14 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: "3.9"
-      - name: Install Poetry
+      - name: Install Build
         run: |
           python -m pip install --upgrade pip
-          pip install poetry
-          poetry config virtualenvs.in-project false
-          poetry config virtualenvs.path ~/.virtualenvs
-          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+          pip install build
       - name: Build package
-        run: poetry build
+        run: python -m build .
       - name: Upload package
-        run: poetry publish
+        uses: pypa/gh-action-pypi-publish@v1.8.5
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}

@@ -1,53 +1,65 @@
-[tool.poetry]
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "pysindy"
 description = "Sparse Identification of Nonlinear Dynamics"
 authors = [
-    "Brian de Silva <bdesilva@uw.edu>",
-    "Kathleen Champion <kpchamp@uw.edu>",
-    "Markus Quade <info@markusqua.de>",
-    "Alan Kaptanoglu <akaptano@uw.edu>"
+    {name="Brian de Silva", email="bdesilva@uw.edu"},
+    {name="Kathleen Champion", email="kpchamp@uw.edu"},
+    {name="Markus Quade", email="info@markusqua.de"},
+    {name="Alan Kaptanoglu", email="akaptano@uw.edu"}
 ]
-license = "MIT"
-version = "1.7.5"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dynamic = ["version"]
 classifiers = [
     "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 readme = "README.rst"
-packages = [{include = "pysindy"}]
+dependencies = [
+    "scikit-learn>=0.23",
+    "derivative",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9, <3.12"
-scikit-learn = "^1.2.2"
-derivative = "^0.6.0"
-scs = "^3.2.3"
-cvxpy = {extras = ["gurobi"], version = "^1.3.1"}
-
-[tool.poetry.group.dev.dependencies]
-matplotlib = "^3.7.1"
-seaborn = "^0.12.2"
-pytest = "^7.3.1"
-black = "^23.3.0"
-pytest-cov = "^4.0.0"
-pytest-lazy-fixtures = "^1.0.0"
-flake8-builtins-unleashed = "^1.3.1"
-jupyter = "^1.0.0"
-jupytext = "^1.14.5"
-pre-commit = "^3.3.1"
-hypothesis = "^6.75.2"
-jupyter-contrib-nbextensions = "^0.7.0"
-
-[tool.poetry.group.docs.dependencies]
-pandoc = "^2.3"
-sphinx-rtd-theme = "^1.2.0"
-sphinxcontrib-apidoc = "^0.3.0"
-nbsphinx = "^0.9.1"
+[project.optional-dependencies]
+dev = [
+    "matplotlib",
+    "seaborn",
+    "pytest>=6.2.4",
+    "black",
+    "build",
+    "pytest-cov",
+    "pytest-lazy-fixtures",
+    "flake8-builtins-unleashed",
+    "jupyter",
+    "jupytext",
+    "pre-commit",
+    "hypothesis",
+    "jupyter-contrib-nbextensions"
+]
+docs = [
+    "pandoc",
+    "sphinx-rtd-theme",
+    "sphinx==5.3.0",
+    "sphinxcontrib-apidoc",
+    "nbsphinx"
+]
+miosr = [
+    "gurobipy>=9.5.1,<10.0"
+]
+cvxpy = [
+    "cvxpy",
+    "scs>=2.1, !=2.1.4"
+]
 
 [tool.black]
 line-length = 88
@@ -72,6 +84,8 @@ markers = ["slow"]
 [tool.codespell]
 ignore-words-list = ["pres", "nd"]
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.setuptools]
+packages = ["pysindy"]
+
+[tool.setuptools_scm]
+write_to = "pysindy/version.py"

@@ -144,6 +144,19 @@ To build a local copy of the documentation, you should install the docs-dependen
 
   pip install pysindy[docs]
 
+If you are looking to use convex optimization provided by `cvxpy <https://github.com/cvxpy/cvxpy>`__, then you have to install
+
+.. code-block:: bash
+
+    pip install pysindy[cvxpy]
+
+to utilize Mixed-Integer Optimized Sparse Regression (MIOSR) via `GurobiPy <https://pypi.org/project/gurobipy/>`__, you
+require
+
+.. code-block:: bash
+
+    pip install pysindy[miosr]
+
 
 Documentation
 -------------

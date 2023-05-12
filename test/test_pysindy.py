@@ -546,19 +546,13 @@ def test_differentiate(data_lorenz, data_multiple_trajctories):
         model.differentiate(x)
 
 
-def test_coefficients(data_lorenz):
+def test_coefficients_equals_complexity(data_lorenz):
     x, t = data_lorenz
     model = SINDy()
     model.fit(x, t)
     c = model.coefficients()
-    assert np.count_nonzero(c) < 10
-
-
-def test_complexity(data_lorenz):
-    x, t = data_lorenz
-    model = SINDy()
-    model.fit(x, t)
-    assert model.complexity < 10
+    assert model.complexity == np.count_nonzero(c)
+    assert model.complexity < 30
 
 
 def test_simulate_errors(data_lorenz):

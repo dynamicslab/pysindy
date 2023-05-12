@@ -82,7 +82,7 @@ addopts = '-m "not slow"'
 markers = ["slow"]
 
 [tool.codespell]
-ignore-words-list = ["pres", "nd"]
+ignore-words-list = "pres,nd,hist"
 
 [tool.setuptools]
 packages = ["pysindy"]

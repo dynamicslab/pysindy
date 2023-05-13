@@ -3,6 +3,7 @@ dist
 *.egg-info
 commit-msg
 todo
+poetry.lock
 
 # Environments
 .env

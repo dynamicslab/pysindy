@@ -100,7 +100,7 @@ def readnek(fname):
     # compute total number of points per element
     npel = lr1[0] * lr1[1] * lr1[2]
 
-    # get number of pysical dimensions
+    # get number of physical dimensions
     ndim = 2 + (lr1[2] > 1)
 
     # get number of elements

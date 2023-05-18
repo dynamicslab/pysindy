@@ -5,6 +5,7 @@ from numpy.testing import assert_equal
 from numpy.testing import assert_raises
 
 from pysindy import AxesArray
+from pysindy.utils import axes
 from pysindy.utils.axes import _AxisMapping
 from pysindy.utils.axes import AxesWarning
 
@@ -176,7 +177,7 @@ def test_conflicting_axes_defn():
 
 
 @pytest.mark.skip("giving error")
-def test_fancy_indexing_modifies_axes():
+def test_fancy_getitem_modifies_axes():
     axes = {"ax_time": 0, "ax_coord": 1}
     arr = AxesArray(np.ones(4).reshape((2, 2)), axes)
     slim = arr[1, :]
@@ -185,6 +186,15 @@ def test_fancy_indexing_modifies_axes():
     assert slim.ax_coord == 1
     assert fat.ax_time == [0, 1]
     assert fat.ax_coord == 2
+
+
+def test_standardize_basic_indexer():
+    arr = np.arange(6).reshape(2, 3)
+    result = axes._standardize_basic_indexer(arr, Ellipsis)
+    assert result == (slice(None), slice(None))
+
+    result = axes._standardize_basic_indexer(arr, (np.newaxis, 1, 1, Ellipsis))
+    assert result == (None, 1, 1)
 
 
 def test_reduce_AxisMapping():

@@ -153,7 +153,9 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             isinstance(key, basic_indexer),
             isinstance(key, tuple) and all(isinstance(k, basic_indexer) for k in key),
         ):
-            pass
+            key = _standardize_basic_indexer(self, key)
+
+            return output
         if any(  # fancy indexing
             isinstance(key, Sequence) and not isinstance(key, tuple),
             isinstance(key, np.ndarray),
@@ -162,8 +164,9 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         ):
             # check if integer or boolean indexing
             # if integer, check which dimensions get broadcast where
-            # if multiple, axes are merged.  If adjacent, merged inplace, otherwise moved to beginning
-            pass
+            # if multiple, axes are merged.  If adjacent, merged inplace,
+            #  otherwise moved to beginning
+            return output
         else:
             raise TypeError(f"AxisArray {self} does not know how to slice with {key}")
         # mulligan structured arrays, etc.
@@ -295,6 +298,23 @@ def concatenate(arrays, axis=0):
         if ax1 != ax2:
             raise TypeError("Concatenating >1 AxesArray with incompatible axes")
     return AxesArray(np.concatenate(parents, axis), axes=ax_list[0])
+
+
+def _standardize_basic_indexer(arr: np.ndarray, key):
+    """Convert to a tuple of slices, ints, and None."""
+    if isinstance(key, tuple):
+        if not any(ax_key is Ellipsis for ax_key in key):
+            key = (*key, Ellipsis)
+        slicedim = sum(isinstance(ax_key, slice | int) for ax_key in key)
+        final_key = []
+        for ax_key in key:
+            inner_iterator = (ax_key,)
+            if ax_key is Ellipsis:
+                inner_iterator = (arr.ndim - slicedim) * (slice(None),)
+            for el in inner_iterator:
+                final_key.append(el)
+        return tuple(final_key)
+    return _standardize_basic_indexer(arr, (key,))
 
 
 def comprehend_axes(x):

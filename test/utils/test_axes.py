@@ -176,14 +176,14 @@ def test_conflicting_axes_defn():
         AxesArray(np.ones(4), axes)
 
 
-@pytest.mark.skip("giving error")
-def test_fancy_getitem_modifies_axes():
+def test_getitem_modifies_axes():
     axes = {"ax_time": 0, "ax_coord": 1}
     arr = AxesArray(np.ones(4).reshape((2, 2)), axes)
-    slim = arr[1, :]
+    slim = arr[1, :, None]
     fat = arr[[[0, 1], [0, 1]]]
     assert slim.ax_time is None
-    assert slim.ax_coord == 1
+    assert slim.ax_new == 1
+    assert slim.ax_coord == 0
     assert fat.ax_time == [0, 1]
     assert fat.ax_coord == 2
 
@@ -208,11 +208,31 @@ def test_reduce_AxisMapping():
         },
         7,
     )
-    result = ax_map.reduce(3)
+    result = ax_map.remove_axis(3)
     expected = {
         "ax_a": [0, 1],
         "ax_b": 2,
         "ax_d": 3,
         "ax_e": [4, 5],
+    }
+    assert result == expected
+
+
+def test_reduce_multiple_AxisMapping():
+    ax_map = _AxisMapping(
+        {
+            "ax_a": [0, 1],
+            "ax_b": 2,
+            "ax_c": 3,
+            "ax_d": 4,
+            "ax_e": [5, 6],
+        },
+        7,
+    )
+    result = ax_map.remove_axis([3, 4])
+    expected = {
+        "ax_a": [0, 1],
+        "ax_b": 2,
+        "ax_e": [3, 4],
     }
     assert result == expected

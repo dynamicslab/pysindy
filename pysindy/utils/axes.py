@@ -1,5 +1,7 @@
 import copy
 import warnings
+from collections import defaultdict
+from typing import Collection
 from typing import List
 from typing import MutableMapping
 from typing import Sequence
@@ -69,28 +71,37 @@ class _AxisMapping:
     def compat_axes(self):
         return self._compat_axes(self.fwd_map)
 
-    def reduce(self, axis: Union[int, None] = None):
-        """Create an axes dict from self with specified axis
+    def remove_axis(self, axis: Union[Collection[int], int, None] = None):
+        """Create an axes dict from self with specified axis or axes
         removed and all greater axes decremented.
 
         Arguments:
-            axis: the axis index to remove.  By numpy ufunc convention,
-                axis=None (default) removes _all_ axes.
+            axis: the axis index or axes indexes to remove.  By numpy
+            ufunc convention, axis=None (default) removes _all_ axes.
         """
         if axis is None:
             return {}
         new_axes = copy.deepcopy(self.fwd_map)
         in_ndim = len(self.reverse_map)
-        remove_ax_name = self.reverse_map[axis]
-        if len(new_axes[remove_ax_name]) == 1:
-            new_axes.pop(remove_ax_name)
-        else:
-            new_axes[remove_ax_name].remove(axis)
-        decrement_names = set()
-        for ax_id in range(axis + 1, in_ndim):
-            decrement_names.add(self.reverse_map[ax_id])
-        for dec_name in decrement_names:
-            new_axes[dec_name] = [ax_id - 1 for ax_id in new_axes[dec_name]]
+        decrement_names = defaultdict(lambda: 0)
+        removal_names = []
+        if not isinstance(axis, Collection):
+            axis = [axis]
+        for ax in axis:
+            remove_ax_name = self.reverse_map[ax]
+            removal_names.append(remove_ax_name)
+            if len(new_axes[remove_ax_name]) == 1:
+                new_axes.pop(remove_ax_name)
+            else:
+                new_axes[remove_ax_name].remove(ax)
+            names_beyond_axis = set()
+            for ax_id in range(ax + 1, in_ndim):
+                names_beyond_axis.add(self.reverse_map[ax_id])
+            for ax_name in names_beyond_axis:
+                decrement_names[ax_name] += 1
+        [decrement_names.pop(name, None) for name in removal_names]
+        for dec_name, dec_amt in decrement_names.items():
+            new_axes[dec_name] = [ax_id - dec_amt for ax_id in new_axes[dec_name]]
         return self._compat_axes(new_axes)
 
 
@@ -147,15 +158,24 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         # determine axes of output
         in_dim = self.shape  # noqa
         out_dim = output.shape  # noqa
-        remove_dims = []  # noqa
+        remove_axes = []  # noqa
+        new_axes = []  # noqa
         basic_indexer = Union[slice, int, type(Ellipsis), np.newaxis, type(None)]
-        if any(  # basic indexing
-            isinstance(key, basic_indexer),
-            isinstance(key, tuple) and all(isinstance(k, basic_indexer) for k in key),
+        if any(
+            (  # basic indexing
+                isinstance(key, basic_indexer),
+                isinstance(key, tuple)
+                and all(isinstance(k, basic_indexer) for k in key),
+            )
         ):
             key = _standardize_basic_indexer(self, key)
-
-            return output
+            shift = 0
+            for ax_ind, indexer in enumerate(key):
+                if indexer is None:
+                    new_axes.append(ax_ind - shift)
+                elif isinstance(indexer, int):
+                    remove_axes.append(ax_ind)
+                    shift += 1
         if any(  # fancy indexing
             isinstance(key, Sequence) and not isinstance(key, tuple),
             isinstance(key, np.ndarray),
@@ -166,10 +186,13 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             # if integer, check which dimensions get broadcast where
             # if multiple, axes are merged.  If adjacent, merged inplace,
             #  otherwise moved to beginning
-            return output
+            pass
         else:
             raise TypeError(f"AxisArray {self} does not know how to slice with {key}")
         # mulligan structured arrays, etc.
+        new_map = _AxisMapping(self.__ax_map.remove_axis(remove_axes))
+        new_map = _AxisMapping(new_map.insert_axes(new_axes))
+        output.__ax_map = new_map
         return output
 
     # def __getitem__(self, key, /):
@@ -251,7 +274,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         ):
             axes = None
             if kwargs["axis"] is not None:
-                axes = self.__ax_map.reduce(axis=kwargs["axis"])
+                axes = self.__ax_map.remove_axis(axis=kwargs["axis"])
         else:
             axes = self.axes
         final_results = []

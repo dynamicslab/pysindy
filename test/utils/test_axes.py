@@ -236,3 +236,65 @@ def test_reduce_multiple_AxisMapping():
         "ax_e": [3, 4],
     }
     assert result == expected
+
+
+def test_reduce_twisted_AxisMapping():
+    ax_map = _AxisMapping(
+        {
+            "ax_a": [0, 6],
+            "ax_b": 2,
+            "ax_c": 3,
+            "ax_d": 4,
+            "ax_e": [1, 5],
+        },
+        7,
+    )
+    result = ax_map.remove_axis([3, 4])
+    expected = {
+        "ax_a": [0, 4],
+        "ax_b": 2,
+        "ax_e": [1, 3],
+    }
+    assert result == expected
+
+
+def test_insert_AxisMapping():
+    ax_map = _AxisMapping(
+        {
+            "ax_a": [0, 1],
+            "ax_b": 2,
+            "ax_c": 3,
+            "ax_d": [4, 5],
+        },
+        6,
+    )
+    result = ax_map.insert_axis(3)
+    expected = {
+        "ax_a": [0, 1],
+        "ax_b": 2,
+        "ax_unk": 3,
+        "ax_c": 4,
+        "ax_d": [5, 6],
+    }
+    assert result == expected
+
+
+def test_insert_multiple_AxisMapping():
+    ax_map = _AxisMapping(
+        {
+            "ax_a": [0, 1],
+            "ax_b": 2,
+            "ax_c": 3,
+            "ax_d": [4, 5],
+        },
+        6,
+    )
+    result = ax_map.insert_axis([1, 4])
+    expected = {
+        "ax_a": [0, 2],
+        "ax_unk": [1, 4],
+        "ax_b": 3,
+        "ax_c": 5,
+        "ax_d": [6, 7],
+    }
+    assert result == expected

@@ -1,6 +1,5 @@
 import copy
 import warnings
-from collections import defaultdict
 from typing import Collection
 from typing import List
 from typing import MutableMapping
@@ -83,25 +82,20 @@ class _AxisMapping:
             return {}
         new_axes = copy.deepcopy(self.fwd_map)
         in_ndim = len(self.reverse_map)
-        decrement_names = defaultdict(lambda: 0)
-        removal_names = []
         if not isinstance(axis, Collection):
             axis = [axis]
-        for ax in axis:
-            remove_ax_name = self.reverse_map[ax]
-            removal_names.append(remove_ax_name)
+        for cum_shift, orig_ax_remove in enumerate(axis):
+            remove_ax_name = self.reverse_map[orig_ax_remove]
+            curr_ax_remove = orig_ax_remove - cum_shift
             if len(new_axes[remove_ax_name]) == 1:
                 new_axes.pop(remove_ax_name)
             else:
-                new_axes[remove_ax_name].remove(ax)
-            names_beyond_axis = set()
-            for ax_id in range(ax + 1, in_ndim):
-                names_beyond_axis.add(self.reverse_map[ax_id])
-            for ax_name in names_beyond_axis:
-                decrement_names[ax_name] += 1
-        [decrement_names.pop(name, None) for name in removal_names]
-        for dec_name, dec_amt in decrement_names.items():
-            new_axes[dec_name] = [ax_id - dec_amt for ax_id in new_axes[dec_name]]
+                new_axes[remove_ax_name].remove(curr_ax_remove)
+            for old_ax_dec in range(curr_ax_remove + 1, in_ndim - cum_shift):
+                orig_ax_dec = old_ax_dec + cum_shift
+                ax_dec_name = self.reverse_map[orig_ax_dec]
+                new_axes[ax_dec_name].remove(old_ax_dec)
+                new_axes[ax_dec_name].append(old_ax_dec - 1)
         return self._compat_axes(new_axes)
 
     def insert_axis(self, axis: Union[Collection[int], int]):

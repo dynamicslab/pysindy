@@ -28,8 +28,8 @@ class _AxisMapping:
         if axes is None:
             axes = {}
         axes = copy.deepcopy(axes)
-        self.fwd_map = {}
-        self.reverse_map = {}
+        self.fwd_map: dict[str, list[int]] = {}
+        self.reverse_map: dict[int, str] = {}
         null = object()
 
         def coerce_sequence(obj):
@@ -102,6 +102,33 @@ class _AxisMapping:
         [decrement_names.pop(name, None) for name in removal_names]
         for dec_name, dec_amt in decrement_names.items():
             new_axes[dec_name] = [ax_id - dec_amt for ax_id in new_axes[dec_name]]
+        return self._compat_axes(new_axes)
+
+    def insert_axis(self, axis: Union[Collection[int], int]):
+        """Create an axes dict from self with specified axis or axes
+        added and all greater axes incremented.
+
+        Arguments:
+            axis: the axis index or axes indexes to add.
+
+        Todo:
+            May be more efficient to determine final axis-to-axis
+            mapping, then apply, rather than apply changes after each
+            axis insert.
+        """
+        new_axes = copy.deepcopy(self.fwd_map)
+        in_ndim = len(self.reverse_map)
+        if not isinstance(axis, Collection):
+            axis = [axis]
+        for cum_shift, ax in enumerate(axis):
+            if "ax_unk" in new_axes.keys():
+                new_axes["ax_unk"].append(ax)
+            else:
+                new_axes["ax_unk"] = [ax]
+            for ax_id in range(ax, in_ndim + cum_shift):
+                ax_name = self.reverse_map[ax_id - cum_shift]
+                new_axes[ax_name].remove(ax_id)
+                new_axes[ax_name].append(ax_id + 1)
         return self._compat_axes(new_axes)
 
 

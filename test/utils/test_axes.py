@@ -196,11 +196,15 @@ def test_fancy_indexing_modifies_axes():
 
 def test_standardize_basic_indexer():
     arr = np.arange(6).reshape(2, 3)
-    result, _ = axes._standardize_indexer(arr, Ellipsis)
-    assert result == (slice(None), slice(None))
+    result_indexer, result_fancy = axes._standardize_indexer(arr, Ellipsis)
+    assert result_indexer == (slice(None), slice(None))
+    assert result_fancy == ()
 
-    result, _ = axes._standardize_indexer(arr, (np.newaxis, 1, 1, Ellipsis))
-    assert result == (None, 1, 1)
+    result_indexer, result_fancy = axes._standardize_indexer(
+        arr, (np.newaxis, 1, 1, Ellipsis)
+    )
+    assert result_indexer == (None, 1, 1)
+    assert result_fancy == ()
 
 
 def test_standardize_fancy_indexer():

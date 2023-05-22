@@ -12,6 +12,7 @@ from sklearn.base import TransformerMixin
 HANDLED_FUNCTIONS = {}
 
 AxesWarning = type("AxesWarning", (SyntaxWarning,), {})
+BasicIndexer = Union[slice, int, type(Ellipsis), np.newaxis, type(None)]
 
 
 class _AxisMapping:
@@ -183,12 +184,11 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         out_dim = output.shape  # noqa
         remove_axes = []  # noqa
         new_axes = []  # noqa
-        basic_indexer = Union[slice, int, type(Ellipsis), np.newaxis, type(None)]
         if any(
             (  # basic indexing
-                isinstance(key, basic_indexer),
+                isinstance(key, BasicIndexer),
                 isinstance(key, tuple)
-                and all(isinstance(k, basic_indexer) for k in key),
+                and all(isinstance(k, BasicIndexer) for k in key),
             )
         ):
             key, _ = _standardize_indexer(self, key)
@@ -341,19 +341,31 @@ def _standardize_indexer(arr: np.ndarray, key):
         A tuple of the normalized indexer as well as the indexes of
         fancy indexers
     """
-    if isinstance(key, tuple):
-        if not any(ax_key is Ellipsis for ax_key in key):
-            key = (*key, Ellipsis)
-        slicedim = sum(isinstance(ax_key, slice | int) for ax_key in key)
-        final_key = []
-        for ax_key in key:
-            inner_iterator = (ax_key,)
-            if ax_key is Ellipsis:
-                inner_iterator = (arr.ndim - slicedim) * (slice(None),)
-            for el in inner_iterator:
-                final_key.append(el)
-        return tuple(final_key), tuple()
-    return _standardize_indexer(arr, (key,))
+    if not isinstance(key, tuple):
+        key = (key,)
+    if not any(ax_key is Ellipsis for ax_key in key):
+        key = (*key, Ellipsis)
+    new_key = []
+    fancy_inds = []
+    slicedim = 0
+    for indexer_ind, ax_key in enumerate(key):
+        if not isinstance(ax_key, BasicIndexer):
+            ax_key = np.array(ax_key)
+            fancy_inds.append(indexer_ind)
+        new_key.append(ax_key)
+        if isinstance(ax_key, slice | int | np.ndarray):
+            slicedim += 1
+    ellipsis_dims = arr.ndim - slicedim
+    ellind = new_key.index(Ellipsis)
+    new_key[ellind : ellind + 1] = ellipsis_dims * (slice(None),)
+    fancy_inds = [ind if ind < ellind else ind + ellind for ind in fancy_inds]
+    # for ax_key in new_key:
+    #     inner_iterator = (ax_key,)
+    #     if ax_key is Ellipsis:
+    #         inner_iterator = (arr.ndim - slicedim) * (slice(None),)
+    #     for el in inner_iterator:
+    #         final_key.append(el)
+    return tuple(new_key), tuple(fancy_inds)
 
 
 def comprehend_axes(x):

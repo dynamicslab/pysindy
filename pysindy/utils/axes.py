@@ -176,6 +176,8 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
 
     def __getitem__(self, key, /):
         output = super().__getitem__(key)
+        if not isinstance(output, AxesArray):
+            return output
         # determine axes of output
         in_dim = self.shape  # noqa
         out_dim = output.shape  # noqa
@@ -197,11 +199,14 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 elif isinstance(indexer, int):
                     remove_axes.append(ax_ind)
                     shift += 1
-        if any(  # fancy indexing
-            isinstance(key, Sequence) and not isinstance(key, tuple),
-            isinstance(key, np.ndarray),
-            isinstance(key, tuple) and any(isinstance(k, Sequence) for k in key),
-            isinstance(key, tuple) and any(isinstance(k, np.ndarray) for k in key),  # ?
+        elif any(  # fancy indexing
+            (
+                isinstance(key, Sequence) and not isinstance(key, tuple),
+                isinstance(key, np.ndarray),
+                isinstance(key, tuple) and any(isinstance(k, Sequence) for k in key),
+                isinstance(key, tuple)
+                and any(isinstance(k, np.ndarray) for k in key),  # ?
+            )
         ):
             # check if integer or boolean indexing
             # if integer, check which dimensions get broadcast where
@@ -211,8 +216,13 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         else:
             raise TypeError(f"AxisArray {self} does not know how to slice with {key}")
         # mulligan structured arrays, etc.
-        new_map = _AxisMapping(self.__ax_map.remove_axis(remove_axes))
-        new_map = _AxisMapping(new_map.insert_axes(new_axes))
+        new_map = _AxisMapping(
+            self.__ax_map.remove_axis(remove_axes), len(in_dim) - len(remove_axes)
+        )
+        new_map = _AxisMapping(
+            new_map.insert_axis(new_axes),
+            len(in_dim) - len(remove_axes) + len(new_axes),
+        )
         output.__ax_map = new_map
         return output
 

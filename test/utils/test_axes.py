@@ -176,14 +176,20 @@ def test_conflicting_axes_defn():
         AxesArray(np.ones(4), axes)
 
 
-def test_getitem_modifies_axes():
+def test_basic_indexing_modifies_axes():
     axes = {"ax_time": 0, "ax_coord": 1}
     arr = AxesArray(np.ones(4).reshape((2, 2)), axes)
     slim = arr[1, :, None]
-    fat = arr[[[0, 1], [0, 1]]]
-    assert slim.ax_time is None
-    assert slim.ax_new == 1
+    with pytest.raises(KeyError):
+        slim.ax_time
+    assert slim.ax_unk == 1
     assert slim.ax_coord == 0
+
+
+def test_fancy_indexing_modifies_axes():
+    axes = {"ax_time": 0, "ax_coord": 1}
+    arr = AxesArray(np.ones(4).reshape((2, 2)), axes)
+    fat = arr[[[0, 1], [0, 1]]]
     assert fat.ax_time == [0, 1]
     assert fat.ax_coord == 2
 

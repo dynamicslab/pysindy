@@ -196,11 +196,24 @@ def test_fancy_indexing_modifies_axes():
 
 def test_standardize_basic_indexer():
     arr = np.arange(6).reshape(2, 3)
-    result = axes._standardize_basic_indexer(arr, Ellipsis)
+    result, _ = axes._standardize_indexer(arr, Ellipsis)
     assert result == (slice(None), slice(None))
 
-    result = axes._standardize_basic_indexer(arr, (np.newaxis, 1, 1, Ellipsis))
+    result, _ = axes._standardize_indexer(arr, (np.newaxis, 1, 1, Ellipsis))
     assert result == (None, 1, 1)
+
+
+def test_standardize_fancy_indexer():
+    arr = np.arange(6).reshape(2, 3)
+    result_indexer, result_fancy = axes._standardize_indexer(arr, [1])
+    assert result_indexer == (np.ones(1), slice(None))
+    assert result_fancy == (0,)
+
+    result_indexer, result_fancy = axes._standardize_indexer(
+        arr, (np.newaxis, [1], 1, Ellipsis)
+    )
+    assert result_indexer == (None, np.ones(1), 1)
+    assert result_fancy == (1,)
 
 
 def test_reduce_AxisMapping():

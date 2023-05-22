@@ -191,7 +191,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 and all(isinstance(k, basic_indexer) for k in key),
             )
         ):
-            key = _standardize_basic_indexer(self, key)
+            key, _ = _standardize_indexer(self, key)
             shift = 0
             for ax_ind, indexer in enumerate(key):
                 if indexer is None:
@@ -225,26 +225,6 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         )
         output.__ax_map = new_map
         return output
-
-    # def __getitem__(self, key, /):
-    #     remove_axes = []
-    #     if isinstance(key, int):
-    #         remove_axes.append(key)
-    #     if isinstance(key, Sequence):
-    #         for axis, k in enumerate(key):
-    #             if isinstance(k, int):
-    #                 remove_axes.append(axis)
-    #     new_item = super().__getitem__(key)
-    #     if not isinstance(new_item, AxesArray):
-    #         return new_item
-    #     for axis in remove_axes:
-    #         ax_name = self._reverse_map[axis]
-    #         if isinstance(new_item.__dict__[ax_name], int):
-    #             new_item.__dict__[ax_name] = None
-    #         else:
-    #             new_item.__dict__[ax_name].remove(axis)
-    #         new_item._reverse_map.pop(axis)
-    #     return new_item
 
     def __array_wrap__(self, out_arr, context=None):
         return super().__array_wrap__(self, out_arr, context)
@@ -354,8 +334,13 @@ def concatenate(arrays, axis=0):
     return AxesArray(np.concatenate(parents, axis), axes=ax_list[0])
 
 
-def _standardize_basic_indexer(arr: np.ndarray, key):
-    """Convert to a tuple of slices, ints, and None."""
+def _standardize_indexer(arr: np.ndarray, key):
+    """Convert to a tuple of slices, ints, None, and ndarrays.
+
+    Returns:
+        A tuple of the normalized indexer as well as the indexes of
+        fancy indexers
+    """
     if isinstance(key, tuple):
         if not any(ax_key is Ellipsis for ax_key in key):
             key = (*key, Ellipsis)
@@ -367,8 +352,8 @@ def _standardize_basic_indexer(arr: np.ndarray, key):
                 inner_iterator = (arr.ndim - slicedim) * (slice(None),)
             for el in inner_iterator:
                 final_key.append(el)
-        return tuple(final_key)
-    return _standardize_basic_indexer(arr, (key,))
+        return tuple(final_key), tuple()
+    return _standardize_indexer(arr, (key,))
 
 
 def comprehend_axes(x):

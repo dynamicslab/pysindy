@@ -184,6 +184,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         out_dim = output.shape  # noqa
         remove_axes = []  # noqa
         new_axes = []  # noqa
+        key, _ = _standardize_indexer(self, key)
         if any(
             (  # basic indexing
                 isinstance(key, BasicIndexer),
@@ -191,7 +192,6 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 and all(isinstance(k, BasicIndexer) for k in key),
             )
         ):
-            key, _ = _standardize_indexer(self, key)
             shift = 0
             for ax_ind, indexer in enumerate(key):
                 if indexer is None:
@@ -356,15 +356,12 @@ def _standardize_indexer(arr: np.ndarray, key):
         if isinstance(ax_key, slice | int | np.ndarray):
             slicedim += 1
     ellipsis_dims = arr.ndim - slicedim
-    ellind = new_key.index(Ellipsis)
+    #  .index(Ellipsis) in case array is present.
+    for i, v in enumerate(new_key):
+        if isinstance(v, type(Ellipsis)):
+            ellind = i
     new_key[ellind : ellind + 1] = ellipsis_dims * (slice(None),)
     fancy_inds = [ind if ind < ellind else ind + ellind for ind in fancy_inds]
-    # for ax_key in new_key:
-    #     inner_iterator = (ax_key,)
-    #     if ax_key is Ellipsis:
-    #         inner_iterator = (arr.ndim - slicedim) * (slice(None),)
-    #     for el in inner_iterator:
-    #         final_key.append(el)
     return tuple(new_key), tuple(fancy_inds)
 
 

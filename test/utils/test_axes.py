@@ -188,8 +188,31 @@ def test_basic_indexing_modifies_axes():
 
 def test_fancy_indexing_modifies_axes():
     axes = {"ax_time": 0, "ax_coord": 1}
-    arr = AxesArray(np.ones(4).reshape((2, 2)), axes)
+    arr = AxesArray(np.arange(4).reshape((2, 2)), axes)
+    flat = arr[[0, 1], [0, 1]]
+    same = arr[[[0], [1]], [0, 1]]
+    tpose = arr[[0, 1], [[0], [1]]]
+    assert flat.shape == (2,)
+    np.testing.assert_array_equal(np.asarray(flat), np.array([0, 3]))
+
+    assert flat.ax__timecoord == 0
+    with pytest.raises(AttributeError):
+        flat.ax_coord
+    with pytest.raises(AttributeError):
+        flat.ax_time
+
+    assert same.shape == arr.shape
+    np.testing.assert_equal(same, arr)
+    assert same.ax_time == 0
+    assert same.ax_coord == 1
+
+    assert tpose.shape == arr.shape
+    np.testing.assert_equal(same, arr.T)
+    assert same.ax_time == 1
+    assert same.ax_coord == 0
+
     fat = arr[[[0, 1], [0, 1]]]
+    assert fat.shape == (2, 2, 2)
     assert fat.ax_time == [0, 1]
     assert fat.ax_coord == 2
 

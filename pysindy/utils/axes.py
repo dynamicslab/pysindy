@@ -3,6 +3,7 @@ import warnings
 from typing import Collection
 from typing import List
 from typing import MutableMapping
+from typing import NewType
 from typing import Sequence
 from typing import Union
 
@@ -13,6 +14,10 @@ HANDLED_FUNCTIONS = {}
 
 AxesWarning = type("AxesWarning", (SyntaxWarning,), {})
 BasicIndexer = Union[slice, int, type(Ellipsis), np.newaxis, type(None)]
+Indexer = BasicIndexer | np.ndarray
+OldIndex = NewType("OldIndex", int)
+KeyIndex = NewType("KeyIndex", int)
+NewIndex = NewType("NewIndex", int)
 
 
 class _AxisMapping:
@@ -99,7 +104,7 @@ class _AxisMapping:
                 new_axes[ax_dec_name].append(old_ax_dec - 1)
         return self._compat_axes(new_axes)
 
-    def insert_axis(self, axis: Union[Collection[int], int]):
+    def insert_axis(self, axis: Union[Collection[int], int], new_name: str = "ax_unk"):
         """Create an axes dict from self with specified axis or axes
         added and all greater axes incremented.
 
@@ -116,10 +121,10 @@ class _AxisMapping:
         if not isinstance(axis, Collection):
             axis = [axis]
         for cum_shift, ax in enumerate(axis):
-            if "ax_unk" in new_axes.keys():
-                new_axes["ax_unk"].append(ax)
+            if new_name in new_axes.keys():
+                new_axes[new_name].append(ax)
             else:
-                new_axes["ax_unk"] = [ax]
+                new_axes[new_name] = [ax]
             for ax_id in range(ax, in_ndim + cum_shift):
                 ax_name = self.reverse_map[ax_id - cum_shift]
                 new_axes[ax_name].remove(ax_id)
@@ -179,42 +184,77 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         output = super().__getitem__(key)
         if not isinstance(output, AxesArray):
             return output
-        # determine axes of output
-        in_dim = self.shape  # noqa
-        out_dim = output.shape  # noqa
-        remove_axes = []  # noqa
-        new_axes = []  # noqa
-        key, _ = _standardize_indexer(self, key)
-        if any(
-            (  # basic indexing
-                isinstance(key, BasicIndexer),
-                isinstance(key, tuple)
-                and all(isinstance(k, BasicIndexer) for k in key),
-            )
-        ):
-            shift = 0
-            for ax_ind, indexer in enumerate(key):
-                if indexer is None:
-                    new_axes.append(ax_ind - shift)
-                elif isinstance(indexer, int):
-                    remove_axes.append(ax_ind)
-                    shift += 1
-        elif any(  # fancy indexing
-            (
-                isinstance(key, Sequence) and not isinstance(key, tuple),
-                isinstance(key, np.ndarray),
-                isinstance(key, tuple) and any(isinstance(k, Sequence) for k in key),
-                isinstance(key, tuple)
-                and any(isinstance(k, np.ndarray) for k in key),  # ?
-            )
-        ):
+        in_dim = self.shape
+        key, adv_ids = _standardize_indexer(self, key)
+        remove_axes = []
+        new_axes = []
+        leftshift = 0
+        rightshift = 0
+        for key_ind, indexer in enumerate(key):
+            if indexer is None:
+                new_axes.append(key_ind - leftshift)
+                rightshift += 1
+            elif isinstance(indexer, int):
+                remove_axes.append(key_ind - rightshift)
+                leftshift += 1
+        if adv_ids:
+            adv_ids = sorted(adv_ids)
+            source_axis = [  # after basic indexing applied  # noqa
+                len([id for id in range(idx_id) if key[id] is not None])
+                for idx_id in adv_ids
+            ]
+            adv_indexers = [np.array(key[i]) for i in adv_ids]  # noqa
+            bcast_nd = np.broadcast(*adv_indexers).nd
+            adjacent = all(i + 1 == j for i, j in zip(adv_ids[:-1], adv_ids[1:]))
+            bcast_start_axis = 0 if not adjacent else min(adv_ids)
+            adv_map = {}
+
+            def _compare_bcast_shapes(result_ndim, base_shape):
+                """Identify which broadcast shape axes are due to base_shape"""
+                return [
+                    result_ndim - 1 - ax_id
+                    for ax_id, length in enumerate(reversed(base_shape))
+                    if length > 1
+                ]
+
+            for idx_id, idxer in zip(adv_ids, adv_indexers):
+                base_idxer_ax_name = self._reverse_map[  # count non-None keys
+                    len([id for id in range(idx_id) if key[id] is not None])
+                ]
+                adv_map[base_idxer_ax_name] = [
+                    bcast_start_axis + shp
+                    for shp in _compare_bcast_shapes(bcast_nd, idxer.shape)
+                ]
+
+            conflicts = {}
+            for bcast_ax in range(bcast_nd):
+                ax_names = [name for name, axes in adv_map.items() if bcast_ax in axes]
+                if len(ax_names) > 1:
+                    conflicts[bcast_ax] = ax_names
+                    []
+                if len(ax_names) == 0:
+                    if "ax_unk" not in adv_map.keys():
+                        adv_map["ax_unk"] = [bcast_ax + bcast_start_axis]
+                    else:
+                        adv_map["ax_unk"].append(bcast_ax + bcast_start_axis)
+
+            for conflict_axis, conflict_names in conflicts.items():
+                new_name = "ax_"
+                for name in conflict_names:
+                    adv_map[name].remove(conflict_axis)
+                    if not adv_map[name]:
+                        adv_map.pop(name)
+                    new_name += name[3:]
+                adv_map[new_name] = [conflict_axis]
+
             # check if integer or boolean indexing
             # if integer, check which dimensions get broadcast where
             # if multiple, axes are merged.  If adjacent, merged inplace,
             #  otherwise moved to beginning
+            remove_axes.append(adv_map.keys())  # Error: remove_axis takes ints
+
+            out_obj = np.broadcast(np.array(key[i]) for i in adv_ids)  # noqa
             pass
-        else:
-            raise TypeError(f"AxisArray {self} does not know how to slice with {key}")
         # mulligan structured arrays, etc.
         new_map = _AxisMapping(
             self.__ax_map.remove_axis(remove_axes), len(in_dim) - len(remove_axes)
@@ -334,7 +374,9 @@ def concatenate(arrays, axis=0):
     return AxesArray(np.concatenate(parents, axis), axes=ax_list[0])
 
 
-def _standardize_indexer(arr: np.ndarray, key):
+def _standardize_indexer(
+    arr: np.ndarray, key
+) -> tuple[tuple[Indexer], tuple[KeyIndex]]:
     """Convert to a tuple of slices, ints, None, and ndarrays.
 
     Returns:

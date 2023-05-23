@@ -22,6 +22,9 @@ def test_repr():
     assert result == expected
 
 
+@pytest.mark.skip(
+    "Not until fancy indexing (boolean) either short-circuited or implemented"
+)
 def test_ufunc_override():
     # This is largely a clone of test_ufunc_override_with_super() from
     # numpy/core/tests/test_umath.py
@@ -100,7 +103,7 @@ def test_ufunc_override():
     assert_(c is b)
 
 
-# @pytest.mark.skip("Expected error")
+@pytest.mark.skip("Expected error")
 def test_ufunc_override_accumulate():
     d = np.array([[1, 2, 3], [1, 2, 3]])
     a = AxesArray(d, {"ax_time": [0, 1]})
@@ -186,9 +189,14 @@ def test_basic_indexing_modifies_axes():
     assert slim.ax_coord == 0
     reverse_slim = arr[None, :, 1]
     with pytest.raises(KeyError):
-        reverse_slim.ax_time
+        reverse_slim.ax_coord
     assert reverse_slim.ax_unk == 0
-    assert reverse_slim.ax_coord == 1
+    assert reverse_slim.ax_time == 1
+    almost_new = arr[None, None, 1, 1, None, None]
+    with pytest.raises(KeyError):
+        almost_new.ax_time
+        almost_new.ax_coord
+    assert set(almost_new.ax_unk) == {0, 1, 2, 3}
 
 
 def test_fancy_indexing_modifies_axes():

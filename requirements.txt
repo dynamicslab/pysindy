@@ -1,7 +1,0 @@
-scikit-learn>=1.1
-numpy
-scipy
-derivative>=0.5.4
-matplotlib
-cmake
-scs>=2.1,!=2.1.4

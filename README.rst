@@ -38,7 +38,7 @@ The approximation problem to be solved can then be compactly written as
 
 Each row of this matrix equation corresponds to one coordinate function of ``f(x)``.
 SINDy employs sparse regression techniques to find a solution ``Xi`` with sparse column vectors.
-For a more in-depth look at the mathematical foundations of SINDy, please see our `introduction to SINDy <https://pysindy.readthedocs.io/en/latest/examples/2_introduction_to_sindy.html>`__.
+For a more in-depth look at the mathematical foundations of SINDy, please see our `introduction to SINDy <https://pysindy.readthedocs.io/en/latest/examples/2_introduction_to_sindy/example.html>`__.
 
 Relation to PySINDy
 ^^^^^^^^^^^^^^^^^^^
@@ -93,7 +93,7 @@ which prints the following
   x' = -2.000 x
   y' = 1.000 y
 
-PySINDy provides numerous other features not shown here. We recommend the `feature overview <https://pysindy.readthedocs.io/en/latest/examples/1_feature_overview.html>`__ section of the documentation for a more exhaustive summary of additional features.
+PySINDy provides numerous other features not shown here. We recommend the `feature overview <https://pysindy.readthedocs.io/en/latest/examples/1_feature_overview/example.html>`__ section of the documentation for a more exhaustive summary of additional features.
 
 Installation
 ------------
@@ -121,23 +121,41 @@ Then, to install the package, run
 
   pip install .
 
-If you do not have pip you can instead use
-
-.. code-block:: bash
-
-  python setup.py install
-
 If you do not have root access, you should add the ``--user`` option to the above lines.
 
 Caveats
 ^^^^^^^
-If you would like to use the ``SINDy-PI`` optimizer, the ``Trapping SINDy`` optimizer (TrappingSR3), or the other SR3 optimizations with inequality constraints, you will also need to install the cvxpy package, e.g. with ``pip install cvxpy``.
 
-To run the unit tests, example notebooks, or build a local copy of the documentation, you should install the additional dependencies in ``requirements-dev.txt``
+To run the unit tests, or example notebooks, you should install the dev-dependencies with:
 
 .. code-block:: bash
 
-  pip install -r requirements-dev.txt
+  pip install pysindy[dev]
+
+or if you are installing from a local copy
+
+.. code-block:: bash
+
+  pip install .[dev]
+
+To build a local copy of the documentation, you should install the docs-dependencies with:
+
+.. code-block:: bash
+
+  pip install pysindy[docs]
+
+If you are looking to use convex optimization provided by `cvxpy <https://github.com/cvxpy/cvxpy>`__, then you have to install
+
+.. code-block:: bash
+
+    pip install pysindy[cvxpy]
+
+to utilize Mixed-Integer Optimized Sparse Regression (MIOSR) via `GurobiPy <https://pypi.org/project/gurobipy/>`__, you
+require
+
+.. code-block:: bash
+
+    pip install pysindy[miosr]
 
 
 Documentation
@@ -178,11 +196,11 @@ You can optimize your notebook for testing by checking ``__name__``.  When our t
 
 Contributing code
 ^^^^^^^^^^^^^^^^^
-We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To get started we recommend installing the packages in ``requirements-dev.txt`` via
+We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To get started we recommend installing an editable ``dev`` version from a local clone via
 
 .. code-block:: bash
 
-    pip install -r requirements-dev.txt
+    pip install -e .[dev]
 
 This will allow you to run unit tests and automatically format your code. To be accepted your code should conform to PEP8 and pass all unit tests. Code can be tested by invoking
 
@@ -190,13 +208,19 @@ This will allow you to run unit tests and automatically format your code. To be 
 
     pytest
 
-We recommend using ``pre-commit`` to format your code. Once you have staged changes to commit
+We recommend using ``pre-commit`` to format your code. The easiest approach is to install pre-commit via
+
+.. code-block:: bash
+
+    pre-commit install
+
+After which pre-commit will automatically check all future commits. Once you have staged changes to commit
 
 .. code-block:: bash
 
     git add path/to/changed/file.py
 
-you can run the following to automatically reformat your staged code
+Pre-commit will then automatically run all checks against your committed code. If you want to trigger this manually, you can run the following to automatically reformat your staged code
 
 .. code-block:: bash
 
@@ -204,7 +228,19 @@ you can run the following to automatically reformat your staged code
 
 Note that you will then need to re-stage any changes ``pre-commit`` made to your code.
 
-Building documentation requires [pandoc](https://pandoc.org/installing.html) as a separate install.  Once installed, run
+Building documentation requires the ``docs`` dependencies, which can be installed with either
+
+.. code-block:: bash
+
+    pip install pysindy[docs]
+
+or with
+
+.. code-block:: bash
+
+    pip install .[docs]
+
+for a local clone of the repository. Once installed, run
 
 .. code-block:: bash
 

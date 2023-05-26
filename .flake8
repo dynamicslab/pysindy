@@ -18,7 +18,3 @@ import-order-style = smarkets
 statistics = True
 count = True
 verbose = 1
-# format = [%(code)s] %(text)s @ %(path)s:%(row)d:%(col)d
-
-[codespell]
-ignore-words-list = pres,nd

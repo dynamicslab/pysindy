@@ -282,11 +282,12 @@ class PDELibrary(BaseFeatureLibrary):
             feature_names.append("1")
 
         # Include any non-derivative terms
+        function_feature_names = []
         for i, f in enumerate(self.functions):
             for c in self._combinations(
                 n_features, f.__code__.co_argcount, self.interaction_only
             ):
-                feature_names.append(
+                function_feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
                 )
 
@@ -308,27 +309,31 @@ class PDELibrary(BaseFeatureLibrary):
             return ret
 
         # Include derivative terms
+        derivative_feature_names = []
         for k in range(self.num_derivatives):
             for j in range(n_features):
-                feature_names.append(
+                derivative_feature_names.append(
                     input_features[j] + "_" + derivative_string(self.multiindices[k])
                 )
+        feature_names = feature_names + function_feature_names
+        feature_names = feature_names + derivative_feature_names
+
         # Include mixed non-derivative + derivative terms
-        if self.include_interaction:
-            for k in range(self.num_derivatives):
-                for i, f in enumerate(self.functions):
-                    for c in self._combinations(
-                        n_features,
-                        f.__code__.co_argcount,
-                        self.interaction_only,
-                    ):
-                        for jj in range(n_features):
-                            feature_names.append(
-                                self.function_names[i](*[input_features[j] for j in c])
-                                + input_features[jj]
-                                + "_"
-                                + derivative_string(self.multiindices[k])
-                            )
+        if (
+            self.include_interaction
+            and len(function_feature_names) > 0
+            and len(derivative_feature_names) > 0
+        ):
+            feature_names = (
+                feature_names
+                + np.char.add(
+                    np.array(function_feature_names).reshape(1, -1),
+                    np.array(derivative_feature_names).reshape(-1, 1),
+                )
+                .reshape(-1)
+                .tolist()
+            )
+
         return feature_names
 
     @x_sequence_or_item

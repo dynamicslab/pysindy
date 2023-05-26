@@ -47,6 +47,7 @@ dev = [
     "jupyter-contrib-nbextensions"
 ]
 docs = [
+    "ipython",
     "pandoc",
     "sphinx-rtd-theme",
     "sphinx==5.3.0",

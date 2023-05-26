@@ -45,9 +45,12 @@ def test_centered_difference_variable_timestep_length():
     assert len(centered_difference(x, t) == len(x))
 
 
-# Fixtures: data sets to be re-used in multiple tests
-# data_derivative_1d and data_derivative_2d are defined
-# in ../conftest.py
+def test_nan_derivatives(data_lorenz):
+    x, t = data_lorenz
+    x_dot = FiniteDifference(drop_endpoints=False)(x, t)
+    x_dot_nans = FiniteDifference(drop_endpoints=True)(x, t)
+    np.testing.assert_allclose(x_dot_nans[1:-1], x_dot[1:-1])
+    assert np.isnan(x_dot_nans[:1]).all() and np.isnan(x_dot_nans[-1:]).all()
 
 
 def test_forward_difference_1d(data_derivative_1d):

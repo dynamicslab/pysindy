@@ -1,10 +1,9 @@
-#!/usr/bin/env python
-# coding: utf-8
-# # Differentiators in PySINDy
+# %% [markdown]
+# Differentiators in PySINDy
 #
 # This notebook explores the differentiation methods available in PySINDy. Most of the methods are powered by the [derivative](https://pypi.org/project/derivative/) package. While this notebook explores these methods on temporal data, these apply equally well to the computation of spatial derivatives for SINDy for PDE identification (see example Jupyter notebooks 10 and 12, on PDEs and weak forms).
 # [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dynamicslab/pysindy/v1.7?filepath=examples/5_differentiation.ipynb)
-# In[1]:
+# %%
 import warnings
 
 import matplotlib.pyplot as plt
@@ -50,6 +49,7 @@ else:
     )
 
 
+# %% [markdown]
 # In the cell below we define all the available differentiators. Note that the different options in `SINDyDerivative` all originate from `derivative`.
 #
 # * `FiniteDifference` - First order (forward difference) or second order (centered difference) finite difference methods with the ability to drop endpoints. Does *not* assume a uniform time step. Appropriate for smooth data.
@@ -60,7 +60,7 @@ else:
 # * `trend_filtered` - Use total squared variations to fit the data (computes a global derivative that is a piecewise combination of polynomials of a chosen order). Set `order=0` to obtain the total-variational derivative. Appropriate for noisy data
 # * `spectral` - Compute the spectral derivative of the data via Fourier Transform. Appropriate for very smooth (i.e. analytic) data. There is an in-house PySINDy version for speed but this is also included in the derivative package.
 
-# In[2]:
+# %%
 
 
 diffs = [
@@ -79,10 +79,11 @@ diffs = [
 ]
 
 
+# %% [markdown]
 # ## Compare differentiation methods directly
 # First we'll use the methods to numerically approximate derivatives to measurement data directly, without bringing SINDy into the picture. We'll compare the different methods' accuracies when working with clean data ("approx" in the plots) and data with a small amount of white noise ("noisy").
 
-# In[3]:
+# %%
 
 
 noise_level = 0.01
@@ -90,7 +91,7 @@ noise_level = 0.01
 
 # ### Sine
 
-# In[4]:
+# %%
 
 
 # True data
@@ -101,7 +102,7 @@ plt.show()
 
 # ### Absolute value
 
-# In[5]:
+# %%
 
 
 # Shrink window for Savitzky Golay method
@@ -117,19 +118,22 @@ axs = compare_methods(diffs, x, y, y_noisy, y_dot)
 plt.show()
 
 
+# %% [markdown]
 # ## Compare differentiators when used in PySINDy
 # We got some idea of the performance of the differentiation options applied to raw data. Next we'll look at how they work as a single component of the SINDy algorithm.
-
+#
 # ### Linear oscillator
 # $$ \frac{d}{dt} \begin{bmatrix}x \\ y\end{bmatrix} = \begin{bmatrix} -0.1 & 2 \\ -2 & -0.1 \end{bmatrix} \begin{bmatrix}x \\ y\end{bmatrix} $$
+#
+# +
+#
 
-# In[6]:
+# %%
 
 
 noise_level = 0.1
 
-
-# In[7]:
+# %%
 
 
 # Generate training data
@@ -177,14 +181,12 @@ for name, method in diffs:
     equations_noisy[name] = model.equations()
     coefficients_noisy[name] = model.coefficients()
 
-
-# In[10]:
+# %%
 
 
 print_equations(equations_clean, equations_noisy)
 
-
-# In[11]:
+# %%
 
 
 feature_names = model.get_feature_names()
@@ -196,11 +198,11 @@ compare_coefficient_plots(
 )
 plt.show()
 
-
 # %% [markdown]
-
+#
 # We can take a look at the smoothed values of x that some differentiation
 # methods implicitly calculate:
+
 # %%
 fig = plt.figure(figsize=[12, 5])
 fig.suptitle("Training Data Coordinates")
@@ -217,20 +219,18 @@ ax.set_title("Kalman smoothed")
 # $$ \begin{aligned} \dot x &= 10(y-x)\\ \dot y &= x(28 - z) - y \\ \dot z &= xy - \tfrac{8}{3} z, \end{aligned} $$
 #
 
-# In[12]:
+# %%
 
 
 noise_level = 0.5
 
-
-# In[13]:
+# %%
 
 
 # Generate measurement data
 dt, t_train, x_train, x_train_noisy = gen_data_lorenz(noise_level, integrator_keywords)
 
-
-# In[14]:
+# %%
 
 
 fig = plt.figure(figsize=(8, 8))
@@ -268,14 +268,12 @@ for name, method in diffs:
     equations_noisy[name] = model.equations()
     coefficients_noisy[name] = model.coefficients()
 
-
-# In[16]:
+# %%
 
 
 print_equations(equations_clean, equations_noisy)
 
-
-# In[17]:
+# %%
 
 
 feature_names = model.get_feature_names()
@@ -287,8 +285,7 @@ compare_coefficient_plots(
 )
 plt.show()
 
-
-# In[18]:
+# %%
 
 
 # %%
@@ -324,8 +321,7 @@ for i in range(n_spectral):
     stop = timeit.default_timer()
     spectral_times[i, 1] = stop - start
 
-
-# In[19]:
+# %%
 
 
 plt.figure()
@@ -337,8 +333,7 @@ plt.xlabel("Matrix size in powers of 10")
 plt.legend()
 plt.show()
 
-
-# In[20]:
+# %%
 
 
 # Check error improves as order increases
@@ -356,6 +351,3 @@ plt.grid(True)
 plt.ylabel("Derivative error")
 plt.xlabel("Finite difference order")
 plt.show()
-
-
-# In[ ]:

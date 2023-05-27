@@ -46,7 +46,7 @@ jobs:
         cd ..
     - name: Test with pytest
       run: |
-        pytest test --cov=pysindy --cov-report=xml -vv
+        coverage run --debug=trace --source=pysindy pytest test  && coverage report
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:

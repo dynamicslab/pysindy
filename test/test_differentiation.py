@@ -12,7 +12,40 @@ from pysindy.differentiation import SpectralDerivative
 from pysindy.differentiation.base import BaseDifferentiation
 
 
-# Simplest example: just use an assert statement
+@pytest.mark.parametrize(
+    "method",
+    [
+        FiniteDifference(),
+        SINDyDerivative(kind="spline", s=1),
+        SmoothedFiniteDifference(),
+        SpectralDerivative(),
+    ],
+)
+def test_methods_store_smoothed_x_(data_derivative_1d, method):
+    x, _ = data_derivative_1d
+    assert not hasattr(method, "smoothed_x_")
+    method(x)
+    assert hasattr(method, "smoothed_x_")
+    assert x.shape == method.smoothed_x_.shape
+
+
+def test_methods_smoothedfd_smooths(data_derivative_1d):
+    x, _ = data_derivative_1d
+    x_noisy = x + np.random.normal(size=x.shape)
+    method = SmoothedFiniteDifference()
+    _ = method(x_noisy)
+    result = method.smoothed_x_
+    assert np.linalg.norm(result - x) < np.linalg.norm(x_noisy - x)
+
+
+def test_methods_smoothedfd_not_save_smooth(data_derivative_1d):
+    x, _ = data_derivative_1d
+    method = SmoothedFiniteDifference(save_smooth=False)
+    _ = method(x)
+    result = method.smoothed_x_
+    np.testing.assert_allclose(x, result)
+
+
 def test_forward_difference_length():
     x = 2 * np.linspace(1, 100, 100)
     forward_difference = FiniteDifference(order=1)

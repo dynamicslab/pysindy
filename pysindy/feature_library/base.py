@@ -85,7 +85,8 @@ class BaseFeatureLibrary(TransformerMixin):
     def calc_trajectory(self, diff_method, x, t):
         axes = x.__dict__
         x_dot = diff_method(x, t=t)
-        return AxesArray(x_dot, axes)
+        x = AxesArray(diff_method.smoothed_x_, axes)
+        return x, AxesArray(x_dot, axes)
 
     def get_spatial_grid(self):
         return None

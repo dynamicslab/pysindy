@@ -3,7 +3,7 @@ Wrapper classes for differentiation methods from the :doc:`derivative:index` pac
 
 Some default values used here may differ from those used in :doc:`derivative:index`.
 """
-from derivative import dxdt
+from derivative import methods
 from numpy import arange
 
 from .base import BaseDifferentiation
@@ -33,8 +33,9 @@ class SINDyDerivative(BaseDifferentiation):
     for acceptable keywords.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, save_smooth=True, **kwargs):
         self.kwargs = kwargs
+        self.save_smooth = save_smooth
 
     def set_params(self, **params):
         """
@@ -52,6 +53,7 @@ class SINDyDerivative(BaseDifferentiation):
             return self
         else:
             self.kwargs.update(params["kwargs"])
+            self.save_smooth = params.get("save_smooth", self.save_smooth)
 
         return self
 
@@ -61,6 +63,7 @@ class SINDyDerivative(BaseDifferentiation):
 
         if isinstance(self.kwargs, dict):
             params.update(self.kwargs)
+        params["save_smooth"] = self.save_smooth
 
         return params
 
@@ -70,4 +73,12 @@ class SINDyDerivative(BaseDifferentiation):
                 raise ValueError("t must be a positive constant or an array")
             t = arange(x.shape[0]) * t
 
-        return dxdt(x, t, axis=0, **self.kwargs)
+        differentiator = methods[self.kwargs["kind"]](
+            **{k: v for k, v in self.kwargs.items() if k != "kind"}
+        )
+        x_dot = differentiator.d(x, t, axis=0)
+        if self.save_smooth:
+            self.smoothed_x_ = differentiator.x(x, t, axis=0)
+        else:
+            self.smoothed_x_ = x
+        return x_dot

@@ -1077,4 +1077,4 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     def calc_trajectory(self, diff_method, x, t):
         x_dot = self.convert_u_dot_integral(x)
-        return AxesArray(x_dot, {"ax_sample": 0, "ax_coord": 1})
+        return x, AxesArray(x_dot, {"ax_sample": 0, "ax_coord": 1})

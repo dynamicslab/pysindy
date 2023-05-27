@@ -113,9 +113,7 @@ class ParameterizedLibrary(GeneralizedLibrary):
             constants_final = np.ones(self.libraries_[0].K)
             for k in range(self.libraries_[0].K):
                 constants_final[k] = np.sum(self.libraries_[0].fullweights0[k])
-            return (
-                self.libraries_[0].calc_trajectory(diff_method, x, t)
-                * constants_final[:, np.newaxis]
-            )
+            x, x_int = self.libraries_[0].calc_trajectory(diff_method, x, t)
+            return x, x_int * constants_final[:, np.newaxis]
         else:
             return self.libraries_[0].calc_trajectory(diff_method, x, t)

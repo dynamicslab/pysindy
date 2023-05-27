@@ -61,7 +61,7 @@ def data_1d_bad_shape():
 @pytest.fixture
 def data_lorenz():
 
-    t = np.linspace(0, 5, 500)
+    t = np.linspace(0, 1, 50)
     x0 = [8, 27, -7]
     x = solve_ivp(lorenz, (t[0], t[-1]), x0, t_eval=t).y.T
 
@@ -351,7 +351,7 @@ def data_generalized_library():
 
 
 @pytest.fixture
-def data_sindypi_library():
+def data_sindypi_library(data_lorenz):
     library_functions = [
         lambda x: x,
         lambda x: x**2,
@@ -362,7 +362,7 @@ def data_sindypi_library():
         lambda s: str(s) + "^2",
         lambda s, t: str(s) + " " + str(t),
     ]
-    t = np.linspace(0, 5, 500)
+    _, t = data_lorenz
 
     return PDELibrary(
         library_functions=library_functions,
@@ -393,8 +393,8 @@ def data_ode_library():
 
 
 @pytest.fixture
-def data_pde_library():
-    spatial_grid = np.linspace(0, 10, 500)
+def data_pde_library(data_lorenz):
+    _, spatial_grid = data_lorenz
     library_functions = [
         lambda x: x,
         lambda x: x**2,

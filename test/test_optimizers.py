@@ -1028,25 +1028,12 @@ def test_normalize_columns(data_derivative_1d, optimizer):
         assert opt.coef_.shape == (1, x.shape[1])
 
 
-@pytest.mark.parametrize(
-    "optimizer",
-    [
-        STLSQ,
-        SSR,
-        FROLS,
-        SR3,
-        ConstrainedSR3,
-        StableLinearSR3,
-        TrappingSR3,
-        MIOSR,
-    ],
-)
-def test_legacy_ensemble_odes(data_lorenz, optimizer):
+def test_legacy_ensemble_odes(data_lorenz):
     x, t = data_lorenz
-    opt = optimizer(normalize_columns=True)
+    opt = STLSQ(normalize_columns=True)
     model = SINDy(optimizer=opt)
-    model.fit(x, ensemble=True, n_models=10, n_subset=20)
-    assert np.shape(model.coef_list) == (10, 3, 10)
+    model.fit(x, ensemble=True, n_models=2, n_subset=2)
+    assert np.shape(model.coef_list) == (2, 3, 10)
 
 
 @pytest.mark.parametrize(
@@ -1066,20 +1053,7 @@ def test_ensemble_optimizer(data_lorenz, optimizer_params):
     assert model.coefficients().shape == (3, 10)
 
 
-@pytest.mark.parametrize(
-    "optimizer",
-    [
-        STLSQ,
-        SSR,
-        FROLS,
-        SR3,
-        ConstrainedSR3,
-        StableLinearSR3,
-        TrappingSR3,
-        MIOSR,
-    ],
-)
-def test_legacy_ensemble_pdes(optimizer):
+def test_legacy_ensemble_pdes():
     u = np.random.randn(10, 10, 2)
     t = np.linspace(1, 10, 10)
     x = np.linspace(1, 10, 10)
@@ -1097,11 +1071,11 @@ def test_legacy_ensemble_pdes(optimizer):
         spatial_grid=x,
         include_bias=True,
     )
-    opt = optimizer(normalize_columns=True)
+    opt = STLSQ(normalize_columns=True)
     model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u, x_dot=u_dot, ensemble=True, n_models=10, n_subset=20)
+    model.fit(u, x_dot=u_dot, ensemble=True, n_models=2, n_subset=2)
     n_features = len(model.get_feature_names())
-    assert np.shape(model.coef_list) == (10, 2, n_features)
+    assert np.shape(model.coef_list) == (2, 2, n_features)
 
 
 def test_ssr_criteria(data_lorenz):

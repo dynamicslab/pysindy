@@ -762,13 +762,13 @@ class WeakPDELibrary(BaseFeatureLibrary):
             # Include mixed non-derivative + integral terms
             if self.include_interaction:
                 for k in range(self.num_derivatives):
-                    for i, f in enumerate(self.functions):
-                        for c in self._combinations(
-                            n_features,
-                            f.__code__.co_argcount,
-                            self.interaction_only,
-                        ):
-                            for jj in range(n_features):
+                    for jj in range(n_features):
+                        for i, f in enumerate(self.functions):
+                            for c in self._combinations(
+                                n_features,
+                                f.__code__.co_argcount,
+                                self.interaction_only,
+                            ):
                                 feature_names.append(
                                     self.function_names[i](
                                         *[input_features[j] for j in c]
@@ -937,6 +937,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     self.dfx_k_j = []
 
                     for j in range(self.num_derivatives):
+                        funcs_derivs[j + 1] = funcs
+                        x_derivs[j + 1] = x
                         for axis in range(self.ind_range):
                             s = [0] * (self.grid_ndim + 1)
                             s[axis] = slice(None, None, None)
@@ -950,7 +952,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                     axis=axis,
                                     **self.diff_kwargs,
                                 )._differentiate(
-                                    funcs, self.spatiotemporal_grid[tuple(s)]
+                                    funcs_derivs[j + 1],
+                                    self.spatiotemporal_grid[tuple(s)],
                                 )
                             if self.multiindices[j][axis] > 0 and self.multiindices[j][
                                 axis
@@ -959,7 +962,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                     d=self.multiindices[j][axis],
                                     axis=axis,
                                     **self.diff_kwargs,
-                                )._differentiate(x, self.spatiotemporal_grid[tuple(s)])
+                                )._differentiate(
+                                    x_derivs[j + 1], self.spatiotemporal_grid[tuple(s)]
+                                )
 
                     # Extract the function and feature derivatives on the domains
                     self.dx_k_j = [
@@ -996,21 +1001,21 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         for deriv in derivs[
                             np.where(np.all(derivs <= derivs_mixed, axis=1))[0]
                         ]:
+
+                            # indices for product rule terms
+                            j0 = np.where(np.all(derivs == deriv, axis=1))[0][0]
+                            j1 = np.where(
+                                np.all(derivs == derivs_mixed - deriv, axis=1)
+                            )[0][0]
+                            j2 = np.where(np.all(derivs == derivs_pure, axis=1))[0][0]
+
                             for k in range(self.K):
                                 # Weights are either in fullweights0 or fullweights1
-                                j0 = np.where(np.all(derivs == deriv, axis=1))[0][0]
                                 if j0 == 0:
                                     weights = self.fullweights0[k]
                                 else:
                                     weights = self.fullweights1[k][j0 - 1]
 
-                                # indices for product rule terms
-                                j1 = np.where(
-                                    np.all(derivs == derivs_mixed - deriv, axis=1)
-                                )[0][0]
-                                j2 = np.where(np.all(derivs == derivs_pure, axis=1))[0][
-                                    0
-                                ]
                                 # Calculate the integral by taking the dot product
                                 # of the weights and data x_k over each axis.
                                 # Integration by parts gives power of (-1).
@@ -1072,4 +1077,4 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     def calc_trajectory(self, diff_method, x, t):
         x_dot = self.convert_u_dot_integral(x)
-        return AxesArray(x_dot, {"ax_sample": 0, "ax_coord": 1})
+        return x, AxesArray(x_dot, {"ax_sample": 0, "ax_coord": 1})

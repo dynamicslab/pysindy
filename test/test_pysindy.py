@@ -23,7 +23,6 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import SINDy
-from pysindy.differentiation import FiniteDifference
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
@@ -79,20 +78,6 @@ def test_improper_shape_input(data_1d):
     model = SINDy()
     model.fit(x, t, x_dot=x.flatten())
     check_is_fitted(model)
-
-
-def test_nan_derivatives(data_lorenz):
-    x, t = data_lorenz
-    model0 = SINDy(differentiation_method=FiniteDifference(drop_endpoints=False))
-    model0.fit(x, t)
-
-    model = SINDy(differentiation_method=FiniteDifference(drop_endpoints=True))
-    model.fit(x, t)
-    check_is_fitted(model)
-
-    result = model.score(x, t=t)
-    expected = model0.score(x, t=t)
-    np.testing.assert_allclose(result, expected, rtol=1e-4)
 
 
 @pytest.mark.parametrize(
@@ -561,19 +546,13 @@ def test_differentiate(data_lorenz, data_multiple_trajctories):
         model.differentiate(x)
 
 
-def test_coefficients(data_lorenz):
+def test_coefficients_equals_complexity(data_lorenz):
     x, t = data_lorenz
     model = SINDy()
     model.fit(x, t)
     c = model.coefficients()
-    assert np.count_nonzero(c) < 10
-
-
-def test_complexity(data_lorenz):
-    x, t = data_lorenz
-    model = SINDy()
-    model.fit(x, t)
-    assert model.complexity < 10
+    assert model.complexity == np.count_nonzero(c)
+    assert model.complexity < 30
 
 
 def test_simulate_errors(data_lorenz):

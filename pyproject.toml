@@ -1,23 +1,78 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4", "setuptools_scm_git_archive"]
-build-backend = "setuptools.build_meta:__legacy__"
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
 
-[tool.setuptools_scm]
-write_to = "pysindy/version.py"
+[project]
+name = "pysindy"
+description = "Sparse Identification of Nonlinear Dynamics"
+authors = [
+    {name="Brian de Silva", email="bdesilva@uw.edu"},
+    {name="Kathleen Champion", email="kpchamp@uw.edu"},
+    {name="Markus Quade", email="info@markusqua.de"},
+    {name="Alan Kaptanoglu", email="akaptano@uw.edu"}
+]
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dynamic = ["version"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+readme = "README.rst"
+dependencies = [
+    "scikit-learn>=1.1",
+    "derivative>=0.5.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "matplotlib",
+    "seaborn",
+    "pytest>=6.2.4",
+    "black",
+    "build",
+    "pytest-cov",
+    "pytest-lazy-fixture",
+    "flake8-builtins-unleashed",
+    "jupyter",
+    "jupytext",
+    "pre-commit",
+    "hypothesis",
+    "jupyter-contrib-nbextensions"
+]
+docs = [
+    "ipython",
+    "pandoc",
+    "sphinx-rtd-theme",
+    "sphinx==5.3.0",
+    "sphinxcontrib-apidoc",
+    "nbsphinx"
+]
+miosr = [
+    "gurobipy>=9.5.1,<10.0"
+]
+cvxpy = [
+    "cvxpy",
+    "scs>=2.1, !=2.1.4"
+]
 
 [tool.black]
 line-length = 88
-extend-exclude = '''
-/(
+force-exclude = '''
     \.git
-  | \.mypy_cache
-  | \.venv
-  | .vscode
-  | version.py
-  | build
-  | dist
-  | env
-)/
+    \.mypy_cache
+    \.venv
+    .vscode
+    version.py
+    build
+    dist
+    env
 '''
 
 [tool.pytest.ini_options]
@@ -26,3 +81,12 @@ filterwarnings = [
   "ignore::UserWarning",]
 addopts = '-m "not slow"'
 markers = ["slow"]
+
+[tool.codespell]
+ignore-words-list = "pres,nd,hist"
+
+[tool.setuptools]
+packages = ["pysindy"]
+
+[tool.setuptools_scm]
+write_to = "pysindy/version.py"

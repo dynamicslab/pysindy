@@ -4,76 +4,77 @@ import numpy as np
 
 import pysindy as ps
 
-for filebase in ["odd", "even", "periodic"]:
+for filebase in [
+    "odd",
+    "even",
+    "periodic",
+    "odd2",
+    "even2",
+    "periodic2",
+    "odd3",
+    "even3",
+    "periodic3",
+    "odd4",
+    "even4",
+    "periodic4",
+    "odd5",
+    "even5",
+    "periodic5",
+]:
     sols = np.load(filebase + "_sols.npy")
     pars = np.load(filebase + "_pars.npy")
     if not os.path.exists(filebase + "/"):
         os.mkdir(filebase)
+    else:
+        os.system("rm -r " + filebase)
+        os.mkdir(filebase)
 
     evals = []
     evecs = []
+    print()
     for i in range(len(sols)):
-        print(filebase, i, end="\r")
+        print(filebase, i, len(sols), end="\r")
         t, u = sols[i].T
-        epsilon, r, b3, b5, T, norm = pars[i]
+        epsilon, d1, d2, d3, b1, b2, b3, b4, b5, T, norm = pars[i]
         u = u[::4]
         t = t[::4]
         t = T * t
         u = np.concatenate([u, -np.flip(u)[1:]])
         t = np.concatenate([t, t[-1] + np.cumsum(np.flip(np.diff(t)))])
 
-        fd = ps.FiniteDifference(d=2, axis=0, order=4, periodic=True)
-        interior_coeffs = fd._coefficients(t)
-        interior_inds = fd.stencil_inds
-        slice_interior = slice((fd.n_stencil - 1) // 2, -(fd.n_stencil - 1) // 2)
-        slice_boundary = np.concatenate(
-            [
-                np.arange(0, (fd.n_stencil - 1) // 2),
-                -np.flip(1 + np.arange(1, (fd.n_stencil - 1) // 2)),
-                np.array([-1]),
-            ]
-        )
-        boundary_coeffs = fd._coefficients_boundary_periodic(t)
-        boundary_inds = fd.stencil_inds
+        ds = [1, 2, 3, 4]
+        dx = np.zeros((len(ds), len(t), len(t)))
+        for k in range(len(ds)):
+            fd = ps.FiniteDifference(d=ds[k], axis=0, order=8, periodic=True)
+            interior_coeffs = fd._coefficients(t)
+            interior_inds = fd.stencil_inds
+            slice_interior = slice((fd.n_stencil - 1) // 2, -(fd.n_stencil - 1) // 2)
+            slice_boundary = np.concatenate(
+                [
+                    np.arange(0, (fd.n_stencil - 1) // 2),
+                    -np.flip(1 + np.arange(1, (fd.n_stencil - 1) // 2)),
+                    np.array([-1]),
+                ]
+            )
+            boundary_coeffs = fd._coefficients_boundary_periodic(t)
+            boundary_inds = fd.stencil_inds
 
-        dxx = np.zeros((len(t), len(t)))
-        for i in range(len(interior_inds)):
-            dxx[slice_interior][
-                np.arange(len(interior_inds[i])), interior_inds[i]
-            ] = interior_coeffs[:, i].T
-        for i in range(len(boundary_inds)):
-            dxx[slice_boundary][
-                np.arange(len(boundary_inds[i])), boundary_inds[i]
-            ] = boundary_coeffs[:, i].T
-
-        fd = ps.FiniteDifference(d=4, axis=0, order=4, periodic=True)
-        interior_coeffs = fd._coefficients(t)
-        interior_inds = fd.stencil_inds
-        slice_interior = slice((fd.n_stencil - 1) // 2, -(fd.n_stencil - 1) // 2)
-        slice_boundary = np.concatenate(
-            [
-                np.arange(0, (fd.n_stencil - 1) // 2),
-                -np.flip(1 + np.arange(1, (fd.n_stencil - 1) // 2)),
-                np.array([-1]),
-            ]
-        )
-        boundary_coeffs = fd._coefficients_boundary_periodic(t)
-        boundary_inds = fd.stencil_inds
-
-        dxxxx = np.zeros((len(t), len(t)))
-        for i in range(len(interior_inds)):
-            dxxxx[slice_interior][
-                np.arange(len(interior_inds[i])), interior_inds[i]
-            ] = interior_coeffs[:, i].T
-        for i in range(len(boundary_inds)):
-            dxxxx[slice_boundary][
-                np.arange(len(boundary_inds[i])), boundary_inds[i]
-            ] = boundary_coeffs[:, i].T
+            for i in range(len(interior_inds)):
+                dx[k][slice_interior][
+                    np.arange(len(interior_inds[i])), interior_inds[i]
+                ] = interior_coeffs[:, i].T
+            for i in range(len(boundary_inds)):
+                dx[k][slice_boundary][
+                    np.arange(len(boundary_inds[i])), boundary_inds[i]
+                ] = boundary_coeffs[:, i].T
 
         vals, vecs = np.linalg.eig(
-            (r - 1 + 3 * b3 * u**2 - 5 * b5 * u**4) * np.eye(len(t))
-            - dxxxx
-            - 2 * dxx
+            (b1 + 2 * b2 * u + 3 * b3 * u**2 + 4 * b4 * u**3 + 5 * b5 * u**4)
+            * np.eye(len(t))
+            + d1 * dx[0]
+            + d2 * dx[1]
+            + d3 * dx[2]
+            - dx[3]
         )
         evals = evals + [vals]
         evecs = evecs + [vecs]
@@ -88,7 +89,7 @@ for filebase in ["odd", "even", "periodic"]:
             np.real(
                 np.array(evals)[tuple([np.arange(len(evals))[:, np.newaxis], inds2])]
             )
-            < 1e-1,
+            < 1e-2,
             axis=1,
         )
     )[0]
@@ -97,7 +98,7 @@ for filebase in ["odd", "even", "periodic"]:
             np.real(
                 np.array(evals)[tuple([np.arange(len(evals))[:, np.newaxis], inds2])]
             )
-            > 1e-1,
+            > 1e-2,
             axis=1,
         )
     )[0]

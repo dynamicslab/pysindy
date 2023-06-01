@@ -993,7 +993,6 @@ def generate_oregonator_trajectories():
     spatial_grid[:, :, 1] = 1.0 / n * np.arange(n)[np.newaxis, :]
     X0, Y0, Z0 = get_oregonator_ic(2e-1, 0, spatial_grid)
     u0 = np.concatenate([X0.ravel(), Y0.ravel(), Z0.ravel()])
-    scales = []
 
     if not os.path.exists("data/oregonator"):
         os.mkdir("data/oregonator")
@@ -1018,34 +1017,19 @@ def generate_oregonator_trajectories():
 
                 X, Y, Z = get_oregonator_trajectory(u0, b, t1, dt, spatial_grid)
 
-                x = np.array([X, Y, Z]).transpose(1, 2, 3, 0)
-                plt.plot(
-                    np.mean(x[:, :, :, 0] - np.mean(x[:, :, -100, 0]), axis=(0, 1))
-                )
-                plt.plot(
-                    np.mean(x[:, :, :, 2] - np.mean(x[:, :, -100, 2]), axis=(0, 1))
-                )
-                plt.show()
-                plt.imshow(x[:, :, -1, 0])
-                plt.show()
-
-                Nt = x.shape[2] // 5 // 10 * 10
-                x0 = np.mean(x[:, :, -Nt:, [0, 2]], axis=(0, 1, 2))
-                U = (x[:, :, Nt:, [0, 2]] - x0) / x0
-                nt = U.shape[2] // 10 * 10
+                Nt = X.shape[2] // 5 // 10 * 10
+                X0 = np.mean(X[:, :, -Nt:], axis=(0, 1, 2))
+                Z0 = np.mean(Z[:, :, -Nt:], axis=(0, 1, 2))
+                nt = X.shape[2] // 10 * 10
                 A = np.mean(
                     (
-                        (U[:, :, :, 0] + 1j * U[:, :, :, 1])
-                        * np.exp(-1j * 2 * np.pi / 10 * np.arange(U.shape[2]))
+                        ((X - X0) / X0 + 1j * (Z - Z0) / Z0)
+                        * np.exp(-1j * 2 * np.pi / 10 * np.arange(X.shape[2]))
                     )[:, :, :nt].reshape(n, n, nt // 10, 10),
                     axis=3,
                 )
-                plt.plot(np.mean(np.real(A), axis=(0, 1)))
-                plt.plot(np.mean(np.imag(A), axis=(0, 1)))
-                plt.show()
 
                 f = interp1d(np.arange(A.shape[2]) / A.shape[2], A, axis=2)
-                scales = scales + [[x0, np.mean(np.abs(A) ** 2) ** 0.5]]
                 A = f(np.arange(500) / 500)
 
                 np.save("data/oregonator/oregonator_" + str(j), A)
@@ -1078,14 +1062,9 @@ def generate_oregonator_trajectories():
     ):
         b = b0
         t1 = 2e2 / np.abs(1 - b0)
-        start = timeit.default_timer()
         X0, Y0, Z0 = get_oregonator_ic(2e-1, 0, spatial_grid)
         u0 = np.concatenate([X0.ravel(), Y0.ravel(), Z0.ravel()])
         X, Y, Z = get_oregonator_trajectory(u0, b, t1, dt, spatial_grid)
-        stop = timeit.default_timer()
-        plt.imshow(X[:, :, -1])
-        plt.show()
-        print(stop - start)
 
         u0 = np.concatenate(
             [X[:, :, -1].ravel(), Y[:, :, -1].ravel(), Z[:, :, -1].ravel()]
@@ -1099,15 +1078,6 @@ def generate_oregonator_trajectories():
                 start = timeit.default_timer()
                 X, Y, Z = get_oregonator_trajectory(u0, b, t1, dt, spatial_grid)
                 x = np.array([X, Y, Z]).transpose(1, 2, 3, 0)
-                plt.plot(
-                    np.mean(x[:, :, :, 0] - np.mean(x[:, :, -100, 0]), axis=(0, 1))
-                )
-                plt.plot(
-                    np.mean(x[:, :, :, 2] - np.mean(x[:, :, -100, 2]), axis=(0, 1))
-                )
-                plt.show()
-                plt.imshow(x[:, :, -1, 0])
-                plt.show()
 
                 np.save("data/oregonator/oregonator2_" + str(j), x)
                 stop = timeit.default_timer()
@@ -1146,11 +1116,6 @@ def generate_oregonator_trajectories():
                 x = np.array([X, Y, Z]).transpose(1, 2, 3, 0)
                 fi = interp1d(np.arange(x.shape[2]), x, axis=2)
                 x = fi(np.arange(Nt) / (Nt - 1) * (x.shape[2] - 1))
-                plt.plot(np.mean(x[:, :, :, 0], axis=(0, 1)))
-                plt.plot(np.mean(x[:, :, :, 2], axis=(0, 1)))
-                plt.show()
-                plt.imshow(x[:, :, -1, 0])
-                plt.show()
 
                 np.save("data/oregonator/canard_" + str(j), x)
                 stop = timeit.default_timer()

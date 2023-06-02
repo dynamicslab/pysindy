@@ -1020,11 +1020,13 @@ def generate_oregonator_trajectories():
                 Nt = X.shape[2] // 5 // 10 * 10
                 X0 = np.mean(X[:, :, -Nt:], axis=(0, 1, 2))
                 Z0 = np.mean(Z[:, :, -Nt:], axis=(0, 1, 2))
-                nt = X.shape[2] // 10 * 10
+                nt = X[:, :, Nt:].shape[2] // 10 * 10
                 A = np.mean(
                     (
-                        ((X - X0) / X0 + 1j * (Z - Z0) / Z0)
-                        * np.exp(-1j * 2 * np.pi / 10 * np.arange(X.shape[2]))
+                        ((X[:, :, Nt:] - X0) / X0 + 1j * (Z[:, :, Nt:] - Z0) / Z0)
+                        * np.exp(
+                            -1j * 2 * np.pi / 10 * np.arange(X[:, :, Nt:].shape[2])
+                        )
                     )[:, :, :nt].reshape(n, n, nt // 10, 10),
                     axis=3,
                 )

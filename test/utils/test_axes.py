@@ -184,6 +184,11 @@ def test_basic_indexing_modifies_axes():
         slim.ax_time
     assert slim.ax_unk == 1
     assert slim.ax_coord == 0
+    reverse_slim = arr[None, :, 1]
+    with pytest.raises(KeyError):
+        reverse_slim.ax_time
+    assert reverse_slim.ax_unk == 0
+    assert reverse_slim.ax_coord == 1
 
 
 def test_fancy_indexing_modifies_axes():

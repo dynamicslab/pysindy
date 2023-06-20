@@ -8,7 +8,6 @@ from typing import Sequence
 
 import numpy as np
 from scipy import sparse
-from sklearn import __version__
 from sklearn.base import TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
@@ -234,10 +233,8 @@ class ConcatLibrary(BaseFeatureLibrary):
     libraries_ : list of libraries
         Library instances to be applied to the input matrix.
 
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -284,10 +281,7 @@ class ConcatLibrary(BaseFeatureLibrary):
         self : instance
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
+        self.n_features_in_ = n_features
 
         # First fit all libs provided below
         fitted_libs = [lib.fit(x_full, y) for lib in self.libraries_]
@@ -380,10 +374,8 @@ class TensoredLibrary(BaseFeatureLibrary):
         libraries you are going to tensor together. Used for building
         GeneralizedLibrary objects.
 
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -473,10 +465,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
 
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
+        self.n_features_in_ = n_features
 
         # If parameter is not set, use all the inputs
         if self.inputs_per_library_ is None:

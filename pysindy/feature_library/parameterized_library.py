@@ -40,10 +40,8 @@ class ParameterizedLibrary(GeneralizedLibrary):
         Can be used to specify a subset of the variables to use to generate
         a feature library. Value determined by num_parameters and num_features.
 
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features

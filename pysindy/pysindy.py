@@ -8,7 +8,6 @@ from scipy.integrate import odeint
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 from scipy.linalg import LinAlgWarning
-from sklearn import __version__
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import r2_score
@@ -413,13 +412,8 @@ class SINDy(BaseEstimator):
             warnings.filterwarnings(action, category=UserWarning)
             self.model.fit(x, x_dot)
 
-        # New version of sklearn changes attribute name
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = self.model.steps[0][1].n_features_in_
-            n_input_features = self.model.steps[0][1].n_features_in_
-        else:
-            self.n_input_features_ = self.model.steps[0][1].n_input_features_
-            n_input_features = self.model.steps[0][1].n_input_features_
+        self.n_features_in_ = self.model.steps[0][1].n_features_in_
+        n_input_features = self.model.steps[0][1].n_features_in_
         self.n_output_features_ = self.model.steps[0][1].n_output_features_
 
         if self.feature_names is None:
@@ -821,11 +815,7 @@ class SINDy(BaseEstimator):
                 def check_stop_condition(xi):
                     pass
 
-            # New version of sklearn changes attribute name
-            if float(__version__[:3]) >= 1.0:
-                x = np.zeros((t, self.n_features_in_ - self.n_control_features_))
-            else:
-                x = np.zeros((t, self.n_input_features_ - self.n_control_features_))
+            x = np.zeros((t, self.n_features_in_ - self.n_control_features_))
             x[0] = x0
 
             if u is None or self.n_control_features_ == 0:

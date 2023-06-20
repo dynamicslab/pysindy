@@ -4,7 +4,6 @@ from itertools import combinations_with_replacement as combinations_w_r
 
 import numpy as np
 from scipy import sparse
-from sklearn import __version__
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.preprocessing._csr_polynomial_expansion import _csr_polynomial_expansion
 from sklearn.utils.validation import check_is_fitted
@@ -57,10 +56,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     powers_ : array, shape (n_output_features, n_input_features)
         powers_[i, j] is the exponent of the jth input in the ith output.
 
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. This number is computed by
@@ -124,10 +121,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     @property
     def powers_(self):
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_features = self.n_features_in_
-        else:
-            n_features = self.n_input_features_
+        n_features = self.n_features_in_
         combinations = self._combinations(
             n_features,
             self.degree,
@@ -190,10 +184,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             self.interaction_only,
             self.include_bias,
         )
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
+        self.n_features_in_ = n_features
         self.n_output_features_ = sum(1 for _ in combinations)
         return self
 
@@ -236,12 +227,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
             n_samples = x.shape[x.ax_time]
             n_features = x.shape[x.ax_coord]
-            if float(__version__[:3]) >= 1.0:
-                if n_features != self.n_features_in_:
-                    raise ValueError("x shape does not match training shape")
-            else:
-                if n_features != self.n_input_features_:
-                    raise ValueError("x shape does not match training shape")
+            if n_features != self.n_features_in_:
+                raise ValueError("x shape does not match training shape")
 
             if sparse.isspmatrix_csr(x):
                 if self.degree > 3:

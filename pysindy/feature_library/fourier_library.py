@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -35,10 +34,8 @@ class FourierLibrary(BaseFeatureLibrary):
 
     Attributes
     ----------
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -93,10 +90,7 @@ class FourierLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
+        n_input_features = self.n_features_in_
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_input_features)]
         feature_names = []
@@ -123,10 +117,7 @@ class FourierLibrary(BaseFeatureLibrary):
         self : instance
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
+        self.n_features_in_ = n_features
         if self.include_sin and self.include_cos:
             self.n_output_features_ = n_features * self.n_frequencies * 2
         else:
@@ -156,10 +147,7 @@ class FourierLibrary(BaseFeatureLibrary):
             n_features = x.shape[x.ax_coord]
             shape = np.array(x.shape)
 
-            if float(__version__[:3]) >= 1.0:
-                n_input_features = self.n_features_in_
-            else:
-                n_input_features = self.n_input_features_
+            n_input_features = self.n_features_in_
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 

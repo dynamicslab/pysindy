@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -70,10 +69,8 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         all the individual feature libraries. The shape is equal to
         # feature libraries, # variable inputs.
 
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -177,11 +174,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self : instance
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
-
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
+        self.n_features_in_ = n_features
 
         # If parameter is not set, use all the inputs
         if self.inputs_per_library_ is None:
@@ -251,11 +244,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         xp_full = []
         for x in x_full:
             n_features = x.shape[x.ax_coord]
-
-            if float(__version__[:3]) >= 1.0:
-                n_input_features = self.n_features_in_
-            else:
-                n_input_features = self.n_input_features_
+            n_input_features = self.n_features_in_
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 

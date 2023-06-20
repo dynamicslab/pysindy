@@ -6,7 +6,6 @@ from itertools import product as iproduct
 import numpy as np
 from scipy.special import binom
 from scipy.special import perm
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -136,10 +135,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         Functions for generating string representations of each library
         function.
 
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -708,10 +705,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_features = self.n_features_in_
-        else:
-            n_features = self.n_input_features_
+        n_features = self.n_features_in_
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
         if self.function_names is None:
@@ -793,11 +787,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self : instance
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
-
+        self.n_features_in_ = n_features
         n_output_features = 0
 
         # Count the number of non-derivative terms

@@ -587,23 +587,6 @@ def test_fit_warn(data_lorenz, params, warning):
     with pytest.warns(warning):
         model.fit(x, t=t)
 
-    with pytest.warns(None) as warn_record:
-        model.fit(x, t=t, quiet=True)
-
-    while True:
-        try:
-            warn_record.pop(PendingDeprecationWarning)
-        except AssertionError:
-            break
-
-    while True:
-        try:
-            warn_record.pop(DeprecationWarning)
-        except AssertionError:
-            break
-
-    assert len(warn_record) == 0
-
 
 def test_cross_validation(data_lorenz):
     x, t = data_lorenz

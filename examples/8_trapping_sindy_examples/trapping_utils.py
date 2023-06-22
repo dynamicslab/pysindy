@@ -231,7 +231,7 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
     ax.fill_between(
         x,
         rhos_plus[1:],
-        np.ones(len(x)) * rhos_plus[-1] * 1.2,
+        np.ones(len(x)) * rhos_plus[-1] * 5,
         color="r",
         label="Unstable",
     )
@@ -242,8 +242,10 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
     plt.ylabel("Stability radius")
     plt.xlabel("Algorithm iteration")
     plt.legend(framealpha=1.0)
-    plt.xlim(0, x[-1])
-    plt.ylim(0, rhos_plus[-1] * 1.2)
+    plt.xlim(1, x[-1])
+    plt.ylim(1, rhos_plus[-1] * 5)
+    plt.xscale('log')
+    plt.yscale('log')
     return rhos_minus, rhos_plus
 
 

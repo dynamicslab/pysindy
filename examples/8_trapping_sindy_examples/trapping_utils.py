@@ -164,12 +164,18 @@ def check_local_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     print("optimal m: ", opt_m)
     print("As eigvals: ", np.sort(eigvals))
     max_eigval = np.sort(eigvals)[-1]
-    C = np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
-    L = np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
-    Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
+    # C = np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
+    # L = np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
+    # Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
+    C = mod_matrix @ np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
+    L = mod_matrix @ np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
+    Q = np.tensordot(
+        mod_matrix, np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1])), axes=([1], [0])
+    )
     eps_Q = np.max(
         np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))
     )
+    print(eps_Q)
     d = C + np.dot(L, opt_m) + np.dot(np.tensordot(Q, opt_m, axes=([2], [0])), opt_m)
     d = mod_matrix @ d
     Rm, R_ls = get_trapping_radius(max_eigval, eps_Q, r, d)
@@ -195,9 +201,14 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
     rhos_minus = []
     for i in range(len(eigs)):
         if eigs[i][-1] < 0:
-            C = np.tensordot(PC_tensor, coef_history[i], axes=([2, 1], [1, 0]))
-            L = np.tensordot(PL_tensor_unsym, coef_history[i], axes=([3, 2], [1, 0]))
-            Q = np.tensordot(PQ_tensor, coef_history[i], axes=([4, 3], [1, 0]))
+            Xi = coef_history[i]
+            C = mod_matrix @ np.tensordot(PC_tensor, Xi, axes=([2, 1], [1, 0]))
+            L = mod_matrix @ np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [1, 0]))
+            Q = np.tensordot(
+                mod_matrix,
+                np.tensordot(PQ_tensor, Xi, axes=([4, 3], [1, 0])),
+                axes=([1], [0]),
+            )
             eps_Q = np.max(
                 np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))
             )
@@ -206,7 +217,6 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
                 + np.dot(L, ms[i])
                 + np.dot(np.tensordot(Q, ms[i], axes=([2], [0])), ms[i])
             )
-            d = mod_matrix @ d
             delta = (
                 eigs[i][-1] ** 2
                 - 4 * np.sqrt(r**3) * eps_Q * np.linalg.norm(d, 2) / 3
@@ -244,8 +254,8 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
     plt.legend(framealpha=1.0)
     plt.xlim(1, x[-1])
     plt.ylim(1, rhos_plus[-1] * 5)
-    plt.xscale('log')
-    plt.yscale('log')
+    plt.xscale("log")
+    plt.yscale("log")
     return rhos_minus, rhos_plus
 
 

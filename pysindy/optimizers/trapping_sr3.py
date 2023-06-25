@@ -575,7 +575,11 @@ class TrappingSR3(SR3):
         # Compute the errors
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
-        Qijk = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
+        Qijk = np.tensordot(
+            self.mod_matrix,
+            np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])),
+            axes=([1], [0]),
+        )
         beta2 = (
             Qijk + np.transpose(Qijk, [1, 2, 0]) + np.transpose(Qijk, [2, 0, 1])
         ) ** 2
@@ -828,12 +832,12 @@ class TrappingSR3(SR3):
                     PQ = np.reshape(PQ, (r * r * r, r * n_features), "F")
                     PQTPQ = np.dot(PQ.T, PQ)
                     PQ = np.reshape(self.PQ_, (r, r, r, r * n_features), "F")
+                    PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
                     PQ_ep = (
                         PQ
                         + np.transpose(PQ, [1, 2, 0, 3])
                         + np.transpose(PQ, [2, 0, 1, 3])
                     )
-                    PQ_ep = np.tensordot(self.mod_matrix, PQ_ep, axes=([1], [0]))
                     PQ_ep = np.reshape(PQ_ep, (r * r * r, r * n_features), "F")
                     PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
                     H = xTx + pTp / self.eta + PQTPQ / self.alpha + PQTPQ_ep / self.beta

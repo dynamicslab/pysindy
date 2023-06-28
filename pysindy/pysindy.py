@@ -7,10 +7,7 @@ import numpy as np
 from scipy.integrate import odeint
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
-from scipy.linalg import LinAlgWarning
-from sklearn import __version__
 from sklearn.base import BaseEstimator
-from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
@@ -186,14 +183,10 @@ class SINDy(BaseEstimator):
         u=None,
         multiple_trajectories=False,
         unbias=True,
-        quiet=False,
         ensemble=False,
         library_ensemble=False,
-        replace=True,
-        n_candidates_to_drop=1,
         n_subset=None,
         n_models=None,
-        ensemble_aggregator=None,
     ):
         """
         Fit a SINDy model.
@@ -250,9 +243,6 @@ class SINDy(BaseEstimator):
             identified by the optimizer. This helps to remove the bias introduced by
             regularization.
 
-        quiet: boolean, optional (default False)
-            Whether or not to suppress warnings during model fitting.
-
         ensemble : boolean, optional (default False)
             This parameter is used to allow for "ensembling", i.e. the
             generation of many SINDy models (n_models) by choosing a random
@@ -274,26 +264,11 @@ class SINDy(BaseEstimator):
             The user can also generate "distributions" of many models, and
             calculate how often certain library terms are included in a model.
 
-        replace : boolean, optional (default True)
-            If ensemble true, whether or not to time sample with replacement.
-
-        n_candidates_to_drop : int, optional (default 1)
-            Number of candidate terms in the feature library to drop during
-            library ensembling.
-
         n_subset : int, optional (default len(time base))
             Number of time points to use for ensemble
 
         n_models : int, optional (default 20)
             Number of models to generate via ensemble
-
-        ensemble_aggregator : callable, optional (default numpy.median)
-            Method to aggregate model coefficients across different samples.
-            This method argument is only used if ``ensemble`` or ``library_ensemble``
-            is True.
-            The method should take in a list of 2D arrays and return a 2D
-            array of the same shape as the arrays in the list.
-            Example: :code:`lambda x: np.median(x, axis=0)`
 
         Returns
         -------
@@ -406,20 +381,10 @@ class SINDy(BaseEstimator):
         ]
         x_dot = concat_sample_axis(x_dot)
         self.model = Pipeline(steps)
-        action = "ignore" if quiet else "default"
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action, category=ConvergenceWarning)
-            warnings.filterwarnings(action, category=LinAlgWarning)
-            warnings.filterwarnings(action, category=UserWarning)
-            self.model.fit(x, x_dot)
+        self.model.fit(x, x_dot)
 
-        # New version of sklearn changes attribute name
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = self.model.steps[0][1].n_features_in_
-            n_input_features = self.model.steps[0][1].n_features_in_
-        else:
-            self.n_input_features_ = self.model.steps[0][1].n_input_features_
-            n_input_features = self.model.steps[0][1].n_input_features_
+        self.n_features_in_ = self.model.steps[0][1].n_features_in_
+        n_input_features = self.model.steps[0][1].n_features_in_
         self.n_output_features_ = self.model.steps[0][1].n_output_features_
 
         if self.feature_names is None:
@@ -821,11 +786,7 @@ class SINDy(BaseEstimator):
                 def check_stop_condition(xi):
                     pass
 
-            # New version of sklearn changes attribute name
-            if float(__version__[:3]) >= 1.0:
-                x = np.zeros((t, self.n_features_in_ - self.n_control_features_))
-            else:
-                x = np.zeros((t, self.n_input_features_ - self.n_control_features_))
+            x = np.zeros((t, self.n_features_in_ - self.n_control_features_))
             x[0] = x0
 
             if u is None or self.n_control_features_ == 0:

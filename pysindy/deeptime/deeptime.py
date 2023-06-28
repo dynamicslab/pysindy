@@ -1,7 +1,6 @@
 """
 `Deeptime <https://deeptime-ml.github.io/>`_ wrapper interface for PySINDy.
 """
-from sklearn import __version__
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
@@ -217,10 +216,7 @@ class SINDyModel(SINDy):
         ]
         self.model = Pipeline(steps)
 
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = self.model.steps[0][1].n_features_in_
-        else:
-            self.n_input_features_ = self.model.steps[0][1].n_input_features_
+        self.n_features_in_ = self.model.steps[0][1].n_features_in_
         self.n_output_features_ = self.model.steps[0][1].n_output_features_
 
     def copy(self):

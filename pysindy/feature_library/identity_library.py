@@ -1,4 +1,3 @@
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from .base import BaseFeatureLibrary
@@ -12,10 +11,8 @@ class IdentityLibrary(BaseFeatureLibrary):
 
     Attributes
     ----------
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -66,10 +63,7 @@ class IdentityLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
+        n_input_features = self.n_features_in_
         if input_features:
             if len(input_features) == n_input_features:
                 return input_features
@@ -92,10 +86,7 @@ class IdentityLibrary(BaseFeatureLibrary):
         self : instance
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
+        self.n_features_in_ = n_features
         self.n_output_features_ = n_features
         return self
 
@@ -118,11 +109,7 @@ class IdentityLibrary(BaseFeatureLibrary):
         xp_full = []
         for x in x_full:
             n_features = x.shape[x.ax_coord]
-
-            if float(__version__[:3]) >= 1.0:
-                n_input_features = self.n_features_in_
-            else:
-                n_input_features = self.n_input_features_
+            n_input_features = self.n_features_in_
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 

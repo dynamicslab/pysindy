@@ -6,7 +6,6 @@ from numpy import empty
 from numpy import hstack
 from numpy import nan_to_num
 from numpy import ones
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -89,10 +88,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
         Functions for generating string representations of each library
         function.
 
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -209,10 +206,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
+        n_input_features = self.n_features_in_
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_input_features)]
             x_dot_features = ["x%d_dot" % i for i in range(n_input_features)]
@@ -291,10 +285,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
 
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
+        self.n_features_in_ = n_features
         n_x_output_features = 0
         n_x_dot_output_features = 0
 
@@ -372,10 +363,7 @@ class SINDyPILibrary(BaseFeatureLibrary):
 
             n_samples, n_features = x.shape
 
-            if float(__version__[:3]) >= 1.0:
-                n_input_features = self.n_features_in_
-            else:
-                n_input_features = self.n_input_features_
+            n_input_features = self.n_features_in_
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 

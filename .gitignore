@@ -5,6 +5,9 @@ commit-msg
 todo
 poetry.lock
 
+# profiling
+prof/
+
 # Environments
 .env
 .venv

@@ -1031,8 +1031,8 @@ def test_normalize_columns(data_derivative_1d, optimizer):
     "optimizer_params",
     (
         {"library_ensemble": True, "n_models": 2},
-        {"bagging": True, "n_models": 2},
-        {"library_ensemble": True, "bagging": True, "n_models": 2},
+        {"bagging": True, "n_models": 2, "n_subset": 2},
+        {"library_ensemble": True, "bagging": True, "n_models": 2, "n_subset": 2},
     ),
 )
 def test_ensemble_optimizer(data_lorenz, optimizer_params):
@@ -1046,15 +1046,10 @@ def test_ensemble_optimizer(data_lorenz, optimizer_params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(ensemble=False, n_models=-1, n_subset=1),
-        dict(ensemble=False, n_models=0, n_subset=1),
-        dict(ensemble=False, n_models=1, n_subset=0),
-        dict(ensemble=False, n_models=1, n_subset=-1),
-        dict(ensemble=True, n_models=-1, n_subset=1),
-        dict(ensemble=True, n_models=0, n_subset=1),
-        dict(ensemble=True, n_models=1, n_subset=0),
-        dict(ensemble=True, n_models=1, n_subset=-1),
-        dict(ensemble=True, n_models=1, n_subset=0),
+        dict(),
+        dict(bagging=True, n_models=0),
+        dict(bagging=True, n_subset=0),
+        dict(library_ensemble=True, n_candidates_to_drop=0),
     ],
 )
 def test_bad_ensemble_params(data_lorenz, params):

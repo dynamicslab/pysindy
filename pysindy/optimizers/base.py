@@ -281,19 +281,19 @@ class EnsembleOptimizer(BaseOptimizer):
             raise ValueError(
                 "If not ensembling data or library terms, use another optimizer"
             )
-        if n_subset is not None and n_subset <= 0:
+        if bagging and (n_subset is None or n_subset < 1):
             raise ValueError("n_subset must be a positive integer if bagging")
-        if n_candidates_to_drop is not None and n_candidates_to_drop <= 0:
+        if library_ensemble and (
+            n_candidates_to_drop is None or n_candidates_to_drop < 1
+        ):
+            raise ValueError(
+                "n_candidates_to_drop must be a positive integer if ensembling library"
+            )
+        if n_models < 1:
             raise ValueError(
                 "n_candidates_to_drop must be a positive integer if ensembling library"
             )
         self.opt = opt
-        if n_models is None or n_models == 0:
-            warnings.warn(
-                "n_models must be a positive integer.  Explicitly initialized to zero"
-                " or None, defaulting to 20."
-            )
-            n_models = 20
         self.n_models = n_models
         self.n_subset = n_subset
         self.bagging = bagging

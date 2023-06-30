@@ -13,7 +13,6 @@ from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import FiniteDifference
-from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
@@ -1028,54 +1027,39 @@ def test_normalize_columns(data_derivative_1d, optimizer):
         assert opt.coef_.shape == (1, x.shape[1])
 
 
-def test_legacy_ensemble_odes(data_lorenz):
-    x, t = data_lorenz
-    opt = STLSQ(normalize_columns=True)
-    model = SINDy(optimizer=opt)
-    model.fit(x, ensemble=True, n_models=2, n_subset=2)
-    assert np.shape(model.coef_list) == (2, 3, 10)
-
-
 @pytest.mark.parametrize(
     "optimizer_params",
     (
-        {"library_ensemble": True},
-        {"bagging": True},
-        {"library_ensemble": True, "bagging": True},
+        {"library_ensemble": True, "n_models": 2},
+        {"bagging": True, "n_models": 2},
+        {"library_ensemble": True, "bagging": True, "n_models": 2},
     ),
 )
 def test_ensemble_optimizer(data_lorenz, optimizer_params):
     x, t = data_lorenz
     optimizer = EnsembleOptimizer(STLSQ(), **optimizer_params)
-    feature_library = PolynomialLibrary()
-    model = SINDy(feature_library=feature_library, optimizer=optimizer)
-    model.fit(x, t)
-    assert model.coefficients().shape == (3, 10)
+    optimizer.fit(x, x)
+    assert optimizer.coef_.shape == (3, 3)
+    assert len(optimizer.coef_list) == 2
 
 
-def test_legacy_ensemble_pdes():
-    u = np.random.randn(10, 10, 2)
-    t = np.linspace(1, 10, 10)
-    x = np.linspace(1, 10, 10)
-    dt = t[1] - t[0]
-    u_dot = np.zeros(u.shape)
-    for i in range(len(x)):
-        u_dot[i, :, :] = FiniteDifference()._differentiate(u[i, :, :], t=dt)
-
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=3,
-        spatial_grid=x,
-        include_bias=True,
-    )
-    opt = STLSQ(normalize_columns=True)
-    model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u, x_dot=u_dot, ensemble=True, n_models=2, n_subset=2)
-    n_features = len(model.get_feature_names())
-    assert np.shape(model.coef_list) == (2, 2, n_features)
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(ensemble=False, n_models=-1, n_subset=1),
+        dict(ensemble=False, n_models=0, n_subset=1),
+        dict(ensemble=False, n_models=1, n_subset=0),
+        dict(ensemble=False, n_models=1, n_subset=-1),
+        dict(ensemble=True, n_models=-1, n_subset=1),
+        dict(ensemble=True, n_models=0, n_subset=1),
+        dict(ensemble=True, n_models=1, n_subset=0),
+        dict(ensemble=True, n_models=1, n_subset=-1),
+        dict(ensemble=True, n_models=1, n_subset=0),
+    ],
+)
+def test_bad_ensemble_params(data_lorenz, params):
+    with pytest.raises(ValueError):
+        EnsembleOptimizer(opt=STLSQ(), **params)
 
 
 def test_ssr_criteria(data_lorenz):

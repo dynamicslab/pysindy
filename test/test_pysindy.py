@@ -30,6 +30,7 @@ from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import WeakPDELibrary
 from pysindy.optimizers import ConstrainedSR3
+from pysindy.optimizers import EnsembleOptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
 
@@ -636,210 +637,6 @@ def test_linear_constraints(data_lorenz):
     )
 
 
-def test_ensemble(data_lorenz):
-    x, t = data_lorenz
-    library = PolynomialLibrary().fit(x)
-
-    constraint_rhs = np.ones(2)
-    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
-
-    target_1, target_2 = 1, 3
-    constraint_lhs[0, 3] = target_1
-    constraint_lhs[1, library.n_output_features_] = target_2
-
-    optimizer = ConstrainedSR3(
-        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
-    )
-    model = SINDy(feature_library=library, optimizer=optimizer).fit(
-        x, t, ensemble=True, n_models=10, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_ensemble_pdes(data_1d_random_pde):
-    t, spatial_grid, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatial_grid=spatial_grid,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=pde_lib).fit(
-        u, t, ensemble=True, n_models=10, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 10
-    model = SINDy(feature_library=pde_lib).fit(
-        u, x_dot=u_dot, ensemble=True, n_models=10, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_ensemble_weak_pdes(data_1d_random_pde):
-    t, x, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    X, T = np.meshgrid(x, t)
-    XT = np.array([X, T]).T
-    weak_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatiotemporal_grid=XT,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=weak_lib).fit(
-        u, t=t, ensemble=True, n_models=2, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 2
-    model = SINDy(feature_library=weak_lib).fit(
-        u, x_dot=u_dot[:, 0, :], ensemble=True, n_models=2, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 2
-
-
-def test_library_ensemble(data_lorenz):
-    x, t = data_lorenz
-    library = PolynomialLibrary()
-    model = SINDy(feature_library=library).fit(
-        x, t=t, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_library_ensemble_pde(data_1d_random_pde):
-    t, spatial_grid, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatial_grid=spatial_grid,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=pde_lib).fit(
-        u, t=t, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-    model = SINDy(feature_library=pde_lib).fit(
-        u, x_dot=u_dot, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_library_ensemble_weak_pde(data_1d_random_pde):
-    t, x, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    X, T = np.meshgrid(x, t)
-    XT = np.array([X, T]).T
-    weak_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatiotemporal_grid=XT,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=weak_lib).fit(
-        u, t=t, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-    u_dot = weak_lib.convert_u_dot_integral(u)
-    model = SINDy(feature_library=weak_lib).fit(
-        u, x_dot=u_dot, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_both_ensemble(data_lorenz):
-    x, t = data_lorenz
-    library = PolynomialLibrary()
-    model = SINDy(feature_library=library).fit(
-        x, t=t, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-
-
-def test_both_ensemble_pde(data_1d_random_pde):
-    t, spatial_grid, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatial_grid=spatial_grid,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=pde_lib).fit(
-        u, t=t, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-    model = SINDy(feature_library=pde_lib).fit(
-        u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-
-
-def test_both_ensemble_weak_pde(data_1d_random_pde):
-    t, x, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    X, T = np.meshgrid(x, t)
-    XT = np.array([X, T]).T
-    weak_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatiotemporal_grid=XT,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=weak_lib).fit(
-        u, t=t, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-    u_dot = weak_lib.convert_u_dot_integral(u)
-    model = SINDy(feature_library=weak_lib).fit(
-        u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-
-
-@pytest.mark.parametrize(
-    "params",
-    [
-        dict(ensemble=False, n_models=-1, n_subset=1),
-        dict(ensemble=False, n_models=0, n_subset=1),
-        dict(ensemble=False, n_models=1, n_subset=0),
-        dict(ensemble=False, n_models=1, n_subset=-1),
-        dict(ensemble=True, n_models=-1, n_subset=1),
-        dict(ensemble=True, n_models=0, n_subset=1),
-        dict(ensemble=True, n_models=1, n_subset=0),
-        dict(ensemble=True, n_models=1, n_subset=-1),
-        dict(ensemble=True, n_models=1, n_subset=0),
-    ],
-)
-def test_bad_ensemble_params(data_lorenz, params):
-    x, t = data_lorenz
-    library = PolynomialLibrary().fit(x)
-
-    constraint_rhs = np.ones(2)
-    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
-
-    target_1, target_2 = 1, 3
-    constraint_lhs[0, 3] = target_1
-    constraint_lhs[1, library.n_output_features_] = target_2
-
-    optimizer = ConstrainedSR3(
-        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
-    )
-    with pytest.raises(ValueError):
-        SINDy(feature_library=library, optimizer=optimizer).fit(x, t, **params)
-
-
 def test_data_shapes():
     model = SINDy()
     n = 10
@@ -880,32 +677,34 @@ def test_multiple_trajectories_and_ensemble(diffuse_multiple_trajectories):
 
     optimizer = STLSQ(threshold=0.1, alpha=1e-5, normalize_columns=False)
     model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=False)
+    model.fit(u, multiple_trajectories=True, t=t)
     print(model.coefficients(), model.coefficients()[0][-1])
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
     model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=False)
+    model.fit(u, multiple_trajectories=True, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
+    optimizer = EnsembleOptimizer(opt=optimizer, bagging=True, n_subset=len(t))
+
     model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=True, n_subset=len(t))
+    model.fit(u, multiple_trajectories=True, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
     model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=True, n_subset=len(t))
+    model.fit(u, multiple_trajectories=True, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
     model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=True)
+    model.fit(u, multiple_trajectories=True, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
     model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=True)
+    model.fit(u, multiple_trajectories=True, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)

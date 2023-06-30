@@ -98,13 +98,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         Positive integer to define the polynomial degree of the spatial weights
         used for weak/integral SINDy.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     num_pts_per_domain : int, deprecated (default None)
         Included here to retain backwards compatibility with older code
         that uses this parameter. However, it merely raises a
@@ -170,8 +163,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         K=100,
         H_xt=None,
         p=4,
-        library_ensemble=False,
-        ensemble_indices=[0],
         num_pts_per_domain=None,
         implicit_terms=False,
         multiindices=None,
@@ -180,9 +171,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         is_uniform=None,
         periodic=None,
     ):
-        super(WeakPDELibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
+        super().__init__()
         self.functions = library_functions
         self.derivative_order = derivative_order
         self.function_names = function_names
@@ -1061,8 +1050,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     library_idx += n_library_terms * self.num_derivatives * n_features
 
             xp_full = xp_full + [AxesArray(xp, {"ax_sample": 0, "ax_coord": 1})]
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def calc_trajectory(self, diff_method, x, t):

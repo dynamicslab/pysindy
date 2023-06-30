@@ -72,13 +72,6 @@ class SINDyPILibrary(BaseFeatureLibrary):
         This is hard to do with just lambda functions, because if the system
         is not 1D, lambdas will generate duplicates.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     Attributes
     ----------
     functions : list of functions
@@ -145,12 +138,8 @@ class SINDyPILibrary(BaseFeatureLibrary):
         interaction_only=True,
         differentiation_method=None,
         include_bias=False,
-        library_ensemble=False,
-        ensemble_indices=[0],
     ):
-        super(SINDyPILibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
+        super().__init__()
         self.x_functions = library_functions
         self.x_dot_functions = x_dot_library_functions
         self.function_names = function_names
@@ -417,6 +406,4 @@ class SINDyPILibrary(BaseFeatureLibrary):
                                 ) * f_dot(*[x_dot[:, comb] for comb in f_dot_combs])
                                 library_idx += 1
             xp_full = xp_full + [AxesArray(xp, x.__dict__)]
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full

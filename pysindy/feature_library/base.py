@@ -23,28 +23,7 @@ class BaseFeatureLibrary(TransformerMixin):
 
     Forces subclasses to implement ``fit``, ``transform``,
     and ``get_feature_names`` methods.
-
-    Parameters
-    ----------
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
     """
-
-    def __init__(self, library_ensemble=None, ensemble_indices=[0]):
-        if library_ensemble is not None:
-            warnings.warn(
-                "Library ensembling is no longer performed by feature libraries.  Use "
-                "EnsemblingOptimizer to fit an ensemble model.",
-                DeprecationWarning,
-            )
-        self.library_ensemble = library_ensemble
-        if np.any(np.asarray(ensemble_indices) < 0):
-            raise ValueError("Library ensemble indices must be 0 or positive integers.")
-        self.ensemble_indices = ensemble_indices
 
     def validate_input(self, x, *args, **kwargs):
         return validate_no_reshape(x, *args, **kwargs)
@@ -143,29 +122,6 @@ class BaseFeatureLibrary(TransformerMixin):
         """
         raise NotImplementedError
 
-    def _ensemble(self, xp):
-        """
-        If library bagging, return xp without
-        the terms at ensemble_indices
-        """
-        warnings.warn(
-            "Library ensembling is no longer performed by feature libraries.  Use "
-            "EnsemblingOptimizer to fit an ensemble model.",
-            UserWarning,
-        )
-
-        if self.library_ensemble:
-            if self.n_output_features_ <= len(self.ensemble_indices):
-                raise ValueError(
-                    "Error: you are trying to chop more library terms "
-                    "than are available to remove!"
-                )
-            inds = range(self.n_output_features_)
-            inds = np.delete(inds, self.ensemble_indices)
-            return [x[..., inds] for x in xp]
-        else:
-            return xp
-
     def __add__(self, other):
         return ConcatLibrary([self, other])
 
@@ -220,14 +176,6 @@ class ConcatLibrary(BaseFeatureLibrary):
     libraries : list of libraries
         Library instances to be applied to the input matrix.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library).
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library. For instance, if
-        ensemble_indices = [0], it chops off the first column of the library.
-
     Attributes
     ----------
     libraries_ : list of libraries
@@ -258,12 +206,8 @@ class ConcatLibrary(BaseFeatureLibrary):
     def __init__(
         self,
         libraries: list,
-        library_ensemble=False,
-        ensemble_indices=[0],
     ):
-        super(ConcatLibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
+        super().__init__()
         self.libraries_ = libraries
 
     @x_sequence_or_item
@@ -320,8 +264,6 @@ class ConcatLibrary(BaseFeatureLibrary):
 
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def get_feature_names(self, input_features=None):
@@ -355,14 +297,6 @@ class TensoredLibrary(BaseFeatureLibrary):
     ----------
     libraries : list of libraries
         Library instances to be applied to the input matrix.
-
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library).
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library. For instance, if
-        ensemble_indices = [0], it chops off the first column of the library.
 
     Attributes
     ----------
@@ -399,13 +333,9 @@ class TensoredLibrary(BaseFeatureLibrary):
     def __init__(
         self,
         libraries: list,
-        library_ensemble=False,
         inputs_per_library=None,
-        ensemble_indices=[0],
     ):
-        super(TensoredLibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
+        super().__init__()
         self.libraries_ = libraries
         self.inputs_per_library_ = inputs_per_library
 
@@ -534,8 +464,6 @@ class TensoredLibrary(BaseFeatureLibrary):
             xp = np.concatenate(xp, axis=xp[0].ax_coord)
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def get_feature_names(self, input_features=None):

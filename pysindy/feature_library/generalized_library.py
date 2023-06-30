@@ -38,14 +38,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         subsets of the input variables. Note that this must be specified for
         all the individual feature libraries.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library).
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library. For instance, if
-        ensemble_indices = [0], it chops off the first column of the library.
-
     Attributes
     ----------
     libraries_ : list of libraries
@@ -96,13 +88,9 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         libraries: list,
         tensor_array=None,
         inputs_per_library=None,
-        library_ensemble=False,
-        ensemble_indices=[0],
         exclude_libraries=[],
     ):
-        super(GeneralizedLibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
+        super().__init__()
         if len(libraries) > 0:
             self.libraries_ = libraries
 
@@ -262,8 +250,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
 
             xp = AxesArray(np.concatenate(xps, axis=xps[0].ax_coord), xps[0].__dict__)
             xp_full = xp_full + [xp]
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def get_feature_names(self, input_features=None):

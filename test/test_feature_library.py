@@ -683,12 +683,12 @@ def pde_library_helper(library, u, coef_first_dim):
     opt = EnsembleOptimizer(opt=base_opt, bagging=True, n_models=10, n_subset=50)
     model = SINDy(optimizer=opt, feature_library=library)
     model.fit(u)
-    assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
+    assert np.shape(opt.coef_list) == (10, coef_first_dim, n_features)
 
     opt = EnsembleOptimizer(opt=base_opt, library_ensemble=True, n_models=10)
     model = SINDy(optimizer=opt, feature_library=library)
     model.fit(u)
-    assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
+    assert np.shape(opt.coef_list) == (10, coef_first_dim, n_features)
 
 
 def test_1D_pdes(data_1d_random_pde):

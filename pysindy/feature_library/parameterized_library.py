@@ -70,8 +70,6 @@ class ParameterizedLibrary(GeneralizedLibrary):
         feature_library=PolynomialLibrary(),
         num_parameters=3,
         num_features=3,
-        library_ensemble=False,
-        ensemble_indices=[0],
     ):
         if not isinstance(feature_library, BaseFeatureLibrary) or not isinstance(
             parameter_library, BaseFeatureLibrary
@@ -101,8 +99,6 @@ class ParameterizedLibrary(GeneralizedLibrary):
             tensor_array=tensor_array,
             exclude_libraries=[0, 1],
             inputs_per_library=inputs_per_libraries,
-            library_ensemble=library_ensemble,
-            ensemble_indices=ensemble_indices,
         )
 
     def calc_trajectory(self, diff_method, x, t):

@@ -316,7 +316,7 @@ class EnsembleOptimizer(BaseOptimizer):
         else:
             n_subset = self.n_subset
 
-        n_features = x.shape[x.ax_coord]
+        n_features = x.n_coord
         if self.library_ensemble and self.n_candidates_to_drop > n_features:
             warnings.warn(
                 "n_candidates_to_drop larger than number of features.  Cannot "

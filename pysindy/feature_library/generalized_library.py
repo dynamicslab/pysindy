@@ -1,4 +1,5 @@
 from itertools import repeat
+from typing import Optional
 from typing import Sequence
 from warnings import warn
 
@@ -80,7 +81,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         self,
         libraries: list,
         tensor_array=None,
-        inputs_per_library: None | Sequence[Sequence[int]] = None,
+        inputs_per_library: Optional[Sequence[Sequence[int]]] = None,
         library_ensemble=False,
         ensemble_indices=[0],
         exclude_libraries=[],

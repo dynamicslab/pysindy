@@ -5,6 +5,7 @@ import abc
 import warnings
 from functools import wraps
 from itertools import repeat
+from typing import Optional
 from typing import Sequence
 
 import numpy as np
@@ -399,7 +400,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         self,
         libraries: list,
         library_ensemble=False,
-        inputs_per_library: None | Sequence[Sequence[int]] = None,
+        inputs_per_library: Optional[Sequence[Sequence[int]]] = None,
         ensemble_indices=[0],
     ):
         super(TensoredLibrary, self).__init__(

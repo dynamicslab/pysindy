@@ -55,45 +55,29 @@ class ParameterizedLibrary(GeneralizedLibrary):
         library_ensemble=False,
         ensemble_indices=[0],
     ):
-        if not isinstance(feature_library, BaseFeatureLibrary) or not isinstance(
-            parameter_library, BaseFeatureLibrary
-        ):
-            raise ValueError(
-                "Both feature_library and parameter_library must be instances of \
-                 BaseFeatureLibrary."
-            )
-
         if num_parameters <= 0 or num_features <= 0:
             raise ValueError("Both num_parameter and num_feature must be positive.")
-        libraries = [parameter_library, feature_library]
-        tensor_array = [[1, 1]]
+        inputs_per_library = [
+            range(num_features, num_parameters + num_features),
+            range(num_features),
+        ]
 
-        feature_input = np.zeros(num_features + num_parameters, dtype=np.int32)
-        feature_input[:num_features] = np.arange(num_features)
-
-        parameter_input = (
-            np.ones(num_features + num_parameters, dtype=np.int32) * num_features
-        )
-        parameter_input[-num_parameters:] = num_features + np.arange(num_parameters)
-
-        inputs_per_libraries = np.array([parameter_input, feature_input])
-
-        super(ParameterizedLibrary, self).__init__(
-            libraries,
-            tensor_array=tensor_array,
+        super().__init__(
+            libraries=[parameter_library, feature_library],
+            tensor_array=[[1, 1]],
             exclude_libraries=[0, 1],
-            inputs_per_library=inputs_per_libraries,
+            inputs_per_library=inputs_per_library,
             library_ensemble=library_ensemble,
             ensemble_indices=ensemble_indices,
         )
 
     def calc_trajectory(self, diff_method, x, t):
         # if tensoring weak libraries, add the correction
-        if hasattr(self.libraries_[0], "K"):
-            constants_final = np.ones(self.libraries_[0].K)
-            for k in range(self.libraries_[0].K):
-                constants_final[k] = np.sum(self.libraries_[0].fullweights0[k])
-            x, x_int = self.libraries_[0].calc_trajectory(diff_method, x, t)
+        if hasattr(self.libraries[0], "K"):
+            constants_final = np.ones(self.libraries[0].K)
+            for k in range(self.libraries[0].K):
+                constants_final[k] = np.sum(self.libraries[0].fullweights0[k])
+            x, x_int = self.libraries[0].calc_trajectory(diff_method, x, t)
             return x, x_int * constants_final[:, np.newaxis]
         else:
-            return self.libraries_[0].calc_trajectory(diff_method, x, t)
+            return self.libraries[0].calc_trajectory(diff_method, x, t)

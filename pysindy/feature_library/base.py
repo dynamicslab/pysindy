@@ -4,6 +4,7 @@ Base class for feature library classes.
 import abc
 import warnings
 from functools import wraps
+from itertools import repeat
 from typing import Sequence
 
 import numpy as np
@@ -230,9 +231,6 @@ class ConcatLibrary(BaseFeatureLibrary):
 
     Attributes
     ----------
-    libraries_ : list of libraries
-        Library instances to be applied to the input matrix.
-
     n_features_in_ : int
         The total number of input features.
 
@@ -264,7 +262,7 @@ class ConcatLibrary(BaseFeatureLibrary):
         super(ConcatLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
         )
-        self.libraries_ = libraries
+        self.libraries = libraries
 
     @x_sequence_or_item
     def fit(self, x_full, y=None):
@@ -284,13 +282,13 @@ class ConcatLibrary(BaseFeatureLibrary):
         self.n_features_in_ = n_features
 
         # First fit all libs provided below
-        fitted_libs = [lib.fit(x_full, y) for lib in self.libraries_]
+        fitted_libs = [lib.fit(x_full, y) for lib in self.libraries]
 
         # Calculate the sum of output features
         self.n_output_features_ = sum([lib.n_output_features_ for lib in fitted_libs])
 
         # Save fitted libs
-        self.libraries_ = fitted_libs
+        self.libraries = fitted_libs
 
         return self
 
@@ -310,12 +308,12 @@ class ConcatLibrary(BaseFeatureLibrary):
             generated from applying the custom functions to the inputs.
 
         """
-        for lib in self.libraries_:
+        for lib in self.libraries:
             check_is_fitted(lib)
 
         xp_full = []
         for x in x_full:
-            feature_sets = [lib.transform([x])[0] for lib in self.libraries_]
+            feature_sets = [lib.transform([x])[0] for lib in self.libraries]
             xp = np.concatenate(feature_sets, axis=feature_sets[0].ax_coord)
 
             xp = AxesArray(xp, comprehend_axes(xp))
@@ -338,13 +336,13 @@ class ConcatLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         feature_names = list()
-        for lib in self.libraries_:
+        for lib in self.libraries:
             lib_feat_names = lib.get_feature_names(input_features)
             feature_names += lib_feat_names
         return feature_names
 
     def calc_trajectory(self, diff_method, x, t):
-        return self.libraries_[0].calc_trajectory(diff_method, x, t)
+        return self.libraries[0].calc_trajectory(diff_method, x, t)
 
 
 class TensoredLibrary(BaseFeatureLibrary):
@@ -360,6 +358,12 @@ class TensoredLibrary(BaseFeatureLibrary):
         Whether or not to use library bagging (regress on subset of the
         candidate terms in the library).
 
+    inputs_per_library_ : Sequence of Sequences of ints (default None)
+        list that specifies which input indexes should be passed as
+        inputs for each of the individual feature libraries.
+        length must equal the number of feature libraries.  Default is
+        that all inputs are used for every library.
+
     ensemble_indices : integer array, optional (default [0])
         The indices to use for ensembling the library. For instance, if
         ensemble_indices = [0], it chops off the first column of the library.
@@ -368,11 +372,6 @@ class TensoredLibrary(BaseFeatureLibrary):
     ----------
     libraries_ : list of libraries
         Library instances to be applied to the input matrix.
-
-    inputs_per_library_ : numpy nd.array
-        Array that specifies which inputs should be used for each of the
-        libraries you are going to tensor together. Used for building
-        GeneralizedLibrary objects.
 
     n_features_in_ : int
         The total number of input features.
@@ -400,14 +399,14 @@ class TensoredLibrary(BaseFeatureLibrary):
         self,
         libraries: list,
         library_ensemble=False,
-        inputs_per_library=None,
+        inputs_per_library: None | Sequence[Sequence[int]] = None,
         ensemble_indices=[0],
     ):
         super(TensoredLibrary, self).__init__(
             library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
         )
         self.libraries_ = libraries
-        self.inputs_per_library_ = inputs_per_library
+        self.inputs_per_library = inputs_per_library
 
     def _combinations(self, lib_i, lib_j):
         """
@@ -447,7 +446,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         """
         Extra function to make building a GeneralizedLibrary object easier
         """
-        self.inputs_per_library_ = inputs_per_library
+        self.inputs_per_library = inputs_per_library
 
     @x_sequence_or_item
     def fit(self, x_full, y=None):
@@ -468,17 +467,14 @@ class TensoredLibrary(BaseFeatureLibrary):
         self.n_features_in_ = n_features
 
         # If parameter is not set, use all the inputs
-        if self.inputs_per_library_ is None:
-            temp_inputs = np.tile(range(n_features), len(self.libraries_))
-            self.inputs_per_library_ = np.reshape(
-                temp_inputs, (len(self.libraries_), n_features)
+        if self.inputs_per_library is None:
+            self.inputs_per_library = list(
+                repeat(list(range(n_features)), len(self.libraries_))
             )
 
         # First fit all libs provided below
         fitted_libs = [
-            lib.fit(
-                [x[..., np.unique(self.inputs_per_library_[i, :])] for x in x_full], y
-            )
+            lib.fit([x[..., _unique(self.inputs_per_library[i])] for x in x_full], y)
             for i, lib in enumerate(self.libraries_)
         ]
 
@@ -516,17 +512,17 @@ class TensoredLibrary(BaseFeatureLibrary):
             xp = []
             for i in range(len(self.libraries_)):
                 lib_i = self.libraries_[i]
-                if self.inputs_per_library_ is None:
+                if self.inputs_per_library is None:
                     xp_i = lib_i.transform([x])[0]
                 else:
                     xp_i = lib_i.transform(
-                        [x[..., np.unique(self.inputs_per_library_[i, :])]]
+                        [x[..., _unique(self.inputs_per_library[i])]]
                     )[0]
 
                 for j in range(i + 1, len(self.libraries_)):
                     lib_j = self.libraries_[j]
                     xp_j = lib_j.transform(
-                        [x[..., np.unique(self.inputs_per_library_[j, :])]]
+                        [x[..., _unique(self.inputs_per_library[j])]]
                     )[0]
 
                     xp.append(self._combinations(xp_i, xp_j))
@@ -556,22 +552,22 @@ class TensoredLibrary(BaseFeatureLibrary):
             lib_i = self.libraries_[i]
             if input_features is None:
                 input_features_i = [
-                    "x%d" % k for k in np.unique(self.inputs_per_library_[i, :])
+                    "x%d" % k for k in _unique(self.inputs_per_library[i])
                 ]
             else:
                 input_features_i = np.asarray(input_features)[
-                    np.unique(self.inputs_per_library_[i, :])
+                    _unique(self.inputs_per_library[i])
                 ].tolist()
             lib_i_feat_names = lib_i.get_feature_names(input_features_i)
             for j in range(i + 1, len(self.libraries_)):
                 lib_j = self.libraries_[j]
                 if input_features is None:
                     input_features_j = [
-                        "x%d" % k for k in np.unique(self.inputs_per_library_[j, :])
+                        "x%d" % k for k in _unique(self.inputs_per_library[j])
                     ]
                 else:
                     input_features_j = np.asarray(input_features)[
-                        np.unique(self.inputs_per_library_[j, :])
+                        _unique(self.inputs_per_library[j])
                     ].tolist()
                 lib_j_feat_names = lib_j.get_feature_names(input_features_j)
                 feature_names += self._name_combinations(
@@ -581,3 +577,8 @@ class TensoredLibrary(BaseFeatureLibrary):
 
     def calc_trajectory(self, diff_method, x, t):
         return self.libraries_[0].calc_trajectory(diff_method, x, t)
+
+
+def _unique(s: Sequence) -> Sequence:
+    """Remove duplicates, preserving order when python > 3.7"""
+    return list(dict.fromkeys(s))

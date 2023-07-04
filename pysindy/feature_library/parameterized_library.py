@@ -6,47 +6,29 @@ from .polynomial_library import PolynomialLibrary
 
 
 class ParameterizedLibrary(GeneralizedLibrary):
-    """Construct a SINDyCP library to fit multiple trajectories with variable
-    control parameters. The library is composed of a tensor product of a
-    feature library, applied to the input data, and a parameter library,
-    applied to the input control. If the input libraries are weak, the temporal
-    derivatives are automatically rescaled by the appropriate domain volumes.
+    """A tensor product of two libraries with different inputs.
+    Typically, this is a feature library of the input data and a
+    parameter library of input control, making the SINDyCP method.  If
+    the input libraries are weak, the temporal derivatives are
+    automatically rescaled by the appropriate domain volumes.
 
     Parameters
     ----------
-    feature_library : BaseFeatureLibrary, optional (default PolynomialLibrary).
-    Specifies the library function to apply to the input data features.
-
     parameter_library : BaseFeatureLibrary, optional (default PolynomialLibrary).
     Specifies the library function to apply to the input control features.
 
-    num_features : int, optional (default 3)
-    Specifies the number of features in the input data.
+    feature_library : BaseFeatureLibrary, optional (default PolynomialLibrary).
+    Specifies the library function to apply to the input data features.
 
     num_parameters : int, optional (default 3)
     Specifies the number of features in the input control.
 
+    num_features : int, optional (default 3)
+    Specifies the number of features in the input data.
+
     Attributes
     ----------
-    libraries_ : list of libraries
-        Library instances to be applied to the input matrix.
-        Equal to [parameter_library,feature_library].
-
-    tensor_array_ : 2D list of booleans
-        Indicates which pairs of libraries to tensor product together and
-        add to the overall library. Equal to [0,1]
-
-    inputs_per_library_ : 2D np.ndarray
-        Can be used to specify a subset of the variables to use to generate
-        a feature library. Value determined by num_parameters and num_features.
-
-    n_features_in_ : int
-        The total number of input features.
-
-    n_output_features_ : int
-        The total number of output features. The number of output features
-        is the sum of the numbers of output features for each of the
-        concatenated libraries.
+    see GeneralizedLibrary
 
     Examples
     ----------
@@ -66,10 +48,10 @@ class ParameterizedLibrary(GeneralizedLibrary):
 
     def __init__(
         self,
-        parameter_library=PolynomialLibrary(degree=1, include_bias=True),
-        feature_library=PolynomialLibrary(),
-        num_parameters=3,
-        num_features=3,
+        parameter_library: BaseFeatureLibrary = PolynomialLibrary(degree=1),
+        feature_library: BaseFeatureLibrary = PolynomialLibrary(),
+        num_parameters: int = 3,
+        num_features: int = 3,
         library_ensemble=False,
         ensemble_indices=[0],
     ):

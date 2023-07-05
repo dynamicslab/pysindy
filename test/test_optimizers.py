@@ -1133,3 +1133,14 @@ def test_frols_error_linear_dependence():
     y = np.array([[1.0, 1.0]])
     with pytest.raises(ValueError):
         opt.fit(x, y)
+
+
+def test_optimizer_sparse_subset():
+    A = np.diag([1, 1, 1, 1])
+    b = np.array([1, 1, 0.5, 1])
+    opt = STLSQ(threshold=0.5, alpha=0.1, sparse_ind=[2, 3])
+    opt.fit(A, b)
+    X = opt.coef_
+    assert X[0, 2] == 0.0
+    assert X[0, 3] > 0.0 and X[0, 3] < 1.0
+    np.testing.assert_equal(X[0, :2], np.ones(2))

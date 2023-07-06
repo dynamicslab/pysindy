@@ -55,7 +55,6 @@ class FourierLibrary(BaseFeatureLibrary):
         include_sin=True,
         include_cos=True,
     ):
-        super().__init__()
         if not (include_sin or include_cos):
             raise ValueError("include_sin and include_cos cannot both be False")
         if n_frequencies < 1 or not isinstance(n_frequencies, int):

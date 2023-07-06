@@ -76,7 +76,6 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         inputs_per_library: Optional[Sequence[Sequence[int]]] = None,
         exclude_libraries=[],
     ):
-        super().__init__()
         if len(libraries) > 0:
             self.libraries = libraries
 

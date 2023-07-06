@@ -171,7 +171,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         is_uniform=None,
         periodic=None,
     ):
-        super().__init__()
         self.functions = library_functions
         self.derivative_order = derivative_order
         self.function_names = function_names

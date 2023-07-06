@@ -206,7 +206,6 @@ class ConcatLibrary(BaseFeatureLibrary):
         self,
         libraries: list,
     ):
-        super().__init__()
         self.libraries = libraries
 
     @x_sequence_or_item
@@ -335,7 +334,6 @@ class TensoredLibrary(BaseFeatureLibrary):
         libraries: list,
         inputs_per_library: Optional[Sequence[Sequence[int]]] = None,
     ):
-        super().__init__()
         self.libraries = libraries
         self.inputs_per_library = inputs_per_library
 

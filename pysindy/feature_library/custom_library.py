@@ -41,13 +41,6 @@ class CustomLibrary(BaseFeatureLibrary):
         will be included.
         If False, all combinations will be included.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     include_bias : boolean, optional (default False)
         If True (default), then include a bias column, the feature in which
         all polynomial powers are zero (i.e. a column of ones - acts as an
@@ -92,13 +85,9 @@ class CustomLibrary(BaseFeatureLibrary):
         library_functions,
         function_names=None,
         interaction_only=True,
-        library_ensemble=False,
-        ensemble_indices=[0],
         include_bias=False,
     ):
-        super(CustomLibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
+        super().__init__()
         self.functions = library_functions
         self.function_names = function_names
         if function_names and (
@@ -219,6 +208,4 @@ class CustomLibrary(BaseFeatureLibrary):
 
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full

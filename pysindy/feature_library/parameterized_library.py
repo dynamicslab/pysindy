@@ -52,8 +52,6 @@ class ParameterizedLibrary(GeneralizedLibrary):
         feature_library: BaseFeatureLibrary = PolynomialLibrary(),
         num_parameters: int = 3,
         num_features: int = 3,
-        library_ensemble=False,
-        ensemble_indices=[0],
     ):
         if num_parameters <= 0 or num_features <= 0:
             raise ValueError("Both num_parameter and num_feature must be positive.")
@@ -67,8 +65,6 @@ class ParameterizedLibrary(GeneralizedLibrary):
             tensor_array=[[1, 1]],
             exclude_libraries=[0, 1],
             inputs_per_library=inputs_per_library,
-            library_ensemble=library_ensemble,
-            ensemble_indices=ensemble_indices,
         )
 
     def calc_trajectory(self, diff_method, x, t):

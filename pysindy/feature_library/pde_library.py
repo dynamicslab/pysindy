@@ -63,13 +63,6 @@ class PDELibrary(BaseFeatureLibrary):
         will consist of only pure no-derivative terms and pure derivative
         terms, with no mixed terms.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     implicit_terms : boolean
         Flag to indicate if SINDy-PI (temporal derivatives) is being used
         for the right-hand side of the SINDy fit.
@@ -118,8 +111,6 @@ class PDELibrary(BaseFeatureLibrary):
         function_names=None,
         include_bias=False,
         include_interaction=True,
-        library_ensemble=False,
-        ensemble_indices=[0],
         implicit_terms=False,
         multiindices=None,
         differentiation_method=FiniteDifference,
@@ -127,9 +118,7 @@ class PDELibrary(BaseFeatureLibrary):
         is_uniform=None,
         periodic=None,
     ):
-        super(PDELibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
+        super().__init__()
         self.functions = library_functions
         self.derivative_order = derivative_order
         self.function_names = function_names
@@ -472,8 +461,6 @@ class PDELibrary(BaseFeatureLibrary):
                 library_idx += n_library_terms * self.num_derivatives * n_features
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def get_spatial_grid(self):

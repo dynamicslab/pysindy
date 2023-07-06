@@ -23,6 +23,7 @@ from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library import TensoredLibrary
 from pysindy.feature_library import WeakPDELibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
+from pysindy.optimizers import EnsembleOptimizer
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import STLSQ
 
@@ -427,49 +428,6 @@ def test_not_fitted(data_lorenz, library):
         library.transform(x)
 
 
-@pytest.mark.parametrize(
-    "library",
-    [
-        IdentityLibrary(),
-        PolynomialLibrary(),
-        FourierLibrary(),
-        PolynomialLibrary() + FourierLibrary(),
-        pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_generalized_library"),
-        pytest.lazy_fixture("data_ode_library"),
-        pytest.lazy_fixture("data_pde_library"),
-        pytest.lazy_fixture("data_sindypi_library"),
-    ],
-)
-def test_library_ensemble(data_lorenz, library):
-    x, t = data_lorenz
-    library.fit(x)
-    n_output_features = library.n_output_features_
-    library.library_ensemble = True
-    xp = library.transform(x)
-    assert n_output_features == xp.shape[1] + 1
-    library.ensemble_indices = [0, 1]
-    with pytest.warns(UserWarning):
-        xp = library.transform(x)
-    assert n_output_features == xp.shape[1] + 2
-    library.ensemble_indices = np.zeros(1000, dtype=int).tolist()
-    with pytest.raises(ValueError):
-        xp = library.transform(x)
-
-
-@pytest.mark.parametrize(
-    "library",
-    [
-        IdentityLibrary,
-        PolynomialLibrary,
-        FourierLibrary,
-    ],
-)
-def test_bad_library_ensemble(library):
-    with pytest.raises(ValueError):
-        library = library(ensemble_indices=-1)
-
-
 def test_generalized_library(data_lorenz):
     x, t = data_lorenz
     poly_library = PolynomialLibrary(include_bias=False)
@@ -690,7 +648,7 @@ def test_parameterized_library(diffuse_multiple_trajectories):
     model = SINDy(
         feature_library=pde_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
-    model.fit(xs, u=us, multiple_trajectories=True, t=t, ensemble=False)
+    model.fit(xs, u=us, multiple_trajectories=True, t=t)
     assert abs(model.coefficients()[0][4] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:4] == 0)
     assert np.all(model.coefficients()[0][5:] == 0)
@@ -699,7 +657,7 @@ def test_parameterized_library(diffuse_multiple_trajectories):
     model = SINDy(
         feature_library=weak_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
-    model.fit(xs, u=us, multiple_trajectories=True, t=t, ensemble=False)
+    model.fit(xs, u=us, multiple_trajectories=True, t=t)
     assert abs(model.coefficients()[0][4] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:4] == 0)
     assert np.all(model.coefficients()[0][5:] == 0)
@@ -707,17 +665,21 @@ def test_parameterized_library(diffuse_multiple_trajectories):
 
 # Helper function for testing PDE libraries
 def pde_library_helper(library, u, coef_first_dim):
-    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
-    model = SINDy(optimizer=opt, feature_library=library)
+    base_opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
+    model = SINDy(optimizer=base_opt, feature_library=library)
     model.fit(u)
-    assert np.any(opt.coef_ != 0.0)
+    assert np.any(base_opt.coef_ != 0.0)
 
     n_features = len(model.get_feature_names())
-    model.fit(u, ensemble=True, n_subset=50, n_models=10)
-    assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
+    opt = EnsembleOptimizer(opt=base_opt, bagging=True, n_models=10, n_subset=50)
+    model = SINDy(optimizer=opt, feature_library=library)
+    model.fit(u)
+    assert np.shape(opt.coef_list) == (10, coef_first_dim, n_features)
 
-    model.fit(u, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
+    opt = EnsembleOptimizer(opt=base_opt, library_ensemble=True, n_models=10)
+    model = SINDy(optimizer=opt, feature_library=library)
+    model.fit(u)
+    assert np.shape(opt.coef_list) == (10, coef_first_dim, n_features)
 
 
 def test_1D_pdes(data_1d_random_pde):

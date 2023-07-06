@@ -18,13 +18,6 @@ class IdentityLibrary(BaseFeatureLibrary):
         The total number of output features. The number of output features
         is equal to the number of input features.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     Examples
     --------
     >>> import numpy as np
@@ -38,15 +31,6 @@ class IdentityLibrary(BaseFeatureLibrary):
     >>> lib.get_feature_names()
     ['x0', 'x1']
     """
-
-    def __init__(
-        self,
-        library_ensemble=False,
-        ensemble_indices=[0],
-    ):
-        super(IdentityLibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
 
     def get_feature_names(self, input_features=None):
         """
@@ -114,6 +98,4 @@ class IdentityLibrary(BaseFeatureLibrary):
                 raise ValueError("x shape does not match training shape")
 
             xp_full = xp_full + [x.copy()]
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full

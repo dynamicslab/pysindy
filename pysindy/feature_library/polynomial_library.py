@@ -44,13 +44,6 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         Order of output array in the dense case. 'F' order is faster to
         compute, but may slow down subsequent estimators.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     Attributes
     ----------
     powers_ : array, shape (n_output_features, n_input_features)
@@ -71,17 +64,12 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         interaction_only=False,
         include_bias=True,
         order="C",
-        library_ensemble=False,
-        ensemble_indices=[0],
     ):
         super(PolynomialLibrary, self).__init__(
             degree=degree,
             interaction_only=interaction_only,
             include_bias=include_bias,
             order=order,
-        )
-        BaseFeatureLibrary.__init__(
-            self, library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
         )
         if degree < 0 or not isinstance(degree, int):
             raise ValueError("degree must be a nonnegative integer")
@@ -284,6 +272,4 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                     for i, comb in enumerate(combinations):
                         xp[..., i] = x[..., comb].prod(-1)
             xp_full = xp_full + [xp]
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full

@@ -1,6 +1,5 @@
 from itertools import chain
-from itertools import combinations
-from itertools import combinations_with_replacement as combinations_w_r
+from typing import Iterator
 
 import numpy as np
 from scipy import sparse
@@ -83,41 +82,37 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
     @staticmethod
     def _combinations(
         n_features, degree, include_interaction, interaction_only, include_bias
-    ):
-        comb = combinations if interaction_only else combinations_w_r
-        start = int(not include_bias)
+    ) -> Iterator[tuple]:
         if not include_interaction:
-            if include_bias:
-                return chain(
-                    [()],
-                    chain.from_iterable(
-                        combinations_w_r([j], i)
-                        for i in range(1, degree + 1)
-                        for j in range(n_features)
-                    ),
-                )
-            else:
-                return chain.from_iterable(
-                    combinations_w_r([j], i)
-                    for i in range(1, degree + 1)
-                    for j in range(n_features)
-                )
-        return chain.from_iterable(
-            comb(range(n_features), i) for i in range(start, degree + 1)
+            return chain(
+                [()] if include_bias else [],
+                (
+                    exponent * (feat_idx,)
+                    for exponent in range(1, degree + 1)
+                    for feat_idx in range(n_features)
+                ),
+            )
+        return PolynomialFeatures._combinations(
+            n_features=n_features,
+            min_degree=int(not include_bias),
+            max_degree=degree,
+            interaction_only=interaction_only,
+            include_bias=include_bias,
         )
 
     @property
     def powers_(self):
         check_is_fitted(self)
-        n_features = self.n_features_in_
         combinations = self._combinations(
-            n_features,
-            self.degree,
-            self.include_interaction,
-            self.interaction_only,
-            self.include_bias,
+            n_features=self.n_features_in_,
+            degree=self.degree,
+            include_interaction=self.include_interaction,
+            interaction_only=self.interaction_only,
+            include_bias=self.include_bias,
         )
-        return np.vstack([np.bincount(c, minlength=n_features) for c in combinations])
+        return np.vstack(
+            [np.bincount(c, minlength=self.n_features_in_) for c in combinations]
+        )
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.

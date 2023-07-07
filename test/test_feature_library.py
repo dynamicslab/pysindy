@@ -74,11 +74,13 @@ def test_form_sindy_pi_library():
 
 def test_bad_parameters():
     with pytest.raises(ValueError):
-        PolynomialLibrary(degree=-1)
+        PolynomialLibrary(degree=-1).fit(np.array([]))
     with pytest.raises(ValueError):
-        PolynomialLibrary(degree=1.5)
+        PolynomialLibrary(degree=1.5).fit(np.array([]))
     with pytest.raises(ValueError):
-        PolynomialLibrary(include_interaction=False, interaction_only=True)
+        PolynomialLibrary(include_interaction=False, interaction_only=True).fit(
+            np.array([])
+        )
     with pytest.raises(ValueError):
         FourierLibrary(n_frequencies=-1)
     with pytest.raises(ValueError):

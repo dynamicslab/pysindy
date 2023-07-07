@@ -64,19 +64,12 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         include_bias=True,
         order="C",
     ):
-        super(PolynomialLibrary, self).__init__(
+        super().__init__(
             degree=degree,
             interaction_only=interaction_only,
             include_bias=include_bias,
             order=order,
         )
-        if degree < 0 or not isinstance(degree, int):
-            raise ValueError("degree must be a nonnegative integer")
-        if (not include_interaction) and interaction_only:
-            raise ValueError(
-                "Can't have include_interaction be False and interaction_only"
-                " be True"
-            )
         self.include_interaction = include_interaction
 
     @staticmethod
@@ -159,6 +152,13 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         -------
         self : instance
         """
+        if self.degree < 0 or not isinstance(self.degree, int):
+            raise ValueError("degree must be a nonnegative integer")
+        if (not self.include_interaction) and self.interaction_only:
+            raise ValueError(
+                "Can't have include_interaction be False and interaction_only"
+                " be True"
+            )
         n_features = x_full[0].shape[x_full[0].ax_coord]
         combinations = self._combinations(
             n_features,
@@ -177,19 +177,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
         Parameters
         ----------
-        x : array-like or CSR/CSC sparse matrix, shape (n_samples, n_features)
+        x_full : {array-like, sparse matrix} of shape (n_samples, n_features)
             The data to transform, row by row.
-            Prefer CSR over CSC for sparse input (for speed), but CSC is
-            required if the degree is 4 or higher. If the degree is less than
-            4 and the input format is CSC, it will be converted to CSR, have
-            its polynomial features generated, then converted back to CSC.
-            If the degree is 2 or 3, the method described in "Leveraging
-            Sparsity to Speed Up Polynomial Feature Expansions of CSR Matrices
-            Using K-Simplex Numbers" by Andrew Nystrom and John Hughes is
-            used, which is much faster than the method used on CSC input. For
-            this reason, a CSC input will be converted to CSR, and the output
-            will be converted back to CSC prior to being returned, hence the
-            preference of CSR.
 
         Returns
         -------

@@ -882,3 +882,22 @@ def test_sindypi_library(data_lorenz):
     assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(
         sindy_opt.coef_[3, :] != 0.0
     )
+
+
+@pytest.mark.parametrize(
+    ("include_interaction", "interaction_only", "bias", "expected"),
+    [
+        (True, True, True, ((), (0,), (0, 1), (1,))),
+        (False, False, False, ((0,), (0, 0), (1,), (1, 1))),
+    ],
+)
+def test_polynomial_combinations(include_interaction, interaction_only, bias, expected):
+    combos = PolynomialLibrary._combinations(
+        n_features=2,
+        degree=2,
+        include_interaction=include_interaction,
+        interaction_only=interaction_only,
+        include_bias=bias,
+    )
+    result = tuple(sorted(list(combos)))
+    assert result == expected

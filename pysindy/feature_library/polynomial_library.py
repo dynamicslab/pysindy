@@ -4,7 +4,6 @@ from typing import Iterator
 import numpy as np
 from scipy import sparse
 from sklearn.preprocessing import PolynomialFeatures
-from sklearn.preprocessing._csr_polynomial_expansion import _csr_polynomial_expansion
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -194,66 +193,41 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             if sparse.issparse(x) and x.format not in ["csr", "csc"]:
                 # create new with correct sparse
                 axes = comprehend_axes(x)
-                x = x.asformat("csr")
+                x = x.asformat("csc")
                 wrap_axes(axes, x)
-
-            n_samples = x.shape[x.ax_time]
             n_features = x.shape[x.ax_coord]
             if n_features != self.n_features_in_:
                 raise ValueError("x shape does not match training shape")
 
-            if sparse.isspmatrix_csr(x):
-                if self.degree > 3:
-                    return sparse.csr_matrix(self.transform(x.tocsc()))
-                to_stack = []
-                if self.include_bias:
-                    to_stack.append(np.ones(shape=(n_samples, 1), dtype=x.dtype))
-                to_stack.append(x)
-                for deg in range(2, self.degree + 1):
-                    xp_next = _csr_polynomial_expansion(
-                        x.data,
-                        x.indices,
-                        x.indptr,
-                        x.shape[1],
-                        self.interaction_only,
-                        deg,
-                    )
-                    if xp_next is None:
-                        break
-                    to_stack.append(xp_next)
-                xp = sparse.hstack(to_stack, format="csr")
-            elif sparse.isspmatrix_csc(x) and self.degree < 4:
-                return sparse.csc_matrix(self.transform(x.tocsr()))
+            combinations = self._combinations(
+                n_features,
+                self.degree,
+                self.include_interaction,
+                self.interaction_only,
+                self.include_bias,
+            )
+            if sparse.isspmatrix(x):
+                columns = []
+                for comb in combinations:
+                    if comb:
+                        out_col = 1
+                        for col_idx in comb:
+                            out_col = x[..., col_idx].multiply(out_col)
+                        columns.append(out_col)
+                    else:
+                        bias = sparse.csc_matrix(np.ones((x.shape[0], 1)))
+                        columns.append(bias)
+                xp = sparse.hstack(columns, dtype=x.dtype).tocsc()
             else:
-                combinations = self._combinations(
-                    n_features,
-                    self.degree,
-                    self.include_interaction,
-                    self.interaction_only,
-                    self.include_bias,
+                xp = AxesArray(
+                    np.empty(
+                        (*x.shape[:-1], self.n_output_features_),
+                        dtype=x.dtype,
+                        order=self.order,
+                    ),
+                    x.__dict__,
                 )
-                if sparse.isspmatrix(x):
-                    columns = []
-                    for comb in combinations:
-                        if comb:
-                            out_col = 1
-                            for col_idx in comb:
-                                out_col = x[..., col_idx].multiply(out_col)
-                            columns.append(out_col)
-                        else:
-                            bias = sparse.csc_matrix(np.ones((x.shape[0], 1)))
-                            columns.append(bias)
-                    xp = sparse.hstack(columns, dtype=x.dtype).tocsc()
-                else:
-                    xp = AxesArray(
-                        np.empty(
-                            (*x.shape[:-1], self.n_output_features_),
-                            dtype=x.dtype,
-                            order=self.order,
-                        ),
-                        x.__dict__,
-                    )
-                    for i, comb in enumerate(combinations):
-                        xp[..., i] = x[..., comb].prod(-1)
+                for i, comb in enumerate(combinations):
+                    xp[..., i] = x[..., comb].prod(-1)
             xp_full = xp_full + [xp]
         return xp_full

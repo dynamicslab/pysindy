@@ -3,8 +3,6 @@ Unit tests for feature libraries.
 """
 import numpy as np
 import pytest
-from scipy.sparse import coo_matrix
-from scipy.sparse import csc_matrix
 from scipy.sparse import csr_matrix
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
@@ -74,11 +72,13 @@ def test_form_sindy_pi_library():
 
 def test_bad_parameters():
     with pytest.raises(ValueError):
-        PolynomialLibrary(degree=-1)
+        PolynomialLibrary(degree=-1).fit(np.array([]))
     with pytest.raises(ValueError):
-        PolynomialLibrary(degree=1.5)
+        PolynomialLibrary(degree=1.5).fit(np.array([]))
     with pytest.raises(ValueError):
-        PolynomialLibrary(include_interaction=False, interaction_only=True)
+        PolynomialLibrary(include_interaction=False, interaction_only=True).fit(
+            np.array([])
+        )
     with pytest.raises(ValueError):
         FourierLibrary(n_frequencies=-1)
     with pytest.raises(ValueError):
@@ -336,14 +336,6 @@ def test_get_feature_names(data_lorenz, library):
     assert isinstance(feature_names[0], str)
 
 
-@pytest.mark.parametrize("sparse_format", [csc_matrix, csr_matrix, coo_matrix])
-def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
-    x, t = data_lorenz
-    library = PolynomialLibrary()
-    library.fit_transform(sparse_format(x))
-    check_is_fitted(library)
-
-
 # Catch-all for various combinations of options and
 # inputs for polynomial features
 @pytest.mark.parametrize(
@@ -352,6 +344,23 @@ def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
         ({"degree": 4}, csr_matrix),
         ({"include_bias": True}, csr_matrix),
         ({"include_bias": False}, csr_matrix),
+        ({"include_bias": False, "interaction_only": True}, csr_matrix),
+        (
+            {
+                "include_bias": False,
+                "interaction_only": False,
+                "include_interaction": False,
+            },
+            csr_matrix,
+        ),
+        (
+            {
+                "include_bias": False,
+                "interaction_only": False,
+                "include_interaction": True,
+            },
+            csr_matrix,
+        ),
         ({"include_interaction": False}, lambda x: x),
         ({"include_interaction": False, "include_bias": True}, lambda x: x),
     ],
@@ -359,8 +368,11 @@ def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
 def test_polynomial_options(data_lorenz, kwargs, sparse_format):
     x, t = data_lorenz
     library = PolynomialLibrary(**kwargs)
-    library.fit_transform(sparse_format(x))
+    out = library.fit_transform(sparse_format(x))
     check_is_fitted(library)
+    expected = len(library.powers_)
+    result = out.shape[1]
+    assert result == expected
 
 
 # Catch-all for various combinations of options and
@@ -882,3 +894,22 @@ def test_sindypi_library(data_lorenz):
     assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(
         sindy_opt.coef_[3, :] != 0.0
     )
+
+
+@pytest.mark.parametrize(
+    ("include_interaction", "interaction_only", "bias", "expected"),
+    [
+        (True, True, True, ((), (0,), (0, 1), (1,))),
+        (False, False, False, ((0,), (0, 0), (1,), (1, 1))),
+    ],
+)
+def test_polynomial_combinations(include_interaction, interaction_only, bias, expected):
+    combos = PolynomialLibrary._combinations(
+        n_features=2,
+        degree=2,
+        include_interaction=include_interaction,
+        interaction_only=interaction_only,
+        include_bias=bias,
+    )
+    result = tuple(sorted(list(combos)))
+    assert result == expected

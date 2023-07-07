@@ -1,11 +1,9 @@
 from itertools import chain
-from itertools import combinations
-from itertools import combinations_with_replacement as combinations_w_r
+from typing import Iterator
 
 import numpy as np
 from scipy import sparse
 from sklearn.preprocessing import PolynomialFeatures
-from sklearn.preprocessing._csr_polynomial_expansion import _csr_polynomial_expansion
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -65,59 +63,48 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         include_bias=True,
         order="C",
     ):
-        super(PolynomialLibrary, self).__init__(
+        super().__init__(
             degree=degree,
             interaction_only=interaction_only,
             include_bias=include_bias,
             order=order,
         )
-        if degree < 0 or not isinstance(degree, int):
-            raise ValueError("degree must be a nonnegative integer")
-        if (not include_interaction) and interaction_only:
-            raise ValueError(
-                "Can't have include_interaction be False and interaction_only"
-                " be True"
-            )
         self.include_interaction = include_interaction
 
     @staticmethod
     def _combinations(
         n_features, degree, include_interaction, interaction_only, include_bias
-    ):
-        comb = combinations if interaction_only else combinations_w_r
-        start = int(not include_bias)
+    ) -> Iterator[tuple]:
         if not include_interaction:
-            if include_bias:
-                return chain(
-                    [()],
-                    chain.from_iterable(
-                        combinations_w_r([j], i)
-                        for i in range(1, degree + 1)
-                        for j in range(n_features)
-                    ),
-                )
-            else:
-                return chain.from_iterable(
-                    combinations_w_r([j], i)
-                    for i in range(1, degree + 1)
-                    for j in range(n_features)
-                )
-        return chain.from_iterable(
-            comb(range(n_features), i) for i in range(start, degree + 1)
+            return chain(
+                [()] if include_bias else [],
+                (
+                    exponent * (feat_idx,)
+                    for exponent in range(1, degree + 1)
+                    for feat_idx in range(n_features)
+                ),
+            )
+        return PolynomialFeatures._combinations(
+            n_features=n_features,
+            min_degree=int(not include_bias),
+            max_degree=degree,
+            interaction_only=interaction_only,
+            include_bias=include_bias,
         )
 
     @property
     def powers_(self):
         check_is_fitted(self)
-        n_features = self.n_features_in_
         combinations = self._combinations(
-            n_features,
-            self.degree,
-            self.include_interaction,
-            self.interaction_only,
-            self.include_bias,
+            n_features=self.n_features_in_,
+            degree=self.degree,
+            include_interaction=self.include_interaction,
+            interaction_only=self.interaction_only,
+            include_bias=self.include_bias,
         )
-        return np.vstack([np.bincount(c, minlength=n_features) for c in combinations])
+        return np.vstack(
+            [np.bincount(c, minlength=self.n_features_in_) for c in combinations]
+        )
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.
@@ -164,6 +151,13 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         -------
         self : instance
         """
+        if self.degree < 0 or not isinstance(self.degree, int):
+            raise ValueError("degree must be a nonnegative integer")
+        if (not self.include_interaction) and self.interaction_only:
+            raise ValueError(
+                "Can't have include_interaction be False and interaction_only"
+                " be True"
+            )
         n_features = x_full[0].shape[x_full[0].ax_coord]
         combinations = self._combinations(
             n_features,
@@ -182,19 +176,8 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
         Parameters
         ----------
-        x : array-like or CSR/CSC sparse matrix, shape (n_samples, n_features)
+        x_full : {array-like, sparse matrix} of shape (n_samples, n_features)
             The data to transform, row by row.
-            Prefer CSR over CSC for sparse input (for speed), but CSC is
-            required if the degree is 4 or higher. If the degree is less than
-            4 and the input format is CSC, it will be converted to CSR, have
-            its polynomial features generated, then converted back to CSC.
-            If the degree is 2 or 3, the method described in "Leveraging
-            Sparsity to Speed Up Polynomial Feature Expansions of CSR Matrices
-            Using K-Simplex Numbers" by Andrew Nystrom and John Hughes is
-            used, which is much faster than the method used on CSC input. For
-            this reason, a CSC input will be converted to CSR, and the output
-            will be converted back to CSC prior to being returned, hence the
-            preference of CSR.
 
         Returns
         -------
@@ -210,66 +193,41 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             if sparse.issparse(x) and x.format not in ["csr", "csc"]:
                 # create new with correct sparse
                 axes = comprehend_axes(x)
-                x = x.asformat("csr")
+                x = x.asformat("csc")
                 wrap_axes(axes, x)
-
-            n_samples = x.shape[x.ax_time]
             n_features = x.shape[x.ax_coord]
             if n_features != self.n_features_in_:
                 raise ValueError("x shape does not match training shape")
 
-            if sparse.isspmatrix_csr(x):
-                if self.degree > 3:
-                    return sparse.csr_matrix(self.transform(x.tocsc()))
-                to_stack = []
-                if self.include_bias:
-                    to_stack.append(np.ones(shape=(n_samples, 1), dtype=x.dtype))
-                to_stack.append(x)
-                for deg in range(2, self.degree + 1):
-                    xp_next = _csr_polynomial_expansion(
-                        x.data,
-                        x.indices,
-                        x.indptr,
-                        x.shape[1],
-                        self.interaction_only,
-                        deg,
-                    )
-                    if xp_next is None:
-                        break
-                    to_stack.append(xp_next)
-                xp = sparse.hstack(to_stack, format="csr")
-            elif sparse.isspmatrix_csc(x) and self.degree < 4:
-                return sparse.csc_matrix(self.transform(x.tocsr()))
+            combinations = self._combinations(
+                n_features,
+                self.degree,
+                self.include_interaction,
+                self.interaction_only,
+                self.include_bias,
+            )
+            if sparse.isspmatrix(x):
+                columns = []
+                for comb in combinations:
+                    if comb:
+                        out_col = 1
+                        for col_idx in comb:
+                            out_col = x[..., col_idx].multiply(out_col)
+                        columns.append(out_col)
+                    else:
+                        bias = sparse.csc_matrix(np.ones((x.shape[0], 1)))
+                        columns.append(bias)
+                xp = sparse.hstack(columns, dtype=x.dtype).tocsc()
             else:
-                combinations = self._combinations(
-                    n_features,
-                    self.degree,
-                    self.include_interaction,
-                    self.interaction_only,
-                    self.include_bias,
+                xp = AxesArray(
+                    np.empty(
+                        (*x.shape[:-1], self.n_output_features_),
+                        dtype=x.dtype,
+                        order=self.order,
+                    ),
+                    x.__dict__,
                 )
-                if sparse.isspmatrix(x):
-                    columns = []
-                    for comb in combinations:
-                        if comb:
-                            out_col = 1
-                            for col_idx in comb:
-                                out_col = x[..., col_idx].multiply(out_col)
-                            columns.append(out_col)
-                        else:
-                            bias = sparse.csc_matrix(np.ones((x.shape[0], 1)))
-                            columns.append(bias)
-                    xp = sparse.hstack(columns, dtype=x.dtype).tocsc()
-                else:
-                    xp = AxesArray(
-                        np.empty(
-                            (*x.shape[:-1], self.n_output_features_),
-                            dtype=x.dtype,
-                            order=self.order,
-                        ),
-                        x.__dict__,
-                    )
-                    for i, comb in enumerate(combinations):
-                        xp[..., i] = x[..., comb].prod(-1)
+                for i, comb in enumerate(combinations):
+                    xp[..., i] = x[..., comb].prod(-1)
             xp_full = xp_full + [xp]
         return xp_full

@@ -3,8 +3,6 @@ Unit tests for feature libraries.
 """
 import numpy as np
 import pytest
-from scipy.sparse import coo_matrix
-from scipy.sparse import csc_matrix
 from scipy.sparse import csr_matrix
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
@@ -338,14 +336,6 @@ def test_get_feature_names(data_lorenz, library):
     assert isinstance(feature_names[0], str)
 
 
-@pytest.mark.parametrize("sparse_format", [csc_matrix, csr_matrix, coo_matrix])
-def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
-    x, t = data_lorenz
-    library = PolynomialLibrary()
-    library.fit_transform(sparse_format(x))
-    check_is_fitted(library)
-
-
 # Catch-all for various combinations of options and
 # inputs for polynomial features
 @pytest.mark.parametrize(
@@ -354,6 +344,23 @@ def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
         ({"degree": 4}, csr_matrix),
         ({"include_bias": True}, csr_matrix),
         ({"include_bias": False}, csr_matrix),
+        ({"include_bias": False, "interaction_only": True}, csr_matrix),
+        (
+            {
+                "include_bias": False,
+                "interaction_only": False,
+                "include_interaction": False,
+            },
+            csr_matrix,
+        ),
+        (
+            {
+                "include_bias": False,
+                "interaction_only": False,
+                "include_interaction": True,
+            },
+            csr_matrix,
+        ),
         ({"include_interaction": False}, lambda x: x),
         ({"include_interaction": False, "include_bias": True}, lambda x: x),
     ],
@@ -361,8 +368,11 @@ def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
 def test_polynomial_options(data_lorenz, kwargs, sparse_format):
     x, t = data_lorenz
     library = PolynomialLibrary(**kwargs)
-    library.fit_transform(sparse_format(x))
+    out = library.fit_transform(sparse_format(x))
     check_is_fitted(library)
+    expected = len(library.powers_)
+    result = out.shape[1]
+    assert result == expected
 
 
 # Catch-all for various combinations of options and

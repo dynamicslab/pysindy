@@ -107,6 +107,7 @@ class STLSQ(BaseOptimizer):
         copy_X=True,
         initial_guess=None,
         verbose=False,
+        sparse_ind=None,
     ):
         super(STLSQ, self).__init__(
             max_iter=max_iter,
@@ -125,28 +126,55 @@ class STLSQ(BaseOptimizer):
         self.ridge_kw = ridge_kw
         self.initial_guess = initial_guess
         self.verbose = verbose
+        self.sparse_ind = sparse_ind
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):
         """Perform thresholding of the weight vector(s)"""
         c = np.zeros(dim)
         c[ind] = coef
-        big_ind = np.abs(c) >= threshold
+        if self.sparse_ind is not None:
+            big_ind = ind
+            for i in range(dim):
+                if i in self.sparse_ind:
+                    big_ind[i] = np.abs(c[i]) >= threshold
+                else:
+                    big_ind[i] = True
+        if self.sparse_ind is None:
+            big_ind = np.abs(c) >= threshold
         c[~big_ind] = 0
         return c, big_ind
 
-    def _regress(self, x, y):
+    def _regress(self, x, y, dim):
         """Perform the ridge regression"""
         kw = self.ridge_kw or {}
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=LinAlgWarning)
-            try:
-                coef = ridge_regression(x, y, self.alpha, **kw)
-            except LinAlgWarning:
-                # increase alpha until warning stops
-                self.alpha = 2 * self.alpha
-        self.iters += 1
-        return coef
+        sparse_ind = self.sparse_ind
+        if sparse_ind is None:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=LinAlgWarning)
+                try:
+                    coef = ridge_regression(x, y, self.alpha, **kw)
+                except LinAlgWarning:
+                    # increase alpha until warning stops
+                    self.alpha = 2 * self.alpha
+            self.iters += 1
+            return coef
+        if sparse_ind is not None:
+            coef = np.zeros(dim)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=LinAlgWarning)
+                try:
+                    coef_sparse = ridge_regression(x, y, self.alpha, **kw)
+                    coef_notsparse = ridge_regression(x, y, alpha=0, **kw)
+                    for i in range(dim):
+                        if i in sparse_ind:
+                            coef[i] = coef_sparse[i]
+                        if i not in sparse_ind:
+                            coef[i] = coef_notsparse[i]
+                except LinAlgWarning:
+                    # increase alpha until warning stops
+                    self.alpha = 2 * self.alpha
+            self.iters += 1
+            return coef
 
     def _no_change(self):
         """Check if the coefficient mask has changed after thresholding"""
@@ -203,7 +231,7 @@ class STLSQ(BaseOptimizer):
                         "coefficients".format(self.threshold)
                     )
                     continue
-                coef_i = self._regress(x[:, ind[i]], y[:, i])
+                coef_i = self._regress(x[:, ind[i]], y[:, i], np.count_nonzero(ind))
                 coef_i, ind_i = self._sparse_coefficients(
                     n_features, ind[i], coef_i, self.threshold
                 )

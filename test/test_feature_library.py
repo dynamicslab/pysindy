@@ -170,19 +170,19 @@ def test_weak_pde_library_bad_parameters(params):
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1], [0, 100]]),
+            inputs_per_library=[[0, 1], [0, 100]],
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1]]),
+            inputs_per_library=[[0, 1]],
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1, 2], [0, 1, 2], [0, 1, 2]]),
+            inputs_per_library=[[0, 1, 2], [0, 1, 2], [0, 1, 2]],
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1, 2], [0, 1, -1]]),
+            inputs_per_library=[[0, 1, 2], [0, 1, -1]],
         ),
     ],
 )

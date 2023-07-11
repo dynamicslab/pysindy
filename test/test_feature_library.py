@@ -648,7 +648,7 @@ def test_parameterized_library(diffuse_multiple_trajectories):
     model = SINDy(
         feature_library=pde_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
-    model.fit(xs, u=us, multiple_trajectories=True, t=t)
+    model.fit(xs, u=us, t=t)
     assert abs(model.coefficients()[0][4] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:4] == 0)
     assert np.all(model.coefficients()[0][5:] == 0)
@@ -657,7 +657,7 @@ def test_parameterized_library(diffuse_multiple_trajectories):
     model = SINDy(
         feature_library=weak_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
-    model.fit(xs, u=us, multiple_trajectories=True, t=t)
+    model.fit(xs, u=us, t=t)
     assert abs(model.coefficients()[0][4] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:4] == 0)
     assert np.all(model.coefficients()[0][5:] == 0)

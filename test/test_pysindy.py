@@ -330,66 +330,54 @@ def test_score_pde(data_1d_random_pde):
     assert model.score(u, t) <= 1
 
 
-def test_fit_multiple_trajectores(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_fit_multiple_trajectores(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     model = SINDy()
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.fit(x, t=t)
-
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
     check_is_fitted(model)
 
-    model.fit(x, t=t, multiple_trajectories=True)
-    assert model.score(x, t=t, multiple_trajectories=True) > 0.8
+    model.fit(x, t=t)
+    assert model.score(x, t=t) > 0.8
 
     model = SINDy()
-    model.fit(x, x_dot=x, multiple_trajectories=True)
+    model.fit(x, x_dot=x)
     check_is_fitted(model)
 
     model = SINDy()
-    model.fit(x, t=t, x_dot=x, multiple_trajectories=True)
+    model.fit(x, t=t, x_dot=x)
     check_is_fitted(model)
 
     # Test validate_input
     t[0] = None
     with pytest.raises(ValueError):
-        model.fit(x, t=t, multiple_trajectories=True)
+        model.fit(x, t=t)
 
 
-def test_predict_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_predict_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     model = SINDy()
-    model.fit(x, t=t, multiple_trajectories=True)
+    model.fit(x, t=t)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.predict(x)
-
-    p = model.predict(x, multiple_trajectories=True)
+    p = model.predict(x)
     assert len(p) == len(x)
 
 
-def test_score_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_score_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     model = SINDy()
-    model.fit(x, t=t, multiple_trajectories=True)
+    model.fit(x, t=t)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.score(x)
-
-    s = model.score(x, multiple_trajectories=True)
+    s = model.score(x)
     assert s <= 1
 
-    s = model.score(x, t=t, multiple_trajectories=True)
+    s = model.score(x, t=t)
     assert s <= 1
 
-    s = model.score(x, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, x_dot=x)
     assert s <= 1
 
-    s = model.score(x, t=t, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, t=t, x_dot=x)
     assert s <= 1
 
 
@@ -449,17 +437,12 @@ def test_fit_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories,
 ):
     x = data_discrete_time_multiple_trajectories
-
-    # Should fail if multiple_trajectories flag is not set
     model = SINDy(discrete_time=True)
-    with pytest.raises(ValueError):
-        model.fit(x)
-
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
     check_is_fitted(model)
 
     model = SINDy(discrete_time=True)
-    model.fit(x, x_dot=x, multiple_trajectories=True)
+    model.fit(x, x_dot=x)
     check_is_fitted(model)
 
 
@@ -468,13 +451,9 @@ def test_predict_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.predict(x)
-
-    y = model.predict(x, multiple_trajectories=True)
+    y = model.predict(x)
     assert len(y) == len(x)
 
 
@@ -483,17 +462,13 @@ def test_score_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.score(x)
-
-    s = model.score(x, multiple_trajectories=True)
+    s = model.score(x)
     assert s > 0.75
 
     # x is not its own derivative, so we expect bad performance here
-    s = model.score(x, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, x_dot=x)
     assert s < 1
 
 
@@ -534,7 +509,7 @@ def test_print_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
 
     model.print()
 
@@ -542,14 +517,14 @@ def test_print_discrete_time_multiple_trajectories(
     assert len(out) > 1
 
 
-def test_differentiate(data_lorenz, data_multiple_trajctories):
+def test_differentiate(data_lorenz, data_multiple_trajectories):
     x, t = data_lorenz
 
     model = SINDy()
     model.differentiate(x, t)
 
-    x, t = data_multiple_trajctories
-    model.differentiate(x, t, multiple_trajectories=True)
+    x, t = data_multiple_trajectories
+    model.differentiate(x, t)
 
     model = SINDy(discrete_time=True)
     with pytest.raises(RuntimeError):
@@ -686,34 +661,34 @@ def test_multiple_trajectories_and_ensemble(diffuse_multiple_trajectories):
 
     optimizer = STLSQ(threshold=0.1, alpha=1e-5, normalize_columns=False)
     model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t)
+    model.fit(u, t=t)
     print(model.coefficients(), model.coefficients()[0][-1])
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
     model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t)
+    model.fit(u, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
     optimizer = EnsembleOptimizer(opt=optimizer, bagging=True, n_subset=len(t))
 
     model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t)
+    model.fit(u, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
     model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t)
+    model.fit(u, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
     model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t)
+    model.fit(u, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)
 
     model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t)
+    model.fit(u, t=t)
     assert abs(model.coefficients()[0][-1] - 1) < 1e-2
     assert np.all(model.coefficients()[0][:-1] == 0)

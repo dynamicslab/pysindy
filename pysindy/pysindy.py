@@ -535,6 +535,10 @@ class SINDy(BaseEstimator):
             Time derivatives computed by using the model's differentiation
             method
         """
+        warnings.warn(
+            "SINDy.differentiate is deprecated.  "
+            "Call the differentiation_method parameter"
+        )
         if t is None:
             t = self.t_default
         if self.discrete_time:

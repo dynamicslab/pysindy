@@ -44,6 +44,11 @@ def ignore_specific_warnings():
     warnings.filters = filters
 
 
+if __name__ == "testing":
+    import sys
+    import os
+
+    sys.stdout = open(os.devnull, "w")
 # %%
 # Seed the random number generators for reproducibility
 np.random.seed(100)
@@ -895,7 +900,10 @@ fig.show()
 # One can specify:
 # <br>
 # 1. N different libraries to add together
-# 2. A list of inputs to use for each library. For two libraries with four inputs this would look like inputs_per_library = [[0, 1, 2, 3], [0, 1, 2, 3]] and to avoid using the first two input variables in the second library, you would change it to something like inputs_per_library = [[0, 1, 2, 3], [2, 2, 2, 3]], since duplicates are thrown out and [2, 2, 2, 3] will reduce to [2, 3].
+# 2. A list of inputs to use for each library. For two libraries with four inputs this
+#  would look like inputs_per_library = [[0, 1, 2, 3], [0, 1, 2, 3]] and to avoid using
+#  the first two input variables in the second library, you would change it to
+#  inputs_per_library = [[0, 1, 2, 3], [2, 3]].
 #
 # 3. A list of libraries to tensor together and add to the overall library. For four libraries, we could make three tensor libraries by using tensor_array = [[1, 0, 1, 1], [1, 1, 1, 1], [0, 0, 1, 1]]. The first sub-array takes the tensor product of libraries 0, 2, 3, the second takes the tensor product of all of them, and the last takes the tensor product of the libraries 2 and 3. This is a silly example since the [1, 1, 1, 1] tensor product already contains all the possible terms.
 # 4. A list of library indices to exclude from the overall library. The first N libraries correspond to the input libraries and the subsequent indices correspond to the tensored libraries. For two libraries, exclude_libraries=[0,1] and tensor_array=[[1,1]] would result in a library consisting of only the tensor product.
@@ -908,13 +916,9 @@ fig.show()
 poly_library = ps.PolynomialLibrary(include_bias=False)
 fourier_library = ps.FourierLibrary()
 
-# Initialize the default inputs, i.e. each library
-# uses all the input variables
-inputs_temp = np.tile([0, 1, 2], 2)
-inputs_per_library = np.reshape(inputs_temp, (2, 3))
-
-# Don't use the x0 input for generating the Fourier library
-inputs_per_library[1, 0] = 1
+# Initialize the default inputs, but
+# don't use the x0 input for generating the Fourier library
+inputs_per_library = [(0, 1, 2), (1, 2)]
 
 # Tensor all the polynomial and Fourier library terms together
 tensor_array = [[1, 1]]
@@ -1385,10 +1389,7 @@ data_dot = np.transpose(np.asarray([Laplacian_phi, X, Y]), [1, 2, 0])
 tensor_array = [[1, 0, 1]]
 
 # Remove X and Y from PDE library terms because why would we take these derivatives
-inputs_temp = np.tile([0, 1, 2], 3)
-inputs_per_library = np.reshape(inputs_temp, (3, 3))
-inputs_per_library[2, 1] = 0
-inputs_per_library[2, 2] = 0
+inputs_per_library = [(0, 1, 2), (0, 1, 2), (0,)]
 
 # Fit a generalized library of 3 feature libraries + 1 internally
 # generated tensored library and only use the input variable phi

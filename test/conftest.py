@@ -341,12 +341,9 @@ def data_quadratic_library():
 @pytest.fixture
 def data_generalized_library():
     tensor_array = [[1, 1]]
-    inputs_temp = np.tile([0, 1, 2], 2)
-    inputs_per_library = np.reshape(inputs_temp, (2, 3))
     return GeneralizedLibrary(
         [PolynomialLibrary(), FourierLibrary()],
         tensor_array=tensor_array,
-        inputs_per_library=inputs_per_library,
     )
 
 

@@ -170,23 +170,19 @@ def test_weak_pde_library_bad_parameters(params):
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1], [0, 100]]),
+            inputs_per_library=[[0, 1], [0, 100]],
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([0, 0]),
+            inputs_per_library=[[0, 1]],
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1]]),
+            inputs_per_library=[[0, 1, 2], [0, 1, 2], [0, 1, 2]],
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1, 2], [0, 1, 2], [0, 1, 2]]),
-        ),
-        dict(
-            libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1, 2], [0, 1, -1]]),
+            inputs_per_library=[[0, 1, 2], [0, 1, -1]],
         ),
     ],
 )
@@ -459,12 +455,7 @@ def test_generalized_library(data_lorenz):
 
     tensor_array = [[0, 1, 1], [1, 0, 1]]
 
-    inputs_per_library = np.tile([0, 1, 2], 3)
-    inputs_per_library = np.reshape(inputs_per_library, (3, 3))
-    inputs_per_library[0, 0] = 1
-    inputs_per_library[1, 1] = 0
-    inputs_per_library[2, 1] = 0
-    inputs_per_library[2, 2] = 0
+    inputs_per_library = [[1, 2], [0, 2], [0]]
 
     # First try without tensor libraries and subset of the input variables
     sindy_library = GeneralizedLibrary(

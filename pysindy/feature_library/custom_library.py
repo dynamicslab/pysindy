@@ -87,7 +87,6 @@ class CustomLibrary(BaseFeatureLibrary):
         interaction_only=True,
         include_bias=False,
     ):
-        super().__init__()
         self.functions = library_functions
         self.function_names = function_names
         if function_names and (

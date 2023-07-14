@@ -139,7 +139,6 @@ class SINDyPILibrary(BaseFeatureLibrary):
         differentiation_method=None,
         include_bias=False,
     ):
-        super().__init__()
         self.x_functions = library_functions
         self.x_dot_functions = x_dot_library_functions
         self.function_names = function_names

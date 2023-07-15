@@ -62,6 +62,9 @@ class STLSQ(BaseOptimizer):
     verbose : bool, optional (default False)
         If True, prints out the different error terms every iteration.
 
+    sparse_ind : list, optional (default None)
+        Optional List of sparse indices to threshold and perform ridge regression upon.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -130,18 +133,17 @@ class STLSQ(BaseOptimizer):
 
     def _sparse_coefficients(self, dim, ind, coef, threshold):
         """Perform thresholding of the weight vector(s)"""
+        sparse_ind = self.sparse_ind
         c = np.zeros(dim)
         c[ind] = coef
-        if self.sparse_ind is not None:
-            big_ind = ind
-            for i in range(dim):
-                if i in self.sparse_ind:
-                    big_ind[i] = np.abs(c[i]) >= threshold
-                else:
-                    big_ind[i] = True
-        if self.sparse_ind is None:
-            big_ind = np.abs(c) >= threshold
-        c[~big_ind] = 0
+        big_ind = np.abs(c) >= threshold
+        if sparse_ind is not None:
+            sparse_ind_bool = ~ind
+            for i in sparse_ind:
+                sparse_ind_bool[i] = True
+            c[~big_ind & sparse_ind_bool] = 0
+        if sparse_ind is None:
+            c[~big_ind] = 0
         return c, big_ind
 
     def _regress(self, x, y, dim):

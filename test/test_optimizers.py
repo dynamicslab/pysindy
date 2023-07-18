@@ -1138,9 +1138,19 @@ def test_frols_error_linear_dependence():
 def test_optimizer_sparse_subset():
     A = np.diag([1, 1, 1, 1])
     b = np.array([1, 1, 0.5, 1])
-    opt = STLSQ(threshold=0.5, alpha=0.1, sparse_ind=[2, 3])
+    opt = STLSQ(threshold=0.5, alpha=0.1, max_iter=1, sparse_ind=[2, 3])
     opt.fit(A, b)
     X = opt.coef_
     assert X[0, 2] == 0.0
     assert X[0, 3] > 0.0 and X[0, 3] < 1.0
     np.testing.assert_equal(X[0, :2], np.ones(2))
+
+
+def test_optimizer_sparse_ridge():
+    A = np.array([[1, 1], [0, 1]])
+    b = np.array([1, 1])
+    opt = STLSQ(threshold=0, alpha=0.1, sparse_ind=[1])
+    opt.fit(A, b)
+    X = opt.coef_
+    assert X[0, 0] > 0.0 and X[0, 0] < 0.5
+    assert X[0, 1] > 0.5 and X[0, 1] < 1.0

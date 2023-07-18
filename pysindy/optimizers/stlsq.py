@@ -131,18 +131,16 @@ class STLSQ(BaseOptimizer):
         self.verbose = verbose
         self.sparse_ind = sparse_ind
 
-    def _sparse_coefficients(self, dim, ind, coef, threshold):
+    def _sparse_coefficients(self, dim, ind_nonzero, coef, threshold):
         """Perform thresholding of the weight vector(s)"""
-        sparse_ind = self.sparse_ind
         c = np.zeros(dim)
-        c[ind] = coef
+        c[ind_nonzero] = coef
         big_ind = np.abs(c) >= threshold
-        if sparse_ind is not None:
-            sparse_ind_bool = ~ind
-            for i in sparse_ind:
-                sparse_ind_bool[i] = True
-            c[~big_ind & sparse_ind_bool] = 0
-        if sparse_ind is None:
+        if self.sparse_ind is not None:
+            sparse_ind_mask = np.zeros_like(ind_nonzero)
+            sparse_ind_mask[self.sparse_ind] = True
+            c[~big_ind & sparse_ind_mask] = 0
+        if self.sparse_ind is None:
             c[~big_ind] = 0
         return c, big_ind
 
@@ -162,16 +160,13 @@ class STLSQ(BaseOptimizer):
             return coef
         if sparse_ind is not None:
             coef = np.zeros(dim)
+            alpha_array = np.zeros((dim, dim))
+            for i in sparse_ind:
+                alpha_array[i, i] = self.alpha
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=LinAlgWarning)
                 try:
-                    coef_sparse = ridge_regression(x, y, self.alpha, **kw)
-                    coef_notsparse = ridge_regression(x, y, alpha=0, **kw)
-                    for i in range(dim):
-                        if i in sparse_ind:
-                            coef[i] = coef_sparse[i]
-                        if i not in sparse_ind:
-                            coef[i] = coef_notsparse[i]
+                    coef = np.linalg.inv(x.T @ x + alpha_array) @ x.T @ y
                 except LinAlgWarning:
                     # increase alpha until warning stops
                     self.alpha = 2 * self.alpha

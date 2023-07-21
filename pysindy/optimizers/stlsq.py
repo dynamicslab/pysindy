@@ -144,7 +144,7 @@ class STLSQ(BaseOptimizer):
             c[~big_ind] = 0
         return c, big_ind
 
-    def _regress(self, x, y, dim):
+    def _regress(self, x, y, dim, sparse_sub):
         """Perform the ridge regression"""
         kw = self.ridge_kw or {}
         sparse_ind = self.sparse_ind
@@ -161,12 +161,14 @@ class STLSQ(BaseOptimizer):
         if sparse_ind is not None:
             coef = np.zeros(dim)
             alpha_array = np.zeros((dim, dim))
-            for i in sparse_ind:
-                alpha_array[i, i] = self.alpha
+            for i in sparse_sub:
+                alpha_array[i, i] = np.sqrt(self.alpha)
+            x_lin = np.concatenate((x, alpha_array), axis=0)
+            y_lin = np.concatenate((y, np.zeros((dim,))))
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=LinAlgWarning)
                 try:
-                    coef = np.linalg.inv(x.T @ x + alpha_array) @ x.T @ y
+                    coef = ridge_regression(x_lin, y_lin, alpha=0, **kw)
                 except LinAlgWarning:
                     # increase alpha until warning stops
                     self.alpha = 2 * self.alpha
@@ -196,6 +198,8 @@ class STLSQ(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
         n_features_selected = np.sum(ind)
+        # sparse_sub is an array copy of sparse_ind
+        sparse_sub = np.array(self.sparse_ind)
 
         # Print initial values for each term in the optimization
         if self.verbose:
@@ -228,10 +232,26 @@ class STLSQ(BaseOptimizer):
                         "coefficients".format(self.threshold)
                     )
                     continue
-                coef_i = self._regress(x[:, ind[i]], y[:, i], np.count_nonzero(ind))
+                coef_i = self._regress(
+                    x[:, ind[i]], y[:, i], np.count_nonzero(ind), sparse_sub
+                )
                 coef_i, ind_i = self._sparse_coefficients(
                     n_features, ind[i], coef_i, self.threshold
                 )
+                if self.sparse_ind is not None:
+                    intersects = np.intersect1d(self.sparse_ind, np.where(coef_i == 0))
+                    for s in reversed(intersects):
+                        if s < max(self.sparse_ind):
+                            sparse_sub = np.delete(
+                                sparse_sub, np.where(s == sparse_sub)
+                            )
+                            sparse_sub = np.where(
+                                sparse_sub > s, sparse_sub - 1, sparse_sub
+                            )
+                        if s == max(self.sparse_ind):
+                            sparse_sub = np.delete(
+                                sparse_sub, np.where(s == sparse_sub)
+                            )
                 coef[i] = coef_i
                 ind[i] = ind_i
 

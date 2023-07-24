@@ -246,7 +246,7 @@ class TrappingSR3(SR3):
         verbose=False,
         verbose_cvxpy=False,
     ):
-        super(TrappingSR3, self).__init__(
+        super().__init__(
             threshold=threshold,
             max_iter=max_iter,
             normalize_columns=normalize_columns,

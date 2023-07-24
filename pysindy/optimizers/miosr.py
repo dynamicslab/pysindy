@@ -120,11 +120,13 @@ class MIOSR(BaseOptimizer):
         copy_X=True,
         initial_guess=None,
         verbose=False,
+        unbias=True,
     ):
-        super(MIOSR, self).__init__(
+        super().__init__(
             normalize_columns=normalize_columns,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
+            unbias=unbias,
         )
 
         if target_sparsity is not None and (

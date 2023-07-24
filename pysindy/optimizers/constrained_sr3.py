@@ -168,7 +168,7 @@ class ConstrainedSR3(SR3):
         verbose=False,
         verbose_cvxpy=False,
     ):
-        super(ConstrainedSR3, self).__init__(
+        super().__init__(
             threshold=threshold,
             nu=nu,
             tol=tol,

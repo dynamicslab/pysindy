@@ -14,7 +14,6 @@ from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
 from .feature_library import PolynomialLibrary
-from .optimizers import SINDyOptimizer
 
 try:  # Waiting on PEP 690 to lazy import CVXPY
     from .optimizers import SINDyPI
@@ -181,7 +180,6 @@ class SINDy(BaseEstimator):
         x_dot=None,
         u=None,
         multiple_trajectories=False,
-        unbias=True,
     ):
         """
         Fit a SINDy model.
@@ -227,16 +225,6 @@ class SINDy(BaseEstimator):
             for each trajectory. If False, the training data must be a single
             array.
 
-        unbias: boolean, optional (default True)
-            Whether to perform an extra step of unregularized linear regression to
-            unbias the coefficients for the identified support.
-            If the optimizer (``self.optimizer``) applies any type of regularization,
-            that regularization may bias coefficients toward particular values,
-            improving the conditioning of the problem but harming the quality of the
-            fit. Setting ``unbias==True`` enables an extra step wherein unregularized
-            linear regression is applied, but only for the coefficients in the support
-            identified by the optimizer. This helps to remove the bias introduced by
-            regularization.
 
         Returns
         -------
@@ -277,14 +265,10 @@ class SINDy(BaseEstimator):
         if u is not None:
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
-        if hasattr(self.optimizer, "unbias"):
-            unbias = self.optimizer.unbias
-
-        optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
         steps = [
             ("features", self.feature_library),
             ("shaping", SampleConcatter()),
-            ("model", optimizer),
+            ("model", self.optimizer),
         ]
         x_dot = concat_sample_axis(x_dot)
         self.model = Pipeline(steps)

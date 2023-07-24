@@ -152,6 +152,7 @@ class SR3(BaseOptimizer):
         initial_guess=None,
         normalize_columns=False,
         verbose=False,
+        unbias=True,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
@@ -159,6 +160,7 @@ class SR3(BaseOptimizer):
             fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
+            unbias=unbias,
         )
 
         if threshold < 0:

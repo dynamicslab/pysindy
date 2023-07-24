@@ -138,12 +138,6 @@ class StableLinearSR3(ConstrainedSR3):
     coef_full_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
-
-    unbias : boolean
-        Whether to perform an extra step of unregularized linear regression
-        to unbias the coefficients for the identified support.
-        ``unbias`` is automatically set to False if a constraint is used and
-        is otherwise left uninitialized.
     """
 
     def __init__(

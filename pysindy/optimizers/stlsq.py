@@ -107,12 +107,14 @@ class STLSQ(BaseOptimizer):
         copy_X=True,
         initial_guess=None,
         verbose=False,
+        unbias=True,
     ):
-        super(STLSQ, self).__init__(
+        super().__init__(
             max_iter=max_iter,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
+            unbias=unbias,
         )
 
         if threshold < 0:

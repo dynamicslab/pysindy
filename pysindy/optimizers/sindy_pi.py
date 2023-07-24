@@ -108,7 +108,7 @@ class SINDyPI(SR3):
         normalize_columns=False,
         verbose_cvxpy=False,
     ):
-        super(SINDyPI, self).__init__(
+        super().__init__(
             threshold=threshold,
             thresholds=thresholds,
             tol=tol,

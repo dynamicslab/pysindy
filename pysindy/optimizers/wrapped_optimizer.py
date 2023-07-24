@@ -39,13 +39,19 @@ class WrappedOptimizer(BaseOptimizer):
         ):
             raise AttributeError("optimizer does not have a callable predict method")
 
-        self.optimizer.fit(x, y)
-        if not hasattr(self.optimizer, "coef_"):
-            raise AttributeError("optimizer has no attribute coef_")
+        coef_shape = (y.shape[1], x.shape[1])
+        self.coef_ = np.zeros(coef_shape)
+        self.ind_ = np.ones(coef_shape)
+        for tgt in range(y.shape[-1]):
+            self.optimizer.fit(x, y[..., tgt])
+            self.coef_[tgt] = self.optimizer.coef_
         self.ind_ = np.abs(self.coef_) > COEF_THRESHOLD
-        self.coef_ = self.optimizer.coef_
         if self.unbias:
             self._unbias(x, y)
+        if hasattr(self.optimizer, "intercept_"):
+            self.intercept_ = self.optimizer.intercept_
+        else:
+            self.intercept_ = 0.0
         return self
 
     def predict(self, x):
@@ -54,20 +60,6 @@ class WrappedOptimizer(BaseOptimizer):
             return prediction[:, np.newaxis]
         else:
             return prediction
-
-    @property
-    def coef_(self):
-        if self.optimizer.coef_.ndim == 1:
-            return self.optimizer.coef_[np.newaxis, :]
-        else:
-            return self.optimizer.coef_
-
-    @property
-    def intercept_(self):
-        if hasattr(self.optimizer, "intercept_"):
-            return self.optimizer.intercept_
-        else:
-            return 0.0
 
     @property
     def complexity(self):

@@ -121,7 +121,7 @@ def validate_control_variables(x, u, trim_last_point=False):
 
 
 def drop_nan_samples(x, y):
-    """Drops samples from x and y where there is either has a nan value"""
+    """Drops samples from x and y where either has a nan value"""
     x_non_sample_axes = tuple(ax for ax in range(x.ndim) if ax != x.ax_sample)
     y_non_sample_axes = tuple(ax for ax in range(y.ndim) if ax != y.ax_sample)
     x_good_samples = (~np.isnan(x)).any(axis=x_non_sample_axes)

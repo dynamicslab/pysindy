@@ -274,13 +274,12 @@ class SINDy(BaseEstimator):
         self.model = Pipeline(steps)
         self.model.fit(x, x_dot)
 
-        self.n_features_in_ = self.model.steps[0][1].n_features_in_
-        n_input_features = self.model.steps[0][1].n_features_in_
-        self.n_output_features_ = self.model.steps[0][1].n_output_features_
+        self.n_features_in_ = self.feature_library.n_features_in_
+        self.n_output_features_ = self.feature_library.n_output_features_
 
         if self.feature_names is None:
             feature_names = []
-            for i in range(n_input_features - self.n_control_features_):
+            for i in range(self.n_features_in_ - self.n_control_features_):
                 feature_names.append("x" + str(i))
             for i in range(self.n_control_features_):
                 feature_names.append("u" + str(i))

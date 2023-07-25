@@ -1,3 +1,4 @@
+import sys
 import warnings
 from itertools import product
 from typing import Collection
@@ -778,14 +779,32 @@ def _check_multiple_trajectories(x, x_dot, u) -> bool:
 
     """
     SequenceOrNone = Union[Sequence, None]
-    mixed_trajectories = (
-        isinstance(x, Sequence)
-        and (not isinstance(x_dot, SequenceOrNone) or not isinstance(u, SequenceOrNone))
-        or isinstance(x_dot, Sequence)
-        and not isinstance(x, Sequence)
-        or isinstance(u, Sequence)
-        and not isinstance(x, Sequence)
-    )
+    if sys.version_info.minor < 10:
+        mixed_trajectories = (
+            isinstance(x, Sequence)
+            and (
+                not isinstance(x_dot, Sequence)
+                and x_dot is not None
+                or not isinstance(u, Sequence)
+                and u is not None
+            )
+            or isinstance(x_dot, Sequence)
+            and not isinstance(x, Sequence)
+            or isinstance(u, Sequence)
+            and not isinstance(x, Sequence)
+        )
+    else:
+        mixed_trajectories = (
+            isinstance(x, Sequence)
+            and (
+                not isinstance(x_dot, SequenceOrNone)
+                or not isinstance(u, SequenceOrNone)
+            )
+            or isinstance(x_dot, Sequence)
+            and not isinstance(x, Sequence)
+            or isinstance(u, Sequence)
+            and not isinstance(x, Sequence)
+        )
     if mixed_trajectories:
         raise TypeError(
             "If x, x_dot, or u are a Sequence of trajectories, each must be a Sequence"

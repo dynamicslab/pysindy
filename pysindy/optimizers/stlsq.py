@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 from scipy.linalg import LinAlgWarning
 from sklearn.exceptions import ConvergenceWarning
+from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import ridge_regression
 from sklearn.utils.validation import check_is_fitted
 
@@ -161,14 +162,17 @@ class STLSQ(BaseOptimizer):
         if sparse_ind is not None:
             coef = np.zeros(dim)
             alpha_array = np.zeros((dim, dim))
-            for i in sparse_sub:
-                alpha_array[i, i] = np.sqrt(self.alpha)
+            alpha_array[sparse_sub, sparse_sub] = np.sqrt(self.alpha)
             x_lin = np.concatenate((x, alpha_array), axis=0)
             y_lin = np.concatenate((y, np.zeros((dim,))))
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=LinAlgWarning)
                 try:
-                    coef = ridge_regression(x_lin, y_lin, alpha=0, **kw)
+                    coef = (
+                        LinearRegression(fit_intercept=False, **kw)
+                        .fit(x_lin, y_lin)
+                        .coef_
+                    )
                 except LinAlgWarning:
                     # increase alpha until warning stops
                     self.alpha = 2 * self.alpha
@@ -184,6 +188,15 @@ class STLSQ(BaseOptimizer):
             last_coef = np.zeros_like(this_coef)
         return all(bool(i) == bool(j) for i, j in zip(this_coef, last_coef))
 
+    def _sparse_remove(self, coef, sparse_sub):
+        """Removes the sparse indices that have been thresholded
+        for subsequent iterations"""
+        indices_to_remove = np.intersect1d(self.sparse_ind, np.where(coef == 0))
+        for s in reversed(indices_to_remove):
+            sparse_sub = np.delete(sparse_sub, np.where(s == sparse_sub))
+            sparse_sub = np.where(sparse_sub > s, sparse_sub - 1, sparse_sub)
+        return sparse_sub
+
     def _reduce(self, x, y):
         """Performs at most ``self.max_iter`` iterations of the
         sequentially-thresholded least squares algorithm.
@@ -198,7 +211,6 @@ class STLSQ(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
         n_features_selected = np.sum(ind)
-        # sparse_sub is an array copy of sparse_ind
         sparse_sub = np.array(self.sparse_ind)
 
         # Print initial values for each term in the optimization
@@ -239,19 +251,7 @@ class STLSQ(BaseOptimizer):
                     n_features, ind[i], coef_i, self.threshold
                 )
                 if self.sparse_ind is not None:
-                    intersects = np.intersect1d(self.sparse_ind, np.where(coef_i == 0))
-                    for s in reversed(intersects):
-                        if s < max(self.sparse_ind):
-                            sparse_sub = np.delete(
-                                sparse_sub, np.where(s == sparse_sub)
-                            )
-                            sparse_sub = np.where(
-                                sparse_sub > s, sparse_sub - 1, sparse_sub
-                            )
-                        if s == max(self.sparse_ind):
-                            sparse_sub = np.delete(
-                                sparse_sub, np.where(s == sparse_sub)
-                            )
+                    sparse_sub = self._sparse_remove(coef_i, sparse_sub)
                 coef[i] = coef_i
                 ind[i] = ind_i
 

@@ -21,13 +21,13 @@ from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import EnsembleOptimizer
 from pysindy.optimizers import FROLS
 from pysindy.optimizers import MIOSR
-from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import SR3
 from pysindy.optimizers import SSR
 from pysindy.optimizers import StableLinearSR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
+from pysindy.optimizers import WrappedOptimizer
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
 
@@ -107,7 +107,7 @@ def test_fit(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
     if len(x.shape) == 1:
         x = x.reshape(-1, 1)
-    opt = SINDyOptimizer(optimizer, unbias=False)
+    opt = WrappedOptimizer(optimizer, unbias=False)
     opt.fit(x, x_dot)
 
     check_is_fitted(opt)
@@ -616,10 +616,10 @@ def test_bad_optimizers(data_derivative_1d):
     x = x.reshape(-1, 1)
 
     with pytest.raises(AttributeError):
-        opt = SINDyOptimizer(DummyEmptyModel())
+        opt = WrappedOptimizer(DummyEmptyModel())
 
     with pytest.raises(AttributeError):
-        opt = SINDyOptimizer(DummyModelNoCoef())
+        opt = WrappedOptimizer(DummyModelNoCoef())
         opt.fit(x, x_dot)
 
 
@@ -683,12 +683,12 @@ def test_unbias(data_derivative_1d):
     x = x.reshape(-1, 1)
     x_dot = x_dot.reshape(-1, 1)
 
-    optimizer_biased = SINDyOptimizer(
+    optimizer_biased = WrappedOptimizer(
         STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=False
     )
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = SINDyOptimizer(
+    optimizer_unbiased = WrappedOptimizer(
         STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=True
     )
     optimizer_unbiased.fit(x, x_dot)
@@ -705,12 +705,12 @@ def test_unbias_external(data_derivative_1d):
     x = x.reshape(-1, 1)
     x_dot = x_dot.reshape(-1, 1)
 
-    optimizer_biased = SINDyOptimizer(
+    optimizer_biased = WrappedOptimizer(
         Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=False
     )
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = SINDyOptimizer(
+    optimizer_unbiased = WrappedOptimizer(
         Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=True
     )
     optimizer_unbiased.fit(x, x_dot)
@@ -726,10 +726,12 @@ def test_unbias_external(data_derivative_1d):
 def test_sr3_trimming(optimizer, data_linear_oscillator_corrupted):
     X, X_dot, trimming_array = data_linear_oscillator_corrupted
 
-    optimizer_without_trimming = SINDyOptimizer(optimizer(), unbias=False)
+    optimizer_without_trimming = WrappedOptimizer(optimizer(), unbias=False)
     optimizer_without_trimming.fit(X, X_dot)
 
-    optimizer_trimming = SINDyOptimizer(optimizer(trimming_fraction=0.15), unbias=False)
+    optimizer_trimming = WrappedOptimizer(
+        optimizer(trimming_fraction=0.15), unbias=False
+    )
     optimizer_trimming.fit(X, X_dot)
 
     # Check that trimming found the right samples to remove

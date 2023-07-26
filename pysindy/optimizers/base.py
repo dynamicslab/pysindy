@@ -191,10 +191,8 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self._reduce(x_normed, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
 
-        self.history_.append(self.coef_)
         if self.unbias:
             self._unbias(x_normed, y)
-        self.history_.append(self.coef_)
 
         # Rescale coefficients to original units
         if self.normalize_columns:

@@ -145,7 +145,7 @@ class STLSQ(BaseOptimizer):
             c[~big_ind] = 0
         return c, big_ind
 
-    def _regress(self, x, y, dim, sparse_sub):
+    def _regress(self, x, y, dim, existing_vals):
         """Perform the ridge regression"""
         kw = self.ridge_kw or {}
         sparse_ind = self.sparse_ind
@@ -162,7 +162,7 @@ class STLSQ(BaseOptimizer):
         if sparse_ind is not None:
             coef = np.zeros(dim)
             alpha_array = np.zeros((dim, dim))
-            alpha_array[sparse_sub, sparse_sub] = np.sqrt(self.alpha)
+            alpha_array[existing_vals, existing_vals] = np.sqrt(self.alpha)
             x_lin = np.concatenate((x, alpha_array), axis=0)
             y_lin = np.concatenate((y, np.zeros((dim,))))
             with warnings.catch_warnings():
@@ -188,14 +188,17 @@ class STLSQ(BaseOptimizer):
             last_coef = np.zeros_like(this_coef)
         return all(bool(i) == bool(j) for i, j in zip(this_coef, last_coef))
 
-    def _sparse_remove(self, coef, sparse_sub):
-        """Removes the sparse indices that have been thresholded
+    def _remove_and_decrement(
+        self, existing_vals: np.ndarray, vals_to_remove: np.ndarray
+    ) -> np.ndarray:
+        """Remove the sparse indices that have been thresholded
         for subsequent iterations"""
-        indices_to_remove = np.intersect1d(self.sparse_ind, np.where(coef == 0))
-        for s in reversed(indices_to_remove):
-            sparse_sub = np.delete(sparse_sub, np.where(s == sparse_sub))
-            sparse_sub = np.where(sparse_sub > s, sparse_sub - 1, sparse_sub)
-        return sparse_sub
+        for s in reversed(vals_to_remove):
+            existing_vals = np.delete(existing_vals, np.where(s == existing_vals))
+            existing_vals = np.where(
+                existing_vals > s, existing_vals - 1, existing_vals
+            )
+        return existing_vals
 
     def _reduce(self, x, y):
         """Performs at most ``self.max_iter`` iterations of the
@@ -211,7 +214,7 @@ class STLSQ(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
         n_features_selected = np.sum(ind)
-        sparse_sub = np.array(self.sparse_ind)
+        existing_vals = np.array(self.sparse_ind)
 
         # Print initial values for each term in the optimization
         if self.verbose:
@@ -245,13 +248,18 @@ class STLSQ(BaseOptimizer):
                     )
                     continue
                 coef_i = self._regress(
-                    x[:, ind[i]], y[:, i], np.count_nonzero(ind), sparse_sub
+                    x[:, ind[i]], y[:, i], np.count_nonzero(ind), existing_vals
                 )
                 coef_i, ind_i = self._sparse_coefficients(
                     n_features, ind[i], coef_i, self.threshold
                 )
                 if self.sparse_ind is not None:
-                    sparse_sub = self._sparse_remove(coef_i, sparse_sub)
+                    vals_to_remove = np.intersect1d(
+                        self.sparse_ind, np.where(coef_i == 0)
+                    )
+                    existing_vals = self._remove_and_decrement(
+                        existing_vals, vals_to_remove
+                    )
                 coef[i] = coef_i
                 ind[i] = ind_i
 

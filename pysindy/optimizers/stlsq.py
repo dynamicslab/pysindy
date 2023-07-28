@@ -145,7 +145,7 @@ class STLSQ(BaseOptimizer):
             c[~big_ind] = 0
         return c, big_ind
 
-    def _regress(self, x, y, dim, existing_vals):
+    def _regress(self, x, y, dim, sparse_sub):
         """Perform the ridge regression"""
         kw = self.ridge_kw or {}
         sparse_ind = self.sparse_ind
@@ -162,7 +162,7 @@ class STLSQ(BaseOptimizer):
         if sparse_ind is not None:
             coef = np.zeros(dim)
             alpha_array = np.zeros((dim, dim))
-            alpha_array[existing_vals, existing_vals] = np.sqrt(self.alpha)
+            alpha_array[sparse_sub, sparse_sub] = np.sqrt(self.alpha)
             x_lin = np.concatenate((x, alpha_array), axis=0)
             y_lin = np.concatenate((y, np.zeros((dim,))))
             with warnings.catch_warnings():
@@ -214,7 +214,7 @@ class STLSQ(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
         n_features_selected = np.sum(ind)
-        existing_vals = np.array(self.sparse_ind)
+        sparse_sub = np.array(self.sparse_ind)
 
         # Print initial values for each term in the optimization
         if self.verbose:
@@ -248,7 +248,7 @@ class STLSQ(BaseOptimizer):
                     )
                     continue
                 coef_i = self._regress(
-                    x[:, ind[i]], y[:, i], np.count_nonzero(ind), existing_vals
+                    x[:, ind[i]], y[:, i], np.count_nonzero(ind), sparse_sub
                 )
                 coef_i, ind_i = self._sparse_coefficients(
                     n_features, ind[i], coef_i, self.threshold
@@ -257,9 +257,7 @@ class STLSQ(BaseOptimizer):
                     vals_to_remove = np.intersect1d(
                         self.sparse_ind, np.where(coef_i == 0)
                     )
-                    existing_vals = self._remove_and_decrement(
-                        existing_vals, vals_to_remove
-                    )
+                    sparse_sub = self._remove_and_decrement(sparse_sub, vals_to_remove)
                 coef[i] = coef_i
                 ind[i] = ind_i
 

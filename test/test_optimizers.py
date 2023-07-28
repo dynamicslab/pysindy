@@ -1154,3 +1154,13 @@ def test_optimizer_sparse_ridge():
     X = opt.coef_
     assert X[0, 0] > 0.0 and X[0, 0] < 0.5
     assert X[0, 1] > 0.5 and X[0, 1] < 1.0
+
+
+def test_remove_and_decrement():
+    existing_vals = np.array([2, 3, 4, 5])
+    vals_to_remove = np.array([3, 5])
+    expected = np.array([2, 3])
+    result = STLSQ._remove_and_decrement(
+        self=STLSQ, existing_vals=existing_vals, vals_to_remove=vals_to_remove
+    )
+    np.testing.assert_array_equal(expected, result)

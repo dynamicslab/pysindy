@@ -319,16 +319,16 @@ class TrappingSR3(SR3):
             constraint_rhs is not None
         )
 
+        self.constraint_lhs = constraint_lhs
+        self.constraint_rhs = constraint_rhs
+        self.constraint_order = constraint_order
         if self.use_constraints:
             if constraint_order not in ("feature", "target"):
                 raise ValueError(
                     "constraint_order must be either 'feature' or 'target'"
                 )
 
-            self.constraint_lhs = constraint_lhs
-            self.constraint_rhs = constraint_rhs
             self.unbias = False
-            self.constraint_order = constraint_order
 
     def _set_Ptensors(self, r):
         """Make the projection tensors used for the algorithm."""
@@ -709,8 +709,7 @@ class TrappingSR3(SR3):
                 "Total Error",
             ]
             print(
-                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
-                " ... {: >10}".format(*row)
+                "{: >10} ... {: >10} ... {: >10} ... {: >10} ... {: >10}".format(*row)
             )
 
         # initial A

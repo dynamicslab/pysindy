@@ -94,6 +94,9 @@ class MIOSR(BaseOptimizer):
     verbose : bool, optional (default False)
         If True, prints out the Gurobi solver log.
 
+    unbias: bool
+        Required to be false, maintained for supertype compatibility
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -120,7 +123,7 @@ class MIOSR(BaseOptimizer):
         copy_X=True,
         initial_guess=None,
         verbose=False,
-        unbias=True,
+        unbias=False,
     ):
         super().__init__(
             normalize_columns=normalize_columns,
@@ -137,7 +140,8 @@ class MIOSR(BaseOptimizer):
             raise ValueError("constraint_order must be one of {'target', 'feature'}")
         if alpha < 0:
             raise ValueError("alpha cannot be negative")
-
+        if unbias:
+            raise ValueError("MIOSR is incompatible with unbiasing. Set unbias=False")
         self.target_sparsity = target_sparsity
         self.group_sparsity = group_sparsity
         self.constraint_lhs = constraint_lhs

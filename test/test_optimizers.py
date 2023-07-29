@@ -973,7 +973,7 @@ def test_miosr_equality_constraints(data_lorenz, params):
         feature_library=poly_lib,
         feature_names=feature_names,
     )
-    model.fit(x, t=t[1] - t[0], unbias=False)
+    model.fit(x, t=t[1] - t[0])
     assert np.allclose(
         np.dot(constraint_matrix, (model.coefficients()).flatten()),
         constraint_rhs,

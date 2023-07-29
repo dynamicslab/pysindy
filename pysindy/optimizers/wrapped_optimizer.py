@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.multioutput import MultiOutputRegressor
 
 from .base import BaseOptimizer
 
@@ -10,7 +11,11 @@ class WrappedOptimizer(BaseOptimizer):
 
     Enables single target regressors (i.e. those whose predictions are
     1-dimensional) to perform multi target regression (i.e. predictions
-    are 2-dimensional).
+    are 2-dimensional).  Also allows unbiasing optimizers that would
+    otherwise prohibit it.
+
+    Args:
+        optimizer: wrapped optimizer/sparse regression method
 
     Parameters
     ----------
@@ -25,7 +30,7 @@ class WrappedOptimizer(BaseOptimizer):
 
     def __init__(self, optimizer, unbias: bool = True):
         super().__init__(unbias=unbias)
-        self.optimizer = optimizer
+        self.optimizer = MultiOutputRegressor(optimizer)
 
     def _reduce(self, x, y):
         if not hasattr(self.optimizer, "fit") or not callable(
@@ -40,12 +45,13 @@ class WrappedOptimizer(BaseOptimizer):
         coef_shape = (y.shape[1], x.shape[1])
         self.coef_ = np.zeros(coef_shape)
         self.ind_ = np.ones(coef_shape)
-        for tgt in range(y.shape[-1]):
-            self.optimizer.fit(x, y[..., tgt])
-            self.coef_[tgt] = self.optimizer.coef_
+        self.optimizer.fit(x, y)
+        coef_list = [
+            np.reshape(est.coef_, (-1, coef_shape[1]))
+            for est in self.optimizer.estimators_
+        ]
+        self.coef_ = np.concatenate(coef_list, axis=0)
         self.ind_ = np.abs(self.coef_) > COEF_THRESHOLD
-        if self.unbias:
-            self._unbias(x, y)
         if hasattr(self.optimizer, "intercept_"):
             self.intercept_ = self.optimizer.intercept_
         else:

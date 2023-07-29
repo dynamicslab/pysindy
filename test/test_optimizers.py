@@ -10,6 +10,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
+from sklearn.utils._param_validation import InvalidParameterError
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import FiniteDifference
@@ -615,7 +616,7 @@ def test_bad_optimizers(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(InvalidParameterError):
         # Error: optimizer does not have a callable fit method
         opt = WrappedOptimizer(DummyEmptyModel())
         opt.fit(x, x_dot)

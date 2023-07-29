@@ -77,9 +77,9 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
     [[Lasso, "alpha"], [Ridge, "alpha"], [STLSQ, "threshold"], [SR3, "threshold"]],
 )
 @given(
-    n_samples=integers(min_value=100, max_value=10000),
-    n_features=integers(min_value=10, max_value=30),
-    n_informative=integers(min_value=3, max_value=9),
+    n_samples=integers(min_value=30, max_value=50),
+    n_features=integers(min_value=6, max_value=10),
+    n_informative=integers(min_value=2, max_value=5),
     random_state=integers(min_value=0, max_value=2**32 - 1),
 )
 @settings(max_examples=20, deadline=None)

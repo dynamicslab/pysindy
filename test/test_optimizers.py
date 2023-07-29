@@ -616,9 +616,12 @@ def test_bad_optimizers(data_derivative_1d):
     x = x.reshape(-1, 1)
 
     with pytest.raises(AttributeError):
+        # Error: optimizer does not have a callable fit method
         opt = WrappedOptimizer(DummyEmptyModel())
+        opt.fit(x, x_dot)
 
     with pytest.raises(AttributeError):
+        # Error: object has no attribute 'coef_'
         opt = WrappedOptimizer(DummyModelNoCoef())
         opt.fit(x, x_dot)
 

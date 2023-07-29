@@ -156,7 +156,7 @@ class SR3(BaseOptimizer):
         initial_guess=None,
         normalize_columns=False,
         verbose=False,
-        unbias=True,
+        unbias=False,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,

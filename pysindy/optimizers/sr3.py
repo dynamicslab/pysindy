@@ -102,6 +102,10 @@ class SR3(BaseOptimizer):
         If True, prints out the different error terms every
         max_iter / 10 iterations.
 
+    unbias: bool (default False)
+        See base class for definition.  Most options are incompatible
+        with unbiasing.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -171,6 +175,11 @@ class SR3(BaseOptimizer):
             raise ValueError("tol must be positive")
         if (trimming_fraction < 0) or (trimming_fraction > 1):
             raise ValueError("trimming fraction must be between 0 and 1")
+        if trimming_fraction > 0 and unbias:
+            raise ValueError(
+                "Unbiasing counteracts some of the effects of trimming.  Either set"
+                " unbias=False or trimming_fraction=0.0"
+            )
         if thresholder.lower() not in (
             "l0",
             "l1",
@@ -361,8 +370,7 @@ class SR3(BaseOptimizer):
                 "Total Error: |y-Xw|^2 + |w-u|^2/v + R(u)",
             ]
             print(
-                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
-                " ... {: >10}".format(*row)
+                "{: >10} ... {: >10} ... {: >10} ... {: >10} ... {: >10}".format(*row)
             )
         objective_history = []
 

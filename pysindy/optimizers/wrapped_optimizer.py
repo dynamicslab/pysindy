@@ -6,13 +6,11 @@ COEF_THRESHOLD = 1e-14
 
 
 class WrappedOptimizer(BaseOptimizer):
-    """
-    Wrapper class for optimizers/sparse regression methods passed
-    into the SINDy object.
+    """Wrapper class for generic optimizers/sparse regression methods
 
-    Enables single target regressors
-    (i.e. those whose predictions are 1-dimensional)
-    to perform multi target regression (i.e. predictions are 2-dimensional).
+    Enables single target regressors (i.e. those whose predictions are
+    1-dimensional) to perform multi target regression (i.e. predictions
+    are 2-dimensional).
 
     Parameters
     ----------

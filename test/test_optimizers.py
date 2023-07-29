@@ -721,22 +721,18 @@ def test_unbias_external(data_derivative_1d):
     )
 
 
-@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
-def test_sr3_trimming(optimizer, data_linear_oscillator_corrupted):
+@pytest.mark.parametrize("OptCls", [SR3, ConstrainedSR3])
+def test_sr3_trimming(OptCls, data_linear_oscillator_corrupted):
     X, X_dot, trimming_array = data_linear_oscillator_corrupted
 
-    optimizer_without_trimming = WrappedOptimizer(optimizer(), unbias=False)
+    optimizer_without_trimming = OptCls(unbias=False)
     optimizer_without_trimming.fit(X, X_dot)
 
-    optimizer_trimming = WrappedOptimizer(
-        optimizer(trimming_fraction=0.15), unbias=False
-    )
+    optimizer_trimming = OptCls(trimming_fraction=0.15, unbias=False)
     optimizer_trimming.fit(X, X_dot)
 
     # Check that trimming found the right samples to remove
-    np.testing.assert_array_equal(
-        optimizer_trimming.optimizer.trimming_array, trimming_array
-    )
+    np.testing.assert_array_equal(optimizer_trimming.trimming_array, trimming_array)
 
     # Check that the coefficients found by the optimizer with trimming
     # are closer to the true coefficients than the coefficients found by the

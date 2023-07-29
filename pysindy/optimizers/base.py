@@ -15,6 +15,7 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 from ..utils import AxesArray
+from ..utils import drop_nan_samples
 
 
 def _rescale_data(X, y, sample_weight):
@@ -147,6 +148,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         -------
         self : returns an instance of self
         """
+        x_, y = drop_nan_samples(x_, y)
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
         x, y, X_offset, y_offset, X_scale = _preprocess_data(

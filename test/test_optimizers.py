@@ -683,14 +683,10 @@ def test_unbias(data_derivative_1d):
     x = x.reshape(-1, 1)
     x_dot = x_dot.reshape(-1, 1)
 
-    optimizer_biased = WrappedOptimizer(
-        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=False
-    )
+    optimizer_biased = STLSQ(threshold=0.01, alpha=0.1, max_iter=1, unbias=False)
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = WrappedOptimizer(
-        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=True
-    )
+    optimizer_unbiased = STLSQ(threshold=0.01, alpha=0.1, max_iter=1, unbias=True)
     optimizer_unbiased.fit(x, x_dot)
 
     assert (

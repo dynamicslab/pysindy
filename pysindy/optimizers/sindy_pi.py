@@ -87,12 +87,8 @@ class SINDyPI(SR3):
         Regularized weight vector(s). This is the v in the objective
         function.
 
-    unbias : boolean
-        Whether to perform an extra step of unregularized linear regression
-        to unbias the coefficients for the identified support.
-        ``unbias`` is automatically set to False if a constraint is used and
-        is otherwise left uninitialized.
-
+    unbias: bool
+        Required to be false, maintained for supertype compatibility
     """
 
     def __init__(
@@ -107,6 +103,7 @@ class SINDyPI(SR3):
         model_subset=None,
         normalize_columns=False,
         verbose_cvxpy=False,
+        unbias=False,
     ):
         super().__init__(
             threshold=threshold,
@@ -117,6 +114,7 @@ class SINDyPI(SR3):
             fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
+            unbias=unbias,
         )
 
         if (
@@ -199,8 +197,9 @@ class SINDyPI(SR3):
                 )
                 if xi.value is None:
                     warnings.warn(
-                        "Infeasible solve on iteration " + str(i) + ", try "
-                        "changing your library",
+                        "Infeasible solve on iteration "
+                        + str(i)
+                        + ", try changing your library",
                         ConvergenceWarning,
                     )
                 xi_final[:, i] = xi.value
@@ -216,8 +215,9 @@ class SINDyPI(SR3):
                 )
                 if xi.value is None:
                     warnings.warn(
-                        "Infeasible solve on iteration " + str(i) + ", try "
-                        "changing your library",
+                        "Infeasible solve on iteration "
+                        + str(i)
+                        + ", try changing your library",
                         ConvergenceWarning,
                     )
                 xi_final[:, i] = xi.value

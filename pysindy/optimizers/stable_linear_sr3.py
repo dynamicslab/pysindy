@@ -163,8 +163,9 @@ class StableLinearSR3(ConstrainedSR3):
         verbose=False,
         verbose_cvxpy=False,
         gamma=-1e-8,
+        unbias=False,
     ):
-        super(StableLinearSR3, self).__init__(
+        super().__init__(
             threshold=threshold,
             nu=nu,
             tol=tol,
@@ -185,11 +186,11 @@ class StableLinearSR3(ConstrainedSR3):
             equality_constraints=equality_constraints,
             inequality_constraints=inequality_constraints,
             constraint_separation_index=constraint_separation_index,
+            unbias=unbias,
         )
         self.gamma = gamma
         self.alpha_A = nu
         self.max_iter = max_iter
-        self.unbias = False
         warnings.warn(
             "This optimizer is set up to only be used with a purely linear"
             " library in the variables. No constant or nonlinear terms!"

@@ -379,8 +379,8 @@ Thanks to the members of the community who have contributed to PySINDy!
 | `andgoldschmidt <https://github.com/andgoldschmidt>`_ | `derivative <https://derivative.readthedocs.io/en/latest/>`_ package for numerical differentiation `#85 <https://github.com/dynamicslab/pysindy/pull/85>`_ |
 +-------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-.. |BuildCI| image:: https://github.com/dynamicslab/pysindy/workflows/Build%20CI/badge.svg
-    :target: https://github.com/dynamicslab/pysindy/actions?query=workflow%3A%22Build+CI%22
+.. |BuildCI| image:: https://github.com/dynamicslab/pysindy/actions/workflows/main.yml/badge.svg
+    :target: https://github.com/dynamicslab/pysindy/actions/workflows/main.yml?query=branch%3Amaster
 
 .. |RTD| image:: https://readthedocs.org/projects/pysindy/badge/?version=latest
     :target: https://pysindy.readthedocs.io/en/latest/?badge=latest

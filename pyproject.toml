@@ -74,7 +74,6 @@ force-exclude = '''
     dist
     env
 '''
-preview = true
 
 [tool.pytest.ini_options]
 filterwarnings = [

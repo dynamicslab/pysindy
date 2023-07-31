@@ -682,6 +682,22 @@ def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
     check_is_fitted(model)
 
 
+@pytest.mark.parametrize(
+    ("opt_cls", "opt_args"),
+    (
+        (SR3, {"trimming_fraction": 0.1}),
+        (ConstrainedSR3, {"constraint_lhs": 1}),
+        (ConstrainedSR3, {"trimming_fraction": 0.1}),
+        (SINDyPI, {}),
+        (MIOSR, {"constraint_lhs": 1}),
+    ),
+)
+def test_illegal_unbias(data_derivative_1d, opt_cls, opt_args):
+    x, x_dot = data_derivative_1d
+    with pytest.raises(ValueError):
+        opt_cls(unbias=True, **opt_args).fit(x, x_dot)
+
+
 def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)

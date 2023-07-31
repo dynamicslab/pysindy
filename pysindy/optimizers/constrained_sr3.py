@@ -216,7 +216,6 @@ class ConstrainedSR3(SR3):
                     "Constraints are incompatible with an unbiasing step.  Set"
                     " unbias=False"
                 )
-            self.unbias = False
 
         if inequality_constraints and not cvxpy_flag:
             raise ValueError(

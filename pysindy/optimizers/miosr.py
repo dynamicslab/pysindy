@@ -140,7 +140,7 @@ class MIOSR(BaseOptimizer):
             raise ValueError("constraint_order must be one of {'target', 'feature'}")
         if alpha < 0:
             raise ValueError("alpha cannot be negative")
-        if unbias:
+        if unbias and constraint_lhs is not None:
             raise ValueError("MIOSR is incompatible with unbiasing. Set unbias=False")
         self.target_sparsity = target_sparsity
         self.group_sparsity = group_sparsity

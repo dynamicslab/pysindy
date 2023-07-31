@@ -33,15 +33,6 @@ class WrappedOptimizer(BaseOptimizer):
         self.optimizer = MultiOutputRegressor(optimizer)
 
     def _reduce(self, x, y):
-        if not hasattr(self.optimizer, "fit") or not callable(
-            getattr(self.optimizer, "fit")
-        ):
-            raise AttributeError("optimizer does not have a callable fit method")
-        if not hasattr(self.optimizer, "predict") or not callable(
-            getattr(self.optimizer, "predict")
-        ):
-            raise AttributeError("optimizer does not have a callable predict method")
-
         coef_shape = (y.shape[1], x.shape[1])
         self.coef_ = np.zeros(coef_shape)
         self.ind_ = np.ones(coef_shape)

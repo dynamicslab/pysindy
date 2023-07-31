@@ -29,6 +29,7 @@ from pysindy.optimizers import SSR
 from pysindy.optimizers import StableLinearSR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
+from pysindy.optimizers.stlsq import _remove_and_decrement
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
 
@@ -1160,7 +1161,7 @@ def test_remove_and_decrement():
     existing_vals = np.array([2, 3, 4, 5])
     vals_to_remove = np.array([3, 5])
     expected = np.array([2, 3])
-    result = STLSQ._remove_and_decrement(
-        self=STLSQ, existing_vals=existing_vals, vals_to_remove=vals_to_remove
+    result = _remove_and_decrement(
+        existing_vals=existing_vals, vals_to_remove=vals_to_remove
     )
     np.testing.assert_array_equal(expected, result)

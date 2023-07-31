@@ -192,18 +192,6 @@ class STLSQ(BaseOptimizer):
             last_coef = np.zeros_like(this_coef)
         return all(bool(i) == bool(j) for i, j in zip(this_coef, last_coef))
 
-    def _remove_and_decrement(
-        self, existing_vals: np.ndarray, vals_to_remove: np.ndarray
-    ) -> np.ndarray:
-        """Remove elements from existing values and decrement the elements
-        that are greater than the removed elements"""
-        for s in reversed(vals_to_remove):
-            existing_vals = np.delete(existing_vals, np.where(s == existing_vals))
-            existing_vals = np.where(
-                existing_vals > s, existing_vals - 1, existing_vals
-            )
-        return existing_vals
-
     def _reduce(self, x, y):
         """Performs at most ``self.max_iter`` iterations of the
         sequentially-thresholded least squares algorithm.
@@ -261,7 +249,7 @@ class STLSQ(BaseOptimizer):
                     vals_to_remove = np.intersect1d(
                         self.sparse_ind, np.where(coef_i == 0)
                     )
-                    sparse_sub = self._remove_and_decrement(sparse_sub, vals_to_remove)
+                    sparse_sub = _remove_and_decrement(sparse_sub, vals_to_remove)
                 coef[i] = coef_i
                 ind[i] = ind_i
 
@@ -303,3 +291,14 @@ class STLSQ(BaseOptimizer):
         return np.count_nonzero(self.coef_) + np.count_nonzero(
             [abs(self.intercept_) >= self.threshold]
         )
+
+
+def _remove_and_decrement(
+    existing_vals: np.ndarray, vals_to_remove: np.ndarray
+) -> np.ndarray:
+    """Remove elements from existing values and decrement the elements
+    that are greater than the removed elements"""
+    for s in reversed(vals_to_remove):
+        existing_vals = np.delete(existing_vals, np.where(s == existing_vals))
+        existing_vals = np.where(existing_vals > s, existing_vals - 1, existing_vals)
+    return existing_vals

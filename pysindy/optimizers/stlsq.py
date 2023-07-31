@@ -64,7 +64,9 @@ class STLSQ(BaseOptimizer):
         If True, prints out the different error terms every iteration.
 
     sparse_ind : list, optional (default None)
-        Optional List of sparse indices to threshold and perform ridge regression upon.
+        Indices to threshold and perform ridge regression upon.
+        If None, sparse thresholding and ridge regression is applied to all
+        indices.
 
     Attributes
     ----------
@@ -132,8 +134,11 @@ class STLSQ(BaseOptimizer):
         self.verbose = verbose
         self.sparse_ind = sparse_ind
 
-    def _sparse_coefficients(self, dim, ind_nonzero, coef, threshold):
-        """Perform thresholding of the weight vector(s)"""
+    def _sparse_coefficients(
+        self, dim: int, ind_nonzero: np.ndarray, coef: np.ndarray, threshold: float
+    ) -> (np.ndarray, np.ndarray):
+        """Perform thresholding of the weight vector(s) (on specific indices
+        if ``self.sparse_ind`` is not None)"""
         c = np.zeros(dim)
         c[ind_nonzero] = coef
         big_ind = np.abs(c) >= threshold
@@ -145,11 +150,11 @@ class STLSQ(BaseOptimizer):
             c[~big_ind] = 0
         return c, big_ind
 
-    def _regress(self, x, y, dim, sparse_sub):
-        """Perform the ridge regression"""
+    def _regress(self, x: np.ndarray, y: np.ndarray, dim: int, sparse_sub: np.ndarray):
+        """Perform the ridge regression (on specific indices if
+        ``self.sparse_ind`` is not None)"""
         kw = self.ridge_kw or {}
-        sparse_ind = self.sparse_ind
-        if sparse_ind is None:
+        if self.sparse_ind is None:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=LinAlgWarning)
                 try:
@@ -159,8 +164,7 @@ class STLSQ(BaseOptimizer):
                     self.alpha = 2 * self.alpha
             self.iters += 1
             return coef
-        if sparse_ind is not None:
-            coef = np.zeros(dim)
+        if self.sparse_ind is not None:
             alpha_array = np.zeros((dim, dim))
             alpha_array[sparse_sub, sparse_sub] = np.sqrt(self.alpha)
             x_lin = np.concatenate((x, alpha_array), axis=0)
@@ -191,8 +195,8 @@ class STLSQ(BaseOptimizer):
     def _remove_and_decrement(
         self, existing_vals: np.ndarray, vals_to_remove: np.ndarray
     ) -> np.ndarray:
-        """Remove the sparse indices that have been thresholded
-        for subsequent iterations"""
+        """Remove elements from existing values and decrement the elements
+        that are greater than the removed elements"""
         for s in reversed(vals_to_remove):
             existing_vals = np.delete(existing_vals, np.where(s == existing_vals))
             existing_vals = np.where(

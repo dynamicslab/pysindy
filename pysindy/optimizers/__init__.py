@@ -27,7 +27,7 @@ from .stlsq import STLSQ
 __all__ = [
     "BaseOptimizer",
     "EnsembleOptimizer",
-    "SINDyOptimizer",
+    "WrappedOptimizer",
     "SR3",
     "STLSQ",
     "ConstrainedSR3",

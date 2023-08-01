@@ -50,11 +50,7 @@ class WrappedOptimizer(BaseOptimizer):
         return self
 
     def predict(self, x):
-        prediction = self.optimizer.predict(x)
-        if prediction.ndim == 1:
-            return prediction[:, np.newaxis]
-        else:
-            return prediction
+        return self.optimizer.predict(x)
 
     @property
     def complexity(self):

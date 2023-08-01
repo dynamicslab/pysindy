@@ -121,7 +121,8 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         """
         Carry out the bulk of the work of the fit function.
 
-        Subclass implementations MUST update self.coef_.
+        Subclass implementations MUST update self.coef_ as shape
+            (n_targets, n_inputs).
         """
         raise NotImplementedError
 
@@ -222,10 +223,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
                     .fit(x[:, self.ind_[i]], y[:, i])
                     .coef_
                 )
-        if self.coef_.ndim == 1:
-            self.coef_ = coef[0]
-        else:
-            self.coef_ = coef
+        self.coef_ = coef
 
 
 class EnsembleOptimizer(BaseOptimizer):

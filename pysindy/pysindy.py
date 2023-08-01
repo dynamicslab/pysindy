@@ -577,7 +577,7 @@ class SINDy(BaseEstimator):
             Equivalent to :math:`\\Xi^\\top` in the literature.
         """
         check_is_fitted(self, "model")
-        return self.model.steps[-1][1].coef_
+        return self.optimizer.coef_
 
     def get_feature_names(self):
         """
@@ -590,9 +590,7 @@ class SINDy(BaseEstimator):
             library, :code:`self.feature_library`.
         """
         check_is_fitted(self, "model")
-        return self.model.steps[0][1].get_feature_names(
-            input_features=self.feature_names
-        )
+        return self.feature_library.get_feature_names(input_features=self.feature_names)
 
     def simulate(
         self,
@@ -760,7 +758,7 @@ class SINDy(BaseEstimator):
         """
         Complexity of the model measured as the number of nonzero parameters.
         """
-        return self.model.steps[-1][1].complexity
+        return self.optimizer.complexity
 
 
 def _zip_like_sequence(x, t):

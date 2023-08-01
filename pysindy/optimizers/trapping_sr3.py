@@ -154,6 +154,10 @@ class TrappingSR3(SR3):
         output should be verbose or not. Only relevant for optimizers that
         use the CVXPY package in some capabity.
 
+    unbias: bool (default False)
+        See base class for definition.  Most options are incompatible
+        with unbiasing.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -245,6 +249,7 @@ class TrappingSR3(SR3):
         constraint_order="target",
         verbose=False,
         verbose_cvxpy=False,
+        unbias=False,
     ):
         super().__init__(
             threshold=threshold,
@@ -255,6 +260,7 @@ class TrappingSR3(SR3):
             thresholder=thresholder,
             thresholds=thresholds,
             verbose=verbose,
+            unbias=unbias,
         )
         if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
             raise ValueError("Regularizer must be (weighted) L1 or L2")
@@ -327,8 +333,11 @@ class TrappingSR3(SR3):
                 raise ValueError(
                     "constraint_order must be either 'feature' or 'target'"
                 )
-
-            self.unbias = False
+            if unbias:
+                raise ValueError(
+                    "Constraints are incompatible with an unbiasing step.  Set"
+                    " unbias=False"
+                )
 
     def _set_Ptensors(self, r):
         """Make the projection tensors used for the algorithm."""

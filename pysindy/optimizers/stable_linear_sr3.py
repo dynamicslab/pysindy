@@ -129,6 +129,8 @@ class StableLinearSR3(ConstrainedSR3):
         output should be verbose or not. Only relevant for optimizers that
         use the CVXPY package in some capabity.
 
+    See base class for additional arguments
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)

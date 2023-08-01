@@ -686,10 +686,13 @@ def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
     ("opt_cls", "opt_args"),
     (
         (SR3, {"trimming_fraction": 0.1}),
-        (ConstrainedSR3, {"constraint_lhs": 1}),
+        (ConstrainedSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
         (ConstrainedSR3, {"trimming_fraction": 0.1}),
+        (TrappingSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
+        (StableLinearSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
+        (StableLinearSR3, {"trimming_fraction": 0.1}),
         (SINDyPI, {}),
-        (MIOSR, {"constraint_lhs": 1}),
+        (MIOSR, {"constraint_lhs": [1]}),
     ),
 )
 def test_illegal_unbias(data_derivative_1d, opt_cls, opt_args):

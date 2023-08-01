@@ -69,7 +69,7 @@ def data_lorenz():
 
 
 @pytest.fixture
-def data_multiple_trajctories():
+def data_multiple_trajectories():
 
     n_points = [100, 200, 500]
     initial_conditions = [

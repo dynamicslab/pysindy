@@ -207,7 +207,7 @@ for i in range(n_trajectories):
     )
 
 model = ps.SINDy()
-model.fit(x_train_multi, t=dt, multiple_trajectories=True)
+model.fit(x_train_multi, t=dt)
 model.print()
 
 # %% [markdown]
@@ -230,7 +230,7 @@ for i in range(n_trajectories):
     t_train_multi.append(t)
 
 model = ps.SINDy()
-model.fit(x_train_multi, t=t_train_multi, multiple_trajectories=True)
+model.fit(x_train_multi, t=t_train_multi)
 model.print()
 
 # %% [markdown]
@@ -1209,7 +1209,7 @@ opt = ps.STLSQ(threshold=1e-1, normalize_columns=False)
 model = ps.SINDy(
     feature_library=lib, optimizer=opt, feature_names=["x", "r"], discrete_time=True
 )
-model.fit(xs_train, u=rs_train, multiple_trajectories=True)
+model.fit(xs_train, u=rs_train)
 model.print()
 
 # %% [markdown]

@@ -128,7 +128,8 @@ class SINDyPI(SR3):
                 " in current version of SINDy-PI"
             )
 
-        self.unbias = False
+        if self.unbias:
+            raise ValueError("SINDyPI is incompatible with an unbiasing step")
         self.verbose_cvxpy = verbose_cvxpy
         if model_subset is not None:
             if not isinstance(model_subset, list):

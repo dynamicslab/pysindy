@@ -206,7 +206,8 @@ class STLSQ(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
         n_features_selected = np.sum(ind)
-        sparse_sub = np.array(self.sparse_ind)
+        sparse_fix = [np.array(self.sparse_ind)] * y.shape[1]
+        sparse_sub = [np.array(self.sparse_ind)] * y.shape[1]
 
         # Print initial values for each term in the optimization
         if self.verbose:
@@ -240,7 +241,7 @@ class STLSQ(BaseOptimizer):
                     )
                     continue
                 coef_i = self._regress(
-                    x[:, ind[i]], y[:, i], np.count_nonzero(ind), sparse_sub
+                    x[:, ind[i]], y[:, i], np.count_nonzero(ind[i]), sparse_sub[i]
                 )
                 coef_i, ind_i = self._sparse_coefficients(
                     n_features, ind[i], coef_i, self.threshold
@@ -249,7 +250,7 @@ class STLSQ(BaseOptimizer):
                     vals_to_remove = np.intersect1d(
                         self.sparse_ind, np.where(coef_i == 0)
                     )
-                    sparse_sub = _remove_and_decrement(sparse_sub, vals_to_remove)
+                    sparse_sub[i] = _remove_and_decrement(sparse_fix[i], vals_to_remove)
                 coef[i] = coef_i
                 ind[i] = ind_i
 

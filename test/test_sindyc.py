@@ -235,78 +235,55 @@ def test_score(data):
     assert model.score(x, u=u, t=t, x_dot=x) <= 1
 
 
-def test_fit_multiple_trajectores(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_fit_multiple_trajectores(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     u = [np.ones((xi.shape[0], 2)) for xi in x]
 
     model = SINDy()
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.fit(x, u=u, t=t)
-
-    # Should fail if x or u is not a list
-    with pytest.raises(TypeError):
-        model.fit(x, u=u[0], multiple_trajectories=True)
-
-    with pytest.raises(TypeError):
-        model.fit(x[0], u=u, multiple_trajectories=True)
-
-    # x and u should be lists of the same length
-    with pytest.raises(ValueError):
-        model.fit(x[:-1], u=u, multiple_trajectories=True)
-
-    model.fit(x, u=u, multiple_trajectories=True)
+    model.fit(x, u=u)
     check_is_fitted(model)
 
-    model.fit(x, u=u, t=t, multiple_trajectories=True)
-    assert model.score(x, u=u, t=t, multiple_trajectories=True) > 0.8
+    model.fit(x, u=u, t=t)
+    assert model.score(x, u=u, t=t) > 0.8
 
     model = SINDy()
-    model.fit(x, u=u, x_dot=x, multiple_trajectories=True)
+    model.fit(x, u=u, x_dot=x)
     check_is_fitted(model)
 
     model = SINDy()
-    model.fit(x, u=u, t=t, x_dot=x, multiple_trajectories=True)
+    model.fit(x, u=u, t=t, x_dot=x)
     check_is_fitted(model)
 
 
-def test_predict_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_predict_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     u = [np.ones((xi.shape[0], 2)) for xi in x]
 
     model = SINDy()
-    model.fit(x, u=u, t=t, multiple_trajectories=True)
+    model.fit(x, u=u, t=t)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.predict(x, u=u)
-
-    p = model.predict(x, u=u, multiple_trajectories=True)
+    p = model.predict(x, u=u)
     assert len(p) == len(x)
 
 
-def test_score_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_score_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     u = [np.ones((xi.shape[0], 2)) for xi in x]
 
     model = SINDy()
-    model.fit(x, u=u, t=t, multiple_trajectories=True)
+    model.fit(x, u=u, t=t)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.score(x, u=u)
-
-    s = model.score(x, u=u, multiple_trajectories=True)
+    s = model.score(x, u=u)
     assert s <= 1
 
-    s = model.score(x, u=u, t=t, multiple_trajectories=True)
+    s = model.score(x, u=u, t=t)
     assert s <= 1
 
-    s = model.score(x, u=u, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, u=u, x_dot=x)
     assert s <= 1
 
-    s = model.score(x, u=u, t=t, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, u=u, t=t, x_dot=x)
     assert s <= 1
 
 
@@ -382,17 +359,12 @@ def test_fit_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories_c,
 ):
     x, u = data_discrete_time_multiple_trajectories_c
-
-    # Should fail if multiple_trajectories flag is not set
     model = SINDy(discrete_time=True)
-    with pytest.raises(ValueError):
-        model.fit(x, u=u)
-
-    model.fit(x, u=u, multiple_trajectories=True)
+    model.fit(x, u=u)
     check_is_fitted(model)
 
     model = SINDy(discrete_time=True)
-    model.fit(x, u=u, x_dot=x, multiple_trajectories=True)
+    model.fit(x, u=u, x_dot=x)
     check_is_fitted(model)
 
 
@@ -401,13 +373,9 @@ def test_predict_discrete_time_multiple_trajectories(
 ):
     x, u = data_discrete_time_multiple_trajectories_c
     model = SINDy(discrete_time=True)
-    model.fit(x, u=u, multiple_trajectories=True)
+    model.fit(x, u=u)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.predict(x, u=u)
-
-    y = model.predict(x, u=u, multiple_trajectories=True)
+    y = model.predict(x, u=u)
     assert len(y) == len(x)
 
 
@@ -416,17 +384,13 @@ def test_score_discrete_time_multiple_trajectories(
 ):
     x, u = data_discrete_time_multiple_trajectories_c
     model = SINDy(discrete_time=True)
-    model.fit(x, u=u, multiple_trajectories=True)
+    model.fit(x, u=u)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.score(x, u=u)
-
-    s = model.score(x, u=u, multiple_trajectories=True)
+    s = model.score(x, u=u)
     assert s > 0.75
 
     # x is not its own derivative, so we expect bad performance here
-    s = model.score(x, u=u, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, u=u, x_dot=x)
     assert s < 1
 
 

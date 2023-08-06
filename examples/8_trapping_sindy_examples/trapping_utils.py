@@ -175,7 +175,7 @@ def check_local_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     eps_Q = np.max(
         np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))
     )
-    print(eps_Q)
+    print('Maximum deviation from having zero totally symmetric part: ', eps_Q)
     d = C + np.dot(L, opt_m) + np.dot(np.tensordot(Q, opt_m, axes=([2], [0])), opt_m)
     d = mod_matrix @ d
     Rm, R_ls = get_trapping_radius(max_eigval, eps_Q, r, d)

@@ -15,6 +15,7 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 from ..utils import AxesArray
+from ..utils import drop_nan_samples
 
 
 def _rescale_data(X, y, sample_weight):
@@ -62,6 +63,17 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         Initial guess for coefficients ``coef_``.
         If None, the initial guess is obtained via a least-squares fit.
 
+    unbias:  Whether to perform an extra step of unregularized linear
+        regression to unbias the coefficients for the identified
+        support.  If an optimizer (``self.optimizer``) applies any type
+        of regularization, that regularization may bias coefficients,
+        improving the conditioning of the problem but harming the
+        quality of the fit. Setting ``unbias==True`` enables an extra
+        step wherein unregularized linear regression is applied, but
+        only for the coefficients in the support identified by the
+        optimizer. This helps to remove the bias introduced by
+        regularization.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -88,8 +100,9 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         fit_intercept=False,
         initial_guess=None,
         copy_X=True,
+        unbias: bool = True,
     ):
-        super(BaseOptimizer, self).__init__(fit_intercept=fit_intercept, copy_X=copy_X)
+        super().__init__(fit_intercept=fit_intercept, copy_X=copy_X)
 
         if max_iter <= 0:
             raise ValueError("max_iter must be positive")
@@ -100,6 +113,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
             initial_guess = initial_guess.reshape(1, -1)
         self.initial_guess = initial_guess
         self.normalize_columns = normalize_columns
+        self.unbias = unbias
 
     # Force subclasses to implement this
     @abc.abstractmethod
@@ -107,7 +121,8 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         """
         Carry out the bulk of the work of the fit function.
 
-        Subclass implementations MUST update self.coef_.
+        Subclass implementations MUST update self.coef_ as shape
+            (n_targets, n_inputs).
         """
         raise NotImplementedError
 
@@ -134,6 +149,9 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         -------
         self : returns an instance of self
         """
+        x_ = AxesArray(np.asarray(x_), {"ax_sample": 0, "ax_coord": 1})
+        y = AxesArray(np.asarray(y), {"ax_sample": 0, "ax_coord": 1})
+        x_, y = drop_nan_samples(x_, y)
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
         x, y, X_offset, y_offset, X_scale = _preprocess_data(
@@ -178,6 +196,9 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self._reduce(x_normed, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
 
+        if self.unbias:
+            self._unbias(x_normed, y)
+
         # Rescale coefficients to original units
         if self.normalize_columns:
             self.coef_ = np.multiply(reg, self.coef_)
@@ -188,6 +209,21 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
+
+    def _unbias(self, x, y):
+        coef = np.zeros((y.shape[1], x.shape[1]))
+        if hasattr(self, "fit_intercept"):
+            fit_intercept = self.fit_intercept
+        else:
+            fit_intercept = False
+        for i in range(self.ind_.shape[0]):
+            if np.any(self.ind_[i]):
+                coef[i, self.ind_[i]] = (
+                    LinearRegression(fit_intercept=fit_intercept)
+                    .fit(x[:, self.ind_[i]], y[:, i])
+                    .coef_
+                )
+        self.coef_ = coef
 
 
 class EnsembleOptimizer(BaseOptimizer):
@@ -249,12 +285,6 @@ class EnsembleOptimizer(BaseOptimizer):
     coef_full_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
-
-    unbias : boolean
-        Whether to perform an extra step of unregularized linear regression
-        to unbias the coefficients for the identified support.
-        ``unbias`` is automatically set to False if a constraint is used and
-        is otherwise left uninitialized.
     """
 
     def __init__(
@@ -271,7 +301,7 @@ class EnsembleOptimizer(BaseOptimizer):
         if not hasattr(opt, "initial_guess"):
             opt.initial_guess = None
 
-        super(EnsembleOptimizer, self).__init__(
+        super().__init__(
             max_iter=opt.max_iter,
             fit_intercept=opt.fit_intercept,
             initial_guess=opt.initial_guess,
@@ -302,6 +332,7 @@ class EnsembleOptimizer(BaseOptimizer):
         self.replace = replace
         self.n_candidates_to_drop = n_candidates_to_drop
         self.coef_list = []
+        self.unbias = False
 
     def _reduce(self, x: AxesArray, y: np.ndarray) -> None:
         x = AxesArray(np.asarray(x), {"ax_sample": 0, "ax_coord": 1})

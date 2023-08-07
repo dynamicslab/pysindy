@@ -154,6 +154,10 @@ class TrappingSR3(SR3):
         output should be verbose or not. Only relevant for optimizers that
         use the CVXPY package in some capabity.
 
+    unbias: bool (default False)
+        See base class for definition.  Most options are incompatible
+        with unbiasing.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -245,8 +249,9 @@ class TrappingSR3(SR3):
         constraint_order="target",
         verbose=False,
         verbose_cvxpy=False,
+        unbias=False,
     ):
-        super(TrappingSR3, self).__init__(
+        super().__init__(
             threshold=threshold,
             max_iter=max_iter,
             normalize_columns=normalize_columns,
@@ -255,6 +260,7 @@ class TrappingSR3(SR3):
             thresholder=thresholder,
             thresholds=thresholds,
             verbose=verbose,
+            unbias=unbias,
         )
         if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
             raise ValueError("Regularizer must be (weighted) L1 or L2")
@@ -319,16 +325,19 @@ class TrappingSR3(SR3):
             constraint_rhs is not None
         )
 
+        self.constraint_lhs = constraint_lhs
+        self.constraint_rhs = constraint_rhs
+        self.constraint_order = constraint_order
         if self.use_constraints:
             if constraint_order not in ("feature", "target"):
                 raise ValueError(
                     "constraint_order must be either 'feature' or 'target'"
                 )
-
-            self.constraint_lhs = constraint_lhs
-            self.constraint_rhs = constraint_rhs
-            self.unbias = False
-            self.constraint_order = constraint_order
+            if unbias:
+                raise ValueError(
+                    "Constraints are incompatible with an unbiasing step.  Set"
+                    " unbias=False"
+                )
 
     def _set_Ptensors(self, r):
         """Make the projection tensors used for the algorithm."""
@@ -709,8 +718,7 @@ class TrappingSR3(SR3):
                 "Total Error",
             ]
             print(
-                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
-                " ... {: >10}".format(*row)
+                "{: >10} ... {: >10} ... {: >10} ... {: >10} ... {: >10}".format(*row)
             )
 
         # initial A

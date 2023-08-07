@@ -99,12 +99,14 @@ class SSR(BaseOptimizer):
         criteria="coefficient_value",
         kappa=None,
         verbose=False,
+        unbias=True,
     ):
         super(SSR, self).__init__(
             max_iter=max_iter,
             fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
+            unbias=unbias,
         )
 
         if alpha < 0:

@@ -870,7 +870,7 @@ def test_sindypi_library(data_lorenz):
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
+        differentiation_method=FiniteDifference(),
     )
     model.fit(x, t=t)
     assert np.shape(sindy_opt.coef_) == (40, 40)
@@ -879,7 +879,7 @@ def test_sindypi_library(data_lorenz):
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
+        differentiation_method=FiniteDifference(),
     )
     model.fit(x, t=t)
     assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(

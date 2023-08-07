@@ -91,12 +91,14 @@ class FROLS(BaseOptimizer):
         alpha=0.05,
         ridge_kw=None,
         verbose=False,
+        unbias=True,
     ):
-        super(FROLS, self).__init__(
+        super().__init__(
             fit_intercept=fit_intercept,
             copy_X=copy_X,
             max_iter=max_iter,
             normalize_columns=normalize_columns,
+            unbias=unbias,
         )
         self.alpha = alpha
         self.ridge_kw = ridge_kw

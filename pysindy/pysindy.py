@@ -16,7 +16,6 @@ from sklearn.utils.validation import check_is_fitted
 
 from .differentiation import FiniteDifference
 from .feature_library import PolynomialLibrary
-from .optimizers import SINDyOptimizer
 
 try:  # Waiting on PEP 690 to lazy import CVXPY
     from .optimizers import SINDyPI
@@ -182,7 +181,6 @@ class SINDy(BaseEstimator):
         t=None,
         x_dot=None,
         u=None,
-        unbias=True,
     ):
         """
         Fit a SINDy model.
@@ -222,17 +220,6 @@ class SINDy(BaseEstimator):
             for each trajectory. Individual trajectories may contain different
             numbers of samples.
 
-        unbias: boolean, optional (default True)
-            Whether to perform an extra step of unregularized linear regression to
-            unbias the coefficients for the identified support.
-            If the optimizer (``self.optimizer``) applies any type of regularization,
-            that regularization may bias coefficients toward particular values,
-            improving the conditioning of the problem but harming the quality of the
-            fit. Setting ``unbias==True`` enables an extra step wherein unregularized
-            linear regression is applied, but only for the coefficients in the support
-            identified by the optimizer. This helps to remove the bias introduced by
-            regularization.
-
         Returns
         -------
         self: a fitted :class:`SINDy` instance
@@ -262,26 +249,21 @@ class SINDy(BaseEstimator):
         if u is not None:
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
-        if hasattr(self.optimizer, "unbias"):
-            unbias = self.optimizer.unbias
-
-        optimizer = SINDyOptimizer(self.optimizer, unbias=unbias)
         steps = [
             ("features", self.feature_library),
             ("shaping", SampleConcatter()),
-            ("model", optimizer),
+            ("model", self.optimizer),
         ]
         x_dot = concat_sample_axis(x_dot)
         self.model = Pipeline(steps)
         self.model.fit(x, x_dot)
 
-        self.n_features_in_ = self.model.steps[0][1].n_features_in_
-        n_input_features = self.model.steps[0][1].n_features_in_
-        self.n_output_features_ = self.model.steps[0][1].n_output_features_
+        self.n_features_in_ = self.feature_library.n_features_in_
+        self.n_output_features_ = self.feature_library.n_output_features_
 
         if self.feature_names is None:
             feature_names = []
-            for i in range(n_input_features - self.n_control_features_):
+            for i in range(self.n_features_in_ - self.n_control_features_):
                 feature_names.append("x" + str(i))
             for i in range(self.n_control_features_):
                 feature_names.append("u" + str(i))
@@ -568,7 +550,7 @@ class SINDy(BaseEstimator):
             Equivalent to :math:`\\Xi^\\top` in the literature.
         """
         check_is_fitted(self, "model")
-        return self.model.steps[-1][1].coef_
+        return self.optimizer.coef_
 
     def get_feature_names(self):
         """
@@ -581,9 +563,7 @@ class SINDy(BaseEstimator):
             library, :code:`self.feature_library`.
         """
         check_is_fitted(self, "model")
-        return self.model.steps[0][1].get_feature_names(
-            input_features=self.feature_names
-        )
+        return self.feature_library.get_feature_names(input_features=self.feature_names)
 
     def simulate(
         self,
@@ -751,7 +731,7 @@ class SINDy(BaseEstimator):
         """
         Complexity of the model measured as the number of nonzero parameters.
         """
-        return self.model.steps[-1][1].complexity
+        return self.optimizer.complexity
 
 
 def _zip_like_sequence(x, t):

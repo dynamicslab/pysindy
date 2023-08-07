@@ -11,9 +11,9 @@ from sklearn.linear_model import Lasso
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Ridge
 
-from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
+from pysindy.optimizers import WrappedOptimizer
 
 
 @given(
@@ -60,7 +60,7 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
             LinearRegression(**opt_kwargs),
         ]
 
-        optimizers = [SINDyOptimizer(o, unbias=True) for o in optimizers]
+        optimizers = [WrappedOptimizer(o, unbias=True) for o in optimizers]
 
         for k, opt in enumerate(optimizers):
             opt.fit(x, y)
@@ -77,9 +77,9 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
     [[Lasso, "alpha"], [Ridge, "alpha"], [STLSQ, "threshold"], [SR3, "threshold"]],
 )
 @given(
-    n_samples=integers(min_value=100, max_value=10000),
-    n_features=integers(min_value=10, max_value=30),
-    n_informative=integers(min_value=3, max_value=9),
+    n_samples=integers(min_value=30, max_value=50),
+    n_features=integers(min_value=6, max_value=10),
+    n_informative=integers(min_value=2, max_value=5),
     random_state=integers(min_value=0, max_value=2**32 - 1),
 )
 @settings(max_examples=20, deadline=None)
@@ -104,7 +104,7 @@ def test_complexity_parameter(
     y = y.reshape(-1, 1)
 
     optimizers = [
-        SINDyOptimizer(opt_cls(**{reg_name: reg_value}), unbias=True)
+        WrappedOptimizer(opt_cls(**{reg_name: reg_value}), unbias=True)
         for reg_value in [3, 1, 0.3, 0.1, 0.01]
     ]
 

@@ -10,6 +10,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
+from sklearn.utils._param_validation import InvalidParameterError
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import FiniteDifference
@@ -21,13 +22,13 @@ from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import EnsembleOptimizer
 from pysindy.optimizers import FROLS
 from pysindy.optimizers import MIOSR
-from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import SR3
 from pysindy.optimizers import SSR
 from pysindy.optimizers import StableLinearSR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
+from pysindy.optimizers import WrappedOptimizer
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
 
@@ -107,7 +108,7 @@ def test_fit(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
     if len(x.shape) == 1:
         x = x.reshape(-1, 1)
-    opt = SINDyOptimizer(optimizer, unbias=False)
+    opt = WrappedOptimizer(optimizer, unbias=False)
     opt.fit(x, x_dot)
 
     check_is_fitted(opt)
@@ -615,11 +616,14 @@ def test_bad_optimizers(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
 
-    with pytest.raises(AttributeError):
-        opt = SINDyOptimizer(DummyEmptyModel())
+    with pytest.raises(InvalidParameterError):
+        # Error: optimizer does not have a callable fit method
+        opt = WrappedOptimizer(DummyEmptyModel())
+        opt.fit(x, x_dot)
 
     with pytest.raises(AttributeError):
-        opt = SINDyOptimizer(DummyModelNoCoef())
+        # Error: object has no attribute 'coef_'
+        opt = WrappedOptimizer(DummyModelNoCoef())
         opt.fit(x, x_dot)
 
 
@@ -678,19 +682,34 @@ def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
     check_is_fitted(model)
 
 
+@pytest.mark.parametrize(
+    ("opt_cls", "opt_args"),
+    (
+        (SR3, {"trimming_fraction": 0.1}),
+        (ConstrainedSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
+        (ConstrainedSR3, {"trimming_fraction": 0.1}),
+        (TrappingSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
+        (StableLinearSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
+        (StableLinearSR3, {"trimming_fraction": 0.1}),
+        (SINDyPI, {}),
+        (MIOSR, {"constraint_lhs": [1]}),
+    ),
+)
+def test_illegal_unbias(data_derivative_1d, opt_cls, opt_args):
+    x, x_dot = data_derivative_1d
+    with pytest.raises(ValueError):
+        opt_cls(unbias=True, **opt_args).fit(x, x_dot)
+
+
 def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
     x_dot = x_dot.reshape(-1, 1)
 
-    optimizer_biased = SINDyOptimizer(
-        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=False
-    )
+    optimizer_biased = STLSQ(threshold=0.01, alpha=0.1, max_iter=1, unbias=False)
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = SINDyOptimizer(
-        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=True
-    )
+    optimizer_unbiased = STLSQ(threshold=0.01, alpha=0.1, max_iter=1, unbias=True)
     optimizer_unbiased.fit(x, x_dot)
 
     assert (
@@ -705,12 +724,12 @@ def test_unbias_external(data_derivative_1d):
     x = x.reshape(-1, 1)
     x_dot = x_dot.reshape(-1, 1)
 
-    optimizer_biased = SINDyOptimizer(
+    optimizer_biased = WrappedOptimizer(
         Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=False
     )
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = SINDyOptimizer(
+    optimizer_unbiased = WrappedOptimizer(
         Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=True
     )
     optimizer_unbiased.fit(x, x_dot)
@@ -722,20 +741,18 @@ def test_unbias_external(data_derivative_1d):
     )
 
 
-@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
-def test_sr3_trimming(optimizer, data_linear_oscillator_corrupted):
+@pytest.mark.parametrize("OptCls", [SR3, ConstrainedSR3])
+def test_sr3_trimming(OptCls, data_linear_oscillator_corrupted):
     X, X_dot, trimming_array = data_linear_oscillator_corrupted
 
-    optimizer_without_trimming = SINDyOptimizer(optimizer(), unbias=False)
+    optimizer_without_trimming = OptCls(unbias=False)
     optimizer_without_trimming.fit(X, X_dot)
 
-    optimizer_trimming = SINDyOptimizer(optimizer(trimming_fraction=0.15), unbias=False)
+    optimizer_trimming = OptCls(trimming_fraction=0.15, unbias=False)
     optimizer_trimming.fit(X, X_dot)
 
     # Check that trimming found the right samples to remove
-    np.testing.assert_array_equal(
-        optimizer_trimming.optimizer.trimming_array, trimming_array
-    )
+    np.testing.assert_array_equal(optimizer_trimming.trimming_array, trimming_array)
 
     # Check that the coefficients found by the optimizer with trimming
     # are closer to the true coefficients than the coefficients found by the
@@ -976,7 +993,7 @@ def test_miosr_equality_constraints(data_lorenz, params):
         feature_library=poly_lib,
         feature_names=feature_names,
     )
-    model.fit(x, t=t[1] - t[0], unbias=False)
+    model.fit(x, t=t[1] - t[0])
     assert np.allclose(
         np.dot(constraint_matrix, (model.coefficients()).flatten()),
         constraint_rhs,

@@ -34,6 +34,7 @@ from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import EnsembleOptimizer
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
+from pysindy.optimizers import WrappedOptimizer
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -186,8 +187,8 @@ def test_differentiate_returns_compatible_data_type(data):
         STLSQ(),
         SR3(),
         ConstrainedSR3(),
-        Lasso(fit_intercept=False),
-        ElasticNet(fit_intercept=False),
+        WrappedOptimizer(Lasso(fit_intercept=False)),
+        WrappedOptimizer(ElasticNet(fit_intercept=False)),
     ],
 )
 def test_predict(data, optimizer):

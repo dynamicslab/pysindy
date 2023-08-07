@@ -21,10 +21,11 @@ class WrappedOptimizer(BaseOptimizer):
     ----------
     optimizer: estimator object
         The optimizer/sparse regressor to be wrapped, implementing ``fit`` and
-        ``predict``. ``optimizer`` should also have the attributes ``coef_``,
-        ``fit_intercept``, and ``intercept_``. Note that attribute
-        ``normalize`` is deprecated as of sklearn versions >= 1.0 and will be
-        removed in future versions.
+        ``predict``. ``optimizer`` should also have the attribute ``coef_``.
+        Any optimizer that supports a ``fit_intercept`` argument should
+        be initialized to False.  Note that attribute ``normalize`` is
+        deprecated as of sklearn versions >= 1.0 and will be removed in
+        future versions.
 
     """
 
@@ -43,10 +44,7 @@ class WrappedOptimizer(BaseOptimizer):
         ]
         self.coef_ = np.concatenate(coef_list, axis=0)
         self.ind_ = np.abs(self.coef_) > COEF_THRESHOLD
-        if hasattr(self.optimizer, "intercept_"):
-            self.intercept_ = self.optimizer.intercept_
-        else:
-            self.intercept_ = 0.0
+        self.intercept_ = 0.0
         return self
 
     def predict(self, x):

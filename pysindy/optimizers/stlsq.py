@@ -42,10 +42,6 @@ class STLSQ(BaseOptimizer):
     ridge_kw : dict, optional (default None)
         Optional keyword arguments to pass to the ridge regression.
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     normalize_columns : boolean, optional (default False)
         Normalize the columns of x (the SINDy library terms) before regression
         by dividing by the L2-norm. Note that the 'normalize' option in sklearn
@@ -103,7 +99,6 @@ class STLSQ(BaseOptimizer):
         max_iter=20,
         ridge_kw=None,
         normalize_columns=False,
-        fit_intercept=False,
         copy_X=True,
         initial_guess=None,
         verbose=False,
@@ -111,7 +106,6 @@ class STLSQ(BaseOptimizer):
     ):
         super().__init__(
             max_iter=max_iter,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
             unbias=unbias,

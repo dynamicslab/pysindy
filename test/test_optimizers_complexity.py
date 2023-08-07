@@ -49,12 +49,12 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
         )
         y = y.reshape(-1, 1)
 
-        opt_kwargs = dict(fit_intercept=True)
+        opt_kwargs = dict(fit_intercept=False)
         optimizers = [
-            SR3(thresholder="l0", threshold=0.1, **opt_kwargs),
-            SR3(thresholder="l1", threshold=0.1, **opt_kwargs),
+            SR3(thresholder="l0", threshold=0.1),
+            SR3(thresholder="l1", threshold=0.1),
             Lasso(**opt_kwargs),
-            STLSQ(**opt_kwargs),
+            STLSQ(),
             ElasticNet(**opt_kwargs),
             Ridge(**opt_kwargs),
             LinearRegression(**opt_kwargs),

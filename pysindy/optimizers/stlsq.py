@@ -1,4 +1,5 @@
 import warnings
+from typing import Union
 
 import numpy as np
 from scipy.linalg import LinAlgWarning
@@ -206,7 +207,6 @@ class STLSQ(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
         n_features_selected = np.sum(ind)
-        sparse_fix = [np.array(self.sparse_ind)] * y.shape[1]
         sparse_sub = [np.array(self.sparse_ind)] * y.shape[1]
 
         # Print initial values for each term in the optimization
@@ -250,7 +250,9 @@ class STLSQ(BaseOptimizer):
                     vals_to_remove = np.intersect1d(
                         self.sparse_ind, np.where(coef_i == 0)
                     )
-                    sparse_sub[i] = _remove_and_decrement(sparse_fix[i], vals_to_remove)
+                    sparse_sub[i] = _remove_and_decrement(
+                        self.sparse_ind, vals_to_remove
+                    )
                 coef[i] = coef_i
                 ind[i] = ind_i
 
@@ -295,7 +297,7 @@ class STLSQ(BaseOptimizer):
 
 
 def _remove_and_decrement(
-    existing_vals: np.ndarray, vals_to_remove: np.ndarray
+    existing_vals: Union[np.ndarray, list], vals_to_remove: Union[np.ndarray, list]
 ) -> np.ndarray:
     """Remove elements from existing values and decrement the elements
     that are greater than the removed elements"""

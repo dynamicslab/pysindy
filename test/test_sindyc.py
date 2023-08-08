@@ -121,16 +121,17 @@ def test_bad_t(data):
     with pytest.raises(ValueError):
         model.fit(x, u=u, t=t[:-1])
 
+    t_new = np.copy(t)
     # Two points in t out of order
-    t[2], t[4] = t[4], t[2]
+    t_new[2], t_new[4] = t_new[4], t_new[2]
     with pytest.raises(ValueError):
-        model.fit(x, u=u, t=t)
-    t[2], t[4] = t[4], t[2]
+        model.fit(x, u=u, t=t_new)
+    t_new[2], t_new[4] = t_new[4], t_new[2]
 
     # Two matching times in t
-    t[3] = t[5]
+    t_new[3] = t_new[5]
     with pytest.raises(ValueError):
-        model.fit(x, u=u, t=t)
+        model.fit(x, u=u, t=t_new)
 
 
 @pytest.mark.parametrize(

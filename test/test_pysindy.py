@@ -133,15 +133,16 @@ def test_bad_t(data):
         model.fit(x, t[:-1])
 
     # Two points in t out of order
-    t[2], t[4] = t[4], t[2]
+    t_new = np.copy(t)
+    t_new[2], t_new[4] = t_new[4], t_new[2]
     with pytest.raises(ValueError):
-        model.fit(x, t)
-    t[2], t[4] = t[4], t[2]
+        model.fit(x, t_new)
+    t_new[2], t_new[4] = t_new[4], t_new[2]
 
     # Two matching times in t
-    t[3] = t[5]
+    t_new[3] = t_new[5]
     with pytest.raises(ValueError):
-        model.fit(x, t)
+        model.fit(x, t_new)
 
 
 @pytest.mark.parametrize(
@@ -227,8 +228,8 @@ def test_simulate(data):
     [
         PolynomialLibrary(degree=3),
         FourierLibrary(n_frequencies=3),
-        pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_sindypi_library"),
+        pytest.lazy_fixture("custom_library"),
+        pytest.lazy_fixture("sindypi_library"),
         PolynomialLibrary() + FourierLibrary(),
     ],
 )

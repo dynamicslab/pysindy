@@ -44,21 +44,21 @@ def pytest_generate_tests(metafunc):
         )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_1d():
     t = np.linspace(0, 5, 100)
     x = 2 * t.reshape(-1, 1)
     return x, t
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_1d_bad_shape():
     t = np.linspace(0, 5, 100)
     x = 2 * t
     return x, t
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_lorenz():
 
     t = np.linspace(0, 1, 12)
@@ -124,7 +124,7 @@ def diffuse_multiple_trajectories():
     return t, x, u
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_discrete_time():
 
     n_steps = 100
@@ -137,7 +137,7 @@ def data_discrete_time():
     return x
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_discrete_time_multiple_trajectories():
 
     n_steps = 100
@@ -151,7 +151,7 @@ def data_discrete_time_multiple_trajectories():
     return x
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_1d_random_pde():
     n = 100
     t = np.linspace(0, 10, n)
@@ -162,7 +162,7 @@ def data_1d_random_pde():
     return t, x, u, u_dot
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_2d_random_pde():
     n = 4
     t = np.linspace(0, 10, n)
@@ -176,7 +176,7 @@ def data_2d_random_pde():
     return spatial_grid, u, u_dot
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_3d_random_pde():
     n = 4
     t = np.linspace(0, 10, n)
@@ -196,7 +196,7 @@ def data_3d_random_pde():
     return spatial_grid, u, u_dot
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_5d_random_pde():
     n = 4
     t = np.linspace(0, n, n)
@@ -214,7 +214,7 @@ def data_5d_random_pde():
     return spatial_grid, u, u_dot
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_2d_resolved_pde():
     n = 8
     nt = 1000
@@ -229,14 +229,14 @@ def data_2d_resolved_pde():
     return spatial_grid, u, u_dot
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_derivative_1d():
     x = 2 * np.linspace(1, 100, 100)
     x_dot = 2 * np.ones(100)
     return x, x_dot
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_derivative_quasiperiodic_1d():
     t = np.arange(1000) * 2 * np.pi / 1000
     x = 2 * np.sin(t)
@@ -244,7 +244,7 @@ def data_derivative_quasiperiodic_1d():
     return t, x, x_dot
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_derivative_2d():
     x = np.zeros((100, 2))
     x[:, 0] = 2 * np.linspace(1, 100, 100)
@@ -256,7 +256,7 @@ def data_derivative_2d():
     return x, x_dot
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_derivative_quasiperiodic_2d():
     t = np.arange(1000) * 2 * np.pi / 1000
     x = np.zeros((1000, 2))
@@ -268,7 +268,7 @@ def data_derivative_quasiperiodic_2d():
     return t, x, x_dot
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_2dspatial():
     u = np.zeros((100, 50, 2))
     x = np.linspace(1, 100, 100)
@@ -280,7 +280,7 @@ def data_2dspatial():
 
 
 @pytest.fixture
-def data_custom_library():
+def custom_library():
     library_functions = [
         lambda x: x,
         lambda x: x**2,
@@ -300,7 +300,7 @@ def data_custom_library():
 
 
 @pytest.fixture
-def data_custom_library_bias():
+def custom_library_bias():
     library_functions = [
         lambda x: x,
         lambda x: x**2,
@@ -322,7 +322,7 @@ def data_custom_library_bias():
 
 
 @pytest.fixture
-def data_quadratic_library():
+def quadratic_library():
     library_functions = [
         lambda x: x,
         lambda x, y: x * y,
@@ -339,7 +339,7 @@ def data_quadratic_library():
 
 
 @pytest.fixture
-def data_generalized_library():
+def generalized_library():
     tensor_array = [[1, 1]]
     return GeneralizedLibrary(
         [PolynomialLibrary(), FourierLibrary()],
@@ -348,7 +348,7 @@ def data_generalized_library():
 
 
 @pytest.fixture
-def data_sindypi_library(data_lorenz):
+def sindypi_library(data_lorenz):
     library_functions = [
         lambda x: x,
         lambda x: x**2,
@@ -371,7 +371,7 @@ def data_sindypi_library(data_lorenz):
 
 
 @pytest.fixture
-def data_ode_library():
+def ode_library():
     library_functions = [
         lambda x: x,
         lambda x: x**2,
@@ -390,7 +390,7 @@ def data_ode_library():
 
 
 @pytest.fixture
-def data_pde_library(data_lorenz):
+def pde_library(data_lorenz):
     _, spatial_grid = data_lorenz
     library_functions = [
         lambda x: x,
@@ -411,7 +411,7 @@ def data_pde_library(data_lorenz):
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_linear_oscillator_corrupted():
     t = np.linspace(0, 1, 100)
     x = 3 * np.exp(-2 * t)
@@ -430,7 +430,7 @@ def data_linear_oscillator_corrupted():
     return X, X_dot, trimming_array
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_linear_combination():
     t = np.linspace(0, 5, 100)
     x = np.stack((np.exp(t), np.sin(t), np.cos(t)), axis=-1)
@@ -442,7 +442,7 @@ def data_linear_combination():
 # Datasets with control inputs
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_lorenz_c_1d():
     def u_fun(t):
         if len(np.shape(t)) == 0:
@@ -458,7 +458,7 @@ def data_lorenz_c_1d():
     return x, t, u, u_fun
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_lorenz_c_2d():
     def u_fun(t):
         return np.column_stack([np.sin(2 * t), t**2])
@@ -471,7 +471,7 @@ def data_lorenz_c_2d():
     return x, t, u, u_fun
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_discrete_time_c():
 
     n_steps = 100
@@ -487,7 +487,7 @@ def data_discrete_time_c():
     return x, u
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_discrete_time_c_multivariable():
 
     n_steps = 100
@@ -504,7 +504,7 @@ def data_discrete_time_c_multivariable():
     return x, u
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_discrete_time_multiple_trajectories_c():
 
     n_steps = 100

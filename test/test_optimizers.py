@@ -490,17 +490,14 @@ def test_stable_linear_sr3_linear_library(params):
         dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
     ],
 )
-def test_trapping_sr3_quadratic_library(
-    params, trapping_sr3_params, data_quadratic_library
-):
+def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, quadratic_library):
     np.random.seed(100)
     x = np.random.standard_normal((100, 3))
 
-    sindy_library = data_quadratic_library
     params.update(trapping_sr3_params)
 
     opt = TrappingSR3(**params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model = SINDy(optimizer=opt, feature_library=quadratic_library)
     model.fit(x)
     assert opt.PL_unsym_.shape == (3, 3, 3, 9)
     assert opt.PL_.shape == (3, 3, 3, 9)
@@ -515,7 +512,7 @@ def test_trapping_sr3_quadratic_library(
     params["constraint_lhs"] = np.eye(p, r * N)
 
     opt = TrappingSR3(**params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
+    model = SINDy(optimizer=opt, feature_library=quadratic_library)
     model.fit(x)
     assert opt.PL_unsym_.shape == (3, 3, 3, 9)
     assert opt.PL_.shape == (3, 3, 3, 9)

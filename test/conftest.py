@@ -88,7 +88,7 @@ def data_multiple_trajectories():
     return x_list, t_list
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def diffuse_multiple_trajectories():
     def diffuse(t, u, dx, nx):
         u = np.reshape(u, nx)

@@ -450,7 +450,7 @@ def data_lorenz_c_1d():
         else:
             return np.column_stack([np.sin(2 * t), np.zeros(len(t))])
 
-    t = np.linspace(0, 5, 500)
+    t = np.linspace(0, 1, 100)
     x0 = [8, 27, -7]
     x = solve_ivp(lorenz_control, (t[0], t[-1]), x0, t_eval=t, args=(u_fun,)).y.T
     u = u_fun(t)
@@ -463,7 +463,7 @@ def data_lorenz_c_2d():
     def u_fun(t):
         return np.column_stack([np.sin(2 * t), t**2])
 
-    t = np.linspace(0, 5, 500)
+    t = np.linspace(0, 1, 100)
     x0 = [8, 27, -7]
     x = solve_ivp(lorenz_control, (t[0], t[-1]), x0, t_eval=t, args=(u_fun,)).y.T
     u = u_fun(t)

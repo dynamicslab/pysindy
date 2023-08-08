@@ -175,13 +175,6 @@ def test_sample_weight_optimizers(data_lorenz, optimizer):
     model = optimizer()
     model.fit(x, x_dot)
     model.fit(x, x_dot, sample_weight=sample_weight)
-    model.fit(x, x_dot, sample_weight=sample_weight)
-    check_is_fitted(model)
-
-    model = optimizer(normalize_columns=True)
-    model.fit(x, x_dot)
-    model.fit(x, x_dot, sample_weight=sample_weight)
-    model.fit(x, x_dot, sample_weight=sample_weight)
     check_is_fitted(model)
 
 

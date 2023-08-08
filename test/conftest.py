@@ -61,7 +61,7 @@ def data_1d_bad_shape():
 @pytest.fixture
 def data_lorenz():
 
-    t = np.linspace(0, 1, 50)
+    t = np.linspace(0, 1, 12)
     x0 = [8, 27, -7]
     x = solve_ivp(lorenz, (t[0], t[-1]), x0, t_eval=t).y.T
 

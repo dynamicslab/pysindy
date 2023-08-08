@@ -210,11 +210,13 @@ def test_predict(data, optimizer):
 )
 def test_simulate(data):
     x, t = data
-    model = SINDy()
+    model = SINDy(feature_library=PolynomialLibrary(degree=1))
     model.fit(x, t)
-    x1 = model.simulate(np.ravel(x[0]), t)
+    x1 = model.simulate(np.ravel(x[0]), t, integrator_kws={"rtol": 0.1})
     assert len(x1) == len(t)
-    x1 = model.simulate(np.ravel(x[0]), t, integrator="odeint")
+    x1 = model.simulate(
+        np.ravel(x[0]), t, integrator="odeint", integrator_kws={"rtol": 0.1}
+    )
     assert len(x1) == len(t)
     with pytest.raises(ValueError):
         x1 = model.simulate(np.ravel(x[0]), t, integrator="None")

@@ -11,8 +11,8 @@ class WrappedOptimizer(BaseOptimizer):
 
     Enables single target regressors (i.e. those whose predictions are
     1-dimensional) to perform multi target regression (i.e. predictions
-    are 2-dimensional).  Also allows unbiasing optimizers that would
-    otherwise prohibit it.
+    are 2-dimensional).  Also allows unbiasing & normalization for
+    optimizers that would otherwise not include it.
 
     Args:
         optimizer: wrapped optimizer/sparse regression method
@@ -23,14 +23,12 @@ class WrappedOptimizer(BaseOptimizer):
         The optimizer/sparse regressor to be wrapped, implementing ``fit`` and
         ``predict``. ``optimizer`` should also have the attribute ``coef_``.
         Any optimizer that supports a ``fit_intercept`` argument should
-        be initialized to False.  Note that attribute ``normalize`` is
-        deprecated as of sklearn versions >= 1.0 and will be removed in
-        future versions.
+        be initialized to False.
 
     """
 
-    def __init__(self, optimizer, unbias: bool = True):
-        super().__init__(unbias=unbias)
+    def __init__(self, optimizer, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.optimizer = MultiOutputRegressor(optimizer)
 
     def _reduce(self, x, y):

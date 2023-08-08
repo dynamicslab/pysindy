@@ -48,8 +48,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
     ----------
     normalize_columns : boolean, optional (default False)
         Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed.
+        by dividing by the L2-norm.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.

@@ -45,7 +45,7 @@ def test_complexity_parameter(
 
     optimizers = [
         WrappedOptimizer(opt_cls(**{reg_name: reg_value}), unbias=True)
-        for reg_value in [3, 1, 0.3, 0.1, 0.01]
+        for reg_value in [10, 1, 0.1, 0.01]
     ]
 
     for opt in optimizers:

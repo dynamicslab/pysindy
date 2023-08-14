@@ -1142,11 +1142,12 @@ def test_sparse_subset_multitarget():
     opt = STLSQ(threshold=0.5, alpha=0.1, sparse_ind=[2, 3])
     opt.fit(A, b)
     X = opt.coef_
-    assert X[0, 2] == 0.0
-    assert X[0, 3] > 0.0 and X[0, 3] < 1.0
-    np.testing.assert_equal(X[:, :2], np.ones((2, 2)))
-    assert X[1, 3] == 0.0
-    assert X[1, 2] > 0.0 and X[1, 2] < 1.0
+    Y = opt.optvar_non_sparse
+    assert X[0, 0] == 0.0
+    assert X[0, 1] > 0.0 and X[0, 1] < 1.0
+    np.testing.assert_equal(Y[:, :2], np.ones((2, 2)))
+    assert X[1, 1] == 0.0
+    assert X[1, 0] > 0.0 and X[1, 0] < 1.0
 
 
 def test_sparse_subset_off_diagonal():
@@ -1155,8 +1156,9 @@ def test_sparse_subset_off_diagonal():
     opt = STLSQ(threshold=0.1, alpha=0.1, sparse_ind=[1])
     opt.fit(A, b)
     X = opt.coef_
-    assert X[0, 0] > 0.0 and X[0, 0] < 0.5
-    assert X[0, 1] > 0.5 and X[0, 1] < 1.0
+    Y = opt.optvar_non_sparse
+    assert Y[0, 0] > 0.0 and Y[0, 0] < 0.5
+    assert X[0, 0] > 0.5 and X[0, 0] < 1.0
 
 
 def test_remove_and_decrement():

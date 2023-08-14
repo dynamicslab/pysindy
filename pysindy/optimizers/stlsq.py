@@ -229,10 +229,10 @@ class STLSQ(BaseOptimizer):
                     "Sparsity parameter is too big ({}) and eliminated all "
                     "coefficients".format(self.threshold)
                 )
-                coef = np.zeros((n_targets, n_features))
+                optvar = np.zeros((n_targets, n_features))
                 break
 
-            coef = np.zeros((n_targets, n_features))
+            optvar = np.zeros((n_targets, n_features))
             for i in range(n_targets):
                 if np.count_nonzero(ind[i]) == 0:
                     warnings.warn(
@@ -253,14 +253,14 @@ class STLSQ(BaseOptimizer):
                     sparse_sub[i] = _remove_and_decrement(
                         self.sparse_ind, vals_to_remove
                     )
-                coef[i] = coef_i
+                optvar[i] = coef_i
                 ind[i] = ind_i
 
-            self.history_.append(coef)
+            self.history_.append(optvar)
             if self.verbose:
-                R2 = np.sum((y - np.dot(x, coef.T)) ** 2)
-                L2 = self.alpha * np.sum(coef**2)
-                L0 = np.count_nonzero(coef)
+                R2 = np.sum((y - np.dot(x, optvar.T)) ** 2)
+                L2 = self.alpha * np.sum(optvar**2)
+                L0 = np.count_nonzero(optvar)
                 row = [k, R2, L2, L0, R2 + L2]
                 print(
                     "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10d}"
@@ -277,15 +277,22 @@ class STLSQ(BaseOptimizer):
                 ConvergenceWarning,
             )
             try:
-                coef
+                optvar
             except NameError:
-                coef = self.coef_
+                optvar = self.coef_
                 warnings.warn(
                     "STLSQ._reduce has no iterations left to determine coef",
                     ConvergenceWarning,
                 )
-        self.coef_ = coef
-        self.ind_ = ind
+        if self.sparse_ind is None:
+            self.coef_ = optvar
+            self.ind_ = ind
+        else:
+            non_sparse_ind = np.setxor1d(self.sparse_ind, range(n_features))
+            self.coef_ = optvar[:, self.sparse_ind]
+            self.ind_ = ind[:, self.sparse_ind]
+            self.optvar_non_sparse = optvar[:, non_sparse_ind]
+            self.ind_non_sparse = ind[:, non_sparse_ind]
 
     @property
     def complexity(self):

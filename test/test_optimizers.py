@@ -138,9 +138,7 @@ def test_complexity_not_fitted(optimizer, data_derivative_2d):
     assert optimizer.complexity > 0
 
 
-@pytest.mark.parametrize(
-    "kwargs", [{"normalize_columns": True}, {"fit_intercept": True}, {"copy_X": False}]
-)
+@pytest.mark.parametrize("kwargs", [{"normalize_columns": True}, {"copy_X": False}])
 def test_alternate_parameters(data_derivative_1d, kwargs):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)

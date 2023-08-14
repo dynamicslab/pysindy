@@ -53,10 +53,6 @@ class MIOSR(BaseOptimizer):
         optimality (either per dimension or jointly depending on the
         above sparsity settings).
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
         The left hand side matrix C of Cw <= d.
@@ -115,7 +111,6 @@ class MIOSR(BaseOptimizer):
         group_sparsity=None,
         alpha=0.01,
         regression_timeout=10,
-        fit_intercept=False,
         constraint_lhs=None,
         constraint_rhs=None,
         constraint_order="target",
@@ -127,7 +122,6 @@ class MIOSR(BaseOptimizer):
     ):
         super().__init__(
             normalize_columns=normalize_columns,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             unbias=unbias,
         )

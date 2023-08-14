@@ -66,10 +66,6 @@ class ConstrainedSR3(SR3):
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
         The left hand side matrix C of Cw <= d.
@@ -157,7 +153,6 @@ class ConstrainedSR3(SR3):
         constraint_rhs=None,
         constraint_order="target",
         normalize_columns=False,
-        fit_intercept=False,
         copy_X=True,
         initial_guess=None,
         thresholds=None,
@@ -178,7 +173,6 @@ class ConstrainedSR3(SR3):
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
             initial_guess=initial_guess,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
             verbose=verbose,

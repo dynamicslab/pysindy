@@ -46,14 +46,9 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
     Parameters
     ----------
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     normalize_columns : boolean, optional (default False)
         Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed.
+        by dividing by the L2-norm.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -97,12 +92,11 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self,
         max_iter=20,
         normalize_columns=False,
-        fit_intercept=False,
         initial_guess=None,
         copy_X=True,
         unbias: bool = True,
     ):
-        super().__init__(fit_intercept=fit_intercept, copy_X=copy_X)
+        super().__init__(fit_intercept=False, copy_X=copy_X)
 
         if max_iter <= 0:
             raise ValueError("max_iter must be positive")
@@ -157,7 +151,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         x, y, X_offset, y_offset, X_scale = _preprocess_data(
             x_,
             y,
-            fit_intercept=self.fit_intercept,
+            fit_intercept=False,
             copy=self.copy_X,
             sample_weight=sample_weight,
         )
@@ -212,14 +206,10 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
     def _unbias(self, x, y):
         coef = np.zeros((y.shape[1], x.shape[1]))
-        if hasattr(self, "fit_intercept"):
-            fit_intercept = self.fit_intercept
-        else:
-            fit_intercept = False
         for i in range(self.ind_.shape[0]):
             if np.any(self.ind_[i]):
                 coef[i, self.ind_[i]] = (
-                    LinearRegression(fit_intercept=fit_intercept)
+                    LinearRegression(fit_intercept=False)
                     .fit(x[:, self.ind_[i]], y[:, i])
                     .coef_
                 )
@@ -303,7 +293,6 @@ class EnsembleOptimizer(BaseOptimizer):
 
         super().__init__(
             max_iter=opt.max_iter,
-            fit_intercept=opt.fit_intercept,
             initial_guess=opt.initial_guess,
             copy_X=opt.copy_X,
         )

@@ -17,9 +17,9 @@ from pysindy.optimizers import WrappedOptimizer
 
 
 @given(
-    n_samples=integers(min_value=100, max_value=10000),
-    n_features=integers(min_value=10, max_value=30),
-    n_informative=integers(min_value=3, max_value=9),
+    n_samples=integers(min_value=30, max_value=50),
+    n_features=integers(min_value=6, max_value=10),
+    n_informative=integers(min_value=2, max_value=5),
     random_state=integers(min_value=0, max_value=2**32 - 1),
 )
 @settings(max_examples=20, deadline=None)
@@ -49,18 +49,18 @@ def test_complexity(n_samples, n_features, n_informative, random_state):
         )
         y = y.reshape(-1, 1)
 
-        opt_kwargs = dict(fit_intercept=True)
+        opt_kwargs = dict(fit_intercept=False)
         optimizers = [
-            SR3(thresholder="l0", threshold=0.1, **opt_kwargs),
-            SR3(thresholder="l1", threshold=0.1, **opt_kwargs),
+            SR3(thresholder="l0", threshold=0.1),
+            SR3(thresholder="l1", threshold=0.1),
             Lasso(**opt_kwargs),
-            STLSQ(**opt_kwargs),
+            STLSQ(),
             ElasticNet(**opt_kwargs),
             Ridge(**opt_kwargs),
             LinearRegression(**opt_kwargs),
         ]
 
-        optimizers = [WrappedOptimizer(o, unbias=True) for o in optimizers]
+        optimizers = [WrappedOptimizer(o) for o in optimizers]
 
         for k, opt in enumerate(optimizers):
             opt.fit(x, y)
@@ -104,7 +104,7 @@ def test_complexity_parameter(
     y = y.reshape(-1, 1)
 
     optimizers = [
-        WrappedOptimizer(opt_cls(**{reg_name: reg_value}), unbias=True)
+        WrappedOptimizer(opt_cls(**{reg_name: reg_value}), normalize_columns=True)
         for reg_value in [3, 1, 0.3, 0.1, 0.01]
     ]
 

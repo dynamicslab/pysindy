@@ -133,10 +133,6 @@ class TrappingSR3(SR3):
         Initial guess for vector A in the optimization. Otherwise
         A is initialized as A = diag(gamma).
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
@@ -239,7 +235,6 @@ class TrappingSR3(SR3):
         max_iter=30,
         accel=False,
         normalize_columns=False,
-        fit_intercept=False,
         copy_X=True,
         m0=None,
         A0=None,
@@ -255,7 +250,6 @@ class TrappingSR3(SR3):
             threshold=threshold,
             max_iter=max_iter,
             normalize_columns=normalize_columns,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             thresholder=thresholder,
             thresholds=thresholds,

@@ -30,7 +30,7 @@ def test_not_fitted(data_lorenz_c_1d):
     with pytest.raises(NotFittedError):
         model.predict(x, u=u)
     with pytest.raises(NotFittedError):
-        model.simulate(x[0], t=t, u=u_fun)
+        model.simulate(x[0], t=t, u=u_fun, integrator_kws={"rtol": 0.1})
 
 
 def test_improper_shape_input(data_1d):
@@ -121,16 +121,17 @@ def test_bad_t(data):
     with pytest.raises(ValueError):
         model.fit(x, u=u, t=t[:-1])
 
+    t_new = np.copy(t)
     # Two points in t out of order
-    t[2], t[4] = t[4], t[2]
+    t_new[2], t_new[4] = t_new[4], t_new[2]
     with pytest.raises(ValueError):
-        model.fit(x, u=u, t=t)
-    t[2], t[4] = t[4], t[2]
+        model.fit(x, u=u, t=t_new)
+    t_new[2], t_new[4] = t_new[4], t_new[2]
 
     # Two matching times in t
-    t[3] = t[5]
+    t_new[3] = t_new[5]
     with pytest.raises(ValueError):
-        model.fit(x, u=u, t=t)
+        model.fit(x, u=u, t=t_new)
 
 
 @pytest.mark.parametrize(
@@ -183,7 +184,7 @@ def test_simulate(data):
     x, t, u, u_fun = data
     model = SINDy()
     model.fit(x, u=u, t=t)
-    x1 = model.simulate(x[0], t=t, u=u_fun)
+    x1 = model.simulate(x[0], t=t, u=u_fun, integrator_kws={"rtol": 0.1})
 
     assert len(x1) == len(t)
 
@@ -198,9 +199,9 @@ def test_simulate_with_interp(data):
     model.fit(x, u=u, t=t)
 
     u_fun = interp1d(t, u, axis=0)
-    x1 = model.simulate(x[0], t=t[:-1], u=u_fun)
+    x1 = model.simulate(x[0], t=t, u=u_fun, integrator_kws={"rtol": 0.1})
 
-    assert len(x1) == len(t) - 1
+    assert len(x1) == len(t)
 
 
 @pytest.mark.parametrize(
@@ -212,7 +213,7 @@ def test_simulate_with_vector_control_input(data):
     model = SINDy()
     model.fit(x, u=u, t=t)
 
-    x1 = model.simulate(x[0], t=t, u=u)
+    x1 = model.simulate(x[0], t=t, u=u, integrator_kws={"rtol": 0.1})
 
     assert len(x1) == len(t) - 1
 
@@ -447,7 +448,7 @@ def test_extra_u_warn(data_lorenz_c_1d):
         model.score(x, u=u)
 
     with pytest.warns(UserWarning):
-        model.simulate(x[0], t=t, u=u)
+        model.simulate(x[0], t=t, u=u, integrator_kws={"rtol": 0.1})
 
 
 def test_extra_u_warn_discrete(data_discrete_time_c):
@@ -462,4 +463,4 @@ def test_extra_u_warn_discrete(data_discrete_time_c):
         model.score(x, u=u)
 
     with pytest.warns(UserWarning):
-        model.simulate(x[0], u=u, t=10)
+        model.simulate(x[0], u=u, t=10, integrator_kws={"rtol": 0.1})

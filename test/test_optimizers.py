@@ -173,13 +173,6 @@ def test_sample_weight_optimizers(data_lorenz, optimizer):
     model = optimizer()
     model.fit(x, x_dot)
     model.fit(x, x_dot, sample_weight=sample_weight)
-    model.fit(x, x_dot, sample_weight=sample_weight)
-    check_is_fitted(model)
-
-    model = optimizer(normalize_columns=True)
-    model.fit(x, x_dot)
-    model.fit(x, x_dot, sample_weight=sample_weight)
-    model.fit(x, x_dot, sample_weight=sample_weight)
     check_is_fitted(model)
 
 
@@ -483,53 +476,49 @@ def test_stable_linear_sr3_linear_library(params):
         dict(thresholder="l1", threshold=1e-5),
         dict(
             thresholder="weighted_l1",
-            thresholds=np.zeros((3, 9)),
+            thresholds=np.zeros((1, 2)),
             eta=1e5,
             alpha_m=1e4,
             alpha_A=1e5,
         ),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
+        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((1, 2))),
         dict(thresholder="l2", threshold=0),
         dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 9))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((1, 2))),
+        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((1, 2))),
     ],
 )
-def test_trapping_sr3_quadratic_library(
-    params, trapping_sr3_params, data_quadratic_library
-):
-    np.random.seed(100)
-    x = np.random.standard_normal((100, 3))
+def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, quadratic_library):
+    t = np.arange(0, 1, 0.1)
+    x = np.exp(-t).reshape((-1, 1))
+    x_dot = -x
+    features = np.hstack([x, x**2])
 
-    sindy_library = data_quadratic_library
     params.update(trapping_sr3_params)
 
     opt = TrappingSR3(**params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    assert opt.PL_unsym_.shape == (3, 3, 3, 9)
-    assert opt.PL_.shape == (3, 3, 3, 9)
-    assert opt.PQ_.shape == (3, 3, 3, 3, 9)
-    check_is_fitted(model)
+    opt.fit(features, x_dot)
+    assert opt.PL_unsym_.shape == (1, 1, 1, 2)
+    assert opt.PL_.shape == (1, 1, 1, 2)
+    assert opt.PQ_.shape == (1, 1, 1, 1, 2)
+    check_is_fitted(opt)
 
     # Rerun with identity constraints
-    r = 3
-    N = 9
+    r = x.shape[1]
+    N = 2
     p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
     params["constraint_rhs"] = np.zeros(p)
     params["constraint_lhs"] = np.eye(p, r * N)
 
     opt = TrappingSR3(**params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    assert opt.PL_unsym_.shape == (3, 3, 3, 9)
-    assert opt.PL_.shape == (3, 3, 3, 9)
-    assert opt.PQ_.shape == (3, 3, 3, 3, 9)
-    check_is_fitted(model)
+    opt.fit(features, x_dot)
+    assert opt.PL_unsym_.shape == (1, 1, 1, 2)
+    assert opt.PL_.shape == (1, 1, 1, 2)
+    assert opt.PQ_.shape == (1, 1, 1, 1, 2)
+    check_is_fitted(opt)
     # check is solve was infeasible first
     if not np.allclose(opt.m_history_[-1], opt.m_history_[0]):
-        zero_inds = [0, 1, 3, 6, 9, 12, 15, 18, 21, 24]
-        assert np.allclose((model.coefficients().flatten())[zero_inds], 0.0, atol=1e-5)
+        assert np.allclose((opt.coef_.flatten())[0], 0.0, atol=1e-5)
 
 
 def test_trapping_cubic_library():

@@ -202,7 +202,7 @@ def test_generalized_library_bad_parameters(data_lorenz, params):
         dict(parameter_library=None),
     ],
 )
-def test_parametrized_library_bad_parameters(data_lorenz, params):
+def test_parameterized_library_bad_parameters(data_lorenz, params):
     with pytest.raises(ValueError):
         lib = ParameterizedLibrary(**params)
         x, t = data_lorenz

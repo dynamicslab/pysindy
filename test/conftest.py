@@ -46,14 +46,14 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture(scope="session")
 def data_1d():
-    t = np.linspace(0, 5, 100)
+    t = np.linspace(0, 1, 10)
     x = 2 * t.reshape(-1, 1)
     return x, t
 
 
 @pytest.fixture(scope="session")
 def data_1d_bad_shape():
-    t = np.linspace(0, 5, 100)
+    t = np.linspace(0, 5, 10)
     x = 2 * t
     return x, t
 

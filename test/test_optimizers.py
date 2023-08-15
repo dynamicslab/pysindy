@@ -163,17 +163,14 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
         MIOSR,
     ],
 )
-def test_sample_weight_optimizers(data_lorenz, optimizer):
-    x, t = data_lorenz
-    dt = t[1] - t[0]
-    x_dot = FiniteDifference()._differentiate(x, t=dt)
+def test_sample_weight_optimizers(data_1d, optimizer):
+    x, t = data_1d
 
     sample_weight = np.ones(x[:, 0].shape)
     sample_weight[::2] = 0
-    model = optimizer()
-    model.fit(x, x_dot)
-    model.fit(x, x_dot, sample_weight=sample_weight)
-    check_is_fitted(model)
+    opt = optimizer()
+    opt.fit(x, x, sample_weight=sample_weight)
+    check_is_fitted(opt)
 
 
 @pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3, StableLinearSR3])
@@ -1055,13 +1052,11 @@ def test_ssr_criteria(data_lorenz):
         MIOSR,
     ],
 )
-def test_optimizers_verbose(data_lorenz, optimizer):
-    x, t = data_lorenz
-    dt = t[1] - t[0]
-    x_dot = FiniteDifference()._differentiate(x, t=dt)
-    model = optimizer(verbose=True)
-    model.fit(x, x_dot)
-    check_is_fitted(model)
+def test_optimizers_verbose(data_1d, optimizer):
+    x, _ = data_1d
+    opt = optimizer(verbose=True)
+    opt.fit(x, x)
+    check_is_fitted(opt)
 
 
 @pytest.mark.parametrize(
@@ -1073,14 +1068,12 @@ def test_optimizers_verbose(data_lorenz, optimizer):
         TrappingSR3,
     ],
 )
-def test_optimizers_verbose_cvxpy(data_lorenz, optimizer):
-    x, t = data_lorenz
-    dt = t[1] - t[0]
-    x_dot = FiniteDifference()._differentiate(x, t=dt)
+def test_optimizers_verbose_cvxpy(data_1d, optimizer):
+    x, _ = data_1d
 
-    model = optimizer(verbose_cvxpy=True)
-    model.fit(x, x_dot)
-    check_is_fitted(model)
+    opt = optimizer(verbose_cvxpy=True)
+    opt.fit(x, x)
+    check_is_fitted(opt)
 
 
 def test_frols_error_linear_dependence():

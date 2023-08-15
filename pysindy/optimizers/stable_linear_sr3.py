@@ -1,4 +1,5 @@
 import warnings
+from typing import Tuple
 
 try:
     import cvxpy as cp
@@ -204,7 +205,7 @@ class StableLinearSR3(ConstrainedSR3):
         y: np.ndarray,
         coef_sparse: np.ndarray,
         coef_neg_def: np.ndarray,
-    ) -> tuple[cp.Variable, cp.Expression]:
+    ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
         cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (2 * self.nu)

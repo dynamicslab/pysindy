@@ -308,11 +308,6 @@ class TrappingSR3(SR3):
         self.tol_m = tol_m
         self.accel = accel
         self.verbose_cvxpy = verbose_cvxpy
-        self.A_history_ = []
-        self.m_history_ = []
-        self.PW_history_ = []
-        self.PWeigs_history_ = []
-        self.history_ = []
         self.objective_history = objective_history
         self.unbias = False
         self.use_constraints = (constraint_lhs is not None) and (
@@ -431,7 +426,7 @@ class TrappingSR3(SR3):
         # If PL/PQ finite and correct, so trapping theorem is being used,
         # then make sure library is quadratic and correct shape
         if (np.any(self.PL_ != 0.0) or np.any(self.PQ_ != 0.0)) and n_features != N:
-            print(
+            warnings.warn(
                 "The feature library is the wrong shape or not quadratic, "
                 "so please correct this if you are attempting to use the "
                 "trapping algorithm with the stability term included. Setting "
@@ -684,7 +679,11 @@ class TrappingSR3(SR3):
         TrappingSR3 algorithm.
         Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
-
+        self.A_history_ = []
+        self.m_history_ = []
+        self.PW_history_ = []
+        self.PWeigs_history_ = []
+        self.history_ = []
         n_samples, n_features = x.shape
         r = y.shape[1]
         N = int((r**2 + 3 * r) / 2.0)

@@ -74,10 +74,6 @@ class SR3(BaseOptimizer):
         Initial guess for coefficients ``coef_``.
         If None, least-squares is used to obtain an initial guess.
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     normalize_columns : boolean, optional (default False)
         Normalize the columns of x (the SINDy library terms) before regression
         by dividing by the L2-norm. Note that the 'normalize' option in sklearn
@@ -151,7 +147,6 @@ class SR3(BaseOptimizer):
         trimming_fraction=0.0,
         trimming_step_size=1.0,
         max_iter=30,
-        fit_intercept=False,
         copy_X=True,
         initial_guess=None,
         normalize_columns=False,
@@ -161,7 +156,6 @@ class SR3(BaseOptimizer):
         super(SR3, self).__init__(
             max_iter=max_iter,
             initial_guess=initial_guess,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
             unbias=unbias,

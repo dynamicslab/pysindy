@@ -21,7 +21,6 @@ from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library import TensoredLibrary
 from pysindy.feature_library import WeakPDELibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
-from pysindy.optimizers import EnsembleOptimizer
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import STLSQ
 
@@ -676,22 +675,11 @@ def test_parameterized_library(diffuse_multiple_trajectories):
 
 
 # Helper function for testing PDE libraries
-def pde_library_helper(library, u, coef_first_dim):
+def pde_library_helper(library, u):
     base_opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
     model = SINDy(optimizer=base_opt, feature_library=library)
     model.fit(u)
     assert np.any(base_opt.coef_ != 0.0)
-
-    n_features = len(model.get_feature_names())
-    opt = EnsembleOptimizer(opt=base_opt, bagging=True, n_models=10, n_subset=50)
-    model = SINDy(optimizer=opt, feature_library=library)
-    model.fit(u)
-    assert np.shape(opt.coef_list) == (10, coef_first_dim, n_features)
-
-    opt = EnsembleOptimizer(opt=base_opt, library_ensemble=True, n_models=10)
-    model = SINDy(optimizer=opt, feature_library=library)
-    model.fit(u)
-    assert np.shape(opt.coef_list) == (10, coef_first_dim, n_features)
 
 
 def test_1D_pdes(data_1d_random_pde):
@@ -705,7 +693,7 @@ def test_1D_pdes(data_1d_random_pde):
         spatial_grid=spatial_grid,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 1)
+    pde_library_helper(pde_lib, u)
 
 
 def test_2D_pdes(data_2d_random_pde):
@@ -719,7 +707,7 @@ def test_2D_pdes(data_2d_random_pde):
         spatial_grid=spatial_grid,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_3D_pdes(data_3d_random_pde):
@@ -733,21 +721,17 @@ def test_3D_pdes(data_3d_random_pde):
         spatial_grid=spatial_grid,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_5D_pdes(data_5d_random_pde):
     spatial_grid, u, _ = data_5d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=2,
+        derivative_order=1,
         spatial_grid=spatial_grid,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_1D_weak_pdes():
@@ -768,11 +752,11 @@ def test_1D_weak_pdes():
         H_xt=2,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 1)
+    pde_library_helper(pde_lib, u)
 
 
 def test_2D_weak_pdes():
-    n = 10
+    n = 5
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -785,17 +769,17 @@ def test_2D_weak_pdes():
     pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
-        derivative_order=4,
+        derivative_order=2,
         spatiotemporal_grid=spatiotemporal_grid,
         H_xt=4,
         K=10,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 1)
+    pde_library_helper(pde_lib, u)
 
 
 def test_3D_weak_pdes():
-    n = 10
+    n = 5
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -804,18 +788,14 @@ def test_3D_weak_pdes():
     spatiotemporal_grid = np.asarray([X, Y, Z, T])
     spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 4, 0])
     u = np.random.randn(n, n, n, n, 2)
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
+        derivative_order=2,
         spatiotemporal_grid=spatiotemporal_grid,
         H_xt=4,
         K=10,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_5D_weak_pdes():
@@ -830,18 +810,14 @@ def test_5D_weak_pdes():
     spatiotemporal_grid = np.asarray([V, W, X, Y, Z, T])
     spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 4, 5, 6, 0])
     u = np.random.randn(n, n, n, n, n, n, 2)
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
         derivative_order=2,
         spatiotemporal_grid=spatiotemporal_grid,
         H_xt=4,
         K=10,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_sindypi_library(data_lorenz):

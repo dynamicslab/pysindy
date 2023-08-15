@@ -496,9 +496,10 @@ class TrappingSR3(SR3):
             )
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
-    def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
-        """Solve coefficient update with CVXPY if threshold != 0"""
-        xi = cp.Variable(N * r)
+    def _create_var_and_part_cost(
+        self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
+    ) -> tuple[cp.Variable, cp.Expression]:
+        xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
@@ -508,6 +509,11 @@ class TrappingSR3(SR3):
             cost = cost + self.threshold * cp.norm2(xi) ** 2
         elif self.thresholder.lower() == "weighted_l2":
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
+        return xi, cost
+
+    def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
+        """Solve coefficient update with CVXPY if threshold != 0"""
+        xi, cost = self._create_var_and_part_cost(N * r, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -606,16 +612,7 @@ class TrappingSR3(SR3):
         problem, solved in CVXPY, so convergence/quality guarantees are
         not available here!
         """
-        xi = cp.Variable(N * r)
-        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi) ** 2
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
+        xi, cost = self._create_var_and_part_cost(N * r, x_expanded, y)
         cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:

@@ -891,19 +891,31 @@ def test_constrained_inequality_constraints(data_lorenz, params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0.0005),
-        dict(thresholder="weighted_l1", thresholds=0.0005 * np.ones((3, 9))),
-        dict(thresholder="l2", threshold=0.0005),
-        dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 9))),
+        dict(thresholder="l1", threshold=2, expected=2.5),
+        dict(thresholder="weighted_l1", thresholds=0.5 * np.ones((1, 2)), expected=1.0),
+        dict(thresholder="l2", threshold=2, expected=1.5),
+        dict(
+            thresholder="weighted_l2", thresholds=0.5 * np.ones((1, 2)), expected=0.75
+        ),
     ],
 )
-def test_trapping_inequality_constraints(data_lorenz, params):
-    x, t = data_lorenz
-    constraint_rhs = np.array([-10.0, 28.0])
-    constraint_matrix = np.zeros((2, 27))
-    constraint_matrix[0, 0] = 1.0
-    constraint_matrix[1, 10] = 1.0
-    feature_names = ["x", "y", "z"]
+def test_trapping_cost_function(params):
+    expected = params.pop("expected")
+    opt = TrappingSR3(inequality_constraints=True, relax_optim=True, **params)
+    x = np.eye(2)
+    y = np.ones(2)
+    xi, cost = opt._create_var_and_part_cost(2, x, y)
+    xi.value = np.array([0.5, 0.5])
+    np.testing.assert_allclose(cost.value, expected)
+
+
+def test_trapping_inequality_constraints():
+    t = np.arange(0, 1, 0.1)
+    x = np.stack((t, t**2)).T
+    y = x[:, 0] + 0.1 * x[:, 1]
+    constraint_rhs = np.array([0.1])
+    constraint_matrix = np.zeros((1, 2))
+    constraint_matrix[0, 1] = 0.1
 
     # Run Trapping SR3 without CVXPY for the m solve
     opt = TrappingSR3(
@@ -912,18 +924,9 @@ def test_trapping_inequality_constraints(data_lorenz, params):
         constraint_order="feature",
         inequality_constraints=True,
         relax_optim=True,
-        **params,
     )
-    poly_lib = PolynomialLibrary(degree=2, include_bias=False)
-    model = SINDy(
-        optimizer=opt,
-        feature_library=poly_lib,
-        feature_names=feature_names,
-    )
-    model.fit(x, t=t[1] - t[0])
-    # This sometimes fails with L2 norm so just check the model is fitted
-    check_is_fitted(model)
-
+    opt.fit(x, y)
+    assert np.all(np.dot(constraint_matrix, (opt.coef_).flatten()) <= constraint_rhs)
     # Run Trapping SR3 with CVXPY for the m solve
     opt = TrappingSR3(
         constraint_lhs=constraint_matrix,
@@ -931,26 +934,9 @@ def test_trapping_inequality_constraints(data_lorenz, params):
         constraint_order="feature",
         inequality_constraints=True,
         relax_optim=False,
-        **params,
     )
-    model = SINDy(
-        optimizer=opt,
-        feature_library=poly_lib,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
-        feature_names=feature_names,
-    )
-    model.fit(x, t=t[1] - t[0])
-
-    # This sometimes fails with L2 norm or different versions of CVXPY
-    # so just check the model is fitted
-    check_is_fitted(model)
-    # assert np.all(
-    #     np.dot(constraint_matrix, (model.coefficients()).flatten()) <= constraint_rhs
-    # ) or np.allclose(
-    #    np.dot(constraint_matrix, (model.coefficients()).flatten()),
-    #    constraint_rhs,
-    #    atol=1e-3,
-    # )
+    opt.fit(x, y)
+    assert np.all(np.dot(constraint_matrix, (opt.coef_).flatten()) <= constraint_rhs)
 
 
 @pytest.mark.parametrize(

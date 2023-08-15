@@ -1,4 +1,5 @@
 import warnings
+from typing import Tuple
 
 import cvxpy as cp
 import numpy as np
@@ -498,7 +499,7 @@ class TrappingSR3(SR3):
 
     def _create_var_and_part_cost(
         self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
-    ) -> tuple[cp.Variable, cp.Expression]:
+    ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
         if self.thresholder.lower() == "l1":

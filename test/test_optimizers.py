@@ -416,49 +416,36 @@ def test_constrained_sr3_quadratic_library(params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0),
-        dict(thresholder="l1", threshold=1e-5),
-        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 3))),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 3))),
-        dict(thresholder="l2", threshold=0),
-        dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 3))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 3))),
+        dict(thresholder="l1", threshold=1, expected=2.5),
+        dict(thresholder="weighted_l1", thresholds=np.ones((4, 1)), expected=2.5),
+        dict(thresholder="l2", threshold=1, expected=1.5),
+        dict(thresholder="weighted_l2", thresholds=np.ones((4, 1)), expected=2.5),
     ],
 )
-def test_stable_linear_sr3_linear_library(params):
-    x = np.random.standard_normal((100, 3))
-    library_functions = [
-        lambda x: x,
-    ]
-    library_function_names = [
-        lambda x: str(x),
-    ]
-    sindy_library = CustomLibrary(
-        library_functions=library_functions, function_names=library_function_names
-    )
-
-    # Test stable linear SR3 without constraints
+def test_stable_linear_sr3_cost_function(params):
+    expected = params.pop("expected")
     opt = StableLinearSR3(**params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    check_is_fitted(model)
+    x = np.eye(2)
+    y = np.ones(1)
+    xi, cost = opt._create_var_and_part_cost(x.flatten(), y, x, x)
+    xi.value = 0.5 * np.ones(4)
+    np.testing.assert_allclose(cost.value, expected)
 
-    # rerun with identity constraints
-    r = 3
-    N = 3
-    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
-    constraint_rhs = np.zeros(p)
-    constraint_matrix = np.eye(p, r * N)
 
-    # Test stable linear SR3 with constraints
+def test_stable_linear_sr3_linear_library():
+    x = np.ones((2, 1))
+    opt = StableLinearSR3()
+    opt.fit(x, x)
+    check_is_fitted(opt)
+
+    constraint_rhs = np.zeros((1, 1))
+    constraint_matrix = np.eye(1)
     opt = StableLinearSR3(
-        constraint_lhs=constraint_matrix, constraint_rhs=constraint_rhs, **params
+        constraint_lhs=constraint_matrix, constraint_rhs=constraint_rhs
     )
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    check_is_fitted(model)
-    assert np.allclose((model.coefficients().flatten())[:p], 0.0)
+    opt.fit(x, x)
+    check_is_fitted(opt)
+    assert np.allclose(opt.coef_.flatten(), 0.0)
 
 
 @pytest.mark.parametrize(

@@ -198,16 +198,16 @@ class StableLinearSR3(ConstrainedSR3):
                 "datasets."
             )
 
-    def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
-        """
-        Update the coefficients using CVXPY. This function is called if
-        the sparsity threshold is nonzero or constraints are used.
-        """
+    def _create_var_and_part_cost(
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        coef_sparse: np.ndarray,
+        coef_neg_def: np.ndarray,
+    ) -> tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
-        cost = cost + cp.sum_squares(xi - coef_negative_definite.flatten()) / (
-            2 * self.nu
-        )
+        cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (2 * self.nu)
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
         elif self.thresholder.lower() == "weighted_l1":
@@ -216,6 +216,16 @@ class StableLinearSR3(ConstrainedSR3):
             cost = cost + self.threshold * cp.norm2(xi)
         elif self.thresholder.lower() == "weighted_l2":
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
+        return xi, cost
+
+    def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
+        """
+        Update the coefficients using CVXPY. This function is called if
+        the sparsity threshold is nonzero or constraints are used.
+        """
+        xi, cost = self._create_var_and_part_cost(
+            x, y, coef_sparse, coef_negative_definite
+        )
         if self.use_constraints:
             if self.inequality_constraints and self.equality_constraints:
                 # Process equality constraints then inequality constraints

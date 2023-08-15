@@ -311,40 +311,24 @@ class StableLinearSR3(ConstrainedSR3):
             assert trimming_array is not None
             R2 *= trimming_array.reshape(x.shape[0], 1)
 
-        if self.thresholds is None:
-            regularization = self.reg(
-                coef_negative_definite, self.threshold**2 / self.nu
+        regularization = self.reg(
+            coef_negative_definite,
+            (self.threshold**2 if self.thresholds is None else self.thresholds**2)
+            / self.nu,
+        )
+        if print_ind == 0 and self.verbose:
+            row = [
+                q,
+                np.sum(R2),
+                np.sum(D2) / self.nu,
+                regularization,
+                np.sum(R2) + np.sum(D2) + regularization,
+            ]
+            print(
+                "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
+                " ... {4:10.4e}".format(*row)
             )
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
-        else:
-            regularization = self.reg(
-                coef_negative_definite, self.thresholds**2 / self.nu
-            )
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
+        return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
 
     def _reduce(self, x, y):
         """

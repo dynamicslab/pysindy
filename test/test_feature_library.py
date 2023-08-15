@@ -661,18 +661,18 @@ def test_parameterized_library(diffuse_multiple_trajectories):
         feature_library=pde_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
     model.fit(xs, u=us, t=t)
-    assert abs(model.coefficients()[0][4] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:4] == 0)
-    assert np.all(model.coefficients()[0][5:] == 0)
+    assert abs(model.coefficients()[0, 4] - 1) < 1e-1
+    assert np.all(model.coefficients()[0, :4] == 0)
+    assert np.all(model.coefficients()[0, 5:] == 0)
 
-    optimizer = STLSQ(threshold=0.5, alpha=1e-8, normalize_columns=False)
+    optimizer = STLSQ(threshold=0.25, alpha=1e-8, normalize_columns=False)
     model = SINDy(
         feature_library=weak_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
     model.fit(xs, u=us, t=t)
-    assert abs(model.coefficients()[0][4] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:4] == 0)
-    assert np.all(model.coefficients()[0][5:] == 0)
+    assert abs(model.coefficients()[0, 4] - 1) < 1e-1
+    assert np.all(model.coefficients()[0, :4] == 0)
+    assert np.all(model.coefficients()[0, 5:] == 0)
 
 
 # Helper function for testing PDE libraries

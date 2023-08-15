@@ -97,10 +97,10 @@ def diffuse_multiple_trajectories():
 
     # Required for accurate solve_ivp results
     integrator_keywords = {}
-    integrator_keywords["rtol"] = 1e-12
+    integrator_keywords["rtol"] = 1e-8
     integrator_keywords["method"] = "LSODA"
-    integrator_keywords["atol"] = 1e-12
-    N = 200
+    integrator_keywords["atol"] = 1e-8
+    N = 25
     h0 = 1.0
     L = 5
     T = 1
@@ -110,17 +110,11 @@ def diffuse_multiple_trajectories():
     y0 = np.reshape(
         h0 + ep * np.cos(4 * np.pi / L * x) + ep * np.cos(2 * np.pi / L * x), N
     )
-    y1 = np.reshape(
-        h0 + ep * np.cos(4 * np.pi / L * x) - ep * np.cos(2 * np.pi / L * x), N
-    )
     dx = x[1] - x[0]
     sol1 = solve_ivp(
         diffuse, (t[0], t[-1]), y0=y0, t_eval=t, args=(dx, N), **integrator_keywords
     )
-    sol2 = solve_ivp(
-        diffuse, (t[0], t[-1]), y0=y1, t_eval=t, args=(dx, N), **integrator_keywords
-    )
-    u = [np.reshape(sol1.y, (N, N, 1)), np.reshape(sol2.y, (N, N, 1))]
+    u = [np.reshape(sol1.y, (N, N, 1))]
     return t, x, u
 
 

@@ -175,7 +175,7 @@ def check_local_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     eps_Q = np.max(
         np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))
     )
-    print('Maximum deviation from having zero totally symmetric part: ', eps_Q)
+    print("Maximum deviation from having zero totally symmetric part: ", eps_Q)
     d = C + np.dot(L, opt_m) + np.dot(np.tensordot(Q, opt_m, axes=([2], [0])), opt_m)
     d = mod_matrix @ d
     Rm, R_ls = get_trapping_radius(max_eigval, eps_Q, r, d)
@@ -243,7 +243,7 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
         rhos_plus[1:],
         np.ones(len(x)) * rhos_plus[-1] * 5,
         color="r",
-        label="Unstable",
+        label="Possibly Unstable",
     )
     ax.fill_between(
         x, np.zeros(len(x)), rhos_minus[1:], color="g", label=r"Trapping region"

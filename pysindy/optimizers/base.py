@@ -300,8 +300,8 @@ class EnsembleOptimizer(BaseOptimizer):
             raise ValueError(
                 "If not ensembling data or library terms, use another optimizer"
             )
-        if bagging and (n_subset is None or n_subset < 1):
-            raise ValueError("n_subset must be a positive integer if bagging")
+        if bagging and n_subset is not None and n_subset < 1:
+            raise ValueError("n_subset must be a positive integer or None if bagging")
         if library_ensemble and (
             n_candidates_to_drop is None or n_candidates_to_drop < 1
         ):

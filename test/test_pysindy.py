@@ -14,6 +14,9 @@ pytest file_to_test.py
 """
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis import settings
+from hypothesis.strategies import integers
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
@@ -24,6 +27,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from pysindy import pysindy
 from pysindy import SINDy
+from pysindy import SSSINDy
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
@@ -34,6 +38,7 @@ from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import WrappedOptimizer
+from pysindy.sssindy import psd_root
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -672,3 +677,21 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
     model.fit(u, t=t)
     assert abs(model.coefficients()[0, -1] - 1) < 1e-1
     assert np.all(model.coefficients()[0, :-1] == 0)
+
+
+def test_sssindy_fit(data_1d):
+    x, t = data_1d
+    model = SSSINDy(feature_library=PolynomialLibrary(degree=0))
+    model.fit(x, t)
+
+
+@given(
+    m=integers(min_value=5, max_value=10), seed=integers(min_value=0, max_value=65536)
+)
+@settings(max_examples=5)
+def test_psd_root(m, seed):
+    rng = np.random.default_rng(seed)
+    arr = rng.normal(size=(m, m))
+    arr = arr @ arr.T
+    root = psd_root(arr)
+    np.testing.assert_allclose(root @ root.T, arr)

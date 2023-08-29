@@ -10,3 +10,6 @@ python:
       path: .
       extra_requirements:
         - docs
+        - cvxpy
+        - miosr
+        - dev

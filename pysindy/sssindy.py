@@ -72,6 +72,9 @@ class SSSINDy(SINDy):
                 self.rtinv_vars = rtinv_vars
                 self.nx = nx
 
+            def fit(self, x, y):
+                return self
+
             def transform(self, feats):
                 A11 = sparse.eye(n_samp)
                 A12 = feats
@@ -85,8 +88,8 @@ class SSSINDy(SINDy):
             ]
         )
         y_col = sparse.vstack((y_col, sparse.csc_array((n_samp, n_tgts))))
-        sparse_inds = slice(n_samp, -1)
-        self.optimizer.set_params(sparse_inds=sparse_inds)
+        sparse_ind = slice(n_samp, -1)
+        self.optimizer.set_params(sparse_ind=sparse_ind)
 
         steps = [
             ("features", self.feature_library),
@@ -95,7 +98,7 @@ class SSSINDy(SINDy):
             ("model", self.optimizer),
         ]
         self.pipeline = Pipeline(steps)
-        steps.fit(x, y_col)
+        self.pipeline.fit(x, y_col.toarray())
 
         self.n_features_in_ = self.feature_library.n_features_in_
         self.n_output_features_ = self.feature_library.n_output_features_

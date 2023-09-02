@@ -6,7 +6,6 @@ from itertools import product as iproduct
 import numpy as np
 from scipy.special import binom
 from scipy.special import perm
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -99,13 +98,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         Positive integer to define the polynomial degree of the spatial weights
         used for weak/integral SINDy.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     num_pts_per_domain : int, deprecated (default None)
         Included here to retain backwards compatibility with older code
         that uses this parameter. However, it merely raises a
@@ -136,10 +128,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         Functions for generating string representations of each library
         function.
 
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -173,8 +163,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         K=100,
         H_xt=None,
         p=4,
-        library_ensemble=False,
-        ensemble_indices=[0],
         num_pts_per_domain=None,
         implicit_terms=False,
         multiindices=None,
@@ -183,9 +171,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         is_uniform=None,
         periodic=None,
     ):
-        super(WeakPDELibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
         self.functions = library_functions
         self.derivative_order = derivative_order
         self.function_names = function_names
@@ -708,10 +693,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_features = self.n_features_in_
-        else:
-            n_features = self.n_input_features_
+        n_features = self.n_features_in_
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
         if self.function_names is None:
@@ -793,11 +775,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self : instance
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
-
+        self.n_features_in_ = n_features
         n_output_features = 0
 
         # Count the number of non-derivative terms
@@ -1071,8 +1049,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     library_idx += n_library_terms * self.num_derivatives * n_features
 
             xp_full = xp_full + [AxesArray(xp, {"ax_sample": 0, "ax_coord": 1})]
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def calc_trajectory(self, diff_method, x, t):

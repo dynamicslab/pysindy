@@ -1,4 +1,5 @@
 import warnings
+from typing import Tuple
 
 try:
     import cvxpy as cp
@@ -67,10 +68,6 @@ class StableLinearSR3(ConstrainedSR3):
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
         The left hand side matrix C of Cw <= d.
@@ -129,6 +126,8 @@ class StableLinearSR3(ConstrainedSR3):
         output should be verbose or not. Only relevant for optimizers that
         use the CVXPY package in some capabity.
 
+    See base class for additional arguments
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -138,12 +137,6 @@ class StableLinearSR3(ConstrainedSR3):
     coef_full_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
-
-    unbias : boolean
-        Whether to perform an extra step of unregularized linear regression
-        to unbias the coefficients for the identified support.
-        ``unbias`` is automatically set to False if a constraint is used and
-        is otherwise left uninitialized.
     """
 
     def __init__(
@@ -159,7 +152,6 @@ class StableLinearSR3(ConstrainedSR3):
         constraint_rhs=None,
         constraint_order="target",
         normalize_columns=False,
-        fit_intercept=False,
         copy_X=True,
         initial_guess=None,
         thresholds=None,
@@ -169,8 +161,9 @@ class StableLinearSR3(ConstrainedSR3):
         verbose=False,
         verbose_cvxpy=False,
         gamma=-1e-8,
+        unbias=False,
     ):
-        super(StableLinearSR3, self).__init__(
+        super().__init__(
             threshold=threshold,
             nu=nu,
             tol=tol,
@@ -180,7 +173,6 @@ class StableLinearSR3(ConstrainedSR3):
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
             initial_guess=initial_guess,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
             verbose=verbose,
@@ -191,11 +183,11 @@ class StableLinearSR3(ConstrainedSR3):
             equality_constraints=equality_constraints,
             inequality_constraints=inequality_constraints,
             constraint_separation_index=constraint_separation_index,
+            unbias=unbias,
         )
         self.gamma = gamma
         self.alpha_A = nu
         self.max_iter = max_iter
-        self.unbias = False
         warnings.warn(
             "This optimizer is set up to only be used with a purely linear"
             " library in the variables. No constant or nonlinear terms!"
@@ -207,16 +199,16 @@ class StableLinearSR3(ConstrainedSR3):
                 "datasets."
             )
 
-    def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
-        """
-        Update the coefficients using CVXPY. This function is called if
-        the sparsity threshold is nonzero or constraints are used.
-        """
+    def _create_var_and_part_cost(
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        coef_sparse: np.ndarray,
+        coef_neg_def: np.ndarray,
+    ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
-        cost = cost + cp.sum_squares(xi - coef_negative_definite.flatten()) / (
-            2 * self.nu
-        )
+        cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (2 * self.nu)
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
         elif self.thresholder.lower() == "weighted_l1":
@@ -225,6 +217,16 @@ class StableLinearSR3(ConstrainedSR3):
             cost = cost + self.threshold * cp.norm2(xi)
         elif self.thresholder.lower() == "weighted_l2":
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
+        return xi, cost
+
+    def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
+        """
+        Update the coefficients using CVXPY. This function is called if
+        the sparsity threshold is nonzero or constraints are used.
+        """
+        xi, cost = self._create_var_and_part_cost(
+            x, y, coef_sparse, coef_negative_definite
+        )
         if self.use_constraints:
             if self.inequality_constraints and self.equality_constraints:
                 # Process equality constraints then inequality constraints
@@ -320,40 +322,24 @@ class StableLinearSR3(ConstrainedSR3):
             assert trimming_array is not None
             R2 *= trimming_array.reshape(x.shape[0], 1)
 
-        if self.thresholds is None:
-            regularization = self.reg(
-                coef_negative_definite, self.threshold**2 / self.nu
+        regularization = self.reg(
+            coef_negative_definite,
+            (self.threshold**2 if self.thresholds is None else self.thresholds**2)
+            / self.nu,
+        )
+        if print_ind == 0 and self.verbose:
+            row = [
+                q,
+                np.sum(R2),
+                np.sum(D2) / self.nu,
+                regularization,
+                np.sum(R2) + np.sum(D2) + regularization,
+            ]
+            print(
+                "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
+                " ... {4:10.4e}".format(*row)
             )
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
-        else:
-            regularization = self.reg(
-                coef_negative_definite, self.thresholds**2 / self.nu
-            )
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
+        return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
 
     def _reduce(self, x, y):
         """

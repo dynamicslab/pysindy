@@ -1,6 +1,5 @@
 import pytest
 from numpy.testing import assert_allclose
-from sklearn import __version__
 from sklearn.exceptions import NotFittedError
 
 from pysindy import FourierLibrary
@@ -38,10 +37,7 @@ def test_model_sindy_equivalence(data_lorenz_c_1d):
 
     assert_allclose(model.coefficients(), sindy_model.coefficients())
     print(sindy_model.n_features_in_)
-    if float(__version__[:3]) >= 1.0:
-        assert model.n_features_in_ == sindy_model.n_features_in_
-    else:
-        assert model.n_input_features_ == sindy_model.n_input_features_
+    assert model.n_features_in_ == sindy_model.n_features_in_
     assert model.n_output_features_ == sindy_model.n_output_features_
     assert model.n_control_features_ == sindy_model.n_control_features_
 

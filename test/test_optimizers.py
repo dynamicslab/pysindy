@@ -10,10 +10,10 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
+from sklearn.utils._param_validation import InvalidParameterError
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import FiniteDifference
-from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
@@ -22,13 +22,13 @@ from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import EnsembleOptimizer
 from pysindy.optimizers import FROLS
 from pysindy.optimizers import MIOSR
-from pysindy.optimizers import SINDyOptimizer
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import SR3
 from pysindy.optimizers import SSR
 from pysindy.optimizers import StableLinearSR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
+from pysindy.optimizers import WrappedOptimizer
 from pysindy.optimizers.stlsq import _remove_and_decrement
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
@@ -109,7 +109,7 @@ def test_fit(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
     if len(x.shape) == 1:
         x = x.reshape(-1, 1)
-    opt = SINDyOptimizer(optimizer, unbias=False)
+    opt = WrappedOptimizer(optimizer, unbias=False)
     opt.fit(x, x_dot)
 
     check_is_fitted(opt)
@@ -139,9 +139,7 @@ def test_complexity_not_fitted(optimizer, data_derivative_2d):
     assert optimizer.complexity > 0
 
 
-@pytest.mark.parametrize(
-    "kwargs", [{"normalize_columns": True}, {"fit_intercept": True}, {"copy_X": False}]
-)
+@pytest.mark.parametrize("kwargs", [{"normalize_columns": True}, {"copy_X": False}])
 def test_alternate_parameters(data_derivative_1d, kwargs):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
@@ -166,24 +164,14 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
         MIOSR,
     ],
 )
-def test_sample_weight_optimizers(data_lorenz, optimizer):
-    x, t = data_lorenz
-    dt = t[1] - t[0]
-    x_dot = FiniteDifference()._differentiate(x, t=dt)
+def test_sample_weight_optimizers(data_1d, optimizer):
+    x, t = data_1d
 
     sample_weight = np.ones(x[:, 0].shape)
     sample_weight[::2] = 0
-    model = optimizer()
-    model.fit(x, x_dot)
-    model.fit(x, x_dot, sample_weight=sample_weight)
-    model.fit(x, x_dot, sample_weight=sample_weight)
-    check_is_fitted(model)
-
-    model = optimizer(normalize_columns=True)
-    model.fit(x, x_dot)
-    model.fit(x, x_dot, sample_weight=sample_weight)
-    model.fit(x, x_dot, sample_weight=sample_weight)
-    check_is_fitted(model)
+    opt = optimizer()
+    opt.fit(x, x, sample_weight=sample_weight)
+    check_is_fitted(opt)
 
 
 @pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3, StableLinearSR3])
@@ -426,49 +414,36 @@ def test_constrained_sr3_quadratic_library(params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0),
-        dict(thresholder="l1", threshold=1e-5),
-        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 3))),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 3))),
-        dict(thresholder="l2", threshold=0),
-        dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 3))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 3))),
+        dict(thresholder="l1", threshold=1, expected=2.5),
+        dict(thresholder="weighted_l1", thresholds=np.ones((4, 1)), expected=2.5),
+        dict(thresholder="l2", threshold=1, expected=1.5),
+        dict(thresholder="weighted_l2", thresholds=np.ones((4, 1)), expected=2.5),
     ],
 )
-def test_stable_linear_sr3_linear_library(params):
-    x = np.random.standard_normal((100, 3))
-    library_functions = [
-        lambda x: x,
-    ]
-    library_function_names = [
-        lambda x: str(x),
-    ]
-    sindy_library = CustomLibrary(
-        library_functions=library_functions, function_names=library_function_names
-    )
-
-    # Test stable linear SR3 without constraints
+def test_stable_linear_sr3_cost_function(params):
+    expected = params.pop("expected")
     opt = StableLinearSR3(**params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    check_is_fitted(model)
+    x = np.eye(2)
+    y = np.ones(1)
+    xi, cost = opt._create_var_and_part_cost(x.flatten(), y, x, x)
+    xi.value = 0.5 * np.ones(4)
+    np.testing.assert_allclose(cost.value, expected)
 
-    # rerun with identity constraints
-    r = 3
-    N = 3
-    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
-    constraint_rhs = np.zeros(p)
-    constraint_matrix = np.eye(p, r * N)
 
-    # Test stable linear SR3 with constraints
+def test_stable_linear_sr3_linear_library():
+    x = np.ones((2, 1))
+    opt = StableLinearSR3()
+    opt.fit(x, x)
+    check_is_fitted(opt)
+
+    constraint_rhs = np.zeros((1, 1))
+    constraint_matrix = np.eye(1)
     opt = StableLinearSR3(
-        constraint_lhs=constraint_matrix, constraint_rhs=constraint_rhs, **params
+        constraint_lhs=constraint_matrix, constraint_rhs=constraint_rhs
     )
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    check_is_fitted(model)
-    assert np.allclose((model.coefficients().flatten())[:p], 0.0)
+    opt.fit(x, x)
+    check_is_fitted(opt)
+    assert np.allclose(opt.coef_.flatten(), 0.0)
 
 
 @pytest.mark.parametrize(
@@ -486,53 +461,49 @@ def test_stable_linear_sr3_linear_library(params):
         dict(thresholder="l1", threshold=1e-5),
         dict(
             thresholder="weighted_l1",
-            thresholds=np.zeros((3, 9)),
+            thresholds=np.zeros((1, 2)),
             eta=1e5,
             alpha_m=1e4,
             alpha_A=1e5,
         ),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
+        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((1, 2))),
         dict(thresholder="l2", threshold=0),
         dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 9))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((1, 2))),
+        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((1, 2))),
     ],
 )
-def test_trapping_sr3_quadratic_library(
-    params, trapping_sr3_params, data_quadratic_library
-):
-    np.random.seed(100)
-    x = np.random.standard_normal((100, 3))
+def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, quadratic_library):
+    t = np.arange(0, 1, 0.1)
+    x = np.exp(-t).reshape((-1, 1))
+    x_dot = -x
+    features = np.hstack([x, x**2])
 
-    sindy_library = data_quadratic_library
     params.update(trapping_sr3_params)
 
     opt = TrappingSR3(**params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    assert opt.PL_unsym_.shape == (3, 3, 3, 9)
-    assert opt.PL_.shape == (3, 3, 3, 9)
-    assert opt.PQ_.shape == (3, 3, 3, 3, 9)
-    check_is_fitted(model)
+    opt.fit(features, x_dot)
+    assert opt.PL_unsym_.shape == (1, 1, 1, 2)
+    assert opt.PL_.shape == (1, 1, 1, 2)
+    assert opt.PQ_.shape == (1, 1, 1, 1, 2)
+    check_is_fitted(opt)
 
     # Rerun with identity constraints
-    r = 3
-    N = 9
+    r = x.shape[1]
+    N = 2
     p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
     params["constraint_rhs"] = np.zeros(p)
     params["constraint_lhs"] = np.eye(p, r * N)
 
     opt = TrappingSR3(**params)
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    assert opt.PL_unsym_.shape == (3, 3, 3, 9)
-    assert opt.PL_.shape == (3, 3, 3, 9)
-    assert opt.PQ_.shape == (3, 3, 3, 3, 9)
-    check_is_fitted(model)
+    opt.fit(features, x_dot)
+    assert opt.PL_unsym_.shape == (1, 1, 1, 2)
+    assert opt.PL_.shape == (1, 1, 1, 2)
+    assert opt.PQ_.shape == (1, 1, 1, 1, 2)
+    check_is_fitted(opt)
     # check is solve was infeasible first
     if not np.allclose(opt.m_history_[-1], opt.m_history_[0]):
-        zero_inds = [0, 1, 3, 6, 9, 12, 15, 18, 21, 24]
-        assert np.allclose((model.coefficients().flatten())[zero_inds], 0.0, atol=1e-5)
+        assert np.allclose((opt.coef_.flatten())[0], 0.0, atol=1e-5)
 
 
 def test_trapping_cubic_library():
@@ -617,11 +588,14 @@ def test_bad_optimizers(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
 
-    with pytest.raises(AttributeError):
-        opt = SINDyOptimizer(DummyEmptyModel())
+    with pytest.raises(InvalidParameterError):
+        # Error: optimizer does not have a callable fit method
+        opt = WrappedOptimizer(DummyEmptyModel())
+        opt.fit(x, x_dot)
 
     with pytest.raises(AttributeError):
-        opt = SINDyOptimizer(DummyModelNoCoef())
+        # Error: object has no attribute 'coef_'
+        opt = WrappedOptimizer(DummyModelNoCoef())
         opt.fit(x, x_dot)
 
 
@@ -680,19 +654,34 @@ def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
     check_is_fitted(model)
 
 
+@pytest.mark.parametrize(
+    ("opt_cls", "opt_args"),
+    (
+        (SR3, {"trimming_fraction": 0.1}),
+        (ConstrainedSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
+        (ConstrainedSR3, {"trimming_fraction": 0.1}),
+        (TrappingSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
+        (StableLinearSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
+        (StableLinearSR3, {"trimming_fraction": 0.1}),
+        (SINDyPI, {}),
+        (MIOSR, {"constraint_lhs": [1]}),
+    ),
+)
+def test_illegal_unbias(data_derivative_1d, opt_cls, opt_args):
+    x, x_dot = data_derivative_1d
+    with pytest.raises(ValueError):
+        opt_cls(unbias=True, **opt_args).fit(x, x_dot)
+
+
 def test_unbias(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
     x_dot = x_dot.reshape(-1, 1)
 
-    optimizer_biased = SINDyOptimizer(
-        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=False
-    )
+    optimizer_biased = STLSQ(threshold=0.01, alpha=0.1, max_iter=1, unbias=False)
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = SINDyOptimizer(
-        STLSQ(threshold=0.01, alpha=0.1, max_iter=1), unbias=True
-    )
+    optimizer_unbiased = STLSQ(threshold=0.01, alpha=0.1, max_iter=1, unbias=True)
     optimizer_unbiased.fit(x, x_dot)
 
     assert (
@@ -707,12 +696,12 @@ def test_unbias_external(data_derivative_1d):
     x = x.reshape(-1, 1)
     x_dot = x_dot.reshape(-1, 1)
 
-    optimizer_biased = SINDyOptimizer(
+    optimizer_biased = WrappedOptimizer(
         Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=False
     )
     optimizer_biased.fit(x, x_dot)
 
-    optimizer_unbiased = SINDyOptimizer(
+    optimizer_unbiased = WrappedOptimizer(
         Lasso(alpha=0.1, fit_intercept=False, max_iter=1), unbias=True
     )
     optimizer_unbiased.fit(x, x_dot)
@@ -724,20 +713,18 @@ def test_unbias_external(data_derivative_1d):
     )
 
 
-@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
-def test_sr3_trimming(optimizer, data_linear_oscillator_corrupted):
+@pytest.mark.parametrize("OptCls", [SR3, ConstrainedSR3])
+def test_sr3_trimming(OptCls, data_linear_oscillator_corrupted):
     X, X_dot, trimming_array = data_linear_oscillator_corrupted
 
-    optimizer_without_trimming = SINDyOptimizer(optimizer(), unbias=False)
+    optimizer_without_trimming = OptCls(unbias=False)
     optimizer_without_trimming.fit(X, X_dot)
 
-    optimizer_trimming = SINDyOptimizer(optimizer(trimming_fraction=0.15), unbias=False)
+    optimizer_trimming = OptCls(trimming_fraction=0.15, unbias=False)
     optimizer_trimming.fit(X, X_dot)
 
     # Check that trimming found the right samples to remove
-    np.testing.assert_array_equal(
-        optimizer_trimming.optimizer.trimming_array, trimming_array
-    )
+    np.testing.assert_array_equal(optimizer_trimming.trimming_array, trimming_array)
 
     # Check that the coefficients found by the optimizer with trimming
     # are closer to the true coefficients than the coefficients found by the
@@ -889,19 +876,31 @@ def test_constrained_inequality_constraints(data_lorenz, params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0.0005),
-        dict(thresholder="weighted_l1", thresholds=0.0005 * np.ones((3, 9))),
-        dict(thresholder="l2", threshold=0.0005),
-        dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 9))),
+        dict(thresholder="l1", threshold=2, expected=2.5),
+        dict(thresholder="weighted_l1", thresholds=0.5 * np.ones((1, 2)), expected=1.0),
+        dict(thresholder="l2", threshold=2, expected=1.5),
+        dict(
+            thresholder="weighted_l2", thresholds=0.5 * np.ones((1, 2)), expected=0.75
+        ),
     ],
 )
-def test_trapping_inequality_constraints(data_lorenz, params):
-    x, t = data_lorenz
-    constraint_rhs = np.array([-10.0, 28.0])
-    constraint_matrix = np.zeros((2, 27))
-    constraint_matrix[0, 0] = 1.0
-    constraint_matrix[1, 10] = 1.0
-    feature_names = ["x", "y", "z"]
+def test_trapping_cost_function(params):
+    expected = params.pop("expected")
+    opt = TrappingSR3(inequality_constraints=True, relax_optim=True, **params)
+    x = np.eye(2)
+    y = np.ones(2)
+    xi, cost = opt._create_var_and_part_cost(2, x, y)
+    xi.value = np.array([0.5, 0.5])
+    np.testing.assert_allclose(cost.value, expected)
+
+
+def test_trapping_inequality_constraints():
+    t = np.arange(0, 1, 0.1)
+    x = np.stack((t, t**2)).T
+    y = x[:, 0] + 0.1 * x[:, 1]
+    constraint_rhs = np.array([0.1])
+    constraint_matrix = np.zeros((1, 2))
+    constraint_matrix[0, 1] = 0.1
 
     # Run Trapping SR3 without CVXPY for the m solve
     opt = TrappingSR3(
@@ -910,18 +909,9 @@ def test_trapping_inequality_constraints(data_lorenz, params):
         constraint_order="feature",
         inequality_constraints=True,
         relax_optim=True,
-        **params,
     )
-    poly_lib = PolynomialLibrary(degree=2, include_bias=False)
-    model = SINDy(
-        optimizer=opt,
-        feature_library=poly_lib,
-        feature_names=feature_names,
-    )
-    model.fit(x, t=t[1] - t[0])
-    # This sometimes fails with L2 norm so just check the model is fitted
-    check_is_fitted(model)
-
+    opt.fit(x, y)
+    assert np.all(np.dot(constraint_matrix, (opt.coef_).flatten()) <= constraint_rhs)
     # Run Trapping SR3 with CVXPY for the m solve
     opt = TrappingSR3(
         constraint_lhs=constraint_matrix,
@@ -929,26 +919,9 @@ def test_trapping_inequality_constraints(data_lorenz, params):
         constraint_order="feature",
         inequality_constraints=True,
         relax_optim=False,
-        **params,
     )
-    model = SINDy(
-        optimizer=opt,
-        feature_library=poly_lib,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
-        feature_names=feature_names,
-    )
-    model.fit(x, t=t[1] - t[0])
-
-    # This sometimes fails with L2 norm or different versions of CVXPY
-    # so just check the model is fitted
-    check_is_fitted(model)
-    # assert np.all(
-    #     np.dot(constraint_matrix, (model.coefficients()).flatten()) <= constraint_rhs
-    # ) or np.allclose(
-    #    np.dot(constraint_matrix, (model.coefficients()).flatten()),
-    #    constraint_rhs,
-    #    atol=1e-3,
-    # )
+    opt.fit(x, y)
+    assert np.all(np.dot(constraint_matrix, (opt.coef_).flatten()) <= constraint_rhs)
 
 
 @pytest.mark.parametrize(
@@ -978,7 +951,7 @@ def test_miosr_equality_constraints(data_lorenz, params):
         feature_library=poly_lib,
         feature_names=feature_names,
     )
-    model.fit(x, t=t[1] - t[0], unbias=False)
+    model.fit(x, t=t[1] - t[0])
     assert np.allclose(
         np.dot(constraint_matrix, (model.coefficients()).flatten()),
         constraint_rhs,
@@ -1029,54 +1002,34 @@ def test_normalize_columns(data_derivative_1d, optimizer):
         assert opt.coef_.shape == (1, x.shape[1])
 
 
-def test_legacy_ensemble_odes(data_lorenz):
-    x, t = data_lorenz
-    opt = STLSQ(normalize_columns=True)
-    model = SINDy(optimizer=opt)
-    model.fit(x, ensemble=True, n_models=2, n_subset=2)
-    assert np.shape(model.coef_list) == (2, 3, 10)
-
-
 @pytest.mark.parametrize(
     "optimizer_params",
     (
-        {"library_ensemble": True},
-        {"bagging": True},
-        {"library_ensemble": True, "bagging": True},
+        {"library_ensemble": True, "n_models": 2},
+        {"bagging": True, "n_models": 2, "n_subset": 2},
+        {"library_ensemble": True, "bagging": True, "n_models": 2, "n_subset": 2},
     ),
 )
 def test_ensemble_optimizer(data_lorenz, optimizer_params):
     x, t = data_lorenz
     optimizer = EnsembleOptimizer(STLSQ(), **optimizer_params)
-    feature_library = PolynomialLibrary()
-    model = SINDy(feature_library=feature_library, optimizer=optimizer)
-    model.fit(x, t)
-    assert model.coefficients().shape == (3, 10)
+    optimizer.fit(x, x)
+    assert optimizer.coef_.shape == (3, 3)
+    assert len(optimizer.coef_list) == 2
 
 
-def test_legacy_ensemble_pdes():
-    u = np.random.randn(10, 10, 2)
-    t = np.linspace(1, 10, 10)
-    x = np.linspace(1, 10, 10)
-    dt = t[1] - t[0]
-    u_dot = np.zeros(u.shape)
-    for i in range(len(x)):
-        u_dot[i, :, :] = FiniteDifference()._differentiate(u[i, :, :], t=dt)
-
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=3,
-        spatial_grid=x,
-        include_bias=True,
-    )
-    opt = STLSQ(normalize_columns=True)
-    model = SINDy(optimizer=opt, feature_library=pde_lib)
-    model.fit(u, x_dot=u_dot, ensemble=True, n_models=2, n_subset=2)
-    n_features = len(model.get_feature_names())
-    assert np.shape(model.coef_list) == (2, 2, n_features)
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(),
+        dict(bagging=True, n_models=0),
+        dict(bagging=True, n_subset=0),
+        dict(library_ensemble=True, n_candidates_to_drop=0),
+    ],
+)
+def test_bad_ensemble_params(data_lorenz, params):
+    with pytest.raises(ValueError):
+        EnsembleOptimizer(opt=STLSQ(), **params)
 
 
 def test_ssr_criteria(data_lorenz):
@@ -1100,13 +1053,11 @@ def test_ssr_criteria(data_lorenz):
         MIOSR,
     ],
 )
-def test_optimizers_verbose(data_lorenz, optimizer):
-    x, t = data_lorenz
-    dt = t[1] - t[0]
-    x_dot = FiniteDifference()._differentiate(x, t=dt)
-    model = optimizer(verbose=True)
-    model.fit(x, x_dot)
-    check_is_fitted(model)
+def test_optimizers_verbose(data_1d, optimizer):
+    x, _ = data_1d
+    opt = optimizer(verbose=True)
+    opt.fit(x, x)
+    check_is_fitted(opt)
 
 
 @pytest.mark.parametrize(
@@ -1118,14 +1069,12 @@ def test_optimizers_verbose(data_lorenz, optimizer):
         TrappingSR3,
     ],
 )
-def test_optimizers_verbose_cvxpy(data_lorenz, optimizer):
-    x, t = data_lorenz
-    dt = t[1] - t[0]
-    x_dot = FiniteDifference()._differentiate(x, t=dt)
+def test_optimizers_verbose_cvxpy(data_1d, optimizer):
+    x, _ = data_1d
 
-    model = optimizer(verbose_cvxpy=True)
-    model.fit(x, x_dot)
-    check_is_fitted(model)
+    opt = optimizer(verbose_cvxpy=True)
+    opt.fit(x, x)
+    check_is_fitted(opt)
 
 
 def test_frols_error_linear_dependence():

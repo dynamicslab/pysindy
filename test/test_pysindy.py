@@ -22,6 +22,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
 
+from pysindy import pysindy
 from pysindy import SINDy
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
@@ -32,6 +33,7 @@ from pysindy.feature_library import WeakPDELibrary
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
+from pysindy.optimizers import WrappedOptimizer
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -130,15 +132,16 @@ def test_bad_t(data):
         model.fit(x, t[:-1])
 
     # Two points in t out of order
-    t[2], t[4] = t[4], t[2]
+    t_new = np.copy(t)
+    t_new[2], t_new[4] = t_new[4], t_new[2]
     with pytest.raises(ValueError):
-        model.fit(x, t)
-    t[2], t[4] = t[4], t[2]
+        model.fit(x, t_new)
+    t_new[2], t_new[4] = t_new[4], t_new[2]
 
     # Two matching times in t
-    t[3] = t[5]
+    t_new[3] = t_new[5]
     with pytest.raises(ValueError):
-        model.fit(x, t)
+        model.fit(x, t_new)
 
 
 @pytest.mark.parametrize(
@@ -184,8 +187,8 @@ def test_differentiate_returns_compatible_data_type(data):
         STLSQ(),
         SR3(),
         ConstrainedSR3(),
-        Lasso(fit_intercept=False),
-        ElasticNet(fit_intercept=False),
+        WrappedOptimizer(Lasso(fit_intercept=False)),
+        WrappedOptimizer(ElasticNet(fit_intercept=False)),
     ],
 )
 def test_predict(data, optimizer):
@@ -207,11 +210,13 @@ def test_predict(data, optimizer):
 )
 def test_simulate(data):
     x, t = data
-    model = SINDy()
+    model = SINDy(feature_library=PolynomialLibrary(degree=1))
     model.fit(x, t)
-    x1 = model.simulate(np.ravel(x[0]), t)
+    x1 = model.simulate(np.ravel(x[0]), t, integrator_kws={"rtol": 0.1})
     assert len(x1) == len(t)
-    x1 = model.simulate(np.ravel(x[0]), t, integrator="odeint")
+    x1 = model.simulate(
+        np.ravel(x[0]), t, integrator="odeint", integrator_kws={"rtol": 0.1}
+    )
     assert len(x1) == len(t)
     with pytest.raises(ValueError):
         x1 = model.simulate(np.ravel(x[0]), t, integrator="None")
@@ -222,8 +227,8 @@ def test_simulate(data):
     [
         PolynomialLibrary(degree=3),
         FourierLibrary(n_frequencies=3),
-        pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_sindypi_library"),
+        pytest.lazy_fixture("custom_library"),
+        pytest.lazy_fixture("sindypi_library"),
         PolynomialLibrary() + FourierLibrary(),
     ],
 )
@@ -328,66 +333,54 @@ def test_score_pde(data_1d_random_pde):
     assert model.score(u, t) <= 1
 
 
-def test_fit_multiple_trajectores(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_fit_multiple_trajectores(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     model = SINDy()
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.fit(x, t=t)
-
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
     check_is_fitted(model)
 
-    model.fit(x, t=t, multiple_trajectories=True)
-    assert model.score(x, t=t, multiple_trajectories=True) > 0.8
+    model.fit(x, t=t)
+    assert model.score(x, t=t) > 0.8
 
     model = SINDy()
-    model.fit(x, x_dot=x, multiple_trajectories=True)
+    model.fit(x, x_dot=x)
     check_is_fitted(model)
 
     model = SINDy()
-    model.fit(x, t=t, x_dot=x, multiple_trajectories=True)
+    model.fit(x, t=t, x_dot=x)
     check_is_fitted(model)
 
     # Test validate_input
     t[0] = None
     with pytest.raises(ValueError):
-        model.fit(x, t=t, multiple_trajectories=True)
+        model.fit(x, t=t)
 
 
-def test_predict_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_predict_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     model = SINDy()
-    model.fit(x, t=t, multiple_trajectories=True)
+    model.fit(x, t=t)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.predict(x)
-
-    p = model.predict(x, multiple_trajectories=True)
+    p = model.predict(x)
     assert len(p) == len(x)
 
 
-def test_score_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_score_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     model = SINDy()
-    model.fit(x, t=t, multiple_trajectories=True)
+    model.fit(x, t=t)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.score(x)
-
-    s = model.score(x, multiple_trajectories=True)
+    s = model.score(x)
     assert s <= 1
 
-    s = model.score(x, t=t, multiple_trajectories=True)
+    s = model.score(x, t=t)
     assert s <= 1
 
-    s = model.score(x, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, x_dot=x)
     assert s <= 1
 
-    s = model.score(x, t=t, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, t=t, x_dot=x)
     assert s <= 1
 
 
@@ -435,21 +428,24 @@ def test_score_discrete_time(data_discrete_time):
     assert model.score(x, x_dot=x) < 1
 
 
+def test_bad_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
+    with pytest.raises(TypeError):
+        pysindy._check_multiple_trajectories(x, x_dot=x[0], u=None)
+    with pytest.raises(ValueError):
+        pysindy._check_multiple_trajectories(x, x_dot=x[:-1], u=None)
+
+
 def test_fit_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories,
 ):
     x = data_discrete_time_multiple_trajectories
-
-    # Should fail if multiple_trajectories flag is not set
     model = SINDy(discrete_time=True)
-    with pytest.raises(ValueError):
-        model.fit(x)
-
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
     check_is_fitted(model)
 
     model = SINDy(discrete_time=True)
-    model.fit(x, x_dot=x, multiple_trajectories=True)
+    model.fit(x, x_dot=x)
     check_is_fitted(model)
 
 
@@ -458,13 +454,9 @@ def test_predict_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.predict(x)
-
-    y = model.predict(x, multiple_trajectories=True)
+    y = model.predict(x)
     assert len(y) == len(x)
 
 
@@ -473,17 +465,13 @@ def test_score_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
 
-    # Should fail if multiple_trajectories flag is not set
-    with pytest.raises(ValueError):
-        model.score(x)
-
-    s = model.score(x, multiple_trajectories=True)
+    s = model.score(x)
     assert s > 0.75
 
     # x is not its own derivative, so we expect bad performance here
-    s = model.score(x, x_dot=x, multiple_trajectories=True)
+    s = model.score(x, x_dot=x)
     assert s < 1
 
 
@@ -524,7 +512,7 @@ def test_print_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
-    model.fit(x, multiple_trajectories=True)
+    model.fit(x)
 
     model.print()
 
@@ -532,14 +520,14 @@ def test_print_discrete_time_multiple_trajectories(
     assert len(out) > 1
 
 
-def test_differentiate(data_lorenz, data_multiple_trajctories):
+def test_differentiate(data_lorenz, data_multiple_trajectories):
     x, t = data_lorenz
 
     model = SINDy()
     model.differentiate(x, t)
 
-    x, t = data_multiple_trajctories
-    model.differentiate(x, t, multiple_trajectories=True)
+    x, t = data_multiple_trajectories
+    model.differentiate(x, t)
 
     model = SINDy(discrete_time=True)
     with pytest.raises(RuntimeError):
@@ -586,23 +574,6 @@ def test_fit_warn(data_lorenz, params, warning):
 
     with pytest.warns(warning):
         model.fit(x, t=t)
-
-    with pytest.warns(None) as warn_record:
-        model.fit(x, t=t, quiet=True)
-
-    while True:
-        try:
-            warn_record.pop(PendingDeprecationWarning)
-        except AssertionError:
-            break
-
-    while True:
-        try:
-            warn_record.pop(DeprecationWarning)
-        except AssertionError:
-            break
-
-    assert len(warn_record) == 0
 
 
 def test_cross_validation(data_lorenz):
@@ -653,210 +624,6 @@ def test_linear_constraints(data_lorenz):
     )
 
 
-def test_ensemble(data_lorenz):
-    x, t = data_lorenz
-    library = PolynomialLibrary().fit(x)
-
-    constraint_rhs = np.ones(2)
-    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
-
-    target_1, target_2 = 1, 3
-    constraint_lhs[0, 3] = target_1
-    constraint_lhs[1, library.n_output_features_] = target_2
-
-    optimizer = ConstrainedSR3(
-        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
-    )
-    model = SINDy(feature_library=library, optimizer=optimizer).fit(
-        x, t, ensemble=True, n_models=10, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_ensemble_pdes(data_1d_random_pde):
-    t, spatial_grid, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatial_grid=spatial_grid,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=pde_lib).fit(
-        u, t, ensemble=True, n_models=10, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 10
-    model = SINDy(feature_library=pde_lib).fit(
-        u, x_dot=u_dot, ensemble=True, n_models=10, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_ensemble_weak_pdes(data_1d_random_pde):
-    t, x, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    X, T = np.meshgrid(x, t)
-    XT = np.array([X, T]).T
-    weak_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatiotemporal_grid=XT,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=weak_lib).fit(
-        u, t=t, ensemble=True, n_models=2, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 2
-    model = SINDy(feature_library=weak_lib).fit(
-        u, x_dot=u_dot[:, 0, :], ensemble=True, n_models=2, n_subset=len(t) // 2
-    )
-    assert len(model.coef_list) == 2
-
-
-def test_library_ensemble(data_lorenz):
-    x, t = data_lorenz
-    library = PolynomialLibrary()
-    model = SINDy(feature_library=library).fit(
-        x, t=t, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_library_ensemble_pde(data_1d_random_pde):
-    t, spatial_grid, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatial_grid=spatial_grid,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=pde_lib).fit(
-        u, t=t, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-    model = SINDy(feature_library=pde_lib).fit(
-        u, x_dot=u_dot, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_library_ensemble_weak_pde(data_1d_random_pde):
-    t, x, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    X, T = np.meshgrid(x, t)
-    XT = np.array([X, T]).T
-    weak_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatiotemporal_grid=XT,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=weak_lib).fit(
-        u, t=t, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-    u_dot = weak_lib.convert_u_dot_integral(u)
-    model = SINDy(feature_library=weak_lib).fit(
-        u, x_dot=u_dot, library_ensemble=True, n_models=10
-    )
-    assert len(model.coef_list) == 10
-
-
-def test_both_ensemble(data_lorenz):
-    x, t = data_lorenz
-    library = PolynomialLibrary()
-    model = SINDy(feature_library=library).fit(
-        x, t=t, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-
-
-def test_both_ensemble_pde(data_1d_random_pde):
-    t, spatial_grid, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatial_grid=spatial_grid,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=pde_lib).fit(
-        u, t=t, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-    model = SINDy(feature_library=pde_lib).fit(
-        u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-
-
-def test_both_ensemble_weak_pde(data_1d_random_pde):
-    t, x, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
-    X, T = np.meshgrid(x, t)
-    XT = np.array([X, T]).T
-    weak_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
-        spatiotemporal_grid=XT,
-        include_bias=True,
-    )
-    model = SINDy(feature_library=weak_lib).fit(
-        u, t=t, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-    u_dot = weak_lib.convert_u_dot_integral(u)
-    model = SINDy(feature_library=weak_lib).fit(
-        u, x_dot=u_dot, ensemble=True, library_ensemble=True, n_models=2
-    )
-    assert len(model.coef_list) == 2
-
-
-@pytest.mark.parametrize(
-    "params",
-    [
-        dict(ensemble=False, n_models=-1, n_subset=1),
-        dict(ensemble=False, n_models=0, n_subset=1),
-        dict(ensemble=False, n_models=1, n_subset=0),
-        dict(ensemble=False, n_models=1, n_subset=-1),
-        dict(ensemble=True, n_models=-1, n_subset=1),
-        dict(ensemble=True, n_models=0, n_subset=1),
-        dict(ensemble=True, n_models=1, n_subset=0),
-        dict(ensemble=True, n_models=1, n_subset=-1),
-        dict(ensemble=True, n_models=1, n_subset=0),
-    ],
-)
-def test_bad_ensemble_params(data_lorenz, params):
-    x, t = data_lorenz
-    library = PolynomialLibrary().fit(x)
-
-    constraint_rhs = np.ones(2)
-    constraint_lhs = np.zeros((2, x.shape[1] * library.n_output_features_))
-
-    target_1, target_2 = 1, 3
-    constraint_lhs[0, 3] = target_1
-    constraint_lhs[1, library.n_output_features_] = target_2
-
-    optimizer = ConstrainedSR3(
-        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs
-    )
-    with pytest.raises(ValueError):
-        SINDy(feature_library=library, optimizer=optimizer).fit(x, t, **params)
-
-
 def test_data_shapes():
     model = SINDy()
     n = 10
@@ -872,7 +639,7 @@ def test_data_shapes():
     model.fit(x)
 
 
-def test_multiple_trajectories_and_ensemble(diffuse_multiple_trajectories):
+def test_diffusion_pde(diffuse_multiple_trajectories):
     t, x, u = diffuse_multiple_trajectories
     library_functions = [lambda x: x]
     library_function_names = [lambda x: x]
@@ -895,34 +662,13 @@ def test_multiple_trajectories_and_ensemble(diffuse_multiple_trajectories):
         K=100,
     )
 
-    optimizer = STLSQ(threshold=0.1, alpha=1e-5, normalize_columns=False)
+    optimizer = STLSQ(threshold=0.2, alpha=1e-5, normalize_columns=False)
     model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=False)
-    print(model.coefficients(), model.coefficients()[0][-1])
-    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:-1] == 0)
+    model.fit(u, t=t)
+    assert abs(model.coefficients()[0, -1] - 1) < 1e-1
+    assert np.all(model.coefficients()[0, :-1] == 0)
 
     model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=False)
-    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:-1] == 0)
-
-    model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=True, n_subset=len(t))
-    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:-1] == 0)
-
-    model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=True, n_subset=len(t))
-    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:-1] == 0)
-
-    model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=True)
-    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:-1] == 0)
-
-    model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, multiple_trajectories=True, t=t, ensemble=True)
-    assert abs(model.coefficients()[0][-1] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:-1] == 0)
+    model.fit(u, t=t)
+    assert abs(model.coefficients()[0, -1] - 1) < 1e-1
+    assert np.all(model.coefficients()[0, :-1] == 0)

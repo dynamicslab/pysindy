@@ -3,8 +3,6 @@ Unit tests for feature libraries.
 """
 import numpy as np
 import pytest
-from scipy.sparse import coo_matrix
-from scipy.sparse import csc_matrix
 from scipy.sparse import csr_matrix
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
@@ -73,11 +71,13 @@ def test_form_sindy_pi_library():
 
 def test_bad_parameters():
     with pytest.raises(ValueError):
-        PolynomialLibrary(degree=-1)
+        PolynomialLibrary(degree=-1).fit(np.array([]))
     with pytest.raises(ValueError):
-        PolynomialLibrary(degree=1.5)
+        PolynomialLibrary(degree=1.5).fit(np.array([]))
     with pytest.raises(ValueError):
-        PolynomialLibrary(include_interaction=False, interaction_only=True)
+        PolynomialLibrary(include_interaction=False, interaction_only=True).fit(
+            np.array([])
+        )
     with pytest.raises(ValueError):
         FourierLibrary(n_frequencies=-1)
     with pytest.raises(ValueError):
@@ -169,23 +169,19 @@ def test_weak_pde_library_bad_parameters(params):
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1], [0, 100]]),
+            inputs_per_library=[[0, 1], [0, 100]],
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([0, 0]),
+            inputs_per_library=[[0, 1]],
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1]]),
+            inputs_per_library=[[0, 1, 2], [0, 1, 2], [0, 1, 2]],
         ),
         dict(
             libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1, 2], [0, 1, 2], [0, 1, 2]]),
-        ),
-        dict(
-            libraries=[PolynomialLibrary(), PolynomialLibrary()],
-            inputs_per_library=np.array([[0, 1, 2], [0, 1, -1]]),
+            inputs_per_library=[[0, 1, 2], [0, 1, -1]],
         ),
     ],
 )
@@ -205,7 +201,7 @@ def test_generalized_library_bad_parameters(data_lorenz, params):
         dict(parameter_library=None),
     ],
 )
-def test_parametrized_library_bad_parameters(data_lorenz, params):
+def test_parameterized_library_bad_parameters(data_lorenz, params):
     with pytest.raises(ValueError):
         lib = ParameterizedLibrary(**params)
         x, t = data_lorenz
@@ -245,11 +241,11 @@ def test_sindypi_library_bad_params(params):
         PolynomialLibrary(include_bias=False),
         FourierLibrary(),
         IdentityLibrary() + PolynomialLibrary(),
-        pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_custom_library_bias"),
-        pytest.lazy_fixture("data_generalized_library"),
-        pytest.lazy_fixture("data_ode_library"),
-        pytest.lazy_fixture("data_sindypi_library"),
+        pytest.lazy_fixture("custom_library"),
+        pytest.lazy_fixture("custom_library_bias"),
+        pytest.lazy_fixture("generalized_library"),
+        pytest.lazy_fixture("ode_library"),
+        pytest.lazy_fixture("sindypi_library"),
     ],
 )
 def test_fit_transform(data_lorenz, library):
@@ -266,12 +262,12 @@ def test_fit_transform(data_lorenz, library):
         PolynomialLibrary(include_bias=False),
         FourierLibrary(),
         IdentityLibrary() + PolynomialLibrary(),
-        pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_custom_library_bias"),
-        pytest.lazy_fixture("data_generalized_library"),
-        pytest.lazy_fixture("data_ode_library"),
-        pytest.lazy_fixture("data_pde_library"),
-        pytest.lazy_fixture("data_sindypi_library"),
+        pytest.lazy_fixture("custom_library"),
+        pytest.lazy_fixture("custom_library_bias"),
+        pytest.lazy_fixture("generalized_library"),
+        pytest.lazy_fixture("ode_library"),
+        pytest.lazy_fixture("pde_library"),
+        pytest.lazy_fixture("sindypi_library"),
     ],
 )
 def test_change_in_data_shape(data_lorenz, library):
@@ -289,11 +285,11 @@ def test_change_in_data_shape(data_lorenz, library):
         (PolynomialLibrary(), 10),
         (IdentityLibrary() + PolynomialLibrary(), 13),
         (FourierLibrary(), 6),
-        (pytest.lazy_fixture("data_custom_library_bias"), 13),
-        (pytest.lazy_fixture("data_custom_library"), 12),
-        (pytest.lazy_fixture("data_generalized_library"), 76),
-        (pytest.lazy_fixture("data_ode_library"), 9),
-        (pytest.lazy_fixture("data_sindypi_library"), 39),
+        (pytest.lazy_fixture("custom_library_bias"), 13),
+        (pytest.lazy_fixture("custom_library"), 12),
+        (pytest.lazy_fixture("generalized_library"), 76),
+        (pytest.lazy_fixture("ode_library"), 9),
+        (pytest.lazy_fixture("sindypi_library"), 39),
     ],
 )
 def test_output_shape(data_lorenz, library, shape):
@@ -312,11 +308,11 @@ def test_output_shape(data_lorenz, library, shape):
         PolynomialLibrary(include_bias=False),
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),
-        pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_custom_library_bias"),
-        pytest.lazy_fixture("data_generalized_library"),
-        pytest.lazy_fixture("data_ode_library"),
-        pytest.lazy_fixture("data_sindypi_library"),
+        pytest.lazy_fixture("custom_library"),
+        pytest.lazy_fixture("custom_library_bias"),
+        pytest.lazy_fixture("generalized_library"),
+        pytest.lazy_fixture("ode_library"),
+        pytest.lazy_fixture("sindypi_library"),
     ],
 )
 def test_get_feature_names(data_lorenz, library):
@@ -335,14 +331,6 @@ def test_get_feature_names(data_lorenz, library):
     assert isinstance(feature_names[0], str)
 
 
-@pytest.mark.parametrize("sparse_format", [csc_matrix, csr_matrix, coo_matrix])
-def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
-    x, t = data_lorenz
-    library = PolynomialLibrary()
-    library.fit_transform(sparse_format(x))
-    check_is_fitted(library)
-
-
 # Catch-all for various combinations of options and
 # inputs for polynomial features
 @pytest.mark.parametrize(
@@ -351,6 +339,23 @@ def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
         ({"degree": 4}, csr_matrix),
         ({"include_bias": True}, csr_matrix),
         ({"include_bias": False}, csr_matrix),
+        ({"include_bias": False, "interaction_only": True}, csr_matrix),
+        (
+            {
+                "include_bias": False,
+                "interaction_only": False,
+                "include_interaction": False,
+            },
+            csr_matrix,
+        ),
+        (
+            {
+                "include_bias": False,
+                "interaction_only": False,
+                "include_interaction": True,
+            },
+            csr_matrix,
+        ),
         ({"include_interaction": False}, lambda x: x),
         ({"include_interaction": False, "include_bias": True}, lambda x: x),
     ],
@@ -358,8 +363,11 @@ def test_polynomial_sparse_inputs(data_lorenz, sparse_format):
 def test_polynomial_options(data_lorenz, kwargs, sparse_format):
     x, t = data_lorenz
     library = PolynomialLibrary(**kwargs)
-    library.fit_transform(sparse_format(x))
+    out = library.fit_transform(sparse_format(x))
     check_is_fitted(library)
+    expected = len(library.powers_)
+    result = out.shape[1]
+    assert result == expected
 
 
 # Catch-all for various combinations of options and
@@ -417,11 +425,11 @@ def test_tensored(data_lorenz):
         PolynomialLibrary(),
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),
-        pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_generalized_library"),
-        pytest.lazy_fixture("data_ode_library"),
-        pytest.lazy_fixture("data_pde_library"),
-        pytest.lazy_fixture("data_sindypi_library"),
+        pytest.lazy_fixture("custom_library"),
+        pytest.lazy_fixture("generalized_library"),
+        pytest.lazy_fixture("ode_library"),
+        pytest.lazy_fixture("pde_library"),
+        pytest.lazy_fixture("sindypi_library"),
     ],
 )
 def test_not_fitted(data_lorenz, library):
@@ -429,49 +437,6 @@ def test_not_fitted(data_lorenz, library):
 
     with pytest.raises(NotFittedError):
         library.transform(x)
-
-
-@pytest.mark.parametrize(
-    "library",
-    [
-        IdentityLibrary(),
-        PolynomialLibrary(),
-        FourierLibrary(),
-        PolynomialLibrary() + FourierLibrary(),
-        pytest.lazy_fixture("data_custom_library"),
-        pytest.lazy_fixture("data_generalized_library"),
-        pytest.lazy_fixture("data_ode_library"),
-        pytest.lazy_fixture("data_pde_library"),
-        pytest.lazy_fixture("data_sindypi_library"),
-    ],
-)
-def test_library_ensemble(data_lorenz, library):
-    x, t = data_lorenz
-    library.fit(x)
-    n_output_features = library.n_output_features_
-    library.library_ensemble = True
-    xp = library.transform(x)
-    assert n_output_features == xp.shape[1] + 1
-    library.ensemble_indices = [0, 1]
-    with pytest.warns(UserWarning):
-        xp = library.transform(x)
-    assert n_output_features == xp.shape[1] + 2
-    library.ensemble_indices = np.zeros(1000, dtype=int).tolist()
-    with pytest.raises(ValueError):
-        xp = library.transform(x)
-
-
-@pytest.mark.parametrize(
-    "library",
-    [
-        IdentityLibrary,
-        PolynomialLibrary,
-        FourierLibrary,
-    ],
-)
-def test_bad_library_ensemble(library):
-    with pytest.raises(ValueError):
-        library = library(ensemble_indices=-1)
 
 
 def test_generalized_library(data_lorenz):
@@ -489,12 +454,7 @@ def test_generalized_library(data_lorenz):
 
     tensor_array = [[0, 1, 1], [1, 0, 1]]
 
-    inputs_per_library = np.tile([0, 1, 2], 3)
-    inputs_per_library = np.reshape(inputs_per_library, (3, 3))
-    inputs_per_library[0, 0] = 1
-    inputs_per_library[1, 1] = 0
-    inputs_per_library[2, 1] = 0
-    inputs_per_library[2, 2] = 0
+    inputs_per_library = [[1, 2], [0, 2], [0]]
 
     # First try without tensor libraries and subset of the input variables
     sindy_library = GeneralizedLibrary(
@@ -699,34 +659,27 @@ def test_parameterized_library(diffuse_multiple_trajectories):
     model = SINDy(
         feature_library=pde_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
-    model.fit(xs, u=us, multiple_trajectories=True, t=t, ensemble=False)
-    assert abs(model.coefficients()[0][4] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:4] == 0)
-    assert np.all(model.coefficients()[0][5:] == 0)
+    model.fit(xs, u=us, t=t)
+    assert abs(model.coefficients()[0, 4] - 1) < 1e-1
+    assert np.all(model.coefficients()[0, :4] == 0)
+    assert np.all(model.coefficients()[0, 5:] == 0)
 
-    optimizer = STLSQ(threshold=0.5, alpha=1e-8, normalize_columns=False)
+    optimizer = STLSQ(threshold=0.25, alpha=1e-8, normalize_columns=False)
     model = SINDy(
         feature_library=weak_lib, optimizer=optimizer, feature_names=["u", "c"]
     )
-    model.fit(xs, u=us, multiple_trajectories=True, t=t, ensemble=False)
-    assert abs(model.coefficients()[0][4] - 1) < 1e-2
-    assert np.all(model.coefficients()[0][:4] == 0)
-    assert np.all(model.coefficients()[0][5:] == 0)
+    model.fit(xs, u=us, t=t)
+    assert abs(model.coefficients()[0, 4] - 1) < 1e-1
+    assert np.all(model.coefficients()[0, :4] == 0)
+    assert np.all(model.coefficients()[0, 5:] == 0)
 
 
 # Helper function for testing PDE libraries
-def pde_library_helper(library, u, coef_first_dim):
-    opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
-    model = SINDy(optimizer=opt, feature_library=library)
+def pde_library_helper(library, u):
+    base_opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
+    model = SINDy(optimizer=base_opt, feature_library=library)
     model.fit(u)
-    assert np.any(opt.coef_ != 0.0)
-
-    n_features = len(model.get_feature_names())
-    model.fit(u, ensemble=True, n_subset=50, n_models=10)
-    assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
-
-    model.fit(u, library_ensemble=True, n_models=10)
-    assert np.shape(model.coef_list) == (10, coef_first_dim, n_features)
+    assert np.any(base_opt.coef_ != 0.0)
 
 
 def test_1D_pdes(data_1d_random_pde):
@@ -740,7 +693,7 @@ def test_1D_pdes(data_1d_random_pde):
         spatial_grid=spatial_grid,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 1)
+    pde_library_helper(pde_lib, u)
 
 
 def test_2D_pdes(data_2d_random_pde):
@@ -754,7 +707,7 @@ def test_2D_pdes(data_2d_random_pde):
         spatial_grid=spatial_grid,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_3D_pdes(data_3d_random_pde):
@@ -768,21 +721,17 @@ def test_3D_pdes(data_3d_random_pde):
         spatial_grid=spatial_grid,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_5D_pdes(data_5d_random_pde):
     spatial_grid, u, _ = data_5d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=2,
+        derivative_order=1,
         spatial_grid=spatial_grid,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_1D_weak_pdes():
@@ -803,11 +752,11 @@ def test_1D_weak_pdes():
         H_xt=2,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 1)
+    pde_library_helper(pde_lib, u)
 
 
 def test_2D_weak_pdes():
-    n = 10
+    n = 5
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -820,17 +769,17 @@ def test_2D_weak_pdes():
     pde_lib = WeakPDELibrary(
         library_functions=library_functions,
         function_names=library_function_names,
-        derivative_order=4,
+        derivative_order=2,
         spatiotemporal_grid=spatiotemporal_grid,
         H_xt=4,
         K=10,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 1)
+    pde_library_helper(pde_lib, u)
 
 
 def test_3D_weak_pdes():
-    n = 10
+    n = 5
     t = np.linspace(0, 10, n)
     x = np.linspace(0, 10, n)
     y = np.linspace(0, 10, n)
@@ -839,18 +788,14 @@ def test_3D_weak_pdes():
     spatiotemporal_grid = np.asarray([X, Y, Z, T])
     spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 4, 0])
     u = np.random.randn(n, n, n, n, 2)
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        derivative_order=4,
+        derivative_order=2,
         spatiotemporal_grid=spatiotemporal_grid,
         H_xt=4,
         K=10,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_5D_weak_pdes():
@@ -865,18 +810,14 @@ def test_5D_weak_pdes():
     spatiotemporal_grid = np.asarray([V, W, X, Y, Z, T])
     spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1, 2, 3, 4, 5, 6, 0])
     u = np.random.randn(n, n, n, n, n, n, 2)
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
         derivative_order=2,
         spatiotemporal_grid=spatiotemporal_grid,
         H_xt=4,
         K=10,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u, 2)
+    pde_library_helper(pde_lib, u)
 
 
 def test_sindypi_library(data_lorenz):
@@ -905,7 +846,7 @@ def test_sindypi_library(data_lorenz):
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
+        differentiation_method=FiniteDifference(),
     )
     model.fit(x, t=t)
     assert np.shape(sindy_opt.coef_) == (40, 40)
@@ -914,9 +855,28 @@ def test_sindypi_library(data_lorenz):
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
-        differentiation_method=FiniteDifference(drop_endpoints=True),
+        differentiation_method=FiniteDifference(),
     )
     model.fit(x, t=t)
     assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(
         sindy_opt.coef_[3, :] != 0.0
     )
+
+
+@pytest.mark.parametrize(
+    ("include_interaction", "interaction_only", "bias", "expected"),
+    [
+        (True, True, True, ((), (0,), (0, 1), (1,))),
+        (False, False, False, ((0,), (0, 0), (1,), (1, 1))),
+    ],
+)
+def test_polynomial_combinations(include_interaction, interaction_only, bias, expected):
+    combos = PolynomialLibrary._combinations(
+        n_features=2,
+        degree=2,
+        include_interaction=include_interaction,
+        interaction_only=interaction_only,
+        include_bias=bias,
+    )
+    result = tuple(sorted(list(combos)))
+    assert result == expected

@@ -49,7 +49,7 @@ try:  # Waiting on PEP 690 to lazy import CVXPY
     from .optimizers import StableLinearSR3
 except ImportError:
     pass
-from .optimizers import SINDyOptimizer
+from .optimizers import WrappedOptimizer
 from .optimizers import SR3
 from .optimizers import SSR
 from .optimizers import STLSQ

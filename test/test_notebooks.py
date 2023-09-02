@@ -65,6 +65,7 @@ def purge_notebook_modules():
 
 
 @pytest.mark.parametrize("directory", notebook_scripts)
+@pytest.mark.notebooks
 def test_notebook_script(directory: Path, purge_notebook_modules):
     # Run in native directory with modified sys.path for imports to work
     if "17_" in directory or "5_" in directory:

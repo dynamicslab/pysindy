@@ -52,17 +52,12 @@ jobs:
         cd ..
     - name: Test with pytest
       run: |
-        coverage run --source=pysindy -m pytest test  && coverage xml
+        coverage run --source=pysindy -m pytest test -m "not slow"  && coverage xml
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
-    - name: Execute feature notebook with papermill
-      run: |
-        pip install papermill
-        cd examples
-        papermill --report-mode 1_feature_overview.ipynb out.json
     - uses: actions/cache@v3
       with:
         path: ~/.cache/pip

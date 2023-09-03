@@ -140,11 +140,10 @@ class STLSQ(BaseOptimizer):
         c[ind_nonzero] = coef
         big_ind = np.abs(c) >= threshold
         if self.sparse_ind is not None:
-            sparse_ind_mask = np.zeros_like(ind_nonzero)
-            sparse_ind_mask[self.sparse_ind] = True
-            c[~big_ind & sparse_ind_mask] = 0
-        if self.sparse_ind is None:
-            c[~big_ind] = 0
+            nonsparse_ind_mask = np.ones_like(ind_nonzero)
+            nonsparse_ind_mask[self.sparse_ind] = False
+            big_ind = big_ind | nonsparse_ind_mask
+        c[~big_ind] = 0
         return c, big_ind
 
     def _regress(self, x: np.ndarray, y: np.ndarray, dim: int, sparse_sub: np.ndarray):
@@ -287,8 +286,8 @@ class STLSQ(BaseOptimizer):
             non_sparse_ind = np.setxor1d(self.sparse_ind, range(n_features))
             self.coef_ = optvar[:, self.sparse_ind]
             self.ind_ = ind[:, self.sparse_ind]
-            self.optvar_non_sparse = optvar[:, non_sparse_ind]
-            self.ind_non_sparse = ind[:, non_sparse_ind]
+            self.optvar_non_sparse_ = optvar[:, non_sparse_ind]
+            self.ind_non_sparse_ = ind[:, non_sparse_ind]
 
     @property
     def complexity(self):
@@ -297,6 +296,24 @@ class STLSQ(BaseOptimizer):
         return np.count_nonzero(self.coef_) + np.count_nonzero(
             [abs(self.intercept_) >= self.threshold]
         )
+
+    def _unbias(self, x: np.ndarray, y: np.ndarray):
+        if not self.sparse_ind:
+            return super()._unbias(x, y)
+        regression_col_mask = np.zeros((y.shape[1], x.shape[1]), dtype=bool)
+        regression_col_mask[:, self.sparse_ind] = self.ind_
+        non_sparse_ind = np.setxor1d(self.sparse_ind, range(x.shape[1]))
+        regression_col_mask[:, non_sparse_ind] = self.ind_non_sparse_
+
+        for i in range(self.ind_.shape[0]):
+            if np.any(self.ind_[i]):
+                optvar = (
+                    LinearRegression(fit_intercept=False)
+                    .fit(x[:, regression_col_mask[i]], y[:, i])
+                    .coef_
+                )
+                self.coef_[i] = optvar[self.sparse_ind]
+                self.optvar_non_sparse_[i] = optvar[non_sparse_ind]
 
 
 def _remove_and_decrement(

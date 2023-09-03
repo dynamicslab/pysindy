@@ -75,7 +75,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         Weight vector(s).
 
     ind_ : array, shape (n_features,) or (n_targets, n_features)
-        Array of 0s and 1s indicating which coefficients of the
+        Array of bools indicating which coefficients of the
         weight vector have not been masked out.
 
     history_ : list
@@ -204,7 +204,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
 
-    def _unbias(self, x, y):
+    def _unbias(self, x: np.ndarray, y: np.ndarray):
         coef = np.zeros((y.shape[1], x.shape[1]))
         for i in range(self.ind_.shape[0]):
             if np.any(self.ind_[i]):

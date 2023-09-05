@@ -271,14 +271,6 @@ class STLSQ(BaseOptimizer):
                 ),
                 ConvergenceWarning,
             )
-            try:
-                optvar
-            except NameError:
-                optvar = self.coef_
-                warnings.warn(
-                    "STLSQ._reduce has no iterations left to determine coef",
-                    ConvergenceWarning,
-                )
         if self.sparse_ind is None:
             self.coef_ = optvar
             self.ind_ = ind

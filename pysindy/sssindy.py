@@ -52,7 +52,7 @@ class SSSINDy(SINDy):
             zip(*[_conditional_moments(ti, xi) for ti, xi in _zip_like_sequence(x, t)])
         )
 
-        rtinv_vars = [psd_root(np.linalg.pinv(var)).T for var in vars]
+        rtinv_vars = [np.linalg.pinv(psd_root(var)).T for var in vars]
         if u is None:
             self.n_control_features_ = 0
         else:
@@ -160,10 +160,12 @@ def _gen_kalman_covariance(delta_times):
 
 
 def psd_root(arr: Annotated[np.ndarray, "PSD"]) -> np.ndarray:
-    """Calculte a root of a symmetric/hermetian matrix.
+    """Calculte a root of a positive semidefinite matrix
 
-    This is faster than a root from eigh
+    This is faster than a root from eigh.  Does not verify positive
+    semidefiniteness
     """
     l, d, _ = ldl(arr)
     w, v = eigh_tridiagonal(np.diag(d), np.diag(d, 1))
+    w = np.vstack((w, np.zeros_like(w))).max(axis=0)
     return l @ (v * np.sqrt(w))

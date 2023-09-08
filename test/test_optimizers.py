@@ -29,6 +29,7 @@ from pysindy.optimizers import StableLinearSR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.optimizers import WrappedOptimizer
+from pysindy.optimizers.stlsq import _remove_and_decrement
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
 
@@ -1082,3 +1083,49 @@ def test_frols_error_linear_dependence():
     y = np.array([[1.0, 1.0]])
     with pytest.raises(ValueError):
         opt.fit(x, y)
+
+
+def test_sparse_subset_multitarget():
+    A = np.eye(4)
+    b = np.array([[1, 1, 0.5, 1], [1, 1, 1, 0.5]]).T
+    opt = STLSQ(unbias=False, threshold=0.5, alpha=0.1, sparse_ind=[2, 3])
+    opt.fit(A, b)
+    X = opt.coef_
+    Y = opt.optvar_non_sparse_
+    assert X[0, 0] == 0.0
+    assert 0.0 < X[0, 1] < 1.0
+    np.testing.assert_equal(Y[:, :2], np.ones((2, 2)))
+    assert X[1, 1] == 0.0
+    assert 0.0 < X[1, 0] < 1.0
+
+
+def test_sparse_subset_off_diagonal():
+    A = np.array([[1, 1], [0, 1]])
+    b = np.array([1, 1])
+    opt = STLSQ(unbias=False, threshold=0.1, alpha=0.1, sparse_ind=[1])
+    opt.fit(A, b)
+    X = opt.coef_
+    Y = opt.optvar_non_sparse_
+    assert Y[0, 0] > 0.0 and Y[0, 0] < 0.5
+    assert X[0, 0] > 0.5 and X[0, 0] < 1.0
+
+
+def test_sparse_subset_unbias():
+    A = np.array([[1, 1], [0, 1]])
+    b = np.array([1, 1])
+    opt = STLSQ(unbias=True, threshold=0.1, alpha=0.1, sparse_ind=[1])
+    opt.fit(A, b)
+    X = opt.coef_
+    Y = opt.optvar_non_sparse_
+    assert np.abs(Y[0, 0]) < 2e-16
+    assert np.abs(X[0, 0] - 1.0) < 2e-16
+
+
+def test_remove_and_decrement():
+    existing_vals = np.array([2, 3, 4, 5])
+    vals_to_remove = np.array([3, 5])
+    expected = np.array([2, 3])
+    result = _remove_and_decrement(
+        existing_vals=existing_vals, vals_to_remove=vals_to_remove
+    )
+    np.testing.assert_array_equal(expected, result)

@@ -78,8 +78,8 @@ class SSSINDy(SINDy):
             def transform(self, feats):
                 A11 = sparse.eye(n_samp)
                 A12 = feats
-                A21 = sparse.block_diag(rtinv_vars)
-                return sparse.bmat([[A11, A12], [A21, None]])
+                A21 = sparse.block_diag(self.rtinv_vars)
+                return sparse.bmat([[A11, A12], [A21, None]]).toarray()
 
         y_col = np.vstack(
             [

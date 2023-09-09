@@ -97,8 +97,8 @@ class SSSINDy(SINDy):
             ("matrix assembly", _ProblemAssembler(rtinv_vars, n_samp)),
             ("model", self.optimizer),
         ]
-        self.pipeline = Pipeline(steps)
-        self.pipeline.fit(x, y_col.toarray())
+        self.model = Pipeline(steps)
+        self.model.fit(x, y_col.toarray())
 
         self.n_features_in_ = self.feature_library.n_features_in_
         self.n_output_features_ = self.feature_library.n_output_features_

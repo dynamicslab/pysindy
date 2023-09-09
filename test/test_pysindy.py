@@ -683,6 +683,7 @@ def test_sssindy_fit(data_1d):
     x, t = data_1d
     model = SSSINDy(feature_library=PolynomialLibrary(degree=0))
     model.fit(x, t)
+    model.coefficients()
 
 
 @given(

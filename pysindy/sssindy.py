@@ -49,7 +49,7 @@ class SSSINDy(SINDy):
             x, t, x_dot, u, self.feature_library
         )
         means, vars = tuple(
-            zip(*[_conditional_moments(ti, xi) for ti, xi in _zip_like_sequence(x, t)])
+            zip(*[_conditional_moments(ti, xi) for xi, ti in _zip_like_sequence(x, t)])
         )
 
         rtinv_vars = [np.linalg.pinv(psd_root(var)).T for var in vars]
@@ -83,7 +83,7 @@ class SSSINDy(SINDy):
 
         y_col = np.vstack(
             [
-                rtinv_var @ mean.reshape((-1, 1))
+                rtinv_var @ mean.reshape((-1, n_tgts))
                 for mean, rtinv_var in zip(means, rtinv_vars)
             ]
         )

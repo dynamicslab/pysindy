@@ -686,6 +686,14 @@ def test_sssindy_fit(data_1d):
     model.coefficients()
 
 
+def test_sssindy_fit_multitarget(data_1d):
+    x, t = data_1d
+    x = np.hstack((x, 1 / (x + 1)))
+    model = SSSINDy(feature_library=PolynomialLibrary(degree=1))
+    model.fit(x, t)
+    model.coefficients()
+
+
 @given(
     m=integers(min_value=5, max_value=10), seed=integers(min_value=0, max_value=65536)
 )

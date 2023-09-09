@@ -29,6 +29,7 @@ from pysindy.optimizers import StableLinearSR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.optimizers import WrappedOptimizer
+from pysindy.optimizers.stlsq import _normalize_slice
 from pysindy.optimizers.stlsq import _remove_and_decrement
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
@@ -1129,3 +1130,20 @@ def test_remove_and_decrement():
         existing_vals=existing_vals, vals_to_remove=vals_to_remove
     )
     np.testing.assert_array_equal(expected, result)
+
+
+def test_normalize_slice():
+    s = slice(None)
+    result = _normalize_slice(s, 3)
+    expected = [0, 1, 2]
+    assert result == expected
+
+    s = slice(1, -1)
+    result = _normalize_slice(s, 3)
+    expected = [1]
+    assert result == expected
+
+    s = slice(0, 2)
+    result = _normalize_slice(s, 3)
+    expected = [0, 1]
+    assert result == expected

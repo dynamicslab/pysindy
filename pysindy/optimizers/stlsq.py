@@ -60,7 +60,7 @@ class STLSQ(BaseOptimizer):
     verbose : bool, optional (default False)
         If True, prints out the different error terms every iteration.
 
-    sparse_ind : list, optional (default None)
+    sparse_ind : list or slice, optional (default None)
         Indices to threshold and perform ridge regression upon.
         If None, sparse thresholding and ridge regression is applied to all
         indices.
@@ -109,7 +109,7 @@ class STLSQ(BaseOptimizer):
         copy_X=True,
         initial_guess=None,
         verbose=False,
-        sparse_ind=None,
+        sparse_ind: Union[list, slice] = None,
         unbias=True,
     ):
         super().__init__(
@@ -202,6 +202,8 @@ class STLSQ(BaseOptimizer):
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
         n_features_selected = np.sum(ind)
+        if isinstance(self.sparse_ind, slice):
+            self.sparse_ind = _normalize_slice(self.sparse_ind, n_features)
         sparse_sub = [np.array(self.sparse_ind)] * y.shape[1]
 
         # Print initial values for each term in the optimization
@@ -317,3 +319,13 @@ def _remove_and_decrement(
         existing_vals = np.delete(existing_vals, np.where(s == existing_vals))
         existing_vals = np.where(existing_vals > s, existing_vals - 1, existing_vals)
     return existing_vals
+
+
+def _normalize_slice(s: slice, length: int) -> list:
+    """Convert a slice to an explicit list of indices"""
+    start = s.start if s.start else 0
+    stop = s.stop if s.stop else length
+    if stop < 0:
+        stop = length + stop
+    step = s.step if s.step else 1
+    return list(range(start, stop, step))

@@ -88,7 +88,7 @@ class SSSINDy(SINDy):
             ]
         )
         y_col = sparse.vstack((y_col, sparse.csc_array((n_samp, n_tgts))))
-        sparse_ind = slice(n_samp, -1)
+        sparse_ind = slice(n_samp, None)
         self.optimizer.set_params(sparse_ind=sparse_ind)
 
         steps = [

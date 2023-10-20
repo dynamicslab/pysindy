@@ -11,7 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 from .base import BaseOptimizer
 
 
-class STLSQ(BaseOptimizer):
+class adam_STLSQ(BaseOptimizer):
     """Sequentially thresholded least squares algorithm.
     Defaults to doing Sequentially thresholded Ridge regression.
 
@@ -104,6 +104,8 @@ class STLSQ(BaseOptimizer):
         threshold=0.1,
         alpha=0.05,
         max_iter=20,
+        mom_memory = 0.9,
+        mom_init_iter = 1,
         ridge_kw=None,
         normalize_columns=False,
         copy_X=True,
@@ -111,6 +113,8 @@ class STLSQ(BaseOptimizer):
         verbose=False,
         sparse_ind=None,
         unbias=True,
+        use_mom = True,
+        mom_inplace = True
     ):
         super().__init__(
             max_iter=max_iter,
@@ -131,6 +135,14 @@ class STLSQ(BaseOptimizer):
         self.verbose = verbose
         self.sparse_ind = sparse_ind
 
+        self.mom_memory = mom_memory
+        self.mom_inplace = mom_inplace
+        self.mom_init_iter = mom_init_iter
+        if use_mom:
+            self.mom_history = []
+            assert mom_init_iter >= 1
+
+
     def _sparse_coefficients(
         self, dim: int, ind_nonzero: np.ndarray, coef: np.ndarray, threshold: float
     ) -> (np.ndarray, np.ndarray):
@@ -139,6 +151,7 @@ class STLSQ(BaseOptimizer):
         c = np.zeros(dim)
         c[ind_nonzero] = coef
         #Manu Note: this is where the thresholding is happening, we an add the adaptive
+        # thresholding step here.
         big_ind = np.abs(c) >= threshold
         if self.sparse_ind is not None:
             nonsparse_ind_mask = np.ones_like(ind_nonzero)
@@ -146,6 +159,15 @@ class STLSQ(BaseOptimizer):
             big_ind = big_ind | nonsparse_ind_mask
         c[~big_ind] = 0
         return c, big_ind
+
+    def _updated_momentum(
+        self, dim: int, ind_nonzero: np.ndarray, coef: np.ndarray, prev_mom: np.ndarray) -> np.ndarray:
+        """Calculate the momentum of parameters"""
+        c = np.zeros(dim)
+        c[ind_nonzero] = coef
+
+        mom_array = self.mom_memory*prev_mom + ((1 - self.mom_memory)*c)
+        return mom_array
 
     def _regress(self, x: np.ndarray, y: np.ndarray, dim: int, sparse_sub: np.ndarray):
         """Perform the ridge regression (on specific indices if
@@ -229,6 +251,9 @@ class STLSQ(BaseOptimizer):
                 break
 
             optvar = np.zeros((n_targets, n_features))
+            #Defining momentum vector
+            opt_mom = np.zeros((n_targets, n_features))
+
             for i in range(n_targets):
                 if np.count_nonzero(ind[i]) == 0:
                     warnings.warn(
@@ -239,9 +264,21 @@ class STLSQ(BaseOptimizer):
                 coef_i = self._regress(
                     x[:, ind[i]], y[:, i], np.count_nonzero(ind[i]), sparse_sub[i]
                 )
+                #Calculating momentum
+                mom_i = self._updated_momentum(n_features, ind[i], coef_i, self.mom_history[-1][i]) \
+                    if k >= self.mom_init_iter else np.copy(coef_i)
+
+                # if self.mom_inplace:
+                #     coef_i, ind_i = self._sparse_coefficients(
+                #         n_features, ind[i], mom_i, self.threshold
+                #     )
+                # else:
+                #     coef_i, ind_i = self._sparse_coefficients(
+                #         n_features, ind[i], coef_i, self.threshold
+                #     )
                 coef_i, ind_i = self._sparse_coefficients(
                     n_features, ind[i], coef_i, self.threshold
-                )
+                    )
                 if self.sparse_ind is not None:
                     vals_to_remove = np.intersect1d(
                         self.sparse_ind, np.where(coef_i == 0)
@@ -250,9 +287,11 @@ class STLSQ(BaseOptimizer):
                         self.sparse_ind, vals_to_remove
                     )
                 optvar[i] = coef_i
+                opt_mom[i] = mom_i
                 ind[i] = ind_i
 
             self.history_.append(optvar)
+            self.mom_history.append(opt_mom)
             if self.verbose:
                 R2 = np.sum((y - np.dot(x, optvar.T)) ** 2)
                 L2 = self.alpha * np.sum(optvar**2)

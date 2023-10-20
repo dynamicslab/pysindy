@@ -53,6 +53,7 @@ from .optimizers import WrappedOptimizer
 from .optimizers import SR3
 from .optimizers import SSR
 from .optimizers import STLSQ
+from .optimizers import adam_STLSQ
 from .optimizers import EnsembleOptimizer
 
 

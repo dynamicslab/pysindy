@@ -1,3 +1,4 @@
+print("....importing local pysindy copy....")
 from .base import BaseOptimizer
 from .base import EnsembleOptimizer
 from .constrained_sr3 import ConstrainedSR3
@@ -23,6 +24,7 @@ from .wrapped_optimizer import WrappedOptimizer
 from .sr3 import SR3
 from .ssr import SSR
 from .stlsq import STLSQ
+from .adam_stlsq import adam_STLSQ
 
 __all__ = [
     "BaseOptimizer",
@@ -30,6 +32,7 @@ __all__ = [
     "WrappedOptimizer",
     "SR3",
     "STLSQ",
+    "adam_STLSQ",
     "ConstrainedSR3",
     "StableLinearSR3",
     "TrappingSR3",

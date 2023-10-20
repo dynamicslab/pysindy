@@ -268,17 +268,19 @@ class adam_STLSQ(BaseOptimizer):
                 mom_i = self._updated_momentum(n_features, ind[i], coef_i, self.mom_history[-1][i]) \
                     if k >= self.mom_init_iter else np.copy(coef_i)
 
-                # if self.mom_inplace:
-                #     coef_i, ind_i = self._sparse_coefficients(
-                #         n_features, ind[i], mom_i, self.threshold
-                #     )
-                # else:
-                #     coef_i, ind_i = self._sparse_coefficients(
-                #         n_features, ind[i], coef_i, self.threshold
-                #     )
-                coef_i, ind_i = self._sparse_coefficients(
-                    n_features, ind[i], coef_i, self.threshold
+                if self.mom_inplace:
+
+                    coef_i, ind_i = self._sparse_coefficients(
+                        n_features, np.arange(n_features), mom_i, self.threshold
                     )
+                    mom_i = np.copy(coef_i)
+                else:
+                    coef_i, ind_i = self._sparse_coefficients(
+                        n_features, ind[i], coef_i, self.threshold
+                    )
+                # coef_i, ind_i = self._sparse_coefficients(
+                #     n_features, ind[i], coef_i, self.threshold
+                #     )
                 if self.sparse_ind is not None:
                     vals_to_remove = np.intersect1d(
                         self.sparse_ind, np.where(coef_i == 0)

@@ -21,7 +21,7 @@ x = odeint(lorenz, [-8,8,27], t)
 
 
 import pysindy as ps
-opt_adam = ps.optimizers.adam_STLSQ(threshold=0.1, alpha=.5, mom_init_iter=1, use_mom=True, mom_inplace=True,)
+opt_adam = ps.optimizers.adam_STLSQ(threshold=0.1, alpha=.5, mom_memory=0.0, mom_init_iter=1, use_mom=True, mom_inplace=True,)
 model_2 = SINDy(opt_adam)
 model_2.fit(x, t=t[1]-t[0])
 print(" adam-STLSQ optimizer....")

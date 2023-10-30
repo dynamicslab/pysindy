@@ -41,6 +41,15 @@ class adam_STLSQ(BaseOptimizer):
     max_iter : int, optional (default 20)
         Maximum iterations of the optimization algorithm.
 
+    mom_memory : float, optional (default 0.9)
+        0<=mom_memory<=1 is used to calculate the momentum at each time step of
+        sequential thresholding as mom_k =
+        mom_memory*(mom_k-1) + (1-mom_memory)*coeff_k
+
+    mom_init_iter : int, optional (default 1)
+        Iteration number from which momentum is calculated. Until this iteration,
+        momentum = coeff.
+
     ridge_kw : dict, optional (default None)
         Optional keyword arguments to pass to the ridge regression.
 
@@ -64,6 +73,19 @@ class adam_STLSQ(BaseOptimizer):
         Indices to threshold and perform ridge regression upon.
         If None, sparse thresholding and ridge regression is applied to all
         indices.
+
+    use_mom : bool, optional (default True)
+        Use momentum method for sequential thresholding. False case is not implemented yet,
+        but will be same as regular STLS
+
+    mom_inplace : bool, optional (default True)
+        If true, coefficient at each iteration of STLS will be repalced with momentum.
+
+    variable_thresh : bool, optional (default False)
+        If true, a threshold vector will be used for thresholding coeffcieints in STLS.
+
+    threshold_vect : list, optional (default []])
+        Initial treshold vector used for variable thresholding. Empty list by default.
 
     Attributes
     ----------
@@ -114,7 +136,9 @@ class adam_STLSQ(BaseOptimizer):
         sparse_ind=None,
         unbias=True,
         use_mom = True,
-        mom_inplace = True
+        mom_inplace = True,
+        variable_thresh = False,
+        threshold_vect = []
     ):
         super().__init__(
             max_iter=max_iter,
@@ -142,17 +166,27 @@ class adam_STLSQ(BaseOptimizer):
             self.mom_history = []
             assert mom_init_iter >= 1
 
+        self.variable_thresh = variable_thresh
+        self.threshold_vect = threshold_vect
+
 
     def _sparse_coefficients(
-        self, dim: int, ind_nonzero: np.ndarray, coef: np.ndarray, threshold: float
+        self, dim: int, ind_nonzero: np.ndarray, coef: np.ndarray, threshold: list
     ) -> (np.ndarray, np.ndarray):
         """Perform thresholding of the weight vector(s) (on specific indices
-        if ``self.sparse_ind`` is not None)"""
+        if ``self.sparse_ind`` is not None)
+        Note threshold is a list of len dim.
+        """
         c = np.zeros(dim)
         c[ind_nonzero] = coef
         #Manu Note: this is where the thresholding is happening, we an add the adaptive
         # thresholding step here.
+        assert dim == len(threshold), ("Length of threshold vector not same as the "
+                                       "length of the feature library")
+
+
         big_ind = np.abs(c) >= threshold
+
         if self.sparse_ind is not None:
             nonsparse_ind_mask = np.ones_like(ind_nonzero)
             nonsparse_ind_mask[self.sparse_ind] = False
@@ -227,6 +261,9 @@ class adam_STLSQ(BaseOptimizer):
         n_features_selected = np.sum(ind)
         sparse_sub = [np.array(self.sparse_ind)] * y.shape[1]
 
+        self.threshold_vect = np.array(self.threshold_vect) if len(self.threshold_vect) > 0 \
+            else self.threshold*np.ones(n_features)
+
         # Print initial values for each term in the optimization
         if self.verbose:
             row = [
@@ -271,12 +308,12 @@ class adam_STLSQ(BaseOptimizer):
                 if self.mom_inplace:
 
                     coef_i, ind_i = self._sparse_coefficients(
-                        n_features, np.arange(n_features), mom_i, self.threshold
+                        n_features, np.arange(n_features), mom_i, self.threshold_vect
                     )
                     mom_i = np.copy(coef_i)
                 else:
                     coef_i, ind_i = self._sparse_coefficients(
-                        n_features, ind[i], coef_i, self.threshold
+                        n_features, ind[i], coef_i, self.threshold_vect
                     )
                 # coef_i, ind_i = self._sparse_coefficients(
                 #     n_features, ind[i], coef_i, self.threshold

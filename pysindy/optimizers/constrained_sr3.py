@@ -1,4 +1,5 @@
 import warnings
+from typing import Tuple
 
 try:
     import cvxpy as cp
@@ -38,6 +39,9 @@ class ConstrainedSR3(SR3):
         Champion, Kathleen, et al. "A unified sparse optimization framework
         to learn parsimonious physics-informed models from data."
         IEEE Access 8 (2020): 169259-169271.
+
+        Zheng, Peng, et al. "A unified framework for sparse relaxed
+        regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
 
     Parameters
     ----------
@@ -93,9 +97,6 @@ class ConstrainedSR3(SR3):
         is deprecated in sklearn versions >= 1.0 and will be removed. Note that
         this parameter is incompatible with the constraints!
 
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
-
     initial_guess : np.ndarray, optional (default None)
         Shape should be (n_features) or (n_targets, n_features).
         Initial guess for coefficients ``coef_``, (v in the mathematical equations)
@@ -138,6 +139,15 @@ class ConstrainedSR3(SR3):
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
 
+    history_ : list
+        History of sparse coefficients. ``history_[k]`` contains the
+        sparse coefficients (v in the optimization objective function)
+        at iteration k.
+
+    objective_history_ : list
+        History of the value of the objective at each step. Note that
+        the trapping SINDy problem is nonconvex, meaning that this value
+        may increase and decrease as the algorithm works.
     """
 
     def __init__(
@@ -249,17 +259,25 @@ class ConstrainedSR3(SR3):
         rhs = rhs.reshape(g.shape)
         return inv1.dot(rhs)
 
-    def _update_coef_cvxpy(self, x, y, coef_sparse):
-        xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
-        cost = cp.sum_squares(x @ xi - y.flatten())
+    def _create_var_and_part_cost(
+        self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
+    ) -> Tuple[cp.Variable, cp.Expression]:
+        xi = cp.Variable(var_len)
+        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
         elif self.thresholder.lower() == "weighted_l1":
             cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
         elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi)
+            cost = cost + self.threshold * cp.norm2(xi) ** 2
         elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
+            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
+        return xi, cost
+
+    def _update_coef_cvxpy(self, x, y, coef_sparse):
+        xi, cost = self._create_var_and_part_cost(
+            coef_sparse.shape[0] * coef_sparse.shape[1], x, y
+        )
         if self.use_constraints:
             if self.inequality_constraints and self.equality_constraints:
                 # Process inequality constraints then equality constraints

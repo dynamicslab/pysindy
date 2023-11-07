@@ -1,5 +1,4 @@
 import warnings
-from typing import Tuple
 
 import cvxpy as cp
 import numpy as np
@@ -8,10 +7,10 @@ from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import reorder_constraints
-from .sr3 import SR3
+from .constrained_sr3 import ConstrainedSR3
 
 
-class TrappingSR3(SR3):
+class TrappingSR3(ConstrainedSR3):
     """
     Trapping variant of sparse relaxed regularized regression.
     This optimizer can be used to identify systems with globally
@@ -43,24 +42,10 @@ class TrappingSR3(SR3):
         data-driven models of quadratic nonlinear dynamics."
         arXiv preprint arXiv:2105.01843 (2021).
 
-        Zheng, Peng, et al. "A unified framework for sparse relaxed
-        regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
-
-        Champion, Kathleen, et al. "A unified sparse optimization framework
-        to learn parsimonious physics-informed models from data."
-        IEEE Access 8 (2020): 169259-169271.
-
     Parameters
     ----------
     evolve_w : bool, optional (default True)
         If false, don't update w and just minimize over (m, A)
-
-    threshold : float, optional (default 0.1)
-        Determines the strength of the regularization. When the
-        regularization function R is the L0 norm, the regularization
-        is equivalent to performing hard thresholding, and lambda
-        is chosen to threshold at the value given by this parameter.
-        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
 
     eta : float, optional (default 1.0e20)
         Determines the strength of the stability term ||Pw-A||^2 in the
@@ -82,10 +67,6 @@ class TrappingSR3(SR3):
         Determines the negative interval that matrix A is projected onto.
         For most applications gamma = 0.1 - 1.0 works pretty well.
 
-    tol : float, optional (default 1e-5)
-        Tolerance used for determining convergence of the optimization
-        algorithm over w.
-
     tol_m : float, optional (default 1e-5)
         Tolerance used for determining convergence of the optimization
         algorithm over m.
@@ -95,18 +76,6 @@ class TrappingSR3(SR3):
         only the L1 and L2 norms are implemented. Note that other convex norms
         could be straightforwardly implemented, but L0 requires
         reformulation because of nonconvexity.
-
-    thresholds : np.ndarray, shape (n_targets, n_features), optional \
-            (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
 
     eps_solver : float, optional (default 1.0e-7)
         If threshold != 0, this specifies the error tolerance in the
@@ -120,9 +89,6 @@ class TrappingSR3(SR3):
         If True, relax_optim must be false or relax_optim = True
         AND threshold != 0, so that the CVXPY methods are used.
 
-    max_iter : int, optional (default 30)
-        Maximum iterations of the optimization algorithm.
-
     accel : bool, optional (default False)
         Whether or not to use accelerated prox-gradient descent for (m, A).
 
@@ -134,43 +100,8 @@ class TrappingSR3(SR3):
         Initial guess for vector A in the optimization. Otherwise
         A is initialized as A = diag(gamma).
 
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
-
-    normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed.
-
-    verbose : bool, optional (default False)
-        If True, prints out the different error terms every
-        max_iter / 10 iterations.
-
-    verbose_cvxpy : bool, optional (default False)
-        Boolean flag which is passed to CVXPY solve function to indicate if
-        output should be verbose or not. Only relevant for optimizers that
-        use the CVXPY package in some capabity.
-
-    unbias: bool (default False)
-        See base class for definition.  Most options are incompatible
-        with unbiasing.
-
     Attributes
     ----------
-    coef_ : array, shape (n_features,) or (n_targets, n_features)
-        Regularized weight vector(s). This is the v in the objective
-        function.
-
-    history_ : list
-        History of sparse coefficients. ``history_[k]`` contains the
-        sparse coefficients (v in the optimization objective function)
-        at iteration k.
-
-    objective_history_ : list
-        History of the value of the objective at each step. Note that
-        the trapping SINDy problem is nonconvex, meaning that this value
-        may increase and decrease as the algorithm works.
-
     A_history_ : list
         History of the auxiliary variable A that approximates diag(PW).
 
@@ -221,7 +152,6 @@ class TrappingSR3(SR3):
     def __init__(
         self,
         evolve_w=True,
-        threshold=0.1,
         eps_solver=1e-7,
         relax_optim=True,
         inequality_constraints=False,
@@ -229,35 +159,19 @@ class TrappingSR3(SR3):
         alpha_A=None,
         alpha_m=None,
         gamma=-0.1,
-        tol=1e-5,
         tol_m=1e-5,
         thresholder="l1",
-        thresholds=None,
-        max_iter=30,
         accel=False,
-        normalize_columns=False,
-        copy_X=True,
         m0=None,
         A0=None,
         objective_history=None,
-        constraint_lhs=None,
-        constraint_rhs=None,
-        constraint_order="target",
-        verbose=False,
-        verbose_cvxpy=False,
-        unbias=False,
+        **kwargs,
     ):
         super().__init__(
-            threshold=threshold,
-            max_iter=max_iter,
-            normalize_columns=normalize_columns,
-            copy_X=copy_X,
             thresholder=thresholder,
-            thresholds=thresholds,
-            verbose=verbose,
-            unbias=unbias,
+            **kwargs,
         )
-        if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
+        if self.thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
             raise ValueError("Regularizer must be (weighted) L1 or L2")
         if eta is None:
             warnings.warn(
@@ -282,11 +196,11 @@ class TrappingSR3(SR3):
             raise ValueError("0 <= alpha_A <= eta")
         if gamma >= 0:
             raise ValueError("gamma must be negative")
-        if tol <= 0 or tol_m <= 0 or eps_solver <= 0:
+        if self.tol <= 0 or tol_m <= 0 or eps_solver <= 0:
             raise ValueError("tol and tol_m must be positive")
         if not evolve_w and not relax_optim:
             raise ValueError("If doing direct solve, must evolve w")
-        if inequality_constraints and relax_optim and threshold == 0.0:
+        if inequality_constraints and relax_optim and self.threshold == 0.0:
             raise ValueError(
                 "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
             )
@@ -305,29 +219,9 @@ class TrappingSR3(SR3):
         self.alpha_m = alpha_m
         self.eta = eta
         self.gamma = gamma
-        self.tol = tol
         self.tol_m = tol_m
         self.accel = accel
-        self.verbose_cvxpy = verbose_cvxpy
         self.objective_history = objective_history
-        self.unbias = False
-        self.use_constraints = (constraint_lhs is not None) and (
-            constraint_rhs is not None
-        )
-
-        self.constraint_lhs = constraint_lhs
-        self.constraint_rhs = constraint_rhs
-        self.constraint_order = constraint_order
-        if self.use_constraints:
-            if constraint_order not in ("feature", "target"):
-                raise ValueError(
-                    "constraint_order must be either 'feature' or 'target'"
-                )
-            if unbias:
-                raise ValueError(
-                    "Constraints are incompatible with an unbiasing step.  Set"
-                    " unbias=False"
-                )
 
     def _set_Ptensors(self, r):
         """Make the projection tensors used for the algorithm."""
@@ -496,21 +390,6 @@ class TrappingSR3(SR3):
                 " ... {4:10.4e}".format(*row)
             )
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
-
-    def _create_var_and_part_cost(
-        self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
-    ) -> Tuple[cp.Variable, cp.Expression]:
-        xi = cp.Variable(var_len)
-        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi) ** 2
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
-        return xi, cost
 
     def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
         """Solve coefficient update with CVXPY if threshold != 0"""

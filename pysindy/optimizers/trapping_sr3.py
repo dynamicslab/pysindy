@@ -391,56 +391,6 @@ class TrappingSR3(ConstrainedSR3):
             )
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
-    def _solve_sparse_relax_and_split(self, xi, cost, var_len, Pmatrix, A, coef_prev):
-        """Solve coefficient update with CVXPY if threshold != 0"""
-        cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
-        if self.use_constraints:
-            if self.inequality_constraints:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi <= self.constraint_rhs],
-                )
-            else:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi == self.constraint_rhs],
-                )
-        else:
-            prob = cp.Problem(cp.Minimize(cost))
-
-        # default solver is OSQP here but switches to ECOS for L2
-        try:
-            prob.solve(
-                eps_abs=self.eps_solver,
-                eps_rel=self.eps_solver,
-                verbose=self.verbose_cvxpy,
-            )
-        # Annoying error coming from L2 norm switching to use the ECOS
-        # solver, which uses "max_iters" instead of "max_iter", and
-        # similar semantic changes for the other variables.
-        except TypeError:
-            try:
-                prob.solve(
-                    abstol=self.eps_solver,
-                    reltol=self.eps_solver,
-                    verbose=self.verbose_cvxpy,
-                )
-            except cp.error.SolverError:
-                print("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(var_len)
-        except cp.error.SolverError:
-            print("Solver failed, setting coefs to zeros")
-            xi.value = np.zeros(var_len)
-
-        if xi.value is None:
-            warnings.warn(
-                "Infeasible solve, increase/decrease eta",
-                ConvergenceWarning,
-            )
-            return None
-        coef_sparse = (xi.value).reshape(coef_prev.shape)
-        return coef_sparse
-
     def _solve_m_relax_and_split(self, r, N, m_prev, m, A, coef_sparse, tk_previous):
         """
         If using the relaxation formulation of trapping SINDy, solves the
@@ -636,8 +586,12 @@ class TrappingSR3(ConstrainedSR3):
                         xi, cost = self._create_var_and_part_cost(
                             n_features * r, x_expanded, y
                         )
-                        coef_sparse = self._solve_sparse_relax_and_split(
-                            xi, cost, r * n_features, Pmatrix, A, coef_prev
+                        cost = (
+                            cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+                        )
+                        # sparse relax_and_split
+                        coef_sparse = self._update_coef_cvxpy(
+                            xi, cost, r * n_features, coef_prev, self.eps_solver
                         )
                     else:
                         pTp = np.dot(Pmatrix.T, Pmatrix)

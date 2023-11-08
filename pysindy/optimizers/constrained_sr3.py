@@ -274,7 +274,7 @@ class ConstrainedSR3(SR3):
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
         return xi, cost
 
-    def _update_coef_cvxpy(self, xi, cost, var_len, x, y, coef_sparse):
+    def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
         if self.use_constraints:
             if self.inequality_constraints and self.equality_constraints:
                 # Process inequality constraints then equality constraints
@@ -304,8 +304,8 @@ class ConstrainedSR3(SR3):
         try:
             prob.solve(
                 max_iter=self.max_iter,
-                eps_abs=self.tol,
-                eps_rel=self.tol,
+                eps_abs=tol,
+                eps_rel=tol,
                 verbose=self.verbose_cvxpy,
             )
         # Annoying error coming from L2 norm switching to use the ECOS
@@ -313,13 +313,13 @@ class ConstrainedSR3(SR3):
         # similar semantic changes for the other variables.
         except TypeError:
             try:
-                prob.solve(abstol=self.tol, reltol=self.tol, verbose=self.verbose_cvxpy)
+                prob.solve(abstol=tol, reltol=tol, verbose=self.verbose_cvxpy)
             except cp.error.SolverError:
                 print("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
+                xi.value = np.zeros(var_len)
         except cp.error.SolverError:
             print("Solver failed, setting coefs to zeros")
-            xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
+            xi.value = np.zeros(var_len)
 
         if xi.value is None:
             warnings.warn(
@@ -328,7 +328,7 @@ class ConstrainedSR3(SR3):
                 ConvergenceWarning,
             )
             return None
-        coef_new = (xi.value).reshape(coef_sparse.shape)
+        coef_new = (xi.value).reshape(coef_prev.shape)
         return coef_new
 
     def _update_sparse_coef(self, coef_full):
@@ -438,7 +438,7 @@ class ConstrainedSR3(SR3):
             var_len = coef_sparse.shape[0] * coef_sparse.shape[1]
             xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
             coef_sparse = self._update_coef_cvxpy(
-                xi, cost, var_len, x_expanded, y, coef_sparse
+                xi, cost, var_len, coef_sparse, self.tol
             )
             objective_history.append(self._objective(x, y, 0, coef_full, coef_sparse))
         else:

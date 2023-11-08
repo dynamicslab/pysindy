@@ -274,10 +274,7 @@ class ConstrainedSR3(SR3):
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
         return xi, cost
 
-    def _update_coef_cvxpy(self, x, y, coef_sparse):
-        xi, cost = self._create_var_and_part_cost(
-            coef_sparse.shape[0] * coef_sparse.shape[1], x, y
-        )
+    def _update_coef_cvxpy(self, xi, cost, var_len, x, y, coef_sparse):
         if self.use_constraints:
             if self.inequality_constraints and self.equality_constraints:
                 # Process inequality constraints then equality constraints
@@ -438,7 +435,11 @@ class ConstrainedSR3(SR3):
 
         objective_history = []
         if self.inequality_constraints:
-            coef_sparse = self._update_coef_cvxpy(x_expanded, y, coef_sparse)
+            var_len = coef_sparse.shape[0] * coef_sparse.shape[1]
+            xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
+            coef_sparse = self._update_coef_cvxpy(
+                xi, cost, var_len, x_expanded, y, coef_sparse
+            )
             objective_history.append(self._objective(x, y, 0, coef_full, coef_sparse))
         else:
             for k in range(self.max_iter):

@@ -391,9 +391,8 @@ class TrappingSR3(ConstrainedSR3):
             )
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
-    def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
+    def _solve_sparse_relax_and_split(self, xi, cost, var_len, Pmatrix, A, coef_prev):
         """Solve coefficient update with CVXPY if threshold != 0"""
-        xi, cost = self._create_var_and_part_cost(N * r, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -428,10 +427,10 @@ class TrappingSR3(ConstrainedSR3):
                 )
             except cp.error.SolverError:
                 print("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(N * r)
+                xi.value = np.zeros(var_len)
         except cp.error.SolverError:
             print("Solver failed, setting coefs to zeros")
-            xi.value = np.zeros(N * r)
+            xi.value = np.zeros(var_len)
 
         if xi.value is None:
             warnings.warn(
@@ -634,8 +633,11 @@ class TrappingSR3(ConstrainedSR3):
             if self.evolve_w:
                 if self.relax_optim:
                     if self.threshold > 0.0:
+                        xi, cost = self._create_var_and_part_cost(
+                            n_features * r, x_expanded, y
+                        )
                         coef_sparse = self._solve_sparse_relax_and_split(
-                            r, n_features, x_expanded, y, Pmatrix, A, coef_prev
+                            xi, cost, r * n_features, Pmatrix, A, coef_prev
                         )
                     else:
                         pTp = np.dot(Pmatrix.T, Pmatrix)

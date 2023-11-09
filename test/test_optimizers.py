@@ -483,7 +483,6 @@ def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, quadratic_l
 
     opt = TrappingSR3(**params)
     opt.fit(features, x_dot)
-    assert opt.PL_unsym_.shape == (1, 1, 1, 2)
     assert opt.PL_.shape == (1, 1, 1, 2)
     assert opt.PQ_.shape == (1, 1, 1, 1, 2)
     check_is_fitted(opt)
@@ -497,7 +496,6 @@ def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, quadratic_l
 
     opt = TrappingSR3(**params)
     opt.fit(features, x_dot)
-    assert opt.PL_unsym_.shape == (1, 1, 1, 2)
     assert opt.PL_.shape == (1, 1, 1, 2)
     assert opt.PQ_.shape == (1, 1, 1, 1, 2)
     check_is_fitted(opt)

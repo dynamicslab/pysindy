@@ -98,9 +98,8 @@ class TrappingSR3(ConstrainedSR3):
         (default False)
 
     m0 :
-        Initial guess for vector m in the optimization. Otherwise each
-        component of m is randomly initialized in [-1, 1]. shape (n_targets),
-        default None.
+        Initial guess for trap center in the optimization. Default None
+        initializes vector elements randomly in [-1, 1]. shape (n_targets)
 
     A0 :
         Initial guess for vector A in the optimization.  Shape (n_targets, n_targets)
@@ -334,7 +333,7 @@ class TrappingSR3(ConstrainedSR3):
             )
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
-    def _solve_m_relax_and_split(self, r, N, m_prev, m, A, coef_sparse, tk_previous):
+    def _solve_m_relax_and_split(self, m_prev, m, A, coef_sparse, tk_previous):
         """
         If using the relaxation formulation of trapping SINDy, solves the
         (m, A) algorithm update.
@@ -376,9 +375,7 @@ class TrappingSR3(ConstrainedSR3):
             )
         return coef_sparse
 
-    def _solve_direct_cvxpy(
-        self, n_tgts, n_features, x_expanded, y, Pmatrix, coef_prev
-    ):
+    def _solve_m_direct(self, n_tgts, coef_sparse):
         """
         If using the direct formulation of trapping SINDy, solves the
         entire problem in CVXPY regardless of the threshold value.
@@ -386,15 +383,6 @@ class TrappingSR3(ConstrainedSR3):
         problem, solved in CVXPY, so convergence/quality guarantees are
         not available here!
         """
-        var_len = n_tgts * n_features
-        xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
-        cost = (
-            cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (n_tgts, n_tgts))) / self.eta
-        )
-
-        coef_sparse = self._update_coef_cvxpy(
-            xi, cost, var_len, coef_prev, self.eps_solver
-        )
 
         if np.all(self.PL_ == 0) and np.all(self.PQ_ == 0):
             return np.zeros(n_tgts), coef_sparse  # no optimization over m
@@ -415,8 +403,8 @@ class TrappingSR3(ConstrainedSR3):
             m = m_cp.value
             if m is None:
                 print("Infeasible solve over m, increase/decrease eta")
-                return None, coef_sparse
-            return m, coef_sparse
+                return None
+            return m
 
     def _reduce(self, x, y):
         """
@@ -471,11 +459,11 @@ class TrappingSR3(ConstrainedSR3):
 
         # initial guess for m
         if self.m0 is not None:
-            m = self.m0
+            trap_ctr = self.m0
         else:
             np.random.seed(1)
-            m = (np.random.rand(n_tgts) - np.ones(n_tgts)) * 2
-        self.m_history_.append(m)
+            trap_ctr = (np.random.rand(n_tgts) - np.ones(n_tgts)) * 2
+        self.m_history_.append(trap_ctr)
 
         # Precompute some objects for optimization
         x_expanded = np.zeros((n_samples, n_tgts, n_features, n_tgts))
@@ -487,25 +475,25 @@ class TrappingSR3(ConstrainedSR3):
 
         # if using acceleration
         tk_prev = 1
-        m_prev = m
+        trap_prev_ctr = trap_ctr
 
         # Begin optimization loop
         self.objective_history_ = []
         for k in range(self.max_iter):
 
-            # update P tensor from the newest m
-            mPQ = np.tensordot(m, self.PQ_, axes=([0], [0]))
+            # update P tensor from the newest trap center
+            mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
             p = self.PL_ - mPQ
             Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
 
             coef_prev = coef_sparse
             if self.relax_optim:
                 if self.threshold > 0.0:
+                    # sparse relax_and_split
                     xi, cost = self._create_var_and_part_cost(
                         n_features * n_tgts, x_expanded, y
                     )
                     cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
-                    # sparse relax_and_split
                     coef_sparse = self._update_coef_cvxpy(
                         xi, cost, n_tgts * n_features, coef_prev, self.eps_solver
                     )
@@ -516,30 +504,34 @@ class TrappingSR3(ConstrainedSR3):
                     coef_sparse = self._solve_nonsparse_relax_and_split(
                         H, xTy, P_transpose_A, coef_prev
                     )
-            else:
-                m, coef_sparse = self._solve_direct_cvxpy(
-                    n_tgts, n_features, x_expanded, y, Pmatrix, coef_prev
+                trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
+                    trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
                 )
+            else:
+                var_len = n_tgts * n_features
+                xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
+                cost += (
+                    cp.lambda_max(cp.reshape(Pmatrix @ xi, (n_tgts, n_tgts))) / self.eta
+                )
+                coef_sparse = self._update_coef_cvxpy(
+                    xi, cost, var_len, coef_prev, self.eps_solver
+                )
+                trap_ctr = self._solve_m_direct(n_tgts, coef_sparse)
 
             # If problem over xi becomes infeasible, break out of the loop
             if coef_sparse is None:
                 coef_sparse = coef_prev
                 break
 
-            if self.relax_optim:
-                m_prev, m, A, tk_prev = self._solve_m_relax_and_split(
-                    n_tgts, n_features, m_prev, m, A, coef_sparse, tk_prev
-                )
-
             # If problem over m becomes infeasible, break out of the loop
-            if m is None:
-                m = m_prev
+            if trap_ctr is None:
+                trap_ctr = trap_prev_ctr
                 break
             self.history_.append(coef_sparse.T)
             PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
 
             # (m,A) update finished, append the result
-            self.m_history_.append(m)
+            self.m_history_.append(trap_ctr)
             self.A_history_.append(A)
             eigvals, eigvecs = np.linalg.eig(PW)
             self.PW_history_.append(PW)

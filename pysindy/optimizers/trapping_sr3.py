@@ -5,6 +5,7 @@ from typing import Tuple
 
 import cvxpy as cp
 import numpy as np
+from numpy.typing import NDArray
 from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
@@ -47,44 +48,20 @@ class TrappingSR3(ConstrainedSR3):
 
     Parameters
     ----------
-    evolve_w : bool, optional (default True)
+    evolve_w :
         If false, don't update w and just minimize over (m, A)
 
-    eta : float, optional (default 1.0e20)
+    eta :
         Determines the strength of the stability term ||Pw-A||^2 in the
         optimization. The default value is very large so that the
         algorithm default is to ignore the stability term. In this limit,
         this should be approximately equivalent to the ConstrainedSR3 method.
 
-    alpha_m : float, optional (default eta * 0.1)
-        Determines the step size in the prox-gradient descent over m.
-        For convergence, need alpha_m <= eta / ||w^T * PQ^T * PQ * w||.
-        Typically 0.01 * eta <= alpha_m <= 0.1 * eta.
-
-    alpha_A : float, optional (default eta)
-        Determines the step size in the prox-gradient descent over A.
-        For convergence, need alpha_A <= eta, so typically
-        alpha_A = eta is used.
-
-    gamma : float, optional (default 0.1)
-        Determines the negative interval that matrix A is projected onto.
-        For most applications gamma = 0.1 - 1.0 works pretty well.
-
-    tol_m : float, optional (default 1e-5)
-        Tolerance used for determining convergence of the optimization
-        algorithm over m.
-
-    thresholder : string, optional (default 'L1')
-        Regularization function to use. For current trapping SINDy,
-        only the L1 and L2 norms are implemented. Note that other convex norms
-        could be straightforwardly implemented, but L0 requires
-        reformulation because of nonconvexity.
-
-    eps_solver : float, optional (default 1.0e-7)
+    eps_solver :
         If threshold != 0, this specifies the error tolerance in the
-        CVXPY (OSQP) solve. Default is 1.0e-3 in OSQP.
+        CVXPY (OSQP) solve. Default 1.0e-7 (Default is 1.0e-3 in OSQP.)
 
-    relax_optim : bool, optional (default True)
+    relax_optim :
         If relax_optim = True, use the relax-and-split method. If False,
         try a direct minimization on the largest eigenvalue.
 
@@ -92,16 +69,42 @@ class TrappingSR3(ConstrainedSR3):
         If True, relax_optim must be false or relax_optim = True
         AND threshold != 0, so that the CVXPY methods are used.
 
-    accel : bool, optional (default False)
+    alpha_A :
+        Determines the step size in the prox-gradient descent over A.
+        For convergence, need alpha_A <= eta, so default
+        alpha_A = eta is used.
+
+    alpha_m :
+        Determines the step size in the prox-gradient descent over m.
+        For convergence, need alpha_m <= eta / ||w^T * PQ^T * PQ * w||.
+        Typically 0.01 * eta <= alpha_m <= 0.1 * eta.  (default eta * 0.1)
+
+    gamma :
+        Determines the negative interval that matrix A is projected onto.
+        For most applications gamma = 0.1 - 1.0 works pretty well.
+
+    tol_m :
+        Tolerance used for determining convergence of the optimization
+        algorithm over m.
+
+    thresholder :
+        Regularization function to use. For current trapping SINDy,
+        only the L1 and L2 norms are implemented. Note that other convex norms
+        could be straightforwardly implemented, but L0 requires
+        reformulation because of nonconvexity. (default 'L1')
+
+    accel :
         Whether or not to use accelerated prox-gradient descent for (m, A).
+        (default False)
 
-    m0 : np.ndarray, shape (n_targets), optional (default None)
-        Initial guess for vector m in the optimization. Otherwise
-        each component of m is randomly initialized in [-1, 1].
+    m0 :
+        Initial guess for vector m in the optimization. Otherwise each
+        component of m is randomly initialized in [-1, 1]. shape (n_targets),
+        default None.
 
-    A0 : np.ndarray, shape (n_targets, n_targets), optional (default None)
-        Initial guess for vector A in the optimization. Otherwise
-        A is initialized as A = diag(gamma).
+    A0 :
+        Initial guess for vector A in the optimization.  Shape (n_targets, n_targets)
+        Default None, meaning A is initialized as A = diag(gamma).
 
     Attributes
     ----------
@@ -157,19 +160,20 @@ class TrappingSR3(ConstrainedSR3):
 
     def __init__(
         self,
-        evolve_w=True,
-        eps_solver=1e-7,
-        relax_optim=True,
+        *,
+        evolve_w: bool = True,
+        eta: float | None = None,
+        eps_solver: float = 1e-7,
+        relax_optim: bool = True,
         inequality_constraints=False,
-        eta=None,
-        alpha_A=None,
-        alpha_m=None,
-        gamma=-0.1,
-        tol_m=1e-5,
-        thresholder="l1",
-        accel=False,
-        m0=None,
-        A0=None,
+        alpha_A: float | None = None,
+        alpha_m: float | None = None,
+        gamma: float = -0.1,
+        tol_m: float = 1e-5,
+        thresholder: str = "l1",
+        accel: bool = False,
+        m0: NDArray | None = None,
+        A0: NDArray | None = None,
         **kwargs,
     ):
         super().__init__(

@@ -132,6 +132,9 @@ class TrappingSR3(ConstrainedSR3):
                             n_targets, n_targets, n_features)
         Quadratic coefficient part of the P matrix in ||Pw - A||^2
 
+    objective_history_: list
+        History of the objective value at each iteration
+
     Examples
     --------
     >>> import numpy as np
@@ -167,7 +170,6 @@ class TrappingSR3(ConstrainedSR3):
         accel=False,
         m0=None,
         A0=None,
-        objective_history=None,
         **kwargs,
     ):
         super().__init__(
@@ -224,7 +226,6 @@ class TrappingSR3(ConstrainedSR3):
         self.gamma = gamma
         self.tol_m = tol_m
         self.accel = accel
-        self.objective_history = objective_history
 
     def _set_Ptensors(
         self, n_targets: int
@@ -594,4 +595,4 @@ class TrappingSR3(ConstrainedSR3):
             )
 
         self.coef_ = coef_sparse.T
-        self.objective_history = objective_history
+        self.objective_history_ = objective_history

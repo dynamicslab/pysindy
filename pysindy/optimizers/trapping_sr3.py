@@ -376,7 +376,9 @@ class TrappingSR3(ConstrainedSR3):
             )
         return coef_sparse
 
-    def _solve_direct_cvxpy(self, r, N, x_expanded, y, Pmatrix, coef_prev):
+    def _solve_direct_cvxpy(
+        self, n_tgts, n_features, x_expanded, y, Pmatrix, coef_prev
+    ):
         """
         If using the direct formulation of trapping SINDy, solves the
         entire problem in CVXPY regardless of the threshold value.
@@ -384,53 +386,27 @@ class TrappingSR3(ConstrainedSR3):
         problem, solved in CVXPY, so convergence/quality guarantees are
         not available here!
         """
-        xi, cost = self._create_var_and_part_cost(N * r, x_expanded, y)
-        cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
-        if self.use_constraints:
-            if self.inequality_constraints:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi <= self.constraint_rhs],
-                )
-            else:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi == self.constraint_rhs],
-                )
-        else:
-            prob = cp.Problem(cp.Minimize(cost))
+        var_len = n_tgts * n_features
+        xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
+        cost = (
+            cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (n_tgts, n_tgts))) / self.eta
+        )
 
-        # default solver is SCS here
-        try:
-            prob.solve(eps=self.eps_solver, verbose=self.verbose_cvxpy)
-        # Annoying error coming from L2 norm switching to use the ECOS
-        # solver, which uses "max_iters" instead of "max_iter", and
-        # similar semantic changes for the other variables.
-        except TypeError:
-            prob.solve(
-                abstol=self.eps_solver,
-                reltol=self.eps_solver,
-                verbose=self.verbose_cvxpy,
-            )
-        except cp.error.SolverError:
-            print("Solver failed, setting coefs to zeros")
-            xi.value = np.zeros(N * r)
-
-        if xi.value is None:
-            print("Infeasible solve, increase/decrease eta")
-            return None, None
-        coef_sparse = (xi.value).reshape(coef_prev.shape)
+        coef_sparse = self._update_coef_cvxpy(
+            xi, cost, var_len, coef_prev, self.eps_solver
+        )
 
         if np.all(self.PL_ == 0) and np.all(self.PQ_ == 0):
-            return np.zeros(r), coef_sparse  # no optimization over m
+            return np.zeros(n_tgts), coef_sparse  # no optimization over m
         else:
-            m_cp = cp.Variable(r)
+            m_cp = cp.Variable(n_tgts)
             L = np.tensordot(self.PL_, coef_sparse, axes=([3, 2], [0, 1]))
             Q = np.reshape(
-                np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])), (r, r * r)
+                np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])),
+                (n_tgts, n_tgts * n_tgts),
             )
             Ls = 0.5 * (L + L.T).flatten()
-            cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (r, r)))
+            cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (n_tgts, n_tgts)))
             prob_m = cp.Problem(cp.Minimize(cost_m))
 
             # default solver is SCS here

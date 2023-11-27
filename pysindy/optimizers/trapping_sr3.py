@@ -161,7 +161,6 @@ class TrappingSR3(ConstrainedSR3):
     def __init__(
         self,
         *,
-        evolve_w: bool = True,
         eta: float | None = None,
         eps_solver: float = 1e-7,
         relax_optim: bool = True,
@@ -207,18 +206,11 @@ class TrappingSR3(ConstrainedSR3):
             raise ValueError("gamma must be negative")
         if self.tol <= 0 or tol_m <= 0 or eps_solver <= 0:
             raise ValueError("tol and tol_m must be positive")
-        if not evolve_w and not relax_optim:
-            raise ValueError("If doing direct solve, must evolve w")
         if inequality_constraints and relax_optim and self.threshold == 0.0:
             raise ValueError(
                 "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
             )
-        if inequality_constraints and not evolve_w:
-            raise ValueError(
-                "Use of inequality constraints requires solving for xi (evolve_w=True)."
-            )
 
-        self.evolve_w = evolve_w
         self.eps_solver = eps_solver
         self.relax_optim = relax_optim
         self.inequality_constraints = inequality_constraints
@@ -522,7 +514,7 @@ class TrappingSR3(ConstrainedSR3):
         m_prev = m
 
         # Begin optimization loop
-        objective_history = []
+        self.objective_history_ = []
         for k in range(self.max_iter):
 
             # update P tensor from the newest m
@@ -530,32 +522,28 @@ class TrappingSR3(ConstrainedSR3):
             p = self.PL_ - mPQ
             Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
 
-            # update w
             coef_prev = coef_sparse
-            if self.evolve_w:
-                if self.relax_optim:
-                    if self.threshold > 0.0:
-                        xi, cost = self._create_var_and_part_cost(
-                            n_features * n_tgts, x_expanded, y
-                        )
-                        cost = (
-                            cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
-                        )
-                        # sparse relax_and_split
-                        coef_sparse = self._update_coef_cvxpy(
-                            xi, cost, n_tgts * n_features, coef_prev, self.eps_solver
-                        )
-                    else:
-                        pTp = np.dot(Pmatrix.T, Pmatrix)
-                        H = xTx + pTp / self.eta
-                        P_transpose_A = np.dot(Pmatrix.T, A.flatten())
-                        coef_sparse = self._solve_nonsparse_relax_and_split(
-                            H, xTy, P_transpose_A, coef_prev
-                        )
-                else:
-                    m, coef_sparse = self._solve_direct_cvxpy(
-                        n_tgts, n_features, x_expanded, y, Pmatrix, coef_prev
+            if self.relax_optim:
+                if self.threshold > 0.0:
+                    xi, cost = self._create_var_and_part_cost(
+                        n_features * n_tgts, x_expanded, y
                     )
+                    cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+                    # sparse relax_and_split
+                    coef_sparse = self._update_coef_cvxpy(
+                        xi, cost, n_tgts * n_features, coef_prev, self.eps_solver
+                    )
+                else:
+                    pTp = np.dot(Pmatrix.T, Pmatrix)
+                    H = xTx + pTp / self.eta
+                    P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+                    coef_sparse = self._solve_nonsparse_relax_and_split(
+                        H, xTy, P_transpose_A, coef_prev
+                    )
+            else:
+                m, coef_sparse = self._solve_direct_cvxpy(
+                    n_tgts, n_features, x_expanded, y, Pmatrix, coef_prev
+                )
 
             # If problem over xi becomes infeasible, break out of the loop
             if coef_sparse is None:
@@ -582,7 +570,7 @@ class TrappingSR3(ConstrainedSR3):
             self.PWeigs_history_.append(np.sort(eigvals))
 
             # update objective
-            objective_history.append(self._objective(x, y, coef_sparse, A, PW, k))
+            self.objective_history_.append(self._objective(x, y, coef_sparse, A, PW, k))
 
             if (
                 self._m_convergence_criterion() < self.tol_m
@@ -599,4 +587,3 @@ class TrappingSR3(ConstrainedSR3):
             )
 
         self.coef_ = coef_sparse.T
-        self.objective_history_ = objective_history

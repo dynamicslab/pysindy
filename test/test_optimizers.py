@@ -206,13 +206,11 @@ def test_sr3_bad_parameters(optimizer, params):
         dict(eta=1, alpha_m=-1),
         dict(eta=1, alpha_A=-1),
         dict(gamma=1),
-        dict(evolve_w=False, relax_optim=False),
         dict(thresholder="l0"),
         dict(threshold=-1),
         dict(max_iter=0),
         dict(eta=10, alpha_m=20),
         dict(eta=10, alpha_A=20),
-        dict(inequality_constraints=True, evolve_w=False),
         dict(
             constraint_lhs=np.zeros((10, 10)),
             constraint_rhs=np.zeros(10),

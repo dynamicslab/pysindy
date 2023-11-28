@@ -544,13 +544,10 @@ class TrappingSR3(ConstrainedSR3):
                 self._m_convergence_criterion() < self.tol_m
                 and self._convergence_criterion() < self.tol
             ):
-                # Could not (further) select important features
                 break
-        if k == self.max_iter - 1:
+        else:
             warnings.warn(
-                "TrappingSR3._reduce did not converge after {} iters.".format(
-                    self.max_iter
-                ),
+                f"TrappingSR3 did not converge after {self.max_iter} iters.",
                 ConvergenceWarning,
             )
 

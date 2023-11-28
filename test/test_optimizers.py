@@ -760,17 +760,6 @@ def test_sr3_enable_trimming(optimizer, data_linear_oscillator_corrupted):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [SR3, ConstrainedSR3, StableLinearSR3, TrappingSR3]
-)
-def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
-    x, x_dot, _ = data_linear_oscillator_corrupted
-    model = optimizer(max_iter=1, tol=1e-10)
-
-    with pytest.warns(ConvergenceWarning):
-        model.fit(x, x_dot)
-
-
-@pytest.mark.parametrize(
     "optimizer",
     [
         STLSQ(max_iter=1),
@@ -783,6 +772,7 @@ def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
 def test_fit_warn(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
+    optimizer.max_iter = 0  # normally prohibited in constructor
 
     with pytest.warns(ConvergenceWarning):
         optimizer.fit(x, x_dot)

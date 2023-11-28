@@ -478,9 +478,8 @@ class ConstrainedSR3(SR3):
                     break
             else:
                 warnings.warn(
-                    "SR3._reduce did not converge after {} iterations.".format(
-                        self.max_iter
-                    ),
+                    f"ConstrainedSR3 did not converge after {self.max_iter}"
+                    " iterations.",
                     ConvergenceWarning,
                 )
         if self.use_constraints and self.constraint_order.lower() == "target":

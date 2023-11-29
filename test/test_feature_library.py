@@ -115,14 +115,31 @@ def test_pde_library_bad_parameters(params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(spatiotemporal_grid=range(10), p=-1),
-        dict(spatiotemporal_grid=range(10), H_xt=-1),
-        dict(spatiotemporal_grid=range(10), H_xt=11),
-        dict(spatiotemporal_grid=range(10), K=-1),
+        dict(
+            spatiotemporal_grid=range(10),
+            p=-1,
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
+        ),
+        dict(
+            spatiotemporal_grid=range(10),
+            H_xt=-1,
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
+        ),
+        dict(
+            spatiotemporal_grid=range(10),
+            H_xt=11,
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
+        ),
+        dict(
+            spatiotemporal_grid=range(10),
+            K=-1,
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
+        ),
         dict(),
         dict(
             spatiotemporal_grid=np.asarray(np.meshgrid(range(10), range(10))).T,
             H_xt=-1,
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
         ),
         dict(
             spatiotemporal_grid=np.transpose(
@@ -130,6 +147,7 @@ def test_pde_library_bad_parameters(params):
                 axes=[1, 2, 3, 0],
             ),
             H_xt=-1,
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
         ),
         dict(
             spatiotemporal_grid=np.transpose(
@@ -137,11 +155,19 @@ def test_pde_library_bad_parameters(params):
                 axes=[1, 2, 3, 0],
             ),
             H_xt=11,
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
+        ),
+        dict(
+            library=PolynomialLibrary(degree=1, include_bias=False),
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
+        ),
+        dict(
+            library_functions=[lambda x: x, lambda x: x**2, lambda x: 0 * x],
+            function_names=[lambda x: x],
         ),
     ],
 )
 def test_weak_pde_library_bad_parameters(params):
-    params["library_functions"] = [lambda x: x, lambda x: x**2, lambda x: 0 * x]
     with pytest.raises(ValueError):
         WeakPDELibrary(**params)
 
@@ -752,7 +778,15 @@ def test_1D_weak_pdes():
         H_xt=2,
         include_bias=True,
     )
+    pde_lib2 = WeakPDELibrary(
+        library=PolynomialLibrary(degree=2, include_bias=False),
+        derivative_order=4,
+        spatiotemporal_grid=spatiotemporal_grid,
+        H_xt=2,
+        include_bias=True,
+    )
     pde_library_helper(pde_lib, u)
+    pde_library_helper(pde_lib2, u)
 
 
 def test_2D_weak_pdes():
@@ -776,6 +810,16 @@ def test_2D_weak_pdes():
         include_bias=True,
     )
     pde_library_helper(pde_lib, u)
+
+    pde_lib2 = WeakPDELibrary(
+        library=PolynomialLibrary(degree=2, include_bias=False),
+        derivative_order=2,
+        spatiotemporal_grid=spatiotemporal_grid,
+        H_xt=4,
+        K=10,
+        include_bias=True,
+    )
+    pde_library_helper(pde_lib2, u)
 
 
 def test_3D_weak_pdes():

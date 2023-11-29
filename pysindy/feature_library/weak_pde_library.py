@@ -208,7 +208,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 " library_functions or function_names"
             )
 
-        if library_functions is None and derivative_order == 0:
+        if library is None and len(library_functions) == 0 and derivative_order == 0:
             raise ValueError(
                 "No library functions were specified, and no "
                 "derivatives were asked for. The library is empty."
@@ -504,7 +504,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 )
 
             self.fulltweights = self.fulltweights + [
-                ret * np.product(H_xt_k[k] ** (1.0 - deriv))
+                ret * np.prod(H_xt_k[k] ** (1.0 - deriv))
             ]
 
         # Product weights over the axes for pure derivative terms, shaped as inds_k
@@ -522,7 +522,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     weights0[i][lefts[i][k] : rights[i][k] + 1], dims
                 )
 
-            self.fullweights0 = self.fullweights0 + [ret * np.product(H_xt_k[k])]
+            self.fullweights0 = self.fullweights0 + [ret * np.prod(H_xt_k[k])]
 
         # Product weights over the axes for mixed derivative terms, shaped as inds_k
         self.fullweights1 = []
@@ -546,7 +546,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         dims,
                     )
 
-                weights2 = weights2 + [ret * np.product(H_xt_k[k] ** (1.0 - deriv))]
+                weights2 = weights2 + [ret * np.prod(H_xt_k[k] ** (1.0 - deriv))]
             self.fullweights1 = self.fullweights1 + [weights2]
 
     @staticmethod
@@ -1034,7 +1034,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                         tuple(np.arange(self.grid_ndim)),
                                         tuple(np.arange(self.grid_ndim)),
                                     ),
-                                ) * np.product(
+                                ) * np.prod(
                                     binom(derivs_mixed, deriv)
                                 )
                         # collect the results

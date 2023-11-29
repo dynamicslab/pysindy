@@ -722,22 +722,23 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 )
             )
         feature_names = []
+        lib_names = []
 
         # Include constant term
         if self.include_bias:
             feature_names.append("1")
-
         # Include any non-derivative terms
         if self.library is not None:
-            feature_names = self.library.get_feature_names()
+            lib_names = self.library.get_feature_names()
         else:
             for i, f in enumerate(self.functions):
                 for c in self._combinations(
                     n_features, f.__code__.co_argcount, self.interaction_only
                 ):
-                    feature_names.append(
+                    lib_names.append(
                         self.function_names[i](*[input_features[j] for j in c])
                     )
+        feature_names = feature_names + lib_names
 
         if self.grid_ndim != 0:
 
@@ -766,20 +767,13 @@ class WeakPDELibrary(BaseFeatureLibrary):
             if self.include_interaction:
                 for k in range(self.num_derivatives):
                     for jj in range(n_features):
-                        for i, f in enumerate(self.functions):
-                            for c in self._combinations(
-                                n_features,
-                                f.__code__.co_argcount,
-                                self.interaction_only,
-                            ):
-                                feature_names.append(
-                                    self.function_names[i](
-                                        *[input_features[j] for j in c]
-                                    )
-                                    + input_features[jj]
-                                    + "_"
-                                    + derivative_string(self.multiindices[k])
-                                )
+                        for lib_name in lib_names:
+                            feature_names.append(
+                                lib_name
+                                + input_features[jj]
+                                + "_"
+                                + derivative_string(self.multiindices[k])
+                            )
         return feature_names
 
     @x_sequence_or_item

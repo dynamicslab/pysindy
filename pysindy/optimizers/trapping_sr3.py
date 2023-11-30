@@ -174,42 +174,7 @@ class TrappingSR3(ConstrainedSR3):
         A0: NDArray | None = None,
         **kwargs,
     ):
-        super().__init__(
-            thresholder=thresholder,
-            **kwargs,
-        )
-        if self.thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
-            raise ValueError("Regularizer must be (weighted) L1 or L2")
-        if eta is None:
-            warnings.warn(
-                "eta was not set, so defaulting to eta = 1e20 "
-                "with alpha_m = 1e-2 * eta, alpha_A = eta. Here eta is so "
-                "large that the stability term in the optimization "
-                "will be ignored."
-            )
-            eta = 1e20
-            alpha_m = 1e18
-            alpha_A = 1e20
-        else:
-            if alpha_m is None:
-                alpha_m = eta * 1e-2
-            if alpha_A is None:
-                alpha_A = eta
-        if eta <= 0:
-            raise ValueError("eta must be positive")
-        if alpha_m < 0 or alpha_m > eta:
-            raise ValueError("0 <= alpha_m <= eta")
-        if alpha_A < 0 or alpha_A > eta:
-            raise ValueError("0 <= alpha_A <= eta")
-        if gamma >= 0:
-            raise ValueError("gamma must be negative")
-        if self.tol <= 0 or tol_m <= 0 or eps_solver <= 0:
-            raise ValueError("tol and tol_m must be positive")
-        if inequality_constraints and relax_optim and self.threshold == 0.0:
-            raise ValueError(
-                "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
-            )
-
+        super().__init__(thresholder=thresholder, **kwargs)
         self.eps_solver = eps_solver
         self.relax_optim = relax_optim
         self.inequality_constraints = inequality_constraints
@@ -221,6 +186,45 @@ class TrappingSR3(ConstrainedSR3):
         self.gamma = gamma
         self.tol_m = tol_m
         self.accel = accel
+        self.__post_init_guard()
+
+    def __post_init_guard(self):
+        """Conduct initialization post-init, as required by scikitlearn API"""
+        if self.thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
+            raise ValueError("Regularizer must be (weighted) L1 or L2")
+        if self.eta is None:
+            warnings.warn(
+                "eta was not set, so defaulting to eta = 1e20 "
+                "with alpha_m = 1e-2 * eta, alpha_A = eta. Here eta is so "
+                "large that the stability term in the optimization "
+                "will be ignored."
+            )
+            self.eta = 1e20
+            self.alpha_m = 1e18
+            self.alpha_A = 1e20
+        else:
+            if self.alpha_m is None:
+                self.alpha_m = self.eta * 1e-2
+            if self.alpha_A is None:
+                self.alpha_A = self.eta
+        if self.eta <= 0:
+            raise ValueError("eta must be positive")
+        if self.alpha_m < 0 or self.alpha_m > self.eta:
+            raise ValueError("0 <= alpha_m <= eta")
+        if self.alpha_A < 0 or self.alpha_A > self.eta:
+            raise ValueError("0 <= alpha_A <= eta")
+        if self.gamma >= 0:
+            raise ValueError("gamma must be negative")
+        if self.tol <= 0 or self.tol_m <= 0 or self.eps_solver <= 0:
+            raise ValueError("tol and tol_m must be positive")
+        if self.inequality_constraints and self.relax_optim and self.threshold == 0.0:
+            raise ValueError(
+                "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
+            )
+
+    def set_params(self, **kwargs):
+        super().set_params(**kwargs)
+        self.__post_init_guard
 
     def _set_Ptensors(
         self, n_targets: int

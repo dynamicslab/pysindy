@@ -11,6 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 from ..utils import AxesArray
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
+from .polynomial_library import PolynomialLibrary
 from pysindy.differentiation import FiniteDifference
 
 
@@ -37,11 +38,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     Parameters
     ----------
-    library_functions : list of mathematical functions, optional (default None)
-        Functions to include in the library. Each function will be
-        applied to each input variable (but not their derivatives)
-
-    library : BaseFeatureLibrary, optional (default None)
+    function_library : BaseFeatureLibrary, optional (default
+        PolynomialLibrary(degree=3,include_bias=False))
         SINDy library with output features representing library_functions to include
         in the library, in place of library_functions.
 
@@ -54,17 +52,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         This variable must be specified with
         at least one dimension corresponding to a temporal grid, so that
         integration by parts can be done in the weak formulation.
-
-    function_names : list of functions, optional (default None)
-        List of functions used to generate feature names for each library
-        function. Each name function must take a string input (representing
-        a variable name), and output a string depiction of the respective
-        mathematical function applied to that variable. For example, if the
-        first library function is sine, the name function might return
-        :math:`\\sin(x)` given :math:`x` as input. The function_names list
-        must be the same length as library_functions.
-        If no list of function names is provided, defaults to using
-        :math:`[ f_0(x),f_1(x), f_2(x), \\ldots ]`.
 
     interaction_only : boolean, optional (default True)
         Whether to omit self-interaction terms.
@@ -125,13 +112,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     Attributes
     ----------
-    functions : list of functions
-        Mathematical library functions to be applied to each input feature.
-
-    function_names : list of functions
-        Functions for generating string representations of each library
-        function.
-
     n_features_in_ : int
         The total number of input features.
 
@@ -157,11 +137,11 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     def __init__(
         self,
-        library_functions=[],
-        library=None,
+        function_library: BaseFeatureLibrary = PolynomialLibrary(
+            degree=3, include_bias=False
+        ),
         derivative_order=0,
         spatiotemporal_grid=None,
-        function_names=None,
         interaction_only=True,
         include_bias=False,
         include_interaction=True,
@@ -176,10 +156,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         is_uniform=None,
         periodic=None,
     ):
-        self.functions = library_functions
-        self.library = library
+        self.function_library = function_library
         self.derivative_order = derivative_order
-        self.function_names = function_names
         self.interaction_only = interaction_only
         self.implicit_terms = implicit_terms
         self.include_bias = include_bias
@@ -191,28 +169,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.differentiation_method = differentiation_method
         self.diff_kwargs = diff_kwargs
 
-        if (
-            library is None
-            and function_names
-            and (len(library_functions) != len(function_names))
-        ):
-            raise ValueError(
-                "library_functions and function_names must have the same"
-                " number of elements"
-            )
-        if library is not None and (
-            function_names is not None or len(library_functions) > 0
-        ):
-            raise ValueError(
-                "If providing a library, do not provide"
-                " library_functions or function_names"
-            )
-
-        if library is None and len(library_functions) == 0 and derivative_order == 0:
-            raise ValueError(
-                "No library functions were specified, and no "
-                "derivatives were asked for. The library is empty."
-            )
         if spatiotemporal_grid is None:
             raise ValueError(
                 "Spatiotemporal grid was not passed, and at least a 1D"
@@ -714,13 +670,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         n_features = self.n_features_in_
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
-        if self.function_names is None:
-            self.function_names = list(
-                map(
-                    lambda i: (lambda *x: "f" + str(i) + "(" + ",".join(x) + ")"),
-                    range(n_features),
-                )
-            )
         feature_names = []
         lib_names = []
 
@@ -728,16 +677,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         if self.include_bias:
             feature_names.append("1")
         # Include any non-derivative terms
-        if self.library is not None:
-            lib_names = self.library.get_feature_names()
-        else:
-            for i, f in enumerate(self.functions):
-                for c in self._combinations(
-                    n_features, f.__code__.co_argcount, self.interaction_only
-                ):
-                    lib_names.append(
-                        self.function_names[i](*[input_features[j] for j in c])
-                    )
+        lib_names = self.function_library.get_feature_names(input_features)
         feature_names = feature_names + lib_names
 
         if self.grid_ndim != 0:
@@ -794,15 +734,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         n_output_features = 0
 
         # Count the number of non-derivative terms
-        if self.library is None:
-            for f in self.functions:
-                n_args = f.__code__.co_argcount
-                n_output_features += len(
-                    list(self._combinations(n_features, n_args, self.interaction_only))
-                )
-        else:
-            self.library.fit(x_full)
-            n_output_features = self.library.n_output_features_
+        self.function_library.fit(x_full)
+        n_output_features = self.function_library.n_output_features_
 
         if self.grid_ndim != 0:
             # Add the mixed derivative library_terms
@@ -852,29 +785,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
             # library function terms
 
-            n_library_terms = 0
-            for f in self.functions:
-                for c in self._combinations(
-                    n_features, f.__code__.co_argcount, self.interaction_only
-                ):
-                    n_library_terms += 1
-            library_functions = np.empty((self.K, n_library_terms), dtype=x.dtype)
-
             # Evaluate the functions on the indices of domain cells
-            if self.library is not None:
-                funcs = self.library.fit_transform(x)
-                n_library_terms = funcs.shape[-1]
-                library_functions = np.empty((self.K, n_library_terms), dtype=x.dtype)
-            else:
-                funcs = np.zeros((*x.shape[:-1], n_library_terms))
-                func_idx = 0
-
-                for f in self.functions:
-                    for c in self._combinations(
-                        n_features, f.__code__.co_argcount, self.interaction_only
-                    ):
-                        funcs[..., func_idx] = f(*[x[..., j] for j in c])
-                        func_idx += 1
+            funcs = self.function_library.fit_transform(x)
+            n_library_terms = funcs.shape[-1]
+            library_functions = np.empty((self.K, n_library_terms), dtype=x.dtype)
 
             # library function terms
             for k in range(self.K):  # loop over domain cells

@@ -292,11 +292,8 @@ def test_score(data):
 
 def test_score_pde(data_1d_random_pde):
     t, x, u, u_dot = data_1d_random_pde
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
     pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
+        function_library=PolynomialLibrary(degree=2, include_bias=False),
         derivative_order=4,
         spatial_grid=x,
         include_bias=True,
@@ -317,8 +314,7 @@ def test_score_pde(data_1d_random_pde):
     X, T = np.meshgrid(x, t)
     XT = np.array([X, T]).T
     weak_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
+        function_library=PolynomialLibrary(degree=2, include_bias=False),
         derivative_order=4,
         spatiotemporal_grid=XT,
         include_bias=True,
@@ -641,12 +637,9 @@ def test_data_shapes():
 
 def test_diffusion_pde(diffuse_multiple_trajectories):
     t, x, u = diffuse_multiple_trajectories
-    library_functions = [lambda x: x]
-    library_function_names = [lambda x: x]
 
     pde_lib = PDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
+        function_library=PolynomialLibrary(degree=1, include_bias=False),
         derivative_order=2,
         spatial_grid=x,
     )
@@ -655,8 +648,7 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
     XT = np.transpose([X, T], [1, 2, 0])
 
     weak_lib = WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
+        function_library=PolynomialLibrary(degree=1, include_bias=False),
         derivative_order=2,
         spatiotemporal_grid=XT,
         K=100,

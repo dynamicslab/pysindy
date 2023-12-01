@@ -4,7 +4,6 @@ from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
 
 import numpy as np
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -64,13 +63,6 @@ class PDELibrary(BaseFeatureLibrary):
         will consist of only pure no-derivative terms and pure derivative
         terms, with no mixed terms.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     implicit_terms : boolean
         Flag to indicate if SINDy-PI (temporal derivatives) is being used
         for the right-hand side of the SINDy fit.
@@ -95,10 +87,8 @@ class PDELibrary(BaseFeatureLibrary):
         Functions for generating string representations of each library
         function.
 
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -121,8 +111,6 @@ class PDELibrary(BaseFeatureLibrary):
         function_names=None,
         include_bias=False,
         include_interaction=True,
-        library_ensemble=False,
-        ensemble_indices=[0],
         implicit_terms=False,
         multiindices=None,
         differentiation_method=FiniteDifference,
@@ -130,9 +118,6 @@ class PDELibrary(BaseFeatureLibrary):
         is_uniform=None,
         periodic=None,
     ):
-        super(PDELibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
         self.functions = library_functions
         self.derivative_order = derivative_order
         self.function_names = function_names
@@ -261,10 +246,7 @@ class PDELibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_features = self.n_features_in_
-        else:
-            n_features = self.n_input_features_
+        n_features = self.n_features_in_
 
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
@@ -282,11 +264,12 @@ class PDELibrary(BaseFeatureLibrary):
             feature_names.append("1")
 
         # Include any non-derivative terms
+        function_feature_names = []
         for i, f in enumerate(self.functions):
             for c in self._combinations(
                 n_features, f.__code__.co_argcount, self.interaction_only
             ):
-                feature_names.append(
+                function_feature_names.append(
                     self.function_names[i](*[input_features[j] for j in c])
                 )
 
@@ -308,27 +291,31 @@ class PDELibrary(BaseFeatureLibrary):
             return ret
 
         # Include derivative terms
+        derivative_feature_names = []
         for k in range(self.num_derivatives):
             for j in range(n_features):
-                feature_names.append(
+                derivative_feature_names.append(
                     input_features[j] + "_" + derivative_string(self.multiindices[k])
                 )
+        feature_names = feature_names + function_feature_names
+        feature_names = feature_names + derivative_feature_names
+
         # Include mixed non-derivative + derivative terms
-        if self.include_interaction:
-            for k in range(self.num_derivatives):
-                for i, f in enumerate(self.functions):
-                    for c in self._combinations(
-                        n_features,
-                        f.__code__.co_argcount,
-                        self.interaction_only,
-                    ):
-                        for jj in range(n_features):
-                            feature_names.append(
-                                self.function_names[i](*[input_features[j] for j in c])
-                                + input_features[jj]
-                                + "_"
-                                + derivative_string(self.multiindices[k])
-                            )
+        if (
+            self.include_interaction
+            and len(function_feature_names) > 0
+            and len(derivative_feature_names) > 0
+        ):
+            feature_names = (
+                feature_names
+                + np.char.add(
+                    np.array(function_feature_names).reshape(1, -1),
+                    np.array(derivative_feature_names).reshape(-1, 1),
+                )
+                .reshape(-1)
+                .tolist()
+            )
+
         return feature_names
 
     @x_sequence_or_item
@@ -345,13 +332,7 @@ class PDELibrary(BaseFeatureLibrary):
         self : instance
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
-
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
-
-        n_output_features = 0
+        self.n_features_in_ = n_features
         # Count the number of non-derivative terms
         n_output_features = 0
         for f in self.functions:
@@ -399,12 +380,8 @@ class PDELibrary(BaseFeatureLibrary):
         for x in x_full:
             n_features = x.shape[x.ax_coord]
 
-            if float(__version__[:3]) >= 1.0:
-                if n_features != self.n_features_in_:
-                    raise ValueError("x shape does not match training shape")
-            else:
-                if n_features != self.n_input_features_:
-                    raise ValueError("x shape does not match training shape")
+            if n_features != self.n_features_in_:
+                raise ValueError("x shape does not match training shape")
 
             shape = np.array(x.shape)
             shape[-1] = self.n_output_features_
@@ -483,8 +460,6 @@ class PDELibrary(BaseFeatureLibrary):
                 library_idx += n_library_terms * self.num_derivatives * n_features
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def get_spatial_grid(self):

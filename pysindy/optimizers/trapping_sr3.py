@@ -1,4 +1,5 @@
 import warnings
+from typing import Tuple
 
 import cvxpy as cp
 import numpy as np
@@ -133,10 +134,6 @@ class TrappingSR3(SR3):
         Initial guess for vector A in the optimization. Otherwise
         A is initialized as A = diag(gamma).
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
 
@@ -153,6 +150,10 @@ class TrappingSR3(SR3):
         Boolean flag which is passed to CVXPY solve function to indicate if
         output should be verbose or not. Only relevant for optimizers that
         use the CVXPY package in some capabity.
+
+    unbias: bool (default False)
+        See base class for definition.  Most options are incompatible
+        with unbiasing.
 
     Attributes
     ----------
@@ -235,7 +236,6 @@ class TrappingSR3(SR3):
         max_iter=30,
         accel=False,
         normalize_columns=False,
-        fit_intercept=False,
         copy_X=True,
         m0=None,
         A0=None,
@@ -245,16 +245,17 @@ class TrappingSR3(SR3):
         constraint_order="target",
         verbose=False,
         verbose_cvxpy=False,
+        unbias=False,
     ):
-        super(TrappingSR3, self).__init__(
+        super().__init__(
             threshold=threshold,
             max_iter=max_iter,
             normalize_columns=normalize_columns,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             thresholder=thresholder,
             thresholds=thresholds,
             verbose=verbose,
+            unbias=unbias,
         )
         if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
             raise ValueError("Regularizer must be (weighted) L1 or L2")
@@ -308,27 +309,25 @@ class TrappingSR3(SR3):
         self.tol_m = tol_m
         self.accel = accel
         self.verbose_cvxpy = verbose_cvxpy
-        self.A_history_ = []
-        self.m_history_ = []
-        self.PW_history_ = []
-        self.PWeigs_history_ = []
-        self.history_ = []
         self.objective_history = objective_history
         self.unbias = False
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
         )
 
+        self.constraint_lhs = constraint_lhs
+        self.constraint_rhs = constraint_rhs
+        self.constraint_order = constraint_order
         if self.use_constraints:
             if constraint_order not in ("feature", "target"):
                 raise ValueError(
                     "constraint_order must be either 'feature' or 'target'"
                 )
-
-            self.constraint_lhs = constraint_lhs
-            self.constraint_rhs = constraint_rhs
-            self.unbias = False
-            self.constraint_order = constraint_order
+            if unbias:
+                raise ValueError(
+                    "Constraints are incompatible with an unbiasing step.  Set"
+                    " unbias=False"
+                )
 
     def _set_Ptensors(self, r):
         """Make the projection tensors used for the algorithm."""
@@ -428,7 +427,7 @@ class TrappingSR3(SR3):
         # If PL/PQ finite and correct, so trapping theorem is being used,
         # then make sure library is quadratic and correct shape
         if (np.any(self.PL_ != 0.0) or np.any(self.PQ_ != 0.0)) and n_features != N:
-            print(
+            warnings.warn(
                 "The feature library is the wrong shape or not quadratic, "
                 "so please correct this if you are attempting to use the "
                 "trapping algorithm with the stability term included. Setting "
@@ -498,9 +497,10 @@ class TrappingSR3(SR3):
             )
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
-    def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
-        """Solve coefficient update with CVXPY if threshold != 0"""
-        xi = cp.Variable(N * r)
+    def _create_var_and_part_cost(
+        self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
+    ) -> Tuple[cp.Variable, cp.Expression]:
+        xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
@@ -510,6 +510,11 @@ class TrappingSR3(SR3):
             cost = cost + self.threshold * cp.norm2(xi) ** 2
         elif self.thresholder.lower() == "weighted_l2":
             cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
+        return xi, cost
+
+    def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
+        """Solve coefficient update with CVXPY if threshold != 0"""
+        xi, cost = self._create_var_and_part_cost(N * r, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -608,16 +613,7 @@ class TrappingSR3(SR3):
         problem, solved in CVXPY, so convergence/quality guarantees are
         not available here!
         """
-        xi = cp.Variable(N * r)
-        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi) ** 2
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
+        xi, cost = self._create_var_and_part_cost(N * r, x_expanded, y)
         cost = cost + cp.lambda_max(cp.reshape(Pmatrix @ xi, (r, r))) / self.eta
         if self.use_constraints:
             if self.inequality_constraints:
@@ -681,7 +677,11 @@ class TrappingSR3(SR3):
         TrappingSR3 algorithm.
         Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
-
+        self.A_history_ = []
+        self.m_history_ = []
+        self.PW_history_ = []
+        self.PWeigs_history_ = []
+        self.history_ = []
         n_samples, n_features = x.shape
         r = y.shape[1]
         N = int((r**2 + 3 * r) / 2.0)
@@ -709,8 +709,7 @@ class TrappingSR3(SR3):
                 "Total Error",
             ]
             print(
-                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
-                " ... {: >10}".format(*row)
+                "{: >10} ... {: >10} ... {: >10} ... {: >10} ... {: >10}".format(*row)
             )
 
         # initial A

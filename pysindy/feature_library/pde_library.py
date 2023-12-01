@@ -1,6 +1,4 @@
 import warnings
-from itertools import combinations
-from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
 
 import numpy as np
@@ -204,12 +202,6 @@ class PDELibrary(BaseFeatureLibrary):
         self.spatiotemporal_grid = AxesArray(
             spatiotemporal_grid, comprehend_axes(spatiotemporal_grid)
         )
-
-    @staticmethod
-    def _combinations(n_features, n_args, interaction_only):
-        """Get the combinations of features to be passed to a library function."""
-        comb = combinations if interaction_only else combinations_w_r
-        return comb(range(n_features), n_args)
 
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.

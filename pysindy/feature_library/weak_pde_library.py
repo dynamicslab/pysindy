@@ -1,6 +1,4 @@
 import warnings
-from itertools import combinations
-from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
 
 import numpy as np
@@ -504,14 +502,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
                 weights2 = weights2 + [ret * np.prod(H_xt_k[k] ** (1.0 - deriv))]
             self.fullweights1 = self.fullweights1 + [weights2]
-
-    @staticmethod
-    def _combinations(n_features, n_args, interaction_only):
-        """
-        Get the combinations of features to be passed to a library function.
-        """
-        comb = combinations if interaction_only else combinations_w_r
-        return comb(range(n_features), n_args)
 
     def _phi(self, x, d, p):
         """

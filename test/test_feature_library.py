@@ -10,7 +10,6 @@ from sklearn.utils.validation import check_is_fitted
 from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import ConcatLibrary
-from pysindy.feature_library import TrimmedLibrary
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import GeneralizedLibrary
@@ -20,6 +19,7 @@ from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library import TensoredLibrary
+from pysindy.feature_library import TrimmedLibrary
 from pysindy.feature_library import WeakPDELibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
 from pysindy.optimizers import SINDyPI
@@ -419,17 +419,19 @@ def test_tensored(data_lorenz):
     tensored_lib.fit_transform(x)
     check_is_fitted(tensored_lib)
 
+
 def test_trimmed(data_lorenz):
     x, t = data_lorenz
     ident_lib = IdentityLibrary()
     poly_lib = PolynomialLibrary()
     tensored_lib = ident_lib * poly_lib
-    trimmed_lib = TrimmedLibrary(tensored_lib, drop_inds=[0,1])
+    trimmed_lib = TrimmedLibrary(tensored_lib, drop_inds=[0, 1])
     assert isinstance(trimmed_lib, TrimmedLibrary)
     trimmed_lib.fit(x)
     check_is_fitted(trimmed_lib)
     trimmed_lib.fit_transform(x)
     check_is_fitted(trimmed_lib)
+
 
 @pytest.mark.parametrize(
     "library",

@@ -406,6 +406,9 @@ def test_concat(data_lorenz):
     check_is_fitted(concat_lib)
     concat_lib.fit_transform(x)
     check_is_fitted(concat_lib)
+    model = SINDy(feature_library=concat_lib)
+    model.fit(x, t=t)
+    model.print()
 
 
 def test_tensored(data_lorenz):
@@ -418,6 +421,9 @@ def test_tensored(data_lorenz):
     check_is_fitted(tensored_lib)
     tensored_lib.fit_transform(x)
     check_is_fitted(tensored_lib)
+    model = SINDy(feature_library=tensored_lib)
+    model.fit(x, t=t)
+    model.print()
 
 
 def test_trimmed(data_lorenz):
@@ -431,6 +437,9 @@ def test_trimmed(data_lorenz):
     check_is_fitted(trimmed_lib)
     trimmed_lib.fit_transform(x)
     check_is_fitted(trimmed_lib)
+    model = SINDy(feature_library=trimmed_lib)
+    model.fit(x, t=t)
+    model.print()
 
 
 @pytest.mark.parametrize(

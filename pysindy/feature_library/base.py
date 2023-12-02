@@ -506,6 +506,117 @@ class TensoredLibrary(BaseFeatureLibrary):
         return self.libraries[0].calc_trajectory(diff_method, x, t)
 
 
+class TrimmedLibrary(BaseFeatureLibrary):
+    """Construct a trimmed library from another library. All settings
+    provided to input library will be applied.
+
+    Parameters
+    ----------
+    library : input library
+        Library instance to be applied to the input matrix.
+
+    drop_inds : List of integers
+        Feature indices to exclude from the library.
+
+    Attributes
+    ----------
+    n_features_in_ : int
+        The total number of input features.
+
+    n_output_features_ : int
+        The total number of output features. The number of output features
+        is the sum of the numbers of output features for each of the
+        concatenated libraries.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pysindy.feature_library import FourierLibrary, CustomLibrary
+    >>> from pysindy.feature_library import ConcatLibrary
+    >>> x = np.array([[0.,-1],[1.,0.],[2.,-1.]])
+    >>> functions = [lambda x : np.exp(x), lambda x,y : np.sin(x+y)]
+    >>> lib_custom = CustomLibrary(library_functions=functions)
+    >>> lib_fourier = FourierLibrary()
+    >>> lib_concat = ConcatLibrary([lib_custom, lib_fourier])
+    >>> lib_concat.fit()
+    >>> lib.transform(x)
+    """
+
+    def __init__(self, library: BaseFeatureLibrary, drop_inds=[]):
+        self.library = library
+        self.drop_inds = drop_inds
+
+    @x_sequence_or_item
+    def fit(self, x_full, y=None):
+        """
+        Compute number of output features.
+
+        Parameters
+        ----------
+        x : array-like, shape (n_samples, n_features)
+            The data.
+
+        Returns
+        -------
+        self : instance
+        """
+        n_features = x_full[0].shape[x_full[0].ax_coord]
+        self.n_features_in_ = n_features
+
+        # First fit the provided library below
+        self.library.fit(x_full, y)
+
+        # Calculate the sum of output features
+        self.n_output_features_ = self.library.n_output_features_
+
+        return self
+
+    @x_sequence_or_item
+    def transform(self, x_full):
+        """Transform data with libs provided below.
+
+        Parameters
+        ----------
+        x : array-like, shape [n_samples, n_features]
+            The data to transform, row by row.
+
+        Returns
+        -------
+        xp : np.ndarray, shape [n_samples, NP]
+            The matrix of features, where NP is the number of features
+            generated from applying the custom functions to the inputs.
+
+        """
+        check_is_fitted(self.library)
+
+        xp_full = []
+        for x in x_full:
+            xp = self.library.transform([x])[0]
+            xp = np.delete(xp, self.drop_inds, axis=x.ax_coord)
+            xp = AxesArray(xp, comprehend_axes(xp))
+            xp_full.append(xp)
+        return xp_full
+
+    def get_feature_names(self, input_features=None):
+        """Return feature names for output features.
+
+        Parameters
+        ----------
+        input_features : list of string, length n_features, optional
+            String names for input features if available. By default,
+            "x0", "x1", ... "xn_features" is used.
+
+        Returns
+        -------
+        output_feature_names : list of string, length n_output_features
+        """
+        feature_names = self.library.get_feature_names(input_features)
+        return np.delete(feature_names, self.drop_inds).tolist()
+
+    def calc_trajectory(self, diff_method, x, t):
+        return self.library.calc_trajectory(diff_method, x, t)
+
+
 def _unique(s: Sequence) -> Sequence:
     """Remove duplicates, preserving order when python > 3.7"""
     return list(dict.fromkeys(s))

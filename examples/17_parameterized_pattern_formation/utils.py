@@ -314,33 +314,18 @@ def cgle_noise_sweeps():
 
         for scale in intensities:
             print(scale)
-            library_functions = [
-                lambda x: x,
-                lambda x: x**3,
-                lambda x, y: x**2 * y,
-                lambda x, y: y**2 * x,
-            ]
-            function_names = [
-                lambda x: x,
-                lambda x: x + x + x,
-                lambda x, y: x + x + y,
-                lambda x, y: x + y + y,
-            ]
+
             feature_lib = ps.PDELibrary(
-                library_functions=library_functions,
+                function_library=ps.PolynomialLibrary(degree=3, include_bias=False),
                 derivative_order=2,
                 spatial_grid=spatial_grid,
                 include_interaction=False,
-                function_names=function_names,
                 differentiation_method=ps.SpectralDerivative,
             )
-            library_functions = [lambda x: x]
-            function_names = [lambda x: x]
             parameter_lib = ps.PDELibrary(
-                library_functions=library_functions,
+                function_library=ps.PolynomialLibrary(degree=1, include_bias=False),
                 derivative_order=0,
                 include_interaction=False,
-                function_names=function_names,
                 include_bias=True,
             )
             lib = ps.ParameterizedLibrary(
@@ -357,11 +342,9 @@ def cgle_noise_sweeps():
             model = ps.SINDy(
                 feature_library=lib, optimizer=opt, feature_names=["x", "y", "b", "c"]
             )
-            model.fit(xs_noisy, u=us, t=dt, multiple_trajectories=True)
+            model.fit(xs_noisy, u=us, t=dt)
 
-            nscores = nscores + [
-                model.score(xs_test, u=us_test, t=dt, multiple_trajectories=True)
-            ]
+            nscores = nscores + [model.score(xs_test, u=us_test, t=dt)]
 
         stop = timeit.default_timer()
         print(stop - start)
@@ -380,33 +363,17 @@ def cgle_noise_sweeps():
 
         for scale in intensities:
             print(scale)
-            library_functions = [
-                lambda x: x,
-                lambda x: x**3,
-                lambda x, y: x**2 * y,
-                lambda x, y: y**2 * x,
-            ]
-            function_names = [
-                lambda x: x,
-                lambda x: x + x + x,
-                lambda x, y: x + x + y,
-                lambda x, y: x + y + y,
-            ]
             feature_lib = ps.PDELibrary(
-                library_functions=library_functions,
+                function_library=ps.PolynomialLibrary(degree=3, include_bias=False),
                 derivative_order=2,
                 spatial_grid=spatial_grid,
                 include_interaction=False,
-                function_names=function_names,
                 differentiation_method=ps.SpectralDerivative,
             )
-            library_functions = [lambda x: x]
-            function_names = [lambda x: x]
             parameter_lib = ps.PDELibrary(
-                library_functions=library_functions,
+                function_library=ps.PolynomialLibrary(degree=1, include_bias=False),
                 derivative_order=0,
                 include_interaction=False,
-                function_names=function_names,
                 include_bias=True,
             )
             lib = ps.ParameterizedLibrary(
@@ -423,13 +390,9 @@ def cgle_noise_sweeps():
             model = ps.SINDy(
                 feature_library=lib, optimizer=opt, feature_names=["x", "y", "b", "c"]
             )
-            model.fit(
-                xs_noisy, u=us_random[: len(xs)], t=dt, multiple_trajectories=True
-            )
+            model.fit(xs_noisy, u=us_random[: len(xs)], t=dt)
 
-            nscores = nscores + [
-                model.score(xs_test, u=us_test, t=dt, multiple_trajectories=True)
-            ]
+            nscores = nscores + [model.score(xs_test, u=us_test, t=dt)]
 
         stop = timeit.default_timer()
         print(stop - start)
@@ -455,33 +418,17 @@ def cgle_noise_sweeps():
             samples = []
             for nt in nts:
                 print(num, nt, end="  \r")
-                library_functions = [
-                    lambda x: x,
-                    lambda x: x**3,
-                    lambda x, y: x**2 * y,
-                    lambda x, y: y**2 * x,
-                ]
-                function_names = [
-                    lambda x: x,
-                    lambda x: x + x + x,
-                    lambda x, y: x + x + y,
-                    lambda x, y: x + y + y,
-                ]
                 feature_lib = ps.PDELibrary(
-                    library_functions=library_functions,
+                    function_library=ps.PolynomialLibrary(degree=3, include_bias=False),
                     derivative_order=2,
                     spatial_grid=spatial_grid,
                     include_interaction=False,
-                    function_names=function_names,
                     differentiation_method=ps.SpectralDerivative,
                 )
-                library_functions = [lambda x: x]
-                function_names = [lambda x: x]
                 parameter_lib = ps.PDELibrary(
-                    library_functions=library_functions,
+                    function_library=ps.PolynomialLibrary(degree=1, include_bias=False),
                     derivative_order=0,
                     include_interaction=False,
-                    function_names=function_names,
                     include_bias=True,
                 )
                 lib = ps.ParameterizedLibrary(
@@ -503,11 +450,9 @@ def cgle_noise_sweeps():
                     optimizer=opt,
                     feature_names=["x", "y", "b", "c"],
                 )
-                model.fit(xs_noisy, u=us_random, t=dt, multiple_trajectories=True)
+                model.fit(xs_noisy, u=us_random, t=dt)
 
-                scores = scores + [
-                    model.score(xs_test, u=us_test, t=dt, multiple_trajectories=True)
-                ]
+                scores = scores + [model.score(xs_test, u=us_test, t=dt)]
                 samples = samples + [
                     np.sum(
                         [
@@ -598,36 +543,20 @@ def cgle_weak_noise_sweeps():
         for scale in intensities:
             print(scale)
             np.random.seed(100)
-            library_functions = [
-                lambda x: x,
-                lambda x: x**3,
-                lambda x, y: x**2 * y,
-                lambda x, y: y**2 * x,
-            ]
-            function_names = [
-                lambda x: x,
-                lambda x: x + x + x,
-                lambda x, y: x + x + y,
-                lambda x, y: x + y + y,
-            ]
             feature_lib = ps.WeakPDELibrary(
-                library_functions=library_functions,
+                function_library=ps.PolynomialLibrary(degree=3, include_bias=False),
                 derivative_order=2,
                 spatiotemporal_grid=spatiotemporal_grid,
                 include_interaction=False,
-                function_names=function_names,
                 K=500,
                 H_xt=[L * 2 * np.pi / 10, L * 2 * np.pi / 10, (t1 - t3) / 10],
             )
             np.random.seed(100)
-            library_functions = [lambda x: x]
-            function_names = [lambda x: x]
             parameter_lib = ps.WeakPDELibrary(
-                library_functions=library_functions,
+                function_library=ps.PolynomialLibrary(degree=1, include_bias=False),
                 spatiotemporal_grid=spatiotemporal_grid,
                 derivative_order=0,
                 include_interaction=False,
-                function_names=function_names,
                 include_bias=True,
                 K=500,
                 H_xt=[L * 2 * np.pi / 10, L * 2 * np.pi / 10, (t1 - t3) / 10],
@@ -646,11 +575,9 @@ def cgle_weak_noise_sweeps():
             model = ps.SINDy(
                 feature_library=lib, optimizer=opt, feature_names=["x", "y", "b", "c"]
             )
-            model.fit(xs_noisy, u=us, t=dt, multiple_trajectories=True)
+            model.fit(xs_noisy, u=us, t=dt)
 
-            nscores_weak = nscores_weak + [
-                model.score(xs_test, u=us_test, t=dt, multiple_trajectories=True)
-            ]
+            nscores_weak = nscores_weak + [model.score(xs_test, u=us_test, t=dt)]
 
         stop = timeit.default_timer()
         print(stop - start)
@@ -676,36 +603,20 @@ def cgle_weak_noise_sweeps():
         for scale in intensities:
             print(scale)
             np.random.seed(100)
-            library_functions = [
-                lambda x: x,
-                lambda x: x**3,
-                lambda x, y: x**2 * y,
-                lambda x, y: y**2 * x,
-            ]
-            function_names = [
-                lambda x: x,
-                lambda x: x + x + x,
-                lambda x, y: x + x + y,
-                lambda x, y: x + y + y,
-            ]
             feature_lib = ps.WeakPDELibrary(
-                library_functions=library_functions,
+                function_library=ps.PolynomialLibrary(degree=3, include_bias=False),
                 derivative_order=2,
                 spatiotemporal_grid=spatiotemporal_grid,
                 include_interaction=False,
-                function_names=function_names,
                 K=500,
                 H_xt=[L * 2 * np.pi / 10, L * 2 * np.pi / 10, (t1 - t3) / 10],
             )
             np.random.seed(100)
-            library_functions = [lambda x: x]
-            function_names = [lambda x: x]
             parameter_lib = ps.WeakPDELibrary(
-                library_functions=library_functions,
+                function_library=ps.PolynomialLibrary(degree=1, include_bias=False),
                 spatiotemporal_grid=spatiotemporal_grid,
                 derivative_order=0,
                 include_interaction=False,
-                function_names=function_names,
                 include_bias=True,
                 K=500,
                 H_xt=[L * 2 * np.pi / 10, L * 2 * np.pi / 10, (t1 - t3) / 10],
@@ -724,13 +635,9 @@ def cgle_weak_noise_sweeps():
             model = ps.SINDy(
                 feature_library=lib, optimizer=opt, feature_names=["x", "y", "b", "c"]
             )
-            model.fit(
-                xs_noisy, u=us_random[: len(xs)], t=dt, multiple_trajectories=True
-            )
+            model.fit(xs_noisy, u=us_random[: len(xs)], t=dt)
 
-            nscores_weak = nscores_weak + [
-                model.score(xs_test, u=us_test, t=dt, multiple_trajectories=True)
-            ]
+            nscores_weak = nscores_weak + [model.score(xs_test, u=us_test, t=dt)]
 
         stop = timeit.default_timer()
         print(stop - start)
@@ -760,40 +667,24 @@ def cgle_weak_noise_sweeps():
             for nt in nts:
                 print(num, nt, end="  \r")
                 np.random.seed(100)
-                library_functions = [
-                    lambda x: x,
-                    lambda x: x**3,
-                    lambda x, y: x**2 * y,
-                    lambda x, y: y**2 * x,
-                ]
-                function_names = [
-                    lambda x: x,
-                    lambda x: x + x + x,
-                    lambda x, y: x + x + y,
-                    lambda x, y: x + y + y,
-                ]
                 T = (
                     spatiotemporal_grid[0, 0, nt - 1, -1]
                     - spatiotemporal_grid[0, 0, 0, -1]
                 )
                 feature_lib = ps.WeakPDELibrary(
-                    library_functions=library_functions,
+                    function_library=ps.PolynomialLibrary(degree=3, include_bias=False),
                     derivative_order=2,
                     spatiotemporal_grid=spatiotemporal_grid[:, :, :nt],
                     include_interaction=False,
-                    function_names=function_names,
                     K=500,
                     H_xt=[L * 2 * np.pi / 10, L * 2 * np.pi / 10, T / 10],
                 )
                 np.random.seed(100)
-                library_functions = [lambda x: x]
-                function_names = [lambda x: x]
                 parameter_lib = ps.WeakPDELibrary(
-                    library_functions=library_functions,
+                    function_library=ps.PolynomialLibrary(degree=1, include_bias=False),
                     spatiotemporal_grid=spatiotemporal_grid[:, :, :nt],
                     derivative_order=0,
                     include_interaction=False,
-                    function_names=function_names,
                     include_bias=True,
                     K=500,
                     H_xt=[L * 2 * np.pi / 10, L * 2 * np.pi / 10, T / 10],
@@ -817,11 +708,9 @@ def cgle_weak_noise_sweeps():
                     optimizer=opt,
                     feature_names=["x", "y", "b", "c"],
                 )
-                model.fit(xs_noisy, u=us_random, t=dt, multiple_trajectories=True)
+                model.fit(xs_noisy, u=us_random, t=dt)
 
-                scores = scores + [
-                    model.score(xs_test, u=us_test, t=dt, multiple_trajectories=True)
-                ]
+                scores = scores + [model.score(xs_test, u=us_test, t=dt)]
                 samples = samples + [
                     np.sum(
                         [
@@ -1178,52 +1067,67 @@ def get_homogeneous_oregonator_trajectory_fit(model, b, t1, dt):
     lib = model.feature_library
     Xts = np.where(
         [
-            feat.split(" ")[1] == "X_t"
+            "".join(feat.split(" ")[1:]) == "X_t"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     Yts = np.where(
         [
-            feat.split(" ")[1] == "Y_t"
+            "".join(feat.split(" ")[1:]) == "Y_t"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     Xs = np.where(
-        [feat.split(" ")[1] == "X" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "X"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     Ys = np.where(
-        [feat.split(" ")[1] == "Y" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "Y"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     XXs = np.where(
-        [feat.split(" ")[1] == "XX" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "X^2"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     XYs = np.where(
-        [feat.split(" ")[1] == "XY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "XY"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     YYs = np.where(
-        [feat.split(" ")[1] == "YY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "Y^2"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     XXXs = np.where(
         [
-            feat.split(" ")[1] == "XXX"
+            "".join(feat.split(" ")[1:]) == "X^3"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     XXYs = np.where(
         [
-            feat.split(" ")[1] == "XXY"
+            "".join(feat.split(" ")[1:]) == "X^2Y"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     XYYs = np.where(
         [
-            feat.split(" ")[1] == "XYY"
+            "".join(feat.split(" ")[1:]) == "XY^2"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     YYYs = np.where(
         [
-            feat.split(" ")[1] == "YYY"
+            "".join(feat.split(" ")[1:]) == "Y^3"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
@@ -1289,116 +1193,134 @@ def get_normal_form_parameters(model, us, printcoefs=False):
 
     Xts = np.where(
         [
-            feat.split(" ")[1] == "X_t"
+            "".join(feat.split(" ")[1:]) == "X_t"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     Yts = np.where(
         [
-            feat.split(" ")[1] == "Y_t"
+            "".join(feat.split(" ")[1:]) == "Y_t"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     consts = np.where(
-        [feat.split(" ")[1] == "1" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "1"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     Xs = np.where(
-        [feat.split(" ")[1] == "X" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "X"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     Ys = np.where(
-        [feat.split(" ")[1] == "Y" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "Y"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     XXs = np.where(
-        [feat.split(" ")[1] == "XX" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "X^2"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     XYs = np.where(
-        [feat.split(" ")[1] == "XY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "XY"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     YYs = np.where(
-        [feat.split(" ")[1] == "YY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+        [
+            "".join(feat.split(" ")[1:]) == "Y^2"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
     )[0]
     XXXs = np.where(
         [
-            feat.split(" ")[1] == "XXX"
+            "".join(feat.split(" ")[1:]) == "X^3"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     XXYs = np.where(
         [
-            feat.split(" ")[1] == "XXY"
+            "".join(feat.split(" ")[1:]) == "X^2Y"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     XYYs = np.where(
         [
-            feat.split(" ")[1] == "XYY"
+            "".join(feat.split(" ")[1:]) == "XY^2"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     YYYs = np.where(
         [
-            feat.split(" ")[1] == "YYY"
+            "".join(feat.split(" ")[1:]) == "Y^3"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     X1s = np.where(
         [
-            feat.split(" ")[1] == "X_1"
+            "".join(feat.split(" ")[1:]) == "X_1"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     Y1s = np.where(
         [
-            feat.split(" ")[1] == "Y_1"
+            "".join(feat.split(" ")[1:]) == "Y_1"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     X2s = np.where(
         [
-            feat.split(" ")[1] == "X_2"
+            "".join(feat.split(" ")[1:]) == "X_2"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     Y2s = np.where(
         [
-            feat.split(" ")[1] == "Y_2"
+            "".join(feat.split(" ")[1:]) == "Y_2"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
 
     X11s = np.where(
         [
-            feat.split(" ")[1] == "X_11"
+            "".join(feat.split(" ")[1:]) == "X_11"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     Y11s = np.where(
         [
-            feat.split(" ")[1] == "Y_11"
+            "".join(feat.split(" ")[1:]) == "Y_11"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     X12s = np.where(
         [
-            feat.split(" ")[1] == "X_12"
+            "".join(feat.split(" ")[1:]) == "X_12"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     Y12s = np.where(
         [
-            feat.split(" ")[1] == "Y_12"
+            "".join(feat.split(" ")[1:]) == "Y_12"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     X22s = np.where(
         [
-            feat.split(" ")[1] == "X_22"
+            "".join(feat.split(" ")[1:]) == "X_22"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
     Y22s = np.where(
         [
-            feat.split(" ")[1] == "Y_22"
+            "".join(feat.split(" ")[1:]) == "Y_22"
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
@@ -1488,18 +1410,28 @@ def get_normal_form_parameters(model, us, printcoefs=False):
             )
             print()
 
-    if model.feature_library.libraries_[0].include_bias:
+    if model.feature_library.libraries_full_[0].include_bias:
         mus = np.concatenate(
             [
                 [np.ones(len(us))],
                 np.array(
-                    [func(us) for func in model.feature_library.libraries_[0].functions]
+                    [
+                        func(us)
+                        for func in model.feature_library.libraries_full_[
+                            0
+                        ].function_library.functions
+                    ]
                 ),
             ]
         )
     else:
         mus = np.array(
-            [func(us) for func in model.feature_library.libraries_[0].functions]
+            [
+                func(us)
+                for func in model.feature_library.libraries_full_[
+                    0
+                ].function_library.functions
+            ]
         )
 
     D = np.zeros((len(us), 2, 2))
@@ -1604,18 +1536,28 @@ def get_linear_eigenvalues(model, bs, printcoefs=False):
             % tuple(np.concatenate([opt.coef_[:, Xs][1].T, opt.coef_[:, Zs][1].T]))
         )
 
-    if model.feature_library.libraries_[0].include_bias:
+    if model.feature_library.libraries_full_[0].include_bias:
         mus = np.concatenate(
             [
                 [np.ones(len(bs))],
                 np.array(
-                    [func(bs) for func in model.feature_library.libraries_[0].functions]
+                    [
+                        func(bs)
+                        for func in model.feature_library.libraries_full_[
+                            0
+                        ].function_library.functions
+                    ]
                 ),
             ]
         )
     else:
         mus = np.array(
-            [func(bs) for func in model.feature_library.libraries_[0].functions]
+            [
+                func(bs)
+                for func in model.feature_library.libraries_full_[
+                    0
+                ].function_library.functions
+            ]
         )
 
     J = np.zeros((len(bs), 2, 2), dtype=np.complex128)
@@ -1987,25 +1929,25 @@ def get_single_normal_form_parameters(model, printcoefs=False):
         0
     ][0]
     XXs = np.where(
-        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XX"
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X^2"
     )[0][0]
     XYs = np.where(
-        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XY"
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X Y"
     )[0][0]
     YYs = np.where(
-        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "YY"
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "Y^2"
     )[0][0]
     XXXs = np.where(
-        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XXX"
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X^3"
     )[0][0]
     XXYs = np.where(
-        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XXY"
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X^2 Y"
     )[0][0]
     XYYs = np.where(
-        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XYY"
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X Y^2"
     )[0][0]
     YYYs = np.where(
-        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "YYY"
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "Y^3"
     )[0][0]
     X1s = np.where(
         np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X_1"

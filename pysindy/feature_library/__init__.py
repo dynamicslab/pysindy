@@ -1,5 +1,6 @@
 from .base import ConcatLibrary
 from .base import TensoredLibrary
+from .base import TrimmedLibrary
 from .custom_library import CustomLibrary
 from .fourier_library import FourierLibrary
 from .generalized_library import GeneralizedLibrary
@@ -13,6 +14,7 @@ from .weak_pde_library import WeakPDELibrary
 __all__ = [
     "ConcatLibrary",
     "TensoredLibrary",
+    "TrimmedLibrary",
     "GeneralizedLibrary",
     "CustomLibrary",
     "FourierLibrary",

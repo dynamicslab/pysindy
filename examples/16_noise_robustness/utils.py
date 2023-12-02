@@ -571,7 +571,7 @@ def Pareto_scan_ensembling(
                 ps.FiniteDifference(axis=-2),
                 ps.AxesArray(x_test_list[i], axes={"ax_time": 0, "ax_coord": 1}),
                 t_test_list[i],
-            )
+            )[1]
             for i in range(len(x_test_list))
         ]
         mats = poly_library.fit_transform(
@@ -606,7 +606,7 @@ def Pareto_scan_ensembling(
                             x_test_list[i], axes={"ax_time": 0, "ax_coord": 1}
                         ),
                         t_test_list[i],
-                    )
+                    )[1]
                     for i in range(len(x_test_list))
                 ]
                 mats = lib2.fit_transform(
@@ -904,8 +904,6 @@ def hyperparameter_scan_stlsq(
     model.fit(
         x_train,
         t=t_train,
-        quiet=True,
-        multiple_trajectories=True,
     )
     condition_number = np.linalg.cond(optimizer.Theta_)
 
@@ -918,7 +916,6 @@ def hyperparameter_scan_stlsq(
     AIC_best = np.zeros(n_models)
     error_rmse_new = np.zeros(n_models)
     error_rmse = np.zeros(n_models)
-
     for i in range(n_models):
         x_dot_test_pred = [coef_best[i].dot(mat.T).T for mat in mats]
         dx_test = np.array(x_dot_test).reshape(n_trajectories * n_time, n_state)
@@ -960,8 +957,6 @@ def hyperparameter_scan_stlsq(
         model.fit(
             x_train,
             t=t_train,
-            quiet=True,
-            multiple_trajectories=True,
         )
 
         # For each model, compute x_dot_test and compute the RMSE error
@@ -1140,8 +1135,6 @@ def hyperparameter_scan_lasso(
     model.fit(
         x_train,
         t=t_train,
-        quiet=True,
-        multiple_trajectories=True,
     )
     condition_number = np.linalg.cond(optimizer.Theta_)
 
@@ -1193,8 +1186,6 @@ def hyperparameter_scan_lasso(
         model.fit(
             x_train,
             t=t_train,
-            quiet=True,
-            multiple_trajectories=True,
         )
 
         # For each model, compute x_dot_test and compute the RMSE error
@@ -1377,8 +1368,6 @@ def hyperparameter_scan_sr3(
     model.fit(
         x_train,
         t=t_train,
-        quiet=True,
-        multiple_trajectories=True,
     )
     condition_number = np.linalg.cond(optimizer.Theta_)
 
@@ -1436,8 +1425,6 @@ def hyperparameter_scan_sr3(
         model.fit(
             x_train,
             t=t_train,
-            quiet=True,
-            multiple_trajectories=True,
         )
 
         # For each model, compute x_dot_test and compute the RMSE error
@@ -1615,8 +1602,6 @@ def hyperparameter_scan_miosr(
     model.fit(
         x_train,
         t=t_train,
-        quiet=True,
-        multiple_trajectories=True,
     )
     condition_number = np.linalg.cond(optimizer.Theta_)
     tol_iter = np.shape(optimizer.Theta_)[1] - 1
@@ -1674,8 +1659,6 @@ def hyperparameter_scan_miosr(
         model.fit(
             x_train,
             t=t_train,
-            quiet=True,
-            multiple_trajectories=True,
         )
 
         # For each model, compute x_dot_test and compute the RMSE error

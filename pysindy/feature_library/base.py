@@ -592,7 +592,7 @@ class TrimmedLibrary(BaseFeatureLibrary):
         xp_full = []
         for x in x_full:
             xp = self.library.transform([x])[0]
-            xp = np.delete(xp, self.drop_inds, axis=x.ax_coord)
+            xp = np.delete(xp, self.drop_inds, axis=xp.ax_coord)
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
         return xp_full

@@ -2,6 +2,7 @@ import warnings
 from itertools import combinations_with_replacement as combo_wr
 from itertools import product
 from typing import Tuple
+from typing import Union
 
 import cvxpy as cp
 import numpy as np
@@ -160,18 +161,18 @@ class TrappingSR3(ConstrainedSR3):
     def __init__(
         self,
         *,
-        eta: float | None = None,
+        eta: Union[float, None] = None,
         eps_solver: float = 1e-7,
         relax_optim: bool = True,
         inequality_constraints=False,
-        alpha_A: float | None = None,
-        alpha_m: float | None = None,
+        alpha_A: Union[float, None] = None,
+        alpha_m: Union[float, None] = None,
         gamma: float = -0.1,
         tol_m: float = 1e-5,
         thresholder: str = "l1",
         accel: bool = False,
-        m0: NDArray | None = None,
-        A0: NDArray | None = None,
+        m0: Union[NDArray, None] = None,
+        A0: Union[NDArray, None] = None,
         **kwargs,
     ):
         super().__init__(thresholder=thresholder, **kwargs)

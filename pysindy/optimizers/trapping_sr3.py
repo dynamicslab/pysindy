@@ -1,12 +1,19 @@
 import warnings
+from itertools import combinations as combo_nr
+from itertools import combinations_with_replacement as combo_wr
+from math import comb
 from typing import Tuple
 
 import cvxpy as cp
 import numpy as np
+from numpy import intp
+from numpy.typing import NDArray
 from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
+from ..feature_library.polynomial_library import n_poly_features
+from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
 from .sr3 import SR3
 
@@ -813,3 +820,90 @@ class TrappingSR3(SR3):
 
         self.coef_ = coef_sparse.T
         self.objective_history = objective_history
+
+
+def _make_constraints(n_tgts: int):
+    """Create constraints for the Quadratic terms in TrappingSR3.
+
+    These are the constraints from equation 5 of the Trapping SINDy paper.
+
+    Args:
+        n_tgts: number of coordinates or modes for which you're fitting an ODE.
+
+    Returns:
+        A tuple of the constraint zeros, and a constraint matrix to multiply
+        by the coefficient matrix of Polynomial terms. Number of constraints is
+        ``n_tgts + 2 * math.comb(n_tgts, 2) + math.comb(n_tgts, 3)``.
+        Constraint matrix is of shape ``(n_constraint, n_feature, n_tgt)``.
+        To get "feature" order constraints, use
+        ``np.reshape(constraint_matrix, (n_constraints, -1))``.
+        To get "target" order constraints, transpose axis 1 and 2 before
+        reshaping.
+    """
+    n_terms = n_poly_features(n_tgts, degree=2, include_bias=False)
+    lib = PolynomialLibrary(2, include_bias=False).fit(np.zeros((1, n_tgts)))
+    terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+
+    # index of tgt -> index of its pure quadratic term
+    pure_terms = {np.argmax(exps): t_ind for t_ind, exps in terms if max(exps) == 2}
+    # two indexes of tgts -> index of their mixed quadratic term
+    mixed_terms = {
+        frozenset(np.argwhere(exponent == 1).flatten()): t_ind
+        for t_ind, exponent in terms
+        if max(exponent) == 1 and sum(exponent) == 2
+    }
+    constraint_mat = np.vstack(
+        (
+            _pure_constraints(n_tgts, n_terms, pure_terms),
+            _antisymm_double_constraint(n_tgts, n_terms, pure_terms, mixed_terms),
+            _antisymm_triple_constraints(n_tgts, n_terms, mixed_terms),
+        )
+    )
+
+    return np.zeros(len(constraint_mat)), constraint_mat
+
+
+def _pure_constraints(
+    n_tgts: int, n_terms: int, pure_terms: dict[intp, int]
+) -> NDArray[np.dtype("float")]:
+    """Set constraints for coefficients adorning terms like a_i^3 = 0"""
+    constraint_mat = np.zeros((n_tgts, n_terms, n_tgts))
+    for constr_ind, (tgt_ind, term_ind) in zip(range(n_tgts), pure_terms.items()):
+        constraint_mat[constr_ind, term_ind, tgt_ind] = 1.0
+    return constraint_mat
+
+
+def _antisymm_double_constraint(
+    n_tgts: int,
+    n_terms: int,
+    pure_terms: dict[intp, int],
+    mixed_terms: dict[frozenset[intp] : int],
+) -> NDArray[np.dtype("float")]:
+    """Set constraints for coefficients adorning terms like a_i^2 * a_j=0"""
+    constraint_mat_1 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i^2 * a_j
+    constraint_mat_2 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i * a_j^2
+    for constr_ind, ((tgt_i, tgt_j), mix_term) in zip(
+        range(n_tgts), mixed_terms.items()
+    ):
+        constraint_mat_1[constr_ind, mix_term, tgt_i] = 1.0
+        constraint_mat_1[constr_ind, pure_terms[tgt_i], tgt_j] = 1.0
+        constraint_mat_2[constr_ind, mix_term, tgt_j] = 1.0
+        constraint_mat_2[constr_ind, pure_terms[tgt_j], tgt_i] = 1.0
+
+    return np.concatenate((constraint_mat_1, constraint_mat_2), axis=0)
+
+
+def _antisymm_triple_constraints(
+    n_tgts: int, n_terms: int, mixed_terms: dict[frozenset[intp] : int]
+) -> NDArray[np.dtype("float")]:
+    constraint_mat = np.zeros((comb(n_tgts, 3), n_terms, n_tgts))  # a_ia_ja_k
+
+    def find_symm_term(a, b):
+        return mixed_terms[frozenset({a, b})]
+
+    for constr_ind, (tgt_i, tgt_j, tgt_k) in enumerate(combo_nr(range(n_tgts), 3)):
+        constraint_mat[constr_ind, find_symm_term(tgt_j, tgt_k), tgt_i] = 1
+        constraint_mat[constr_ind, find_symm_term(tgt_k, tgt_i), tgt_j] = 1
+        constraint_mat[constr_ind, find_symm_term(tgt_i, tgt_j), tgt_k] = 1
+
+    return constraint_mat

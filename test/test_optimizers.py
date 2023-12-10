@@ -1135,7 +1135,7 @@ def test_remove_and_decrement():
 
 def test_trapping_constraints():
     # x, y, x^2, xy, y^2
-    constraint_rhs, constraint_lhs = _make_constraints(2)
+    constraint_rhs, constraint_lhs = _make_constraints(2, include_bias=False)
     stable_coefs = np.array([[0, 0, 0, 1, -1], [0, 0, -1, 1, 0]])
     result = np.tensordot(constraint_lhs, stable_coefs, ((1, 2), (1, 0)))
     np.testing.assert_array_equal(constraint_rhs, result)

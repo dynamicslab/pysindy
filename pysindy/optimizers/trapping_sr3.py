@@ -822,13 +822,15 @@ class TrappingSR3(SR3):
         self.objective_history = objective_history
 
 
-def _make_constraints(n_tgts: int):
+def _make_constraints(n_tgts: int, **kwargs):
     """Create constraints for the Quadratic terms in TrappingSR3.
 
     These are the constraints from equation 5 of the Trapping SINDy paper.
 
     Args:
         n_tgts: number of coordinates or modes for which you're fitting an ODE.
+        kwargs: Keyword arguments to PolynomialLibrary such as
+            ``include_bias``.
 
     Returns:
         A tuple of the constraint zeros, and a constraint matrix to multiply
@@ -841,7 +843,7 @@ def _make_constraints(n_tgts: int):
         reshaping.
     """
     n_terms = n_poly_features(n_tgts, degree=2, include_bias=False)
-    lib = PolynomialLibrary(2, include_bias=False).fit(np.zeros((1, n_tgts)))
+    lib = PolynomialLibrary(2, **kwargs).fit(np.zeros((1, n_tgts)))
     terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
 
     # index of tgt -> index of its pure quadratic term

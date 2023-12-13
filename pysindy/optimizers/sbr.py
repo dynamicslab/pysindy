@@ -1,13 +1,16 @@
-import numpy as np
-
 import jax.numpy as jnp
-from jax import random
-
+import numpy as np
 import numpyro
-from numpyro.infer import MCMC, NUTS
-from numpyro.distributions import HalfCauchy, InverseGamma, Normal, Exponential
+from jax import random
+from numpyro.distributions import Exponential
+from numpyro.distributions import HalfCauchy
+from numpyro.distributions import InverseGamma
+from numpyro.distributions import Normal
+from numpyro.infer import MCMC
+from numpyro.infer import NUTS
 
 from .base import BaseOptimizer
+
 
 class SBR(BaseOptimizer):
     def __init__(
@@ -34,17 +37,23 @@ class SBR(BaseOptimizer):
         self.mcmc_kwargs = mcmc_kwargs
 
     def _reduce(self, x, y):
-
         # set up a sparse regression and sample.
         regression = BayesianSparseRegression(self.tau_0, self.nu, self.s, self.lamb)
         self.mcmc = regression.fit(x, y, **self.mcmc_kwargs)
 
         # get the variable names and the mean values from the samples.
-        beta_names = [varname for varname in self.mcmc.get_samples().keys() if varname.startswith("beta")]
-        beta = np.array([self.mcmc.get_samples()[varname].mean().item() for varname in beta_names]).reshape(y.shape[1], -1)
+        beta_names = [
+            varname
+            for varname in self.mcmc.get_samples().keys()
+            if varname.startswith("beta")
+        ]
+        beta = np.array(
+            [self.mcmc.get_samples()[varname].mean().item() for varname in beta_names]
+        ).reshape(y.shape[1], -1)
 
         # set the mean values as the coefficients.
         self.coef_ = beta
+
 
 class BayesianSparseRegression:
     def __init__(self, tau_0=0.1, nu=4, s=2, lamb=1):
@@ -77,7 +86,6 @@ class BayesianSparseRegression:
         numpyro.sample("obs", Normal(mu, sigma), obs=y)
 
     def fit(self, x, y, **kwargs):
-
         # set up a jax random key.
         seed = kwargs.pop("seed", 0)
         rng_key = random.PRNGKey(seed)
@@ -93,6 +101,7 @@ class BayesianSparseRegression:
         # extract the MCMC samples and compute the UQ-SINDy parameters.
         return mcmc
 
+
 def sample_reg_horseshoe_hyper(tau_0=0.1, nu=4, s=2):
     """
     For details on this prior, please refer to:
@@ -101,8 +110,9 @@ def sample_reg_horseshoe_hyper(tau_0=0.1, nu=4, s=2):
     Model Discovery (arXiv:2107.02107). arXiv. http://arxiv.org/abs/2107.02107
     """
     tau = numpyro.sample("tau", HalfCauchy(tau_0))
-    c_sq = numpyro.sample("c_sq", InverseGamma(nu/2, nu/2 * s**2))
+    c_sq = numpyro.sample("c_sq", InverseGamma(nu / 2, nu / 2 * s**2))
     return tau, c_sq
+
 
 def sample_reg_horseshoe(i, j, tau, c_sq):
     """
@@ -112,6 +122,11 @@ def sample_reg_horseshoe(i, j, tau, c_sq):
     Model Discovery (arXiv:2107.02107). arXiv. http://arxiv.org/abs/2107.02107
     """
     lambda_i_j = numpyro.sample("lambda_{}_{}".format(i, j), HalfCauchy(1.0))
-    lambda_i_j_squiggle = jnp.sqrt(c_sq) * lambda_i_j / jnp.sqrt(c_sq + tau**2 * lambda_i_j**2)
-    beta_i_j = numpyro.sample("beta_{}_{}".format(i, j), Normal(0.0, jnp.sqrt(lambda_i_j_squiggle**2 * tau**2)))
+    lambda_i_j_squiggle = (
+        jnp.sqrt(c_sq) * lambda_i_j / jnp.sqrt(c_sq + tau**2 * lambda_i_j**2)
+    )
+    beta_i_j = numpyro.sample(
+        "beta_{}_{}".format(i, j),
+        Normal(0.0, jnp.sqrt(lambda_i_j_squiggle**2 * tau**2)),
+    )
     return beta_i_j

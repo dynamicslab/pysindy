@@ -41,4 +41,5 @@ __all__ = [
     "FROLS",
     "SINDyPI",
     "MIOSR",
+    "SBR",
 ]

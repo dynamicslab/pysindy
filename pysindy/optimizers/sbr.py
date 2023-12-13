@@ -38,7 +38,7 @@ class SBR(BaseOptimizer):
 
     def _reduce(self, x, y):
         # set up a sparse regression and sample.
-        regression = BayesianSparseRegression(self.tau_0, self.nu, self.s, self.lamb)
+        regression = SparseBayesianRegression(self.tau_0, self.nu, self.s, self.lamb)
         self.mcmc = regression.fit(x, y, **self.mcmc_kwargs)
 
         # get the variable names and the mean values from the samples.
@@ -55,7 +55,7 @@ class SBR(BaseOptimizer):
         self.coef_ = beta
 
 
-class BayesianSparseRegression:
+class SparseBayesianRegression:
     def __init__(self, tau_0=0.1, nu=4, s=2, lamb=1):
         # set hyperparameters
         self.tau_0 = tau_0

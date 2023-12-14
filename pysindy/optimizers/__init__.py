@@ -19,7 +19,7 @@ try:  # Waiting on PEP 690 to lazy import cvxpy
     from .stable_linear_sr3 import StableLinearSR3
 except ImportError:
     pass
-try:  # Waiting on PEP 690 to lazy import numpyro
+try:
     from .sbr import SBR
 except ImportError:
     pass

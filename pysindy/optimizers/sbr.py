@@ -38,13 +38,7 @@ class SBR(BaseOptimizer):
 
     def _reduce(self, x, y):
         # set up a sparse regression and sample.
-        regression = SparseBayesianRegression(
-            self.sparsity_coef_tau0,
-            self.slab_shape_nu,
-            self.slab_shape_s,
-            self.noise_hyper_lambda,
-        )
-        self.mcmc = regression.fit(x, y, **self.mcmc_kwargs)
+        self.mcmc = self._run_mcmc(x, y, **self.mcmc_kwargs)
 
         # get the variable names and the mean values from the samples.
         beta_names = [
@@ -59,22 +53,7 @@ class SBR(BaseOptimizer):
         # set the mean values as the coefficients.
         self.coef_ = beta
 
-
-class SparseBayesianRegression:
-    def __init__(
-        self,
-        sparsity_coef_tau0=0.1,
-        slab_shape_nu=4.0,
-        slab_shape_s=2.0,
-        noise_hyper_lambda=1.0,
-    ):
-        # set hyperparameters
-        self.sparsity_coef_tau0 = sparsity_coef_tau0
-        self.slab_shape_nu = slab_shape_nu
-        self.slab_shape_s = slab_shape_s
-        self.noise_hyper_lambda = noise_hyper_lambda
-
-    def _model(self, x, y):
+    def _numpyro_model(self, x, y):
         # get the dimensionality of the problem.
         n_features = x.shape[1]
         n_targets = y.shape[1]
@@ -98,14 +77,14 @@ class SparseBayesianRegression:
         sigma = numpyro.sample("sigma", Exponential(self.noise_hyper_lambda))
         numpyro.sample("obs", Normal(mu, sigma), obs=y)
 
-    def fit(self, x, y, **kwargs):
+    def _run_mcmc(self, x, y, **kwargs):
         # set up a jax random key.
         seed = kwargs.pop("seed", 0)
         rng_key = random.PRNGKey(seed)
         rng_key, rng_key_ = random.split(rng_key)
 
         # run the MCMC
-        kernel = NUTS(self._model)
+        kernel = NUTS(self._numpyro_model)
         num_warmup = kwargs.pop("num_warmup", 2000)
         num_samples = kwargs.pop("num_samples", 5000)
         mcmc = MCMC(kernel, num_warmup=num_warmup, num_samples=num_samples, **kwargs)

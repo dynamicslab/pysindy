@@ -15,10 +15,10 @@ from .base import BaseOptimizer
 class SBR(BaseOptimizer):
     def __init__(
         self,
-        tau_0=0.1,
-        nu=4,
-        s=2,
-        lamb=1,
+        sparsity_coef_tau0=0.1,
+        slab_shape_nu=4,
+        slab_shape_s=2,
+        noise_hyper_lambda=1,
         normalize_columns=False,
         copy_X=True,
         **mcmc_kwargs,
@@ -28,17 +28,22 @@ class SBR(BaseOptimizer):
             normalize_columns=normalize_columns,
         )
         # set the hyperparameters
-        self.tau_0 = tau_0
-        self.nu = nu
-        self.s = s
-        self.lamb = lamb
+        self.sparsity_coef_tau0 = sparsity_coef_tau0
+        self.slab_shape_nu = slab_shape_nu
+        self.slab_shape_s = slab_shape_s
+        self.noise_hyper_lambda = noise_hyper_lambda
 
         # store the MCMC kwargs.
         self.mcmc_kwargs = mcmc_kwargs
 
     def _reduce(self, x, y):
         # set up a sparse regression and sample.
-        regression = SparseBayesianRegression(self.tau_0, self.nu, self.s, self.lamb)
+        regression = SparseBayesianRegression(
+            self.sparsity_coef_tau0,
+            self.slab_shape_nu,
+            self.slab_shape_s,
+            self.noise_hyper_lambda,
+        )
         self.mcmc = regression.fit(x, y, **self.mcmc_kwargs)
 
         # get the variable names and the mean values from the samples.
@@ -56,12 +61,18 @@ class SBR(BaseOptimizer):
 
 
 class SparseBayesianRegression:
-    def __init__(self, tau_0=0.1, nu=4, s=2, lamb=1):
+    def __init__(
+        self,
+        sparsity_coef_tau0=0.1,
+        slab_shape_nu=4.0,
+        slab_shape_s=2.0,
+        noise_hyper_lambda=1.0,
+    ):
         # set hyperparameters
-        self.tau_0 = tau_0
-        self.nu = nu
-        self.s = s
-        self.lamb = lamb
+        self.sparsity_coef_tau0 = sparsity_coef_tau0
+        self.slab_shape_nu = slab_shape_nu
+        self.slab_shape_s = slab_shape_s
+        self.noise_hyper_lambda = noise_hyper_lambda
 
     def _model(self, x, y):
         # get the dimensionality of the problem.
@@ -69,7 +80,9 @@ class SparseBayesianRegression:
         n_targets = y.shape[1]
 
         # sample the hyperparameters.
-        tau, c_sq = sample_reg_horseshoe_hyper()
+        tau, c_sq = sample_reg_horseshoe_hyper(
+            self.sparsity_coef_tau0, self.slab_shape_nu, self.slab_shape_s
+        )
 
         # sample the parameters compute the predicted outputs.
         beta = []
@@ -82,7 +95,7 @@ class SparseBayesianRegression:
         mu = jnp.dot(x, beta.T)
 
         # compute the likelihood.
-        sigma = numpyro.sample("sigma", Exponential(1.0))
+        sigma = numpyro.sample("sigma", Exponential(self.noise_hyper_lambda))
         numpyro.sample("obs", Normal(mu, sigma), obs=y)
 
     def fit(self, x, y, **kwargs):
@@ -102,14 +115,14 @@ class SparseBayesianRegression:
         return mcmc
 
 
-def sample_reg_horseshoe_hyper(tau_0=0.1, nu=4, s=2):
+def sample_reg_horseshoe_hyper(tau0=0.1, nu=4, s=2):
     """
     For details on this prior, please refer to:
     Hirsh, S. M., Barajas-Solano, D. A., & Kutz, J. N. (2021).
     parsifying Priors for Bayesian Uncertainty Quantification in
     Model Discovery (arXiv:2107.02107). arXiv. http://arxiv.org/abs/2107.02107
     """
-    tau = numpyro.sample("tau", HalfCauchy(tau_0))
+    tau = numpyro.sample("tau", HalfCauchy(tau0))
     c_sq = numpyro.sample("c_sq", InverseGamma(nu / 2, nu / 2 * s**2))
     return tau, c_sq
 

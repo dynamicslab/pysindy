@@ -13,6 +13,63 @@ from .base import BaseOptimizer
 
 
 class SBR(BaseOptimizer):
+    """
+    Sparse Bayesian Regression (SBR) optimizer. This uses the regularised
+    horseshoe prior over the SINDy coefficients to achieve sparsification.
+
+    Inference is achieved through NUTS sampling with numpyro, which is a
+    dependency for this optimizer.
+
+    The SINDy coefficients are set as the posterior means of the MCMC samples.
+    Additional statistics can be computed from the MCMC samples stored in
+    the `mcmc` attribute using e.g. ArviZ.
+
+    See the following reference for more details:
+
+        Hirsh, S. M., Barajas-Solano, D. A., & Kutz, J. N. (2021).
+        parsifying Priors for Bayesian Uncertainty Quantification in
+        Model Discovery (arXiv:2107.02107). arXiv. http://arxiv.org/abs/2107.02107
+
+    Parameters
+    ----------
+    sparsity_coef_tau0 : float, optional (default 0.1)
+        Sparsity coefficient for regularised horseshoe hyper-prior. Lower
+        value increases the sparsity of the SINDy coefficients. See Hirsh
+        et al. (2021) for more details.
+
+    slab_shape_nu : float, optional (default 4)
+        Shape parameter for the slab region of the regularised horseshoe
+        prior. See Hirsh et al. (2021) for more details
+
+    slab_shape_s : float, optional (default 2)
+        Shape parameter for the slab region of the regularised horseshoe
+        prior. See Hirsh et al. (2021) for more details
+
+    noise_hyper_lambda : float, optional (default 1)
+        Rate hyperparameter for the exponential prior distribution over
+        the noise standard deviation.
+
+    normalize_columns : boolean, optional (default False)
+        Normalize the columns of x (the SINDy library terms) before regression
+        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
+        is deprecated in sklearn versions >= 1.0 and will be removed.
+
+    copy_X : boolean, optional (default True)
+        If True, X will be copied; else, it may be overwritten.
+
+    **mcmc_kwargs
+        Instructions for MCMC sampling.
+        Keyword arguments are passed to numpyro.infer.MCMC
+
+    Attributes
+    ----------
+    coef_ : array, shape (n_features,) or (n_targets, n_features)
+        Posterior means of the SINDy coefficients.
+
+    mcmc : numpyro.infer.mcmc.MCMC
+        Complete traces of the posterior samples.
+    """
+
     def __init__(
         self,
         sparsity_coef_tau0=0.1,

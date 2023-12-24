@@ -243,7 +243,7 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
         rhos_plus[1:],
         np.ones(len(x)) * rhos_plus[-1] * 5,
         color="r",
-        label="Possibly Unstable",
+        label="Possibly unstable",
     )
     ax.fill_between(
         x, np.zeros(len(x)), rhos_minus[1:], color="g", label=r"Trapping region"

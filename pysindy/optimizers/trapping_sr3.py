@@ -1,6 +1,5 @@
 import warnings
 from itertools import combinations as combo_nr
-from itertools import combinations_with_replacement as combo_wr
 from math import comb
 from typing import Tuple
 

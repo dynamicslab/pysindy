@@ -720,12 +720,13 @@ class WeakPDELibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_features = x_full[0].shape[x_full[0].ax_coord]
+        x0 = x_full[0]
+        n_features = x0.shape[x0.ax_coord]
         self.n_features_in_ = n_features
         n_output_features = 0
 
         # Count the number of non-derivative terms
-        self.function_library.fit(x_full)
+        self.function_library.fit(x0.take(0, x0.ax_time))
         n_output_features = self.function_library.n_output_features_
 
         if self.grid_ndim != 0:

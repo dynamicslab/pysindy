@@ -1,5 +1,6 @@
 import warnings
 from itertools import product as iproduct
+from typing import Optional
 
 import numpy as np
 from scipy.special import binom
@@ -135,9 +136,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     def __init__(
         self,
-        function_library: BaseFeatureLibrary = PolynomialLibrary(
-            degree=3, include_bias=False
-        ),
+        function_library: Optional[BaseFeatureLibrary] = None,
         derivative_order=0,
         spatiotemporal_grid=None,
         interaction_only=True,
@@ -166,6 +165,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.num_trajectories = 1
         self.differentiation_method = differentiation_method
         self.diff_kwargs = diff_kwargs
+        if function_library is None:
+            self.function_library = PolynomialLibrary(degree=3, include_bias=False)
 
         if spatiotemporal_grid is None:
             raise ValueError(

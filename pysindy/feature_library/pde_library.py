@@ -1,5 +1,6 @@
 import warnings
 from itertools import product as iproduct
+from typing import Optional
 
 import numpy as np
 from sklearn.utils.validation import check_is_fitted
@@ -85,9 +86,7 @@ class PDELibrary(BaseFeatureLibrary):
 
     def __init__(
         self,
-        function_library: BaseFeatureLibrary = PolynomialLibrary(
-            degree=3, include_bias=False
-        ),
+        function_library: Optional[BaseFeatureLibrary] = None,
         derivative_order=0,
         spatial_grid=None,
         temporal_grid=None,
@@ -110,7 +109,8 @@ class PDELibrary(BaseFeatureLibrary):
         self.num_trajectories = 1
         self.differentiation_method = differentiation_method
         self.diff_kwargs = diff_kwargs
-
+        if function_library is None:
+            self.function_library = PolynomialLibrary(degree=3, include_bias=False)
         if derivative_order < 0:
             raise ValueError("The derivative order must be >0")
 

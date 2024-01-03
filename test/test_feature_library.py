@@ -105,26 +105,13 @@ def test_pde_library_bad_parameters(params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(
-            spatiotemporal_grid=range(10),
-            p=-1,
-        ),
-        dict(
-            spatiotemporal_grid=range(10),
-            H_xt=-1,
-        ),
-        dict(
-            spatiotemporal_grid=range(10),
-            H_xt=11,
-        ),
-        dict(
-            spatiotemporal_grid=range(10),
-            K=-1,
-        ),
+        dict(spatiotemporal_grid=range(10), p=-1),
+        dict(spatiotemporal_grid=range(10), H_xt=-1),
+        dict(spatiotemporal_grid=range(10), H_xt=11),
+        dict(spatiotemporal_grid=range(10), K=-1),
         dict(),
         dict(
-            spatiotemporal_grid=np.asarray(np.meshgrid(range(10), range(10))).T,
-            H_xt=-1,
+            spatiotemporal_grid=np.asarray(np.meshgrid(range(10), range(10))).T, H_xt=-1
         ),
         dict(
             spatiotemporal_grid=np.transpose(

@@ -405,3 +405,15 @@ def test_insert_misordered_AxisMapping():
         "ax_d": [6, 7],
     }
     assert result == expected
+
+
+def test_squeeze_to_sublist():
+    li = ["a", "b", "c", "d"]
+    result = axes._squeeze_to_sublist(li, [1, 2])
+    assert result == ["a", ["b", "c"], "d"]
+
+    result = axes._squeeze_to_sublist(li, [])
+    assert result == li
+
+    with pytest.raises(ValueError, match="Indexes to squeeze"):
+        axes._squeeze_to_sublist(li, [0, 2])

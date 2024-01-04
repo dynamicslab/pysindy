@@ -13,7 +13,7 @@ from sklearn.base import TransformerMixin
 HANDLED_FUNCTIONS = {}
 
 AxesWarning = type("AxesWarning", (SyntaxWarning,), {})
-BasicIndexer = Union[slice, int, type(Ellipsis), np.newaxis, type(None)]
+BasicIndexer = Union[slice, int, type(Ellipsis), type(None)]
 Indexer = BasicIndexer | np.ndarray
 OldIndex = NewType("OldIndex", int)
 KeyIndex = NewType("KeyIndex", int)
@@ -71,7 +71,7 @@ class _AxisMapping:
     def _compat_axes(
         in_dict: dict[str, Sequence[int]]
     ) -> dict[str, Union[Sequence[int], int]]:
-        """Turn single-element axis index lists into ints"""
+        """Like fwd_map, but unpack single-element axis lists"""
         axes = {}
         for k, v in in_dict.items():
             if len(v) == 1:
@@ -211,6 +211,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 raise TypeError(
                     f"AxesArray indexer of type {type(indexer)} not understood"
                 )
+        # Advanced indexing can move axes if they are not adjacent
         if not adjacent:
             _move_idxs_to_front(key, adv_inds)
             adv_inds = range(len(adv_inds))
@@ -485,9 +486,17 @@ def _determine_adv_broadcasting(
     return adjacent, bcast_nd, bcast_start_axis
 
 
-def _squeeze_to_sublist(li: list, idxs: Sequence) -> list:
-    "Turn contiguous elements of a list into a sub-list in the same position"
-    return li[: min(idxs)] + [li[idx] for idx in idxs] + li[max(idxs) :]
+def _squeeze_to_sublist(li: list, idxs: Sequence[int]) -> list:
+    """Turn contiguous elements of a list into a sub-list in the same position
+
+    e.g. _squeeze_to_sublist(["a", "b", "c", "d"], [1,2]) = ["a", ["b", "c"], "d"]
+    """
+    for left, right in zip(idxs[:-1], idxs[1:]):
+        if left + 1 != right:
+            raise ValueError("Indexes to squeeze must be contiguous")
+    if not idxs:
+        return li
+    return li[: min(idxs)] + [[li[idx] for idx in idxs]] + li[max(idxs) + 1 :]
 
 
 def comprehend_axes(x):

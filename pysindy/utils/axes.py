@@ -481,7 +481,7 @@ def _move_idxs_to_front(li: list, idxs: Sequence) -> None:
 
 def _determine_adv_broadcasting(
     key: StandardIndexer | Sequence[StandardIndexer], adv_inds: Sequence[OldIndex]
-) -> tuple:
+) -> tuple[bool, int, Optional[int]]:
     """Calculate the shape and location for the result of advanced indexing."""
     adjacent = all(i + 1 == j for i, j in zip(adv_inds[:-1], adv_inds[1:]))
     adv_indexers = [np.array(key[i]) for i in adv_inds]

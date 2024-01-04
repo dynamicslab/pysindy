@@ -417,3 +417,17 @@ def test_squeeze_to_sublist():
 
     with pytest.raises(ValueError, match="Indexes to squeeze"):
         axes._squeeze_to_sublist(li, [0, 2])
+
+
+def test_determine_adv_broadcasting():
+    indexers = (np.ones(1), np.ones((4, 1)), np.ones(3))
+    res_adj, res_nd, res_start = axes._determine_adv_broadcasting(indexers, [0, 1, 2])
+    assert res_adj is True
+    assert res_nd == 2
+    assert res_start == 0
+
+    indexers = (None, np.ones(1), 2, np.ones(3))
+    res_adj, res_nd, res_start = axes._determine_adv_broadcasting(indexers, [1, 3])
+    assert res_adj is False
+    assert res_nd == 1
+    assert res_start == 0

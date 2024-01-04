@@ -8,17 +8,18 @@ from typing import Sequence
 from typing import Union
 
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.base import TransformerMixin
 
 HANDLED_FUNCTIONS = {}
 
 AxesWarning = type("AxesWarning", (SyntaxWarning,), {})
 BasicIndexer = Union[slice, int, type(Ellipsis), type(None)]
-Indexer = BasicIndexer | np.ndarray
-OldIndex = NewType("OldIndex", int)
+Indexer = BasicIndexer | NDArray
+StandardIndexer = Union[slice, int, type(None), NDArray]
+OldIndex = NewType("OldIndex", int)  # Before moving advanced axes adajent
 KeyIndex = NewType("KeyIndex", int)
 NewIndex = NewType("NewIndex", int)
-# ListOrItem = list[T] | T
 PartialReIndexer = tuple[KeyIndex, Optional[OldIndex], str]
 CompleteReIndexer = tuple[
     list[KeyIndex], Optional[list[OldIndex]], Optional[list[NewIndex]]
@@ -414,7 +415,7 @@ def concatenate(arrays, axis=0):
 
 def standardize_indexer(
     arr: np.ndarray, key: Indexer | Sequence[Indexer]
-) -> tuple[tuple[Indexer], tuple[KeyIndex]]:
+) -> tuple[tuple[StandardIndexer], tuple[KeyIndex]]:
     """Convert any legal numpy indexer to a "standard" form.
 
     Standard form involves creating an equivalent indexer that is a tuple with
@@ -490,7 +491,7 @@ def _move_idxs_to_front(li: list, idxs: Sequence) -> None:
 
 
 def _determine_adv_broadcasting(
-    key: Indexer | Sequence[Indexer], adv_inds: Sequence[OldIndex]
+    key: StandardIndexer | Sequence[StandardIndexer], adv_inds: Sequence[OldIndex]
 ) -> tuple:
     """Calculate the shape and location for the result of advanced indexing"""
     adjacent = all(i + 1 == j for i, j in zip(adv_inds[:-1], adv_inds[1:]))

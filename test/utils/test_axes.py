@@ -22,9 +22,6 @@ def test_repr():
     assert result == expected
 
 
-@pytest.mark.skip(
-    "Not until fancy indexing (boolean) either short-circuited or implemented"
-)
 def test_ufunc_override():
     # This is largely a clone of test_ufunc_override_with_super() from
     # numpy/core/tests/test_umath.py
@@ -199,7 +196,7 @@ def test_basic_indexing_modifies_axes():
     assert set(almost_new.ax_unk) == {0, 1, 3, 4}
 
 
-def test_fancy_indexing_modifies_axes():
+def test_adv_indexing_modifies_axes():
     axes = {"ax_time": 0, "ax_coord": 1}
     arr = AxesArray(np.arange(4).reshape((2, 2)), axes)
     flat = arr[[0, 1], [0, 1]]
@@ -208,21 +205,23 @@ def test_fancy_indexing_modifies_axes():
     assert flat.shape == (2,)
     np.testing.assert_array_equal(np.asarray(flat), np.array([0, 3]))
 
-    assert flat.ax__timecoord == 0
+    assert flat.ax_time_coord == 0
     with pytest.raises(AttributeError):
         flat.ax_coord
     with pytest.raises(AttributeError):
         flat.ax_time
 
     assert same.shape == arr.shape
-    np.testing.assert_equal(same, arr)
-    assert same.ax_time == 0
-    assert same.ax_coord == 1
+    np.testing.assert_equal(np.asarray(same), np.asarray(arr))
+    assert same.ax_time_coord == [0, 1]
+    with pytest.raises(AttributeError):
+        same.ax_coord
 
     assert tpose.shape == arr.shape
-    np.testing.assert_equal(same, arr.T)
-    assert same.ax_time == 1
-    assert same.ax_coord == 0
+    np.testing.assert_equal(np.asarray(tpose), np.asarray(arr.T))
+    assert tpose.ax_time_coord == [0, 1]
+    with pytest.raises(AttributeError):
+        tpose.ax_coord
 
     fat = arr[[[0, 1], [0, 1]]]
     assert fat.shape == (2, 2, 2)
@@ -405,18 +404,6 @@ def test_insert_misordered_AxisMapping():
         "ax_d": [6, 7],
     }
     assert result == expected
-
-
-def test_squeeze_to_sublist():
-    li = ["a", "b", "c", "d"]
-    result = axes._squeeze_to_sublist(li, [1, 2])
-    assert result == ["a", ["b", "c"], "d"]
-
-    result = axes._squeeze_to_sublist(li, [])
-    assert result == li
-
-    with pytest.raises(ValueError, match="Indexes to squeeze"):
-        axes._squeeze_to_sublist(li, [0, 2])
 
 
 def test_determine_adv_broadcasting():

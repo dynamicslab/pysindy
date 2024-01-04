@@ -163,16 +163,16 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         if axes is None:
             axes = {}
         in_ndim = len(input_array.shape)
-        obj.__ax_map = _AxisMapping(axes, in_ndim)
+        obj._ax_map = _AxisMapping(axes, in_ndim)
         return obj
 
     @property
     def axes(self):
-        return self.__ax_map.compat_axes
+        return self._ax_map.compat_axes
 
     @property
     def _reverse_map(self):
-        return self.__ax_map.reverse_map
+        return self._ax_map.reverse_map
 
     @property
     def shape(self):
@@ -183,7 +183,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         if parts[0] == "ax":
             return self.axes[name]
         if parts[0] == "n":
-            fwd_map = self.__ax_map.fwd_map
+            fwd_map = self._ax_map.fwd_map
             shape = tuple(self.shape[ax_id] for ax_id in fwd_map["ax_" + parts[1]])
             if len(shape) == 1:
                 return shape[0]
@@ -296,13 +296,13 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             pass
         # mulligan structured arrays, etc.
         new_map = _AxisMapping(
-            self.__ax_map.remove_axis(remove_axes), len(in_dim) - len(remove_axes)
+            self._ax_map.remove_axis(remove_axes), len(in_dim) - len(remove_axes)
         )
         new_map = _AxisMapping(
             new_map.insert_axis(new_axes),
             len(in_dim) - len(remove_axes) + len(new_axes),
         )
-        output.__ax_map = new_map
+        output._ax_map = new_map
         return output
 
     def __array_wrap__(self, out_arr, context=None):
@@ -319,7 +319,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 not hasattr(self, "__ax_map"),
             )
         ):
-            self.__ax_map = _AxisMapping({})
+            self._ax_map = _AxisMapping({})
         # required by ravel() and view() used in numpy testing.  Also for zeros_like...
         elif all(
             (
@@ -328,7 +328,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 self.shape == obj.shape,
             )
         ):
-            self.__ax_map = _AxisMapping(obj.axes, len(obj.shape))
+            self._ax_map = _AxisMapping(obj.axes, len(obj.shape))
         # maybe add errors for incompatible views?
 
     def __array_ufunc__(
@@ -364,7 +364,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         ):
             axes = None
             if kwargs["axis"] is not None:
-                axes = self.__ax_map.remove_axis(axis=kwargs["axis"])
+                axes = self._ax_map.remove_axis(axis=kwargs["axis"])
         else:
             axes = self.axes
         final_results = []

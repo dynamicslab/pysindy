@@ -196,8 +196,11 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             except KeyError:
                 raise AttributeError(f"AxesArray has no axis '{name}'")
         if parts[0] == "n":
-            fwd_map = self._ax_map.fwd_map
-            shape = tuple(self.shape[ax_id] for ax_id in fwd_map["ax_" + parts[1]])
+            try:
+                ax_ids = self._ax_map.fwd_map["ax_" + parts[1]]
+            except KeyError:
+                raise AttributeError(f"AxesArray has no axis '{name}'")
+            shape = tuple(self.shape[ax_id] for ax_id in ax_ids)
             if len(shape) == 1:
                 return shape[0]
             return shape

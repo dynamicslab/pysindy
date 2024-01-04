@@ -98,7 +98,7 @@ class _AxisMapping:
         in_ndim = len(self.reverse_map)
         if not isinstance(axis, Collection):
             axis = [axis]
-        for cum_shift, orig_ax_remove in enumerate(axis):
+        for cum_shift, orig_ax_remove in enumerate(sorted(axis)):
             remove_ax_name = self.reverse_map[orig_ax_remove]
             curr_ax_remove = orig_ax_remove - cum_shift
             if len(new_axes[remove_ax_name]) == 1:
@@ -129,7 +129,7 @@ class _AxisMapping:
         in_ndim = len(self.reverse_map)
         if not isinstance(axis, Collection):
             axis = [axis]
-        for cum_shift, ax in enumerate(axis):
+        for cum_shift, ax in enumerate(sorted(axis)):
             if new_name in new_axes.keys():
                 new_axes[new_name].append(ax)
             else:

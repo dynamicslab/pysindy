@@ -194,7 +194,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         if not isinstance(output, AxesArray):
             return output
         in_dim = self.shape
-        key, adv_inds = _standardize_indexer(self, key)
+        key, adv_inds = standardize_indexer(self, key)
         if adv_inds:
             adjacent, bcast_nd, bcast_start_axis = _determine_adv_broadcasting(adv_inds)
         else:
@@ -412,37 +412,51 @@ def concatenate(arrays, axis=0):
     return AxesArray(np.concatenate(parents, axis), axes=ax_list[0])
 
 
-def _standardize_indexer(
-    arr: np.ndarray, key
+def standardize_indexer(
+    arr: np.ndarray, key: Indexer | Sequence[Indexer]
 ) -> tuple[tuple[Indexer], tuple[KeyIndex]]:
-    """Convert to a tuple of slices, ints, None, and ndarrays.
+    """Convert any legal numpy indexer to a "standard" form.
 
+    Standard form involves creating an equivalent indexer that is a tuple with
+    one element per index of the original axis.  All advanced indexer elements
+    are converted to numpy arrays
     Returns:
         A tuple of the normalized indexer as well as the indexes of
         advanced indexers
     """
-    if not isinstance(key, tuple):
-        key = (key,)
+    if isinstance(key, tuple):
+        key = list(key)
+    else:
+        key = [
+            key,
+        ]
     if not any(ax_key is Ellipsis for ax_key in key):
-        key = (*key, Ellipsis)
-    new_key = []
-    adv_inds = []
-    slicedim = 0
+        key = [*key, Ellipsis]
+
+    _expand_indexer_ellipsis(key, arr.ndim)
+
+    new_key: list[Indexer] = []
+    adv_inds: list[int] = []
     for indexer_ind, ax_key in enumerate(key):
         if not isinstance(ax_key, BasicIndexer):
             ax_key = np.array(ax_key)
             adv_inds.append(indexer_ind)
         new_key.append(ax_key)
-        if isinstance(ax_key, slice | int | np.ndarray):
-            slicedim += 1
-    ellipsis_dims = arr.ndim - slicedim
-    #  .index(Ellipsis) in case array is present.
-    for i, v in enumerate(new_key):
-        if isinstance(v, type(Ellipsis)):
-            ellind = i
-    new_key[ellind : ellind + 1] = ellipsis_dims * (slice(None),)
-    adv_inds = [ind if ind < ellind else ind + ellind for ind in adv_inds]
     return tuple(new_key), tuple(adv_inds)
+
+
+def _expand_indexer_ellipsis(indexers: list[Indexer], ndim: int) -> None:
+    """Replace ellipsis in indexers with the appropriate amount of slice(None)
+
+    Mutates indexers
+    """
+    try:
+        ellind = indexers.index(Ellipsis)
+    except ValueError:
+        return
+    n_new_dims = sum(k is None for k in indexers)
+    n_ellipsis_dims = ndim - (len(indexers) - n_new_dims - 1)
+    indexers[ellind : ellind + 1] = n_ellipsis_dims * (slice(None),)
 
 
 def _adv_broadcast_magic(*args):

@@ -192,11 +192,11 @@ def test_basic_indexing_modifies_axes():
         reverse_slim.ax_coord
     assert reverse_slim.ax_unk == 0
     assert reverse_slim.ax_time == 1
-    almost_new = arr[None, None, 1, 1, None, None]
+    almost_new = arr[None, None, 1, :, None, None]
     with pytest.raises(KeyError):
         almost_new.ax_time
-        almost_new.ax_coord
-    assert set(almost_new.ax_unk) == {0, 1, 2, 3}
+    assert almost_new.ax_coord == 2
+    assert set(almost_new.ax_unk) == {0, 1, 3, 4}
 
 
 def test_fancy_indexing_modifies_axes():

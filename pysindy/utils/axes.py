@@ -197,6 +197,8 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         in_dim = self.shape
         key, adv_inds = standardize_indexer(self, key)
         adjacent, bcast_nd, bcast_start_ax = _determine_adv_broadcasting(key, adv_inds)
+        remove_axes, new_axes = _apply_basic_indexing(key)
+
         # Handle moving around non-adjacent advanced axes
         old_index = OldIndex(0)
         pindexers: list[PartialReIndexer | list[PartialReIndexer]] = []
@@ -231,17 +233,6 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 cindexers.append((*pindexer[:-1], curr_axis))
                 curr_axis += 1
 
-        remove_axes = []
-        new_axes = []
-        leftshift = 0
-        rightshift = 0
-        for key_ind, indexer in enumerate(key):
-            if indexer is None:
-                new_axes.append(key_ind - leftshift)
-                rightshift += 1
-            elif isinstance(indexer, int):
-                remove_axes.append(key_ind - rightshift)
-                leftshift += 1
         if adv_inds:
             adv_inds = sorted(adv_inds)
             source_axis = [  # after basic indexing applied  # noqa
@@ -510,6 +501,28 @@ def _squeeze_to_sublist(li: list, idxs: Sequence[int]) -> list:
     if not idxs:
         return li
     return li[: min(idxs)] + [[li[idx] for idx in idxs]] + li[max(idxs) + 1 :]
+
+
+def _apply_basic_indexing(key: tuple[StandardIndexer]) -> tuple[list[int], list[int]]:
+    """Determine where axes should be removed and added
+
+    Only considers the basic indexers in key.  Numpy arrays are treated as
+    slices, in that they don't affect the final dimensions of the output
+    """
+    remove_axes = []
+    new_axes = []
+    deleted_to_left = 0
+    added_to_left = 0
+    for key_ind, indexer in enumerate(key):
+        if isinstance(indexer, int):
+            orig_arr_axis = key_ind - added_to_left
+            remove_axes.append(orig_arr_axis)
+            deleted_to_left += 1
+        elif indexer is None:
+            new_arr_axis = key_ind - deleted_to_left
+            new_axes.append(new_arr_axis)
+            added_to_left += 1
+    return remove_axes, new_axes
 
 
 def comprehend_axes(x):

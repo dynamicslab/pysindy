@@ -196,10 +196,8 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             return output
         in_dim = self.shape
         key, adv_inds = standardize_indexer(self, key)
-        if adv_inds:
-            adjacent, bcast_nd, bcast_start_axis = _determine_adv_broadcasting(adv_inds)
-        else:
-            adjacent, bcast_nd, bcast_start_axis = True, 0, 0
+        adjacent, bcast_nd, bcast_start_ax = _determine_adv_broadcasting(key, adv_inds)
+        # Handle moving around non-adjacent advanced axes
         old_index = OldIndex(0)
         pindexers: list[PartialReIndexer | list[PartialReIndexer]] = []
         for key_ind, indexer in enumerate(key):
@@ -253,7 +251,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             adv_indexers = [np.array(key[i]) for i in adv_inds]  # noqa
             bcast_nd = np.broadcast(*adv_indexers).nd
             adjacent = all(i + 1 == j for i, j in zip(adv_inds[:-1], adv_inds[1:]))
-            bcast_start_axis = 0 if not adjacent else min(adv_inds)
+            bcast_start_ax = 0 if not adjacent else min(adv_inds)
             adv_map = {}
 
             for idx_id, idxer in zip(adv_inds, adv_indexers):
@@ -261,7 +259,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                     len([id for id in range(idx_id) if key[id] is not None])
                 ]
                 adv_map[base_idxer_ax_name] = [
-                    bcast_start_axis + shp
+                    bcast_start_ax + shp
                     for shp in _compare_bcast_shapes(bcast_nd, idxer.shape)
                 ]
 
@@ -273,9 +271,9 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                     []
                 if len(ax_names) == 0:
                     if "ax_unk" not in adv_map.keys():
-                        adv_map["ax_unk"] = [bcast_ax + bcast_start_axis]
+                        adv_map["ax_unk"] = [bcast_ax + bcast_start_ax]
                     else:
-                        adv_map["ax_unk"].append(bcast_ax + bcast_start_axis)
+                        adv_map["ax_unk"].append(bcast_ax + bcast_start_ax)
 
             for conflict_axis, conflict_names in conflicts.items():
                 new_name = "ax_"
@@ -493,11 +491,11 @@ def _move_idxs_to_front(li: list, idxs: Sequence) -> None:
 def _determine_adv_broadcasting(
     key: StandardIndexer | Sequence[StandardIndexer], adv_inds: Sequence[OldIndex]
 ) -> tuple:
-    """Calculate the shape and location for the result of advanced indexing"""
+    """Calculate the shape and location for the result of advanced indexing."""
     adjacent = all(i + 1 == j for i, j in zip(adv_inds[:-1], adv_inds[1:]))
     adv_indexers = [np.array(key[i]) for i in adv_inds]
     bcast_nd = np.broadcast(*adv_indexers).nd
-    bcast_start_axis = 0 if not adjacent else min(adv_inds)
+    bcast_start_axis = 0 if not adjacent else min(adv_inds) if adv_inds else None
     return adjacent, bcast_nd, bcast_start_axis
 
 

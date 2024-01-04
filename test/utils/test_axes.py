@@ -327,7 +327,7 @@ def test_insert_AxisMapping():
         },
         6,
     )
-    result = ax_map.insert_axis(3)
+    result = ax_map.insert_axis(3, "ax_unk")
     expected = {
         "ax_a": [0, 1],
         "ax_b": 2,

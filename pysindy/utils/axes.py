@@ -2,7 +2,6 @@ import copy
 import warnings
 from typing import Collection
 from typing import List
-from typing import MutableMapping
 from typing import NewType
 from typing import Optional
 from typing import Sequence
@@ -31,17 +30,18 @@ class _AxisMapping:
     indexes.
     """
 
+    fwd_map: dict[str, list[int]]
+    reverse_map: dict[int, str]
+
     def __init__(
         self,
-        axes: MutableMapping[str, Union[int, Sequence[int]]] = None,
+        axes: dict[str, Union[int, Sequence[int]]] = None,
         in_ndim: int = 0,
     ):
         if axes is None:
             axes = {}
-        axes = copy.deepcopy(axes)
-        self.fwd_map: dict[str, list[int]] = {}
-        self.reverse_map: dict[int, str] = {}
-        null = object()
+        self.fwd_map = {}
+        self.reverse_map = {}
 
         def coerce_sequence(obj):
             if isinstance(obj, Sequence):
@@ -52,8 +52,8 @@ class _AxisMapping:
             ax_ids = coerce_sequence(ax_ids)
             self.fwd_map[ax_name] = ax_ids
             for ax_id in ax_ids:
-                old_name = self.reverse_map.get(ax_id, null)
-                if old_name is not null:
+                old_name = self.reverse_map.get(ax_id)
+                if old_name is not None:
                     raise ValueError(f"Assigned multiple definitions to axis {ax_id}")
                 if ax_id >= in_ndim:
                     raise ValueError(
@@ -68,7 +68,9 @@ class _AxisMapping:
             )
 
     @staticmethod
-    def _compat_axes(in_dict: dict[str, Sequence]) -> dict[str, Union[Sequence, int]]:
+    def _compat_axes(
+        in_dict: dict[str, Sequence[int]]
+    ) -> dict[str, Union[Sequence[int], int]]:
         """Turn single-element axis index lists into ints"""
         axes = {}
         for k, v in in_dict.items():
@@ -110,6 +112,7 @@ class _AxisMapping:
                 new_axes[ax_dec_name].append(old_ax_dec - 1)
         return self._compat_axes(new_axes)
 
+    # TODO: delete default kwarg value
     def insert_axis(self, axis: Union[Collection[int], int], new_name: str = "ax_unk"):
         """Create an axes dict from self with specified axis or axes
         added and all greater axes incremented.

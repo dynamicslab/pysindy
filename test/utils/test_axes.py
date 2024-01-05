@@ -383,7 +383,7 @@ def test_insert_multiple_AxisMapping():
         },
         6,
     )
-    result = ax_map.insert_axis([1, 4])
+    result = ax_map.insert_axis([1, 4], new_name="ax_unk")
     expected = {
         "ax_a": [0, 2],
         "ax_unk": [1, 4],
@@ -404,7 +404,7 @@ def test_insert_misordered_AxisMapping():
         },
         6,
     )
-    result = ax_map.insert_axis([4, 1])
+    result = ax_map.insert_axis([4, 1], new_name="ax_unk")
     expected = {
         "ax_a": [0, 2],
         "ax_unk": [1, 4],

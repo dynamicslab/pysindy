@@ -123,8 +123,7 @@ class _AxisMapping:
                 new_axes[ax_dec_name].append(old_ax_dec - 1)
         return self._compat_axes(new_axes)
 
-    # TODO: delete default kwarg value
-    def insert_axis(self, axis: Union[Collection[int], int], new_name: str = "ax_unk"):
+    def insert_axis(self, axis: Union[Collection[int], int], new_name: str):
         """Create an axes dict from self with specified axis or axes
         added and all greater axes incremented.
 

@@ -186,6 +186,14 @@ def test_basic_indexing_modifies_axes():
     assert set(almost_new.ax_unk) == {0, 1, 3, 4}
 
 
+def test_insert_named_axis():
+    arr = AxesArray(np.ones(1), axes={"ax_time": 0})
+    expanded = arr["time", :]
+    result = expanded.axes
+    expected = {"ax_time": [0, 1]}
+    assert result == expected
+
+
 def test_adv_indexing_modifies_axes():
     axes = {"ax_time": 0, "ax_coord": 1}
     arr = AxesArray(np.arange(4).reshape((2, 2)), axes)
@@ -213,6 +221,10 @@ def test_adv_indexing_modifies_axes():
     with pytest.raises(AttributeError):
         tpose.ax_coord
 
+
+def test_adv_indexing_adds_axes():
+    axes = {"ax_time": 0, "ax_coord": 1}
+    arr = AxesArray(np.arange(4).reshape((2, 2)), axes)
     fat = arr[[[0, 1], [0, 1]]]
     assert fat.shape == (2, 2, 2)
     assert fat.ax_time == [0, 1]

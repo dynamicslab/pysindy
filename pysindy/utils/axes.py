@@ -16,7 +16,7 @@ from sklearn.base import TransformerMixin
 HANDLED_FUNCTIONS = {}
 
 AxesWarning = type("AxesWarning", (SyntaxWarning,), {})
-BasicIndexer = Union[slice, int, type(Ellipsis), type(None)]
+BasicIndexer = Union[slice, int, type(Ellipsis), type(None), str]
 Indexer = BasicIndexer | NDArray | list
 StandardIndexer = Union[slice, int, type(None), NDArray[np.dtype(int)]]
 OldIndex = NewType("OldIndex", int)  # Before moving advanced axes adajent
@@ -207,7 +207,11 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         raise AttributeError(f"'{type(self)}' object has no attribute '{name}'")
 
     def __getitem__(self, key: Indexer | Sequence[Indexer], /):
-        output = super().__getitem__(key)
+        if isinstance(key, list | np.ndarray):
+            base_indexer = key
+        else:
+            base_indexer = tuple(None if isinstance(k, str) else k for k in key)
+        output = super().__getitem__(base_indexer)
         if not isinstance(output, AxesArray):
             return output  # why?
         in_dim = self.shape
@@ -381,7 +385,7 @@ def _expand_indexer_ellipsis(key: list[Indexer], ndim: int) -> list[Indexer]:
     # [...].index errors if list contains numpy array
     ellind = [ind for ind, val in enumerate(key) if val is ...][0]
     new_key = []
-    n_new_dims = sum(ax_key is None for ax_key in key)
+    n_new_dims = sum(ax_key is None or isinstance(ax_key, str) for ax_key in key)
     n_ellipsis_dims = ndim - (len(key) - n_new_dims - 1)
     new_key = (
         key[:ellind]
@@ -427,7 +431,7 @@ def _rename_broadcast_axes(
         elif ax_name is Sentinels.ADV_NAME:
             renamed_axes.append((ax_ind, bcast_name))
         else:
-            renamed_axes.append((ax_ind, ax_name))
+            renamed_axes.append((ax_ind, "ax_" + ax_name))
     return renamed_axes
 
 

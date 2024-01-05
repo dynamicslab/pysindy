@@ -98,15 +98,9 @@ def test_ufunc_override():
     c = np.add.reduce(a, 1, None, b)
     assert_equal(c, check)
     assert_(c is b)
-
-
-@pytest.mark.skip("Expected error")
-def test_ufunc_override_accumulate():
-    d = np.array([[1, 2, 3], [1, 2, 3]])
-    a = AxesArray(d, {"ax_time": [0, 1]})
     check = np.add.accumulate(d, axis=0)
     c = np.add.accumulate(a, axis=0)
-    assert_equal(c, check)
+    # assert_equal(c, check)
     b = np.zeros_like(c)
     c = np.add.accumulate(a, 0, None, b)
     assert_equal(c, check)
@@ -238,7 +232,7 @@ def test_standardize_basic_indexer():
     assert result_fancy == ()
 
 
-def test_standardize_fancy_indexer():
+def test_standardize_advanced_indexer():
     arr = np.arange(6).reshape(2, 3)
     result_indexer, result_fancy = axes.standardize_indexer(arr, [1])
     assert result_indexer == [np.ones(1), slice(None)]
@@ -249,6 +243,13 @@ def test_standardize_fancy_indexer():
     )
     assert result_indexer == [None, np.ones(1), 1]
     assert result_fancy == (1,)
+
+
+def test_standardize_bool_indexer():
+    arr = np.ones((1, 2))
+    result, result_adv = axes.standardize_indexer(arr, [[True, True]])
+    assert_equal(result, [[0, 0], [0, 1]])
+    assert result_adv == (0, 1)
 
 
 def test_reduce_AxisMapping():

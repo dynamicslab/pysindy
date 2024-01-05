@@ -17,8 +17,8 @@ HANDLED_FUNCTIONS = {}
 
 AxesWarning = type("AxesWarning", (SyntaxWarning,), {})
 BasicIndexer = Union[slice, int, type(Ellipsis), type(None)]
-Indexer = BasicIndexer | NDArray
-StandardIndexer = Union[slice, int, type(None), NDArray]
+Indexer = BasicIndexer | NDArray | list
+StandardIndexer = Union[slice, int, type(None), NDArray[np.dtype(int)]]
 OldIndex = NewType("OldIndex", int)  # Before moving advanced axes adajent
 KeyIndex = NewType("KeyIndex", int)
 NewIndex = NewType("NewIndex", int)
@@ -338,12 +338,13 @@ def concatenate(arrays, axis=0):
 
 def standardize_indexer(
     arr: np.ndarray, key: Indexer | Sequence[Indexer]
-) -> tuple[list[StandardIndexer], tuple[KeyIndex]]:
+) -> tuple[Sequence[StandardIndexer], tuple[KeyIndex, ...]]:
     """Convert any legal numpy indexer to a "standard" form.
 
     Standard form involves creating an equivalent indexer that is a tuple with
     one element per index of the original axis.  All advanced indexer elements
-    are converted to numpy arrays
+    are converted to numpy arrays, and boolean arrays are converted to
+    integer arrays with obj.nonzero().
     Returns:
         A tuple of the normalized indexer as well as the indexes of
         advanced indexers
@@ -351,36 +352,46 @@ def standardize_indexer(
     if isinstance(key, tuple):
         key = list(key)
     else:
-        key = [
-            key,
-        ]
+        key = [key]
+
     if not any(ax_key is Ellipsis for ax_key in key):
         key = [*key, Ellipsis]
 
-    _expand_indexer_ellipsis(key, arr.ndim)
-
     new_key: list[Indexer] = []
-    adv_inds: list[int] = []
-    for indexer_ind, ax_key in enumerate(key):
+    for ax_key in key:
         if not isinstance(ax_key, BasicIndexer):
             ax_key = np.array(ax_key)
-            adv_inds.append(indexer_ind)
+            if ax_key.dtype == np.dtype(np.bool_):
+                new_key += ax_key.nonzero()
+                continue
         new_key.append(ax_key)
+
+    new_key = _expand_indexer_ellipsis(new_key, arr.ndim)
+    # Can't identify position of advanced indexers before expanding ellipses
+    adv_inds: list[KeyIndex] = []
+    for key_ind, ax_key in enumerate(new_key):
+        if isinstance(ax_key, np.ndarray):
+            adv_inds.append(KeyIndex(key_ind))
+
     return new_key, tuple(adv_inds)
 
 
-def _expand_indexer_ellipsis(indexers: list[Indexer], ndim: int) -> None:
-    """Replace ellipsis in indexers with the appropriate amount of slice(None)
-
-    Mutates indexers
-    """
-    try:
-        ellind = indexers.index(Ellipsis)
-    except ValueError:
-        return
-    n_new_dims = sum(k is None for k in indexers)
-    n_ellipsis_dims = ndim - (len(indexers) - n_new_dims - 1)
-    indexers[ellind : ellind + 1] = n_ellipsis_dims * (slice(None),)
+def _expand_indexer_ellipsis(key: list[Indexer], ndim: int) -> list[Indexer]:
+    """Replace ellipsis in indexers with the appropriate amount of slice(None)"""
+    # [...].index errors if list contains numpy array
+    ellind = [ind for ind, val in enumerate(key) if val is ...][0]
+    new_key = []
+    n_new_dims = sum(ax_key is None for ax_key in key)
+    n_ellipsis_dims = ndim - (len(key) - n_new_dims - 1)
+    new_key = (
+        key[:ellind]
+        + n_ellipsis_dims
+        * [
+            slice(None),
+        ]
+        + key[ellind + 1 + n_ellipsis_dims :]
+    )
+    return new_key
 
 
 def _determine_adv_broadcasting(

@@ -100,7 +100,7 @@ def test_ufunc_override():
     assert_(c is b)
     check = np.add.accumulate(d, axis=0)
     c = np.add.accumulate(a, axis=0)
-    # assert_equal(c, check)
+    assert_equal(c, check)
     b = np.zeros_like(c)
     c = np.add.accumulate(a, 0, None, b)
     assert_equal(c, check)
@@ -119,11 +119,11 @@ def test_ufunc_override():
     a = d.copy().view(AxesArray)
     np.add.at(check, ([0, 1], [0, 2]), 1.0)
     np.add.at(a, ([0, 1], [0, 2]), 1.0)
-    assert_equal(a, check)
+    assert_equal(np.asarray(a), np.asarray(check))  # modified
     b = np.array(1.0).view(AxesArray)
     a = d.copy().view(AxesArray)
     np.add.at(a, ([0, 1], [0, 2]), b)
-    assert_equal(a, check)
+    assert_equal(np.asarray(a), np.asarray(check))  # modified
 
 
 def test_n_elements():

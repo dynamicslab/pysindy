@@ -242,7 +242,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             (
                 not isinstance(obj, AxesArray),
                 self.shape == (),
-                not hasattr(self, "__ax_map"),
+                not hasattr(self, "_ax_map"),
             )
         ):
             self._ax_map = _AxisMapping({})
@@ -250,7 +250,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         elif all(
             (
                 isinstance(obj, AxesArray),
-                not hasattr(self, "__ax_map"),
+                not hasattr(self, "_ax_map"),
                 self.shape == obj.shape,
             )
         ):

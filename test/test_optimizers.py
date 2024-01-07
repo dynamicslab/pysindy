@@ -208,13 +208,11 @@ def test_sr3_bad_parameters(optimizer, params):
         dict(eta=1, alpha_m=-1),
         dict(eta=1, alpha_A=-1),
         dict(gamma=1),
-        dict(evolve_w=False, relax_optim=False),
         dict(thresholder="l0"),
         dict(threshold=-1),
         dict(max_iter=0),
         dict(eta=10, alpha_m=20),
         dict(eta=10, alpha_A=20),
-        dict(inequality_constraints=True, evolve_w=False),
         dict(
             constraint_lhs=np.zeros((10, 10)),
             constraint_rhs=np.zeros(10),
@@ -485,7 +483,6 @@ def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, quadratic_l
 
     opt = TrappingSR3(**params)
     opt.fit(features, x_dot)
-    assert opt.PL_unsym_.shape == (1, 1, 1, 2)
     assert opt.PL_.shape == (1, 1, 1, 2)
     assert opt.PQ_.shape == (1, 1, 1, 1, 2)
     check_is_fitted(opt)
@@ -499,7 +496,6 @@ def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, quadratic_l
 
     opt = TrappingSR3(**params)
     opt.fit(features, x_dot)
-    assert opt.PL_unsym_.shape == (1, 1, 1, 2)
     assert opt.PL_.shape == (1, 1, 1, 2)
     assert opt.PQ_.shape == (1, 1, 1, 1, 2)
     check_is_fitted(opt)
@@ -766,17 +762,6 @@ def test_sr3_enable_trimming(optimizer, data_linear_oscillator_corrupted):
 
 
 @pytest.mark.parametrize(
-    "optimizer", [SR3, ConstrainedSR3, StableLinearSR3, TrappingSR3]
-)
-def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
-    x, x_dot, _ = data_linear_oscillator_corrupted
-    model = optimizer(max_iter=1, tol=1e-10)
-
-    with pytest.warns(ConvergenceWarning):
-        model.fit(x, x_dot)
-
-
-@pytest.mark.parametrize(
     "optimizer",
     [
         STLSQ(max_iter=1),
@@ -789,12 +774,16 @@ def test_sr3_warn(optimizer, data_linear_oscillator_corrupted):
 def test_fit_warn(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
+    optimizer.max_iter = 0  # normally prohibited in constructor
 
     with pytest.warns(ConvergenceWarning):
         optimizer.fit(x, x_dot)
 
 
-@pytest.mark.parametrize("optimizer", [ConstrainedSR3, TrappingSR3, MIOSR])
+@pytest.mark.parametrize(
+    "optimizer",
+    [(ConstrainedSR3, {"max_iter": 80}), (TrappingSR3, {"max_iter": 100}), (MIOSR, {})],
+)
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_row_format_constraints(data_linear_combination, optimizer, target_value):
     # Solution is x_dot = x.dot(np.array([[1, 1, 0], [0, 1, 1]]))
@@ -807,10 +796,11 @@ def test_row_format_constraints(data_linear_combination, optimizer, target_value
     constraint_lhs[0, 0] = 1
     constraint_lhs[1, 3] = 1
 
-    model = optimizer(
+    model = optimizer[0](
         constraint_lhs=constraint_lhs,
         constraint_rhs=constraint_rhs,
         constraint_order="feature",
+        **optimizer[1],
     )
     model.fit(x, x_dot)
 
@@ -820,7 +810,13 @@ def test_row_format_constraints(data_linear_combination, optimizer, target_value
 
 
 @pytest.mark.parametrize(
-    "optimizer", [ConstrainedSR3, StableLinearSR3, TrappingSR3, MIOSR]
+    "optimizer",
+    [
+        (ConstrainedSR3, {"max_iter": 80}),
+        (StableLinearSR3, {}),
+        (TrappingSR3, {"max_iter": 100}),
+        (MIOSR, {}),
+    ],
 )
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_target_format_constraints(data_linear_combination, optimizer, target_value):
@@ -833,7 +829,9 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
     constraint_lhs[0, 1] = 1
     constraint_lhs[1, 4] = 1
 
-    model = optimizer(constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs)
+    model = optimizer[0](
+        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs, **optimizer[1]
+    )
     model.fit(x, x_dot)
     np.testing.assert_allclose(model.coef_[:, 1], target_value, atol=1e-8)
 

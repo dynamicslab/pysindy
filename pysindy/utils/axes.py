@@ -22,10 +22,6 @@ StandardIndexer = Union[slice, int, type(None), NDArray[np.dtype(int)]]
 OldIndex = NewType("OldIndex", int)  # Before moving advanced axes adajent
 KeyIndex = NewType("KeyIndex", int)
 NewIndex = NewType("NewIndex", int)
-PartialReIndexer = tuple[KeyIndex, Optional[OldIndex], str]
-CompleteReIndexer = tuple[
-    list[KeyIndex], Optional[list[OldIndex]], Optional[list[NewIndex]]
-]
 
 
 class Sentinels(Enum):

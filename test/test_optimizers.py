@@ -473,7 +473,7 @@ def test_stable_linear_sr3_linear_library():
         dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((1, 2))),
     ],
 )
-def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, quadratic_library):
+def test_trapping_sr3_quadratic_library(params, trapping_sr3_params):
     t = np.arange(0, 1, 0.1)
     x = np.exp(-t).reshape((-1, 1))
     x_dot = -x

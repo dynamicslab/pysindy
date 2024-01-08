@@ -1131,13 +1131,18 @@ def test_remove_and_decrement():
     np.testing.assert_array_equal(expected, result)
 
 
-def test_trapping_constraints():
+@pytest.mark.parametrize("include_bias", (True, False))
+def test_trapping_constraints(include_bias):
     # x, y, x^2, xy, y^2
-    constraint_rhs, constraint_lhs = _make_constraints(2, include_bias=False)
+    constraint_rhs, constraint_lhs = _make_constraints(2, include_bias=include_bias)
     stable_coefs = np.array([[0, 0, 0, 1, -1], [0, 0, -1, 1, 0]])
+    if include_bias:
+        stable_coefs = np.concatenate(([[0], [0]], stable_coefs), axis=1)
     result = np.tensordot(constraint_lhs, stable_coefs, ((1, 2), (1, 0)))
     np.testing.assert_array_equal(constraint_rhs, result)
 
+
+def test_trapping_mixed_only():
     # xy, xz, yz
     stable_coefs = np.array([[0, 0, -1], [0, 0.5, 0], [0.5, 0, 0]])
     mixed_terms = {frozenset((0, 1)): 0, frozenset((0, 2)): 1, frozenset((1, 2)): 2}

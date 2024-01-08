@@ -589,7 +589,8 @@ def _make_constraints(n_tgts: int, **kwargs):
         To get "target" order constraints, transpose axis 1 and 2 before
         reshaping.
     """
-    n_terms = n_poly_features(n_tgts, degree=2, include_bias=False)
+    include_bias = kwargs.get("include_bias", False)
+    n_terms = n_poly_features(n_tgts, degree=2, include_bias=include_bias)
     lib = PolynomialLibrary(2, **kwargs).fit(np.zeros((1, n_tgts)))
     terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
 

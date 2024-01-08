@@ -4,6 +4,7 @@ Unit tests for optimizers.
 import numpy as np
 import pytest
 from numpy.linalg import norm
+from numpy.typing import NDArray
 from scipy.integrate import solve_ivp
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
@@ -18,6 +19,7 @@ from pysindy import PolynomialLibrary
 from pysindy import SINDy
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import SINDyPILibrary
+from pysindy.optimizers import BaseOptimizer
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import EnsembleOptimizer
 from pysindy.optimizers import FROLS
@@ -67,6 +69,18 @@ class DummyModelNoCoef(BaseEstimator):
         return x
 
 
+def _align_optimizer_and_1dfeatures(
+    opt: BaseOptimizer, features: NDArray
+) -> tuple[BaseOptimizer, NDArray]:
+    # This is a hack until constraints are moved from init to fit
+    if isinstance(opt, TrappingSR3):
+        opt = TrappingSR3(_n_tgts=1, _include_bias=True)
+        features = np.hstack([features, features, features])
+    else:
+        features = features
+    return opt, features
+
+
 @pytest.mark.parametrize(
     "cls, support",
     [
@@ -100,17 +114,19 @@ def data(request):
         SR3(),
         ConstrainedSR3(),
         StableLinearSR3(),
-        TrappingSR3(),
+        TrappingSR3(_n_tgts=1),
         Lasso(fit_intercept=False),
         ElasticNet(fit_intercept=False),
         DummyLinearModel(),
         MIOSR(),
     ],
+    ids=lambda param: type(param),
 )
 def test_fit(data_derivative_1d, optimizer):
     x, x_dot = data_derivative_1d
     if len(x.shape) == 1:
         x = x.reshape(-1, 1)
+    optimizer, x = _align_optimizer_and_1dfeatures(optimizer, x)
     opt = WrappedOptimizer(optimizer, unbias=False)
     opt.fit(x, x_dot)
 
@@ -167,12 +183,12 @@ def test_alternate_parameters(data_derivative_1d, kwargs):
     ],
 )
 def test_sample_weight_optimizers(data_1d, optimizer):
-    x, t = data_1d
-
+    y, t = data_1d
+    opt = optimizer()
+    opt, x = _align_optimizer_and_1dfeatures(opt, y)
     sample_weight = np.ones(x[:, 0].shape)
     sample_weight[::2] = 0
-    opt = optimizer()
-    opt.fit(x, x, sample_weight=sample_weight)
+    opt.fit(x, y, sample_weight=sample_weight)
     check_is_fitted(opt)
 
 
@@ -222,12 +238,12 @@ def test_sr3_bad_parameters(optimizer, params):
 )
 def test_trapping_bad_parameters(params):
     with pytest.raises(ValueError):
-        TrappingSR3(**params)
+        TrappingSR3(_n_tgts=1, **params)
 
 
 def test_trapping_objective_print():
     # test error in verbose print logic when max_iter < 10
-    opt = TrappingSR3(max_iter=2, verbose=True)
+    opt = TrappingSR3(_n_tgts=1, max_iter=2, verbose=True)
     arr = np.ones(1)
     opt._objective(arr, arr, arr, arr, arr, 1)
 
@@ -481,7 +497,7 @@ def test_trapping_sr3_quadratic_library(params, trapping_sr3_params):
 
     params.update(trapping_sr3_params)
 
-    opt = TrappingSR3(**params)
+    opt = TrappingSR3(_n_tgts=1, _include_bias=False, **params)
     opt.fit(features, x_dot)
     assert opt.PL_.shape == (1, 1, 1, 2)
     assert opt.PQ_.shape == (1, 1, 1, 1, 2)
@@ -494,7 +510,7 @@ def test_trapping_sr3_quadratic_library(params, trapping_sr3_params):
     params["constraint_rhs"] = np.zeros(p)
     params["constraint_lhs"] = np.eye(p, r * N)
 
-    opt = TrappingSR3(**params)
+    opt = TrappingSR3(_n_tgts=1, _include_bias=False, **params)
     opt.fit(features, x_dot)
     assert opt.PL_.shape == (1, 1, 1, 2)
     assert opt.PQ_.shape == (1, 1, 1, 1, 2)
@@ -631,7 +647,7 @@ def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
         (SR3, {"trimming_fraction": 0.1}),
         (ConstrainedSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
         (ConstrainedSR3, {"trimming_fraction": 0.1}),
-        (TrappingSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
+        (TrappingSR3, {"_n_tgts": 1, "constraint_lhs": [1], "constraint_rhs": [1]}),
         (StableLinearSR3, {"constraint_lhs": [1], "constraint_rhs": [1]}),
         (StableLinearSR3, {"trimming_fraction": 0.1}),
         (SINDyPI, {}),
@@ -741,7 +757,7 @@ def test_sr3_enable_trimming(optimizer, data_linear_oscillator_corrupted):
         SR3(max_iter=1),
         ConstrainedSR3(max_iter=1),
         StableLinearSR3(max_iter=1),
-        TrappingSR3(max_iter=1),
+        TrappingSR3(_n_tgts=1, max_iter=1),
     ],
 )
 def test_fit_warn(data_derivative_1d, optimizer):
@@ -755,7 +771,11 @@ def test_fit_warn(data_derivative_1d, optimizer):
 
 @pytest.mark.parametrize(
     "optimizer",
-    [(ConstrainedSR3, {"max_iter": 80}), (TrappingSR3, {"max_iter": 100}), (MIOSR, {})],
+    [
+        (ConstrainedSR3, {"max_iter": 80}),
+        (TrappingSR3, {"_n_tgts": 5, "max_iter": 100}),
+        (MIOSR, {}),
+    ],
 )
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_row_format_constraints(data_linear_combination, optimizer, target_value):
@@ -966,6 +986,7 @@ def test_normalize_columns(data_derivative_1d, optimizer):
     if len(x.shape) == 1:
         x = x.reshape(-1, 1)
     opt = optimizer(normalize_columns=True)
+    opt, x = _align_optimizer_and_1dfeatures(opt, x)
     opt.fit(x, x_dot)
     check_is_fitted(opt)
     assert opt.complexity >= 0
@@ -1027,9 +1048,11 @@ def test_ssr_criteria(data_lorenz):
     ],
 )
 def test_optimizers_verbose(data_1d, optimizer):
-    x, _ = data_1d
+    y, _ = data_1d
     opt = optimizer(verbose=True)
-    opt.fit(x, x)
+    opt, x = _align_optimizer_and_1dfeatures(opt, y)
+    opt.verbose = True
+    opt.fit(x, y)
     check_is_fitted(opt)
 
 
@@ -1043,10 +1066,10 @@ def test_optimizers_verbose(data_1d, optimizer):
     ],
 )
 def test_optimizers_verbose_cvxpy(data_1d, optimizer):
-    x, _ = data_1d
-
+    y, _ = data_1d
     opt = optimizer(verbose_cvxpy=True)
-    opt.fit(x, x)
+    opt, x = _align_optimizer_and_1dfeatures(opt, y)
+    opt.fit(x, y)
     check_is_fitted(opt)
 
 

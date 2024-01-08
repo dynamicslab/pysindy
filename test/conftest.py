@@ -410,7 +410,8 @@ def data_linear_oscillator_corrupted():
 @pytest.fixture(scope="session")
 def data_linear_combination():
     t = np.linspace(0, 5, 100)
-    x = np.stack((np.exp(t), np.sin(t), np.cos(t)), axis=-1)
+    lib = PolynomialLibrary(2)
+    x = lib.fit_transform(t)
     y = np.stack((x[:, 0] + x[:, 1], x[:, 1] + x[:, 2]), axis=-1)
 
     return x, y

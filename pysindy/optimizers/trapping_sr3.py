@@ -71,10 +71,6 @@ class TrappingSR3(ConstrainedSR3):
         If relax_optim = True, use the relax-and-split method. If False,
         try a direct minimization on the largest eigenvalue.
 
-    inequality_constraints : bool, optional (default False)
-        If True, relax_optim must be false or relax_optim = True
-        AND threshold != 0, so that the CVXPY methods are used.
-
     alpha_A :
         Determines the step size in the prox-gradient descent over A.
         For convergence, need alpha_A <= eta, so default
@@ -166,10 +162,11 @@ class TrappingSR3(ConstrainedSR3):
     def __init__(
         self,
         *,
+        _n_tgts: int = None,
+        _include_bias: bool = True,
         eta: Union[float, None] = None,
         eps_solver: float = 1e-7,
         relax_optim: bool = True,
-        inequality_constraints=False,
         alpha_A: Union[float, None] = None,
         alpha_m: Union[float, None] = None,
         gamma: float = -0.1,
@@ -180,10 +177,46 @@ class TrappingSR3(ConstrainedSR3):
         A0: Union[NDArray, None] = None,
         **kwargs,
     ):
-        super().__init__(thresholder=thresholder, **kwargs)
+        # n_tgts, constraints, etc are data-dependent parameters and belong in
+        # _reduce/fit ().  The following is a hack until we refactor how
+        # constraints are applied in ConstrainedSR3 and MIOSR
+        self._include_bias = _include_bias
+        self._n_tgts = _n_tgts
+        if _n_tgts is None:
+            warnings.warn(
+                "Trapping Optimizer initialized without _n_tgts.  It will likely"
+                " be unable to fit data"
+            )
+            _n_tgts = 1
+        constraint_separation_index = kwargs.get("constraint_separation_index", 0)
+        constraint_rhs, constraint_lhs = _make_constraints(
+            _n_tgts, include_bias=_include_bias
+        )
+        constraint_order = kwargs.get("constraint_order", "feature")
+        if constraint_order == "target":
+            constraint_lhs = np.reshape(np.transpose(constraint_lhs, [1, 0, 2]))
+        constraint_lhs = np.reshape(constraint_lhs, (constraint_lhs.shape[0], -1))
+        try:
+            constraint_lhs = np.concatenate(
+                (kwargs.pop("constraint_lhs"), constraint_lhs), 0
+            )
+            constraint_rhs = np.concatenate(
+                (kwargs.pop("constraint_rhs"), constraint_rhs), 0
+            )
+        except KeyError:
+            pass
+
+        super().__init__(
+            constraint_lhs=constraint_lhs,
+            constraint_rhs=constraint_rhs,
+            constraint_separation_index=constraint_separation_index,
+            constraint_order=constraint_order,
+            equality_constraints=True,
+            thresholder=thresholder,
+            **kwargs,
+        )
         self.eps_solver = eps_solver
         self.relax_optim = relax_optim
-        self.inequality_constraints = inequality_constraints
         self.m0 = m0
         self.A0 = A0
         self.alpha_A = alpha_A

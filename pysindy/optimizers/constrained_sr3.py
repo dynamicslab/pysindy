@@ -72,8 +72,8 @@ class ConstrainedSR3(SR3):
 
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
-        The left hand side matrix C of Cw <= d.
-        There should be one row per constraint.
+        The left hand side matrix C of Cw <= d (Or Cw = d for equality
+        constraints). There should be one row per constraint.
 
     constraint_rhs : numpy ndarray, shape (n_constraints,), optional (default None)
         The right hand side vector d of Cw <= d.

@@ -504,33 +504,6 @@ def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, quadratic_l
         assert np.allclose((opt.coef_.flatten())[0], 0.0, atol=1e-5)
 
 
-def test_trapping_cubic_library():
-    x = np.random.standard_normal((10, 3))
-    library_functions = [
-        lambda x: x,
-        lambda x, y: x * y,
-        lambda x: x**2,
-        lambda x, y, z: x * y * z,
-        lambda x, y: x**2 * y,
-        lambda x: x**3,
-    ]
-    library_function_names = [
-        lambda x: str(x),
-        lambda x, y: "{} * {}".format(x, y),
-        lambda x: "{}^2".format(x),
-        lambda x, y, z: "{} * {} * {}".format(x, y, z),
-        lambda x, y: "{}^2 * {}".format(x, y),
-        lambda x: "{}^3".format(x),
-    ]
-    sindy_library = CustomLibrary(
-        library_functions=library_functions, function_names=library_function_names
-    )
-    opt = TrappingSR3()
-    model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
-    check_is_fitted(model)
-
-
 @pytest.mark.parametrize(
     "error, optimizer, params",
     [

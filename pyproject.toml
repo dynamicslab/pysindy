@@ -62,7 +62,8 @@ cvxpy = [
     "scs>=2.1, !=2.1.4"
 ]
 numpyro = [
-    "numpyro"
+    "numpyro",
+    "jax"
 ]
 
 [tool.black]

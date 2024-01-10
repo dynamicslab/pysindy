@@ -163,7 +163,8 @@ class TrappingSR3(ConstrainedSR3):
         self,
         *,
         _n_tgts: int = None,
-        _include_bias: bool = True,
+        _include_bias: bool = False,
+        _interaction_only: bool = False,
         eta: Union[float, None] = None,
         eps_solver: float = 1e-7,
         relax_optim: bool = True,
@@ -181,6 +182,7 @@ class TrappingSR3(ConstrainedSR3):
         # _reduce/fit ().  The following is a hack until we refactor how
         # constraints are applied in ConstrainedSR3 and MIOSR
         self._include_bias = _include_bias
+        self._interaction_only = _interaction_only
         self._n_tgts = _n_tgts
         if _n_tgts is None:
             warnings.warn(
@@ -188,13 +190,22 @@ class TrappingSR3(ConstrainedSR3):
                 " be unable to fit data"
             )
             _n_tgts = 1
-        constraint_separation_index = kwargs.get("constraint_separation_index", 0)
+        if _include_bias:
+            raise ValueError(
+                "Currently not able to include bias until PQ matrices are modified"
+            )
+        if hasattr(kwargs, "constraint_separation_index"):
+            constraint_separation_index = kwargs["constraint_separation_index"]
+        elif kwargs.get("inequality_constraints", False):
+            constraint_separation_index = kwargs["constraint_lhs"].shape[0]
+        else:
+            constraint_separation_index = 0
         constraint_rhs, constraint_lhs = _make_constraints(
             _n_tgts, include_bias=_include_bias
         )
-        constraint_order = kwargs.get("constraint_order", "feature")
+        constraint_order = kwargs.pop("constraint_order", "feature")
         if constraint_order == "target":
-            constraint_lhs = np.reshape(np.transpose(constraint_lhs, [1, 0, 2]))
+            constraint_lhs = np.transpose(constraint_lhs, [0, 2, 1])
         constraint_lhs = np.reshape(constraint_lhs, (constraint_lhs.shape[0], -1))
         try:
             constraint_lhs = np.concatenate(
@@ -460,22 +471,26 @@ class TrappingSR3(ConstrainedSR3):
         self.PW_history_ = []
         self.PWeigs_history_ = []
         self.history_ = []
-        n_samples, n_features = x.shape
-        n_tgts = y.shape[1]
+        n_samples, n_tgts = y.shape
+        n_features = n_poly_features(
+            n_tgts,
+            2,
+            include_bias=self._include_bias,
+            interaction_only=self._interaction_only,
+        )
         var_len = n_features * n_tgts
-        n_feat_expected = int((n_tgts**2 + 3 * n_tgts) / 2.0)
 
         # Only relevant if the stability term is turned on.
         self.PL_unsym_, self.PL_, self.PQ_ = self._set_Ptensors(n_tgts)
         # make sure dimensions/symmetries are correct
         self.PL_, self.PQ_ = self._check_P_matrix(
-            n_tgts, n_features, n_feat_expected, self.PL_, self.PQ_
+            n_tgts, n_features, n_features, self.PL_, self.PQ_
         )
 
         # Set initial coefficients
         if self.use_constraints and self.constraint_order.lower() == "target":
             self.constraint_lhs = reorder_constraints(
-                self.constraint_lhs, n_features, output_order="target"
+                self.constraint_lhs, n_features, output_order="feature"
             )
         coef_sparse = self.coef_.T
 

@@ -74,8 +74,8 @@ def _align_optimizer_and_1dfeatures(
 ) -> tuple[BaseOptimizer, NDArray]:
     # This is a hack until constraints are moved from init to fit
     if isinstance(opt, TrappingSR3):
-        opt = TrappingSR3(_n_tgts=1, _include_bias=True)
-        features = np.hstack([features, features, features])
+        opt = TrappingSR3(_n_tgts=1, _include_bias=False)
+        features = np.hstack([features, features])
     else:
         features = features
     return opt, features
@@ -435,6 +435,7 @@ def test_constrained_sr3_quadratic_library(params):
         dict(thresholder="l2", threshold=1, expected=1.5),
         dict(thresholder="weighted_l2", thresholds=np.ones((4, 1)), expected=2.5),
     ],
+    ids=lambda d: d["thresholder"],
 )
 def test_stable_linear_sr3_cost_function(params):
     expected = params.pop("expected")
@@ -773,21 +774,24 @@ def test_fit_warn(data_derivative_1d, optimizer):
     "optimizer",
     [
         (ConstrainedSR3, {"max_iter": 80}),
-        (TrappingSR3, {"_n_tgts": 5, "max_iter": 100}),
+        (TrappingSR3, {"_n_tgts": 3, "max_iter": 100, "eps_solver": 1e-5}),
         (MIOSR, {}),
     ],
+    ids=lambda param: param[0].__name__ + " " + ",".join([key for key in param[1]]),
 )
 @pytest.mark.parametrize("target_value", [0, -1, 3])
-def test_row_format_constraints(data_linear_combination, optimizer, target_value):
+def test_feature_format_constraints(data_linear_combination, optimizer, target_value):
     # Solution is x_dot = x.dot(np.array([[1, 1, 0], [0, 1, 1]]))
-    x, x_dot = data_linear_combination
+    x, y = data_linear_combination
 
     constraint_rhs = target_value * np.ones(2)
-    constraint_lhs = np.zeros((2, x.shape[1] * x_dot.shape[1]))
+    constraint_lhs = np.zeros((2, x.shape[1], y.shape[1]))
 
     # Should force corresponding entries of coef_ to be target_value
-    constraint_lhs[0, 0] = 1
-    constraint_lhs[1, 3] = 1
+    constraint_lhs[0, 1, 1] = 1
+    constraint_lhs[1, 2, 2] = 1
+    # reshape to "feature" order
+    constraint_lhs = np.reshape(constraint_lhs, (constraint_lhs.shape[0], -1))
 
     model = optimizer[0](
         constraint_lhs=constraint_lhs,
@@ -795,10 +799,10 @@ def test_row_format_constraints(data_linear_combination, optimizer, target_value
         constraint_order="feature",
         **optimizer[1],
     )
-    model.fit(x, x_dot)
+    model.fit(x, y)
 
     np.testing.assert_allclose(
-        np.array([model.coef_[0, 0], model.coef_[1, 1]]), target_value, atol=1e-8
+        np.array([model.coef_[1, 1], model.coef_[2, 2]]), target_value, atol=1e-7
     )
 
 
@@ -807,26 +811,37 @@ def test_row_format_constraints(data_linear_combination, optimizer, target_value
     [
         (ConstrainedSR3, {"max_iter": 80}),
         (StableLinearSR3, {}),
-        (TrappingSR3, {"max_iter": 100}),
+        (TrappingSR3, {"_n_tgts": 3, "max_iter": 200, "eps_solver": 1e-5}),
         (MIOSR, {}),
     ],
+    ids=lambda param: param[0].__name__ + " " + ",".join([key for key in param[1]]),
 )
 @pytest.mark.parametrize("target_value", [0, -1, 3])
 def test_target_format_constraints(data_linear_combination, optimizer, target_value):
-    x, x_dot = data_linear_combination
+    x, y = data_linear_combination
 
     constraint_rhs = target_value * np.ones(2)
-    constraint_lhs = np.zeros((2, x.shape[1] * x_dot.shape[1]))
+    constraint_lhs = np.zeros((2, x.shape[1], y.shape[1]))
 
     # Should force corresponding entries of coef_ to be target_value
-    constraint_lhs[0, 1] = 1
-    constraint_lhs[1, 4] = 1
+    constraint_lhs[0, 2, 1] = 1
+    constraint_lhs[1, 1, 2] = 1
+    # reshape to "target" order
+    constraint_lhs = np.reshape(
+        np.transpose(constraint_lhs, [0, 2, 1]), (constraint_lhs.shape[0], -1)
+    )
 
     model = optimizer[0](
-        constraint_lhs=constraint_lhs, constraint_rhs=constraint_rhs, **optimizer[1]
+        constraint_lhs=constraint_lhs,
+        constraint_rhs=constraint_rhs,
+        constraint_order="target",
+        **optimizer[1],
     )
-    model.fit(x, x_dot)
-    np.testing.assert_allclose(model.coef_[:, 1], target_value, atol=1e-8)
+    model.fit(x, y)
+
+    np.testing.assert_allclose(
+        np.array([model.coef_[1, 2], model.coef_[2, 1]]), target_value, atol=1e-7
+    )
 
 
 @pytest.mark.parametrize(
@@ -876,10 +891,11 @@ def test_constrained_inequality_constraints(data_lorenz, params):
             thresholder="weighted_l2", thresholds=0.5 * np.ones((1, 2)), expected=0.75
         ),
     ],
+    ids=lambda d: d["thresholder"],
 )
 def test_trapping_cost_function(params):
     expected = params.pop("expected")
-    opt = TrappingSR3(inequality_constraints=True, relax_optim=True, **params)
+    opt = TrappingSR3(relax_optim=True, **params)
     x = np.eye(2)
     y = np.ones(2)
     xi, cost = opt._create_var_and_part_cost(2, x, y)

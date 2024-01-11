@@ -333,8 +333,16 @@ def test_score_pde(data_1d_random_pde):
     assert model.score(u, t) <= 1
 
 
+<<<<<<< HEAD
 def test_fit_multiple_trajectores(data_multiple_trajectories):
     x, t = data_multiple_trajectories
+||||||| 5c6e9fd
+def test_fit_multiple_trajectores(data_multiple_trajctories):
+    x, t = data_multiple_trajctories
+=======
+def test_fit_multiple_trajectories(data_multiple_trajctories):
+    x, t = data_multiple_trajctories
+>>>>>>> origin/trapping_extended
     model = SINDy()
 
     model.fit(x)

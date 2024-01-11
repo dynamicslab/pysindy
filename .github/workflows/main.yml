@@ -29,7 +29,13 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
+<<<<<<< HEAD
         python-version: ["3.8", "3.10"]
+||||||| 5c6e9fd
+        python-version: [3.7, 3.8]
+=======
+        python-version: [3.7, 3.8, 3.9]
+>>>>>>> origin/trapping_extended
 
     steps:
     - uses: actions/checkout@v3

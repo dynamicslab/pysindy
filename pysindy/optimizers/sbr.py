@@ -66,7 +66,7 @@ class SBR(BaseOptimizer):
     coef_ : array, shape (n_features,) or (n_targets, n_features)
         Posterior means of the SINDy coefficients.
 
-    mcmc : numpyro.infer.mcmc.MCMC
+    mcmc : numpyro.infer.MCMC
         Complete traces of the posterior samples.
     """
 

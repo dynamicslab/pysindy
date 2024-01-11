@@ -6,7 +6,10 @@ pytest-cov
 pytest-lazy-fixture
 flake8-builtins-unleashed
 codecov
-cvxpy
+sympy
+dysts
+pymech
+cvxpy==1.3.2
 setuptools_scm
 setuptools_scm_git_archive
 jupyter
@@ -22,5 +25,4 @@ jupyter_contrib_nbextensions
 pandas
 seaborn
 ipython
-scs<=2.1.4
 gurobipy>=9.5.1,<10.0

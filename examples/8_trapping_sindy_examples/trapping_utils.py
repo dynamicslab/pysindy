@@ -129,7 +129,8 @@ def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     Rm = np.linalg.norm(d) / np.abs(max_eigval)
     Reff = Rm / mean_val
     print("Estimate of trapping region size, Rm = ", Rm)
-    print("Normalized trapping region size, Reff = ", Reff)
+    if not np.isclose(mean_val, 1.0):
+        print("Normalized trapping region size, Reff = ", Reff)
 
 
 def get_trapping_radius(max_eigval, eps_Q, r, d):
@@ -164,9 +165,6 @@ def check_local_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     print("optimal m: ", opt_m)
     print("As eigvals: ", np.sort(eigvals))
     max_eigval = np.sort(eigvals)[-1]
-    # C = np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
-    # L = np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
-    # Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
     C = mod_matrix @ np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
     L = mod_matrix @ np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
     Q = np.tensordot(
@@ -181,7 +179,8 @@ def check_local_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     Rm, R_ls = get_trapping_radius(max_eigval, eps_Q, r, d)
     Reff = Rm / mean_val
     print("Estimate of trapping region size, Rm = ", Rm)
-    print("Normalized trapping region size, Reff = ", Reff)
+    if not np.isclose(mean_val, 1.0):
+        print("Normalized trapping region size, Reff = ", Reff)
     print("Local stability size, R_ls= ", R_ls)
     return Rm, R_ls
 

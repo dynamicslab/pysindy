@@ -2,8 +2,6 @@ import warnings
 
 import cvxpy as cp
 import numpy as np
-from scipy.linalg import cho_factor
-from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import reorder_constraints
@@ -720,8 +718,15 @@ class TrappingSR3(SR3):
                 H, xTy, P_transpose_A, coef_prev
             ).reshape(coef_prev.shape)
         else:
-            cho = cho_factor(H)
-            coef_sparse = cho_solve(cho, xTy + P_transpose_A / self.eta).reshape(
+            # Alan Kaptanoglu: removed cho factor calculation here
+            # which has numerical issues in certain cases. Easier to chop
+            # things using pinv, but gives dumb results sometimes.
+            warnings.warn(
+                "TrappingSR3._solve_nonsparse_relax_and_split using "
+                "naive pinv() call here, be careful with rcond parameter."
+            )
+            Hinv = np.linalg.pinv(H, rcond=1e-15)
+            coef_sparse = Hinv.dot(xTy + P_transpose_A / self.eta).reshape(
                 coef_prev.shape
             )
         return coef_sparse

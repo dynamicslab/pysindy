@@ -174,6 +174,15 @@ def test_simple_slice():
     assert arr[0] == 1
 
 
+# @pytest.mark.skip  # TODO: make this pass
+def test_0d_indexer():
+    arr = AxesArray(np.ones(2), {"ax_coord": 0})
+    arr_out = arr[1, ...]
+    assert arr_out.ndim == 0
+    assert arr_out.axes == {}
+    assert arr_out[()] == 1
+
+
 def test_basic_indexing_modifies_axes():
     axes = {"ax_time": 0, "ax_coord": 1}
     arr = AxesArray(np.ones(4).reshape((2, 2)), axes)
@@ -428,3 +437,22 @@ def test_determine_adv_broadcasting():
     res_nd, res_start = axes._determine_adv_broadcasting(indexers, [])
     assert res_nd == 0
     assert res_start is None
+
+
+def test_replace_ellipsis():
+    key = [..., 0]
+    result = axes._expand_indexer_ellipsis(key, 2)
+    expected = [slice(None), 0]
+    assert result == expected
+
+
+def test_strip_ellipsis():
+    key = [1, ...]
+    result = axes._expand_indexer_ellipsis(key, 1)
+    expected = [1]
+    assert result == expected
+
+    key = [..., 1]
+    result = axes._expand_indexer_ellipsis(key, 1)
+    expected = [1]
+    assert result == expected

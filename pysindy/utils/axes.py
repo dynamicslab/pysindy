@@ -215,7 +215,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             base_indexer = key
         output = super().__getitem__(base_indexer)
         if not isinstance(output, AxesArray):
-            return output  # why?
+            return output  # return an element from the array
         in_dim = self.shape
         key, adv_inds = standardize_indexer(self, key)
         bcast_nd, bcast_start_ax = _determine_adv_broadcasting(key, adv_inds)
@@ -386,17 +386,10 @@ def _expand_indexer_ellipsis(key: list[Indexer], ndim: int) -> list[Indexer]:
     """Replace ellipsis in indexers with the appropriate amount of slice(None)"""
     # [...].index errors if list contains numpy array
     ellind = [ind for ind, val in enumerate(key) if val is ...][0]
-    new_key = []
     n_new_dims = sum(ax_key is None or isinstance(ax_key, str) for ax_key in key)
     n_ellipsis_dims = ndim - (len(key) - n_new_dims - 1)
-    new_key = (
-        key[:ellind]
-        + n_ellipsis_dims
-        * [
-            slice(None),
-        ]
-        + key[ellind + 1 + n_ellipsis_dims :]
-    )
+    new_key = key[:ellind] + key[ellind + 1 :]
+    new_key = new_key[:ellind] + (n_ellipsis_dims * [slice(None)]) + new_key[ellind:]
     return new_key
 
 

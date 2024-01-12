@@ -184,6 +184,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         return super().shape
 
     def __getattr__(self, name):
+        # TODO: replace with structural pattern matching on Oct 2025 (3.9 EOL)
         parts = name.split("_", 1)
         if parts[0] == "ax":
             try:
@@ -202,10 +203,10 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         raise AttributeError(f"'{type(self)}' object has no attribute '{name}'")
 
     def __getitem__(self, key: Indexer | Sequence[Indexer], /):
-        if isinstance(key, list | np.ndarray):
-            base_indexer = key
-        else:
+        if isinstance(key, tuple):
             base_indexer = tuple(None if isinstance(k, str) else k for k in key)
+        else:
+            base_indexer = key
         output = super().__getitem__(base_indexer)
         if not isinstance(output, AxesArray):
             return output  # why?

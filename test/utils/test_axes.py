@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_
+from numpy.testing import assert_array_equal
 from numpy.testing import assert_equal
 from numpy.testing import assert_raises
 
@@ -164,6 +165,13 @@ def test_missing_axis_errors():
         arr.ax_spatial
     with pytest.raises(AttributeError):
         arr.n_spatial
+
+
+def test_simple_slice():
+    arr = AxesArray(np.ones(2), {"ax_coord": 0})
+    assert_array_equal(arr[:], arr)
+    assert_array_equal(arr[slice(None)], arr)
+    assert arr[0] == 1
 
 
 def test_basic_indexing_modifies_axes():

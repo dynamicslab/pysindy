@@ -93,7 +93,8 @@ class _AxisMapping:
 
     def remove_axis(self, axis: Union[Collection[int], int, None] = None):
         """Create an axes dict from self with specified axis or axes
-        removed and all greater axes decremented.
+        removed and all greater axes decremented.  This can be passed to
+        the constructor to create a new _AxisMapping
 
         Arguments:
             axis: the axis index or axes indexes to remove.  By numpy
@@ -105,6 +106,7 @@ class _AxisMapping:
         in_ndim = len(self.reverse_map)
         if not isinstance(axis, Collection):
             axis = [axis]
+        axis = [ax_id if ax_id >= 0 else (self.ndim + ax_id) for ax_id in axis]
         for cum_shift, orig_ax_remove in enumerate(sorted(axis)):
             remove_ax_name = self.reverse_map[orig_ax_remove]
             curr_ax_remove = orig_ax_remove - cum_shift
@@ -145,6 +147,10 @@ class _AxisMapping:
                 new_axes[ax_name].remove(ax_id)
                 new_axes[ax_name].append(ax_id + 1)
         return self._compat_axes(new_axes)
+
+    @property
+    def ndim(self):
+        return len(self.reverse_map)
 
 
 class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
@@ -481,7 +487,8 @@ def comprehend_axes(x):
     axes = {}
     axes["ax_coord"] = len(x.shape) - 1
     axes["ax_time"] = len(x.shape) - 2
-    axes["ax_spatial"] = list(range(len(x.shape) - 2))
+    if x.ndim > 2:
+        axes["ax_spatial"] = list(range(len(x.shape) - 2))
     return axes
 
 

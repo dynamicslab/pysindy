@@ -274,22 +274,13 @@ def test_standardize_bool_indexer():
 
 def test_reduce_AxisMapping():
     ax_map = _AxisMapping(
-        {
-            "ax_a": [0, 1],
-            "ax_b": 2,
-            "ax_c": 3,
-            "ax_d": 4,
-            "ax_e": [5, 6],
-        },
+        {"ax_a": [0, 1], "ax_b": 2, "ax_c": 3, "ax_d": 4, "ax_e": [5, 6]},
         7,
     )
     result = ax_map.remove_axis(3)
-    expected = {
-        "ax_a": [0, 1],
-        "ax_b": 2,
-        "ax_d": 3,
-        "ax_e": [4, 5],
-    }
+    expected = {"ax_a": [0, 1], "ax_b": 2, "ax_d": 3, "ax_e": [4, 5]}
+    assert result == expected
+    result = ax_map.remove_axis(-4)
     assert result == expected
 
 

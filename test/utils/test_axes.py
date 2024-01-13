@@ -491,3 +491,17 @@ def test_strip_ellipsis():
     result = axes._expand_indexer_ellipsis(key, 1)
     expected = [1]
     assert result == expected
+
+
+def test_transpose():
+    axes = {"ax_a": 0, "ax_b": [1, 2]}
+    arr = AxesArray(np.arange(8).reshape(2, 2, 2), axes)
+    tp = np.transpose(arr, [2, 0, 1])
+    result = tp.axes
+    expected = {"ax_a": 1, "ax_b": [0, 2]}
+    assert result == expected
+    assert_array_equal(tp, np.transpose(np.asarray(arr), [2, 0, 1]))
+    arr = arr[..., 0]
+    tp = arr.T
+    expected = {"ax_a": 1, "ax_b": 0}
+    assert_array_equal(tp, np.asarray(arr).T)

@@ -7,6 +7,7 @@ from typing import Literal
 from typing import NewType
 from typing import Optional
 from typing import Sequence
+from typing import Tuple
 from typing import Union
 
 import numpy as np
@@ -166,6 +167,11 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
     Bound methods, such as arr.reshape, are not implemented.  Use the functions.
     While the functions in the numpy namespace will work on ``AxesArray``
     objects, the documentation must be found in their equivalent names here.
+
+    Current array function implementations:
+    * ``np.concatenate``
+    * ``np.reshape``
+    * ``np.transpose``
 
     Parameters:
         input_array: the data to create the array.
@@ -419,6 +425,25 @@ def reshape(a: AxesArray, newshape: int | tuple[int], order="C"):
             _compat_axes_append(new_axes, base_name, curr_new)
 
     return AxesArray(out, axes=new_axes)
+
+
+@implements(np.transpose)
+def transpose(a: AxesArray, axes: Optional[Union[Tuple[int], List[int]]] = None):
+    """Returns an array with axes transposed.
+
+    Args:
+        a: input array
+        axes: As the numpy function
+    """
+    out = np.transpose(np.asarray(a), axes)
+    if axes is None:
+        axes = range(a.ndim)[::-1]
+    new_axes = {}
+    old_reverse = a._ax_map.reverse_map
+    for new_ind, old_ind in enumerate(axes):
+        _compat_axes_append(new_axes, old_reverse[old_ind], new_ind)
+
+    return AxesArray(out, new_axes)
 
 
 def standardize_indexer(

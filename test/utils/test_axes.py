@@ -140,6 +140,41 @@ def test_n_elements():
     assert arr2.n_coord == 4
 
 
+def test_reshape_outer_product():
+    arr = AxesArray(np.arange(4).reshape((2, 2)), {"ax_a": [0, 1]})
+    merge = np.reshape(arr, (4,))
+    assert merge.axes == {"ax_a": 0}
+
+
+def test_reshape_fill_outer_product():
+    arr = AxesArray(np.arange(4).reshape((2, 2)), {"ax_a": [0, 1]})
+    merge = np.reshape(arr, (-1,))
+    assert merge.axes == {"ax_a": 0}
+
+
+def test_reshape_fill_regular():
+    arr = AxesArray(np.arange(8).reshape((2, 2, 2)), {"ax_a": [0, 1], "ax_b": 2})
+    merge = np.reshape(arr, (4, -1))
+    assert merge.axes == {"ax_a": 0, "ax_b": 1}
+
+
+def test_illegal_reshape():
+    arr = AxesArray(np.arange(4).reshape((2, 2)), {"ax_a": [0, 1]})
+    # melding across axes
+    with pytest.raises(ValueError, match="Cannot reshape an AxesArray"):
+        np.reshape(arr, (4, 1))
+
+    # Add a hidden 1 in the middle!  maybe a matching 1
+
+    # different name outer product
+    arr = AxesArray(np.arange(4).reshape((2, 2)), {"ax_a": 0, "ax_b": 1})
+    with pytest.raises(ValueError, match="Cannot reshape an AxesArray"):
+        np.reshape(arr, (4,))
+    # newaxes
+    with pytest.raises(ValueError, match="Cannot reshape an AxesArray"):
+        np.reshape(arr, (2, 1, 2))
+
+
 def test_warn_toofew_axes():
     axes = {"ax_time": 0, "ax_coord": 1}
     with pytest.warns(AxesWarning):
@@ -334,7 +369,7 @@ def test_reduce_twisted_AxisMapping():
 
 
 def test_reduce_misordered_AxisMapping():
-    ax_map = _AxisMapping({"ax_a": [0, 1], "ax_b": 2, "ax_c": 3}, 7)
+    ax_map = _AxisMapping({"ax_a": [0, 1], "ax_b": 2, "ax_c": 3}, 4)
     result = ax_map.remove_axis([2, 1])
     expected = {"ax_a": 0, "ax_c": 1}
     assert result == expected

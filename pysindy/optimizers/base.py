@@ -15,6 +15,7 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 from ..utils import AxesArray
+from ..utils import drop_nan_samples
 
 
 def _rescale_data(X, y, sample_weight):
@@ -45,14 +46,9 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
     Parameters
     ----------
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     normalize_columns : boolean, optional (default False)
         Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed.
+        by dividing by the L2-norm.
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
@@ -62,13 +58,24 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         Initial guess for coefficients ``coef_``.
         If None, the initial guess is obtained via a least-squares fit.
 
+    unbias:  Whether to perform an extra step of unregularized linear
+        regression to unbias the coefficients for the identified
+        support.  If an optimizer (``self.optimizer``) applies any type
+        of regularization, that regularization may bias coefficients,
+        improving the conditioning of the problem but harming the
+        quality of the fit. Setting ``unbias==True`` enables an extra
+        step wherein unregularized linear regression is applied, but
+        only for the coefficients in the support identified by the
+        optimizer. This helps to remove the bias introduced by
+        regularization.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s).
 
     ind_ : array, shape (n_features,) or (n_targets, n_features)
-        Array of 0s and 1s indicating which coefficients of the
+        Array of bools indicating which coefficients of the
         weight vector have not been masked out.
 
     history_ : list
@@ -85,11 +92,11 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self,
         max_iter=20,
         normalize_columns=False,
-        fit_intercept=False,
         initial_guess=None,
         copy_X=True,
+        unbias: bool = True,
     ):
-        super(BaseOptimizer, self).__init__(fit_intercept=fit_intercept, copy_X=copy_X)
+        super().__init__(fit_intercept=False, copy_X=copy_X)
 
         if max_iter <= 0:
             raise ValueError("max_iter must be positive")
@@ -100,6 +107,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
             initial_guess = initial_guess.reshape(1, -1)
         self.initial_guess = initial_guess
         self.normalize_columns = normalize_columns
+        self.unbias = unbias
 
     # Force subclasses to implement this
     @abc.abstractmethod
@@ -107,7 +115,8 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         """
         Carry out the bulk of the work of the fit function.
 
-        Subclass implementations MUST update self.coef_.
+        Subclass implementations MUST update self.coef_ as shape
+            (n_targets, n_inputs).
         """
         raise NotImplementedError
 
@@ -134,12 +143,15 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         -------
         self : returns an instance of self
         """
+        x_ = AxesArray(np.asarray(x_), {"ax_sample": 0, "ax_coord": 1})
+        y = AxesArray(np.asarray(y), {"ax_sample": 0, "ax_coord": 1})
+        x_, y = drop_nan_samples(x_, y)
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
         x, y, X_offset, y_offset, X_scale = _preprocess_data(
             x_,
             y,
-            fit_intercept=self.fit_intercept,
+            fit_intercept=False,
             copy=self.copy_X,
             sample_weight=sample_weight,
         )
@@ -178,6 +190,9 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self._reduce(x_normed, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
 
+        if self.unbias:
+            self._unbias(x_normed, y)
+
         # Rescale coefficients to original units
         if self.normalize_columns:
             self.coef_ = np.multiply(reg, self.coef_)
@@ -188,6 +203,17 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
+
+    def _unbias(self, x: np.ndarray, y: np.ndarray):
+        coef = np.zeros((y.shape[1], x.shape[1]))
+        for i in range(self.ind_.shape[0]):
+            if np.any(self.ind_[i]):
+                coef[i, self.ind_[i]] = (
+                    LinearRegression(fit_intercept=False)
+                    .fit(x[:, self.ind_[i]], y[:, i])
+                    .coef_
+                )
+        self.coef_ = coef
 
 
 class EnsembleOptimizer(BaseOptimizer):
@@ -249,12 +275,6 @@ class EnsembleOptimizer(BaseOptimizer):
     coef_full_ : array, shape (n_features,) or (n_targets, n_features)
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
-
-    unbias : boolean
-        Whether to perform an extra step of unregularized linear regression
-        to unbias the coefficients for the identified support.
-        ``unbias`` is automatically set to False if a constraint is used and
-        is otherwise left uninitialized.
     """
 
     def __init__(
@@ -271,9 +291,8 @@ class EnsembleOptimizer(BaseOptimizer):
         if not hasattr(opt, "initial_guess"):
             opt.initial_guess = None
 
-        super(EnsembleOptimizer, self).__init__(
+        super().__init__(
             max_iter=opt.max_iter,
-            fit_intercept=opt.fit_intercept,
             initial_guess=opt.initial_guess,
             copy_X=opt.copy_X,
         )
@@ -281,19 +300,19 @@ class EnsembleOptimizer(BaseOptimizer):
             raise ValueError(
                 "If not ensembling data or library terms, use another optimizer"
             )
-        if n_subset is not None and n_subset <= 0:
-            raise ValueError("n_subset must be a positive integer if bagging")
-        if n_candidates_to_drop is not None and n_candidates_to_drop <= 0:
+        if bagging and n_subset is not None and n_subset < 1:
+            raise ValueError("n_subset must be a positive integer or None if bagging")
+        if library_ensemble and (
+            n_candidates_to_drop is None or n_candidates_to_drop < 1
+        ):
+            raise ValueError(
+                "n_candidates_to_drop must be a positive integer if ensembling library"
+            )
+        if n_models < 1:
             raise ValueError(
                 "n_candidates_to_drop must be a positive integer if ensembling library"
             )
         self.opt = opt
-        if n_models is None or n_models == 0:
-            warnings.warn(
-                "n_models must be a positive integer.  Explicitly initialized to zero"
-                " or None, defaulting to 20."
-            )
-            n_models = 20
         self.n_models = n_models
         self.n_subset = n_subset
         self.bagging = bagging
@@ -302,6 +321,7 @@ class EnsembleOptimizer(BaseOptimizer):
         self.replace = replace
         self.n_candidates_to_drop = n_candidates_to_drop
         self.coef_list = []
+        self.unbias = False
 
     def _reduce(self, x: AxesArray, y: np.ndarray) -> None:
         x = AxesArray(np.asarray(x), {"ax_sample": 0, "ax_coord": 1})
@@ -316,7 +336,7 @@ class EnsembleOptimizer(BaseOptimizer):
         else:
             n_subset = self.n_subset
 
-        n_features = x.shape[x.ax_coord]
+        n_features = x.n_coord
         if self.library_ensemble and self.n_candidates_to_drop > n_features:
             warnings.warn(
                 "n_candidates_to_drop larger than number of features.  Cannot "

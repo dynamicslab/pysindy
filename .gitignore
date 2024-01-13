@@ -3,6 +3,10 @@ dist
 *.egg-info
 commit-msg
 todo
+poetry.lock
+
+# profiling
+prof/
 
 # Environments
 .env

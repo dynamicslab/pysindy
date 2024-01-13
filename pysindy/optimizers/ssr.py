@@ -23,10 +23,6 @@ class SSR(BaseOptimizer):
     max_iter : int, optional (default 20)
         Maximum iterations of the optimization algorithm.
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     normalize_columns : boolean, optional (default False)
         Normalize the columns of x (the SINDy library terms) before regression
         by dividing by the L2-norm. Note that the 'normalize' option in sklearn
@@ -94,17 +90,17 @@ class SSR(BaseOptimizer):
         max_iter=20,
         ridge_kw=None,
         normalize_columns=False,
-        fit_intercept=False,
         copy_X=True,
         criteria="coefficient_value",
         kappa=None,
         verbose=False,
+        unbias=True,
     ):
         super(SSR, self).__init__(
             max_iter=max_iter,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
+            unbias=unbias,
         )
 
         if alpha < 0:

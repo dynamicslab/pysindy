@@ -5,18 +5,33 @@
 #
 # Model pattern formation equations typically encode the effects of external drive through a number of driving parameters, which characterize a bifurcation leading to the onset of instability. While driving parameters can be considered as constant control signals for spatiotemporal dynamics, combining the PDEFIND and SINDYc approaches to discover parameterized spatiotemporal dynamics poses a significant challenge.
 # Here, we develop the system identification for nonlinear dynamics with control parameters (SINDyCP) approach to discover such parameterized dynamics.
-# In[1]:
-import matplotlib.pyplot as plt
-
-plt.ion()
-import pysindy as ps
-import numpy as np
-from scipy.integrate import solve_ivp
-from scipy.interpolate import interp1d
-from scipy.signal import find_peaks
-import timeit
+#
+# [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dynamicslab/pysindy/v1.7.3?filepath=examples/17_parameterized_pattern_formation/parameterized_pattern_formation.ipynb)
+# In[2]:
 import os
+import timeit
+
+import matplotlib.pyplot as plt
+import numpy as np
 import utils
+from scipy.integrate import solve_ivp
+from scipy.signal import find_peaks
+from scipy.stats import linregress
+
+import pysindy as ps
+
+colors = [
+    "#ff7f0e",
+    "#2ca02c",
+    "#1f77b4",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+]
 
 
 # ### Fit a parameterized logistic map
@@ -196,12 +211,19 @@ model.print()
 print(lib.get_feature_names(["x", "y", "z", "sigma", "rho", "beta"]))
 
 
+# In[46]:
+
+
+if __name__ == "testing":
+    quit()
+
+
 # ### Fit a parameterized complex Ginzburg-Landau equation
 # The complex Ginzburg-Landau equation
 # $$ \dot{A} = A + (1+ib)\nabla^2 A - (1-ic)|A|^2A$$
 # describes the evolution of the mode amplitude $A$ for pattern formation in a long-wavelength, supercritical Hopf bifurcation. It depends on two parameters $b$ and $c$. We generate 4 trajectories with different values of the parameters. (Note: this will take a few minutes on the first run, but trajectories are saved and reloaded if present)
 
-# In[31]:
+# In[9]:
 
 
 nx = 128
@@ -209,11 +231,6 @@ ny = 128
 L = 16
 t1 = 2e2
 t3 = 1.9e2
-if __name__ == "testing":
-    t1 = 1e0
-    t3 = 0
-    nx = 32
-    ny = 32
 dt = 1e-1
 nt = int((t1 - t3) / dt)
 
@@ -225,7 +242,7 @@ spatiotemporal_grid[:, :, :, :2] = spatial_grid[:, :, np.newaxis, :]
 spatiotemporal_grid[:, :, :, 2] = dt * np.arange(nt)
 
 
-# In[32]:
+# In[10]:
 
 
 bs = [2.0, 2.0, 0.5, 1.0]
@@ -234,10 +251,7 @@ scales = [1e-1, 1e-1, 1e-1, 1e0]
 scales2 = [1e-2, 1e-2, 1e0, 1e-2]
 us = [[bs[i], cs[i]] for i in range(len(bs))]
 
-if (
-    np.all([os.path.exists("data/cgle/cgle_x" + str(i) + ".npy") for i in range(4)])
-    and __name__ != "testing"
-):
+if np.all([os.path.exists("data/cgle/cgle_x" + str(i) + ".npy") for i in range(4)]):
     xs = [np.load("data/cgle/cgle_x" + str(i) + ".npy") for i in range(4)]
 else:
     xs = []
@@ -249,11 +263,10 @@ else:
         x0 = utils.get_cgle_ic(scale0, scale2, spatial_grid)
         x = utils.get_cgle_trajectory(b, c, x0, t1, t3, dt, spatial_grid)
         xs = xs + [x]
-    if __name__ != "testing":
-        for i in range(len(xs)):
-            if not os.path.exists("data/cgle"):
-                os.mkdir("data/cgle")
-            np.save("data/cgle/cgle_x" + str(i), xs[i])
+    for i in range(len(xs)):
+        if not os.path.exists("data/cgle"):
+            os.mkdir("data/cgle")
+        np.save("data/cgle/cgle_x" + str(i), xs[i])
 # utils.animate_clge(xs,us)
 
 
@@ -491,7 +504,7 @@ print(lib.get_feature_names(["x", "y", "b", "c"]))
 #
 # which constitute the classical Oregonator model for the BZ chemical reaction. We fix all parameters except $C_b=C_b^c(1 - \mu)$, and a supercritical Hopf bifurcation occurs at $\mu=0$. In the spatially homogeneous case, a small, stable limit cycle initially emerges for $\mu>0$, but this limit cycle rapid expands in a canard explosion around $\mu\approx 0.15$.
 
-# In[2]:
+# In[3]:
 
 
 bs3 = np.linspace(0.84, 0.98, 8)
@@ -501,8 +514,6 @@ Ys = []
 Zs = []
 for b in bs3:
     t1 = 1e2 / (1 - b)  # Domain size in t directions
-    if __name__ == "testing":
-        t1 = 1e1 / (1 - b)
     dt = 5.94804 / 100
 
     X, Y, Z = utils.get_homogeneous_oregonator_trajectory(b, t1, dt)
@@ -530,87 +541,218 @@ plt.savefig("fig2b.pdf")
 plt.show()
 
 
-# Integrate six trajectories with varying bs. This will take several hours to generate and save the data for the first time, but it will reload the files if they are present from a previous run.
+# Generate several trajectories. This will take several hours on the first run, but files will be saved and reloaded subsequently.
+
+# In[44]:
+
+
+import importlib as imp
+
+imp.reload(utils)
+
+
+# In[47]:
+
+
+utils.generate_oregonator_trajectories()
+
+
+# Plot a finely resolved trajectory above the canard explosion, with $\mu=0.16$. The dynamics exhibit more extreme spatiotemporal variations than exhibited by the CGLE.
 
 # In[48]:
 
 
-bs = np.linspace(0.88, 0.98, 6)
-n = 128  # Number of spatial points in each direction
-Nt = 1000  # Number of temporal interpolation points
+plt.figure(figsize=(3, 4))
+x = np.load("data/oregonator/canard_0.npy")
+plt.imshow(x[:, :, -1, 0])
+plt.clim(2e-6, 8e-6)
+plt.xticks([])
+plt.yticks([])
+plt.savefig("fig2c.pdf")
+plt.show()
+plt.figure(figsize=(3, 4))
+x = np.load("data/oregonator/canard_1.npy")
+plt.imshow(x[:, :, -1, 0])
+plt.clim(2e-6, 8e-6)
+plt.xticks([])
+plt.yticks([])
+plt.savefig("fig2d.pdf")
+plt.show()
+# utils.animate_oregonator()
 
-if __name__ == "testing":
-    Nt = 100
-    n = 32
 
-X0, Y0, Z0 = utils.get_oregonator_ic(2e-1, 0, spatial_grid)
-u0 = np.concatenate([X0.ravel(), Y0.ravel(), Z0.ravel()])
+# Do a SINDyCP fit on unprocessed decaying trajectories to localize the Hopf point
 
-if not os.path.exists("data/oregonator"):
-    os.mkdir("data/oregonator")
-if not np.all(
-    [
-        os.path.exists("data/oregonator/oregonator_" + str(i) + ".npy")
-        for i in range(len(bs))
+# In[13]:
+
+
+bs = np.concatenate([np.linspace(1.05, 1.1, 6), np.linspace(0.95, 0.99, 5)])
+b0 = 0.95
+L = 1 / np.abs(1 - b0) ** 0.5  # Domain size in X and Y directions
+spatial_grid = np.zeros((n, n, 2))
+spatial_grid[:, :, 0] = L / n * np.arange(n)[:, np.newaxis]
+spatial_grid[:, :, 1] = L / n * np.arange(n)[np.newaxis, :]
+t1 = 2e1 / np.abs(1 - b0)  # Domain size in t directions
+dt = 5.94804 / 10
+n = 128
+
+xs = [np.load("data/oregonator/oregonator2_" + str(i) + ".npy") for i in range(len(bs))]
+xs_train = []
+xs_test = []
+scales = []
+
+us = (0.786642 * bs).tolist()
+x0s = []
+Nt = 200
+for i in range(len(bs)):
+    x0 = np.mean(xs[i][:, :, -100:], axis=(0, 1, 2))
+    x0s = x0s + [x0]
+    scale = x0
+    xs_train = xs_train + [
+        (xs[i][:, :, Nt : 2 * Nt, [0, 2]] - x0[[0, 2]]) / scale[[0, 2]]
     ]
-):
-    for j in range(len(bs)):
-        if not os.path.exists("data/oregonator/oregonator_" + str(j) + ".npy"):
-            b = bs[j]
-            print(j, b)
-            L = 1 / (1 - b) ** 0.5  # Domain size in X and Y directions
-            spatial_grid = np.zeros((n, n, 2))
-            spatial_grid[:, :, 0] = L / n * np.arange(n)[:, np.newaxis]
-            spatial_grid[:, :, 1] = L / n * np.arange(n)[np.newaxis, :]
-            t1 = 1e3 / (1 - b)  # Domain size in t directions
-            if __name__ == "testing":
-                t1 = 20
-            dt = 5.94804
+    xs_test = xs_train + [
+        (xs[i][:, :, 2 * Nt : 3 * Nt, [0, 2]] - x0[[0, 2]]) / scale[[0, 2]]
+    ]
+    scales = scales + [scale]
 
-            start = timeit.default_timer()
+library_functions = [
+    lambda x: x,
+]
+function_names = [
+    lambda x: x,
+]
 
-            X, Y, Z = utils.get_oregonator_trajectory(u0, b, t1, dt, spatial_grid)
+feature_lib = ps.PDELibrary(
+    library_functions=library_functions,
+    derivative_order=2,
+    spatial_grid=spatial_grid,
+    include_interaction=False,
+    include_bias=True,
+    function_names=function_names,
+    differentiation_method=ps.SpectralDerivative,
+    multiindices=[],
+)
 
-            x = np.array([X, Y, Z]).transpose(1, 2, 3, 0)
-            fi = interp1d(np.arange(x.shape[2]), x, axis=2)
-            x = fi(np.arange(Nt) / (Nt - 1) * (x.shape[2] - 1))
-            plt.plot(np.mean(x[:, :, :, 0], axis=(0, 1)))
-            plt.plot(np.mean(x[:, :, :, 2], axis=(0, 1)))
-            plt.show()
-            plt.imshow(x[:, :, -1, 0])
-            plt.show()
+library_functions = [lambda x: x]
+function_names = [lambda x: x]
 
-            np.save("data/oregonator/oregonator_" + str(j), x)
-            stop = timeit.default_timer()
-            print(stop - start)
+parameter_lib = ps.PDELibrary(
+    library_functions=library_functions,
+    derivative_order=0,
+    include_interaction=False,
+    function_names=function_names,
+    include_bias=True,
+)
+lib = ps.ParameterizedLibrary(
+    parameter_library=parameter_lib,
+    feature_library=feature_lib,
+    num_parameters=1,
+    num_features=2,
+)
 
-xs = [np.load("data/oregonator/oregonator_" + str(i) + ".npy") for i in range(len(bs))]
+opt = ps.STLSQ(threshold=1e-2, alpha=1e-12, normalize_columns=False)
+
+model = ps.SINDy(feature_library=lib, optimizer=opt, feature_names=["X", "Z", "C_B"])
+
+start = timeit.default_timer()
+model.fit(xs_train[:6], u=us[:6], t=dt, multiple_trajectories=True)
+model.print()
+stop = timeit.default_timer()
+print(stop - start)
+scores = []
+for i in range(len(us)):
+    scores = scores + [
+        model.score(
+            xs_test[i],
+            u=us[i],
+            t=dt,
+            multioutput="raw_values",
+            multiple_trajectories=False,
+        )
+    ]
+
+plt.subplots(2, 2, figsize=(10, 6))
+
+plt.subplot(2, 2, 1)
+for x in xs_train[:6]:
+    plt.plot(dt * np.arange(200), np.mean(x[:, :, :, 0], axis=(0, 1)))
+plt.ylabel(r"$\langle \tilde{X} \rangle$")
+locs, labels = plt.xticks()
+plt.xticks(locs, [])
+plt.xlim(-5, 205 * dt)
+
+plt.subplot(2, 2, 3)
+for x in xs_train[:6]:
+    plt.plot(dt * np.arange(200), np.mean(x[:, :, :, 1], axis=(0, 1)))
+plt.xlim(-5, 205 * dt)
+
+plt.xlabel("t")
+plt.ylabel(r"$\langle \tilde{Y} \rangle$")
+
+plt.subplot(2, 2, 2)
+plt.scatter(0.786642 * bs[:6], 1 - np.mean(scores[:6], axis=1))
+plt.scatter(0.786642 * bs[6:], 1 - np.mean(scores[6:], axis=1))
+plt.yscale("log")
+plt.ylabel(r"$1-R^2$")
+locs, labels = plt.xticks()
+plt.xticks(locs, [])
+
+plt.xlim(0.73, 0.88)
 
 
-# The SINDyCP fit reveals variations in the normal-form parameter that correct the weakly-nonlinear theory away from the instability, and these variations become extreme at the canard explosion.  First, split the trajectories into training and test data and define a quadrative parameter and a quintic feature libraries.
+plt.subplot(2, 2, 4)
+bs2 = np.flip(np.linspace(0.92, 1.15, 1000))
+lambdas, J = utils.get_linear_eigenvalues(model, 0.786642 * bs2, printcoefs=True)
+plt.plot(0.786642 * bs2, np.real(lambdas)[:, 0])
+plt.plot(0.786642 * bs2, 0 * np.real(lambdas)[:, 0], c="black", ls=":")
+plt.xlabel(r"$C_B$")
+plt.ylabel(r"$Re(\lambda)$")
+plt.xlim(0.73, 0.88)
+plt.tight_layout()
+plt.savefig("figs3.pdf")
+plt.show()
 
-# In[14]:
 
+# Construct the amplitude from the same data and attempt a SINDyCP fit
+
+# In[16]:
+
+
+bs = np.concatenate([np.linspace(1.05, 1.1, 6), np.linspace(0.95, 0.99, 5)])
+n = 128
 
 xs_train = []
 xs_test = []
-us = ((1 - bs) ** 0.5).tolist()
+scales = []
+us = (1 - bs).tolist()
+x0s = []
+Nt = xs[0].shape[2] // 5 // 10 * 10
 for i in range(len(bs)):
-    U = xs[i][:, :, 2 * Nt // 5 :, [0, 2]]
-    U = U - np.mean(U, axis=(0, 1, 2))
-    U = U / np.mean(U**2, axis=(0, 1, 2)) ** 0.5
-    xs_train = xs_train + [U[:, :, : Nt // 20]]
-    xs_test = xs_test + [U[:, :, -Nt // 20 :]]
-    #     #Using more data for a better fit requires a lot of memory (>100gb)
-    #     xs_train=xs_train+[U[:,:,:2*Nt//5]]
-    #     xs_test=xs_test+[U[:,:,2*Nt//5:]]
+    x = np.load("data/oregonator/oregonator2_" + str(i) + ".npy")
+    Nt = 10
+    x0 = np.mean(x[:, :, -Nt:, [0, 2]], axis=(0, 1, 2))
+    U = (x[:, :, Nt:, [0, 2]] - x0) / x0
+    nt = U.shape[2] // 10 * 10
+    A = np.mean(
+        (
+            (U[:, :, :, 0] + 1j * U[:, :, :, 1])
+            * np.exp(-1j * 2 * np.pi / 10 * np.arange(U.shape[2]))
+        )[:, :, :nt].reshape(n, n, nt // 10, 10),
+        axis=3,
+    )
+    x_train = np.array([np.real(A), np.imag(A)]).transpose(1, 2, 3, 0)[:, :, : nt // 10]
+    x_test = np.array([np.real(A), np.imag(A)]).transpose(1, 2, 3, 0)[
+        :, :, nt // 10 // 2 :
+    ]
+    xs_train = xs_train + [x_train]
+    xs_test = xs_test + [x_test]
 
-# rescale to a single time step and spatial_grid over all trajectories
+L = 2e2  # Domain size in X and Y directions
 spatial_grid = np.zeros((n, n, 2))
-spatial_grid[:, :, 0] = 2 * np.arange(n)[:, np.newaxis]
-spatial_grid[:, :, 1] = 2 * np.arange(n)[np.newaxis, :]
-nt = xs_train[0].shape[2]
-dt = 1e2 / nt
+spatial_grid[:, :, 0] = L / n * np.arange(n)[:, np.newaxis]
+spatial_grid[:, :, 1] = L / n * np.arange(n)[np.newaxis, :]
+dt = 1e-1
 
 library_functions = [
     lambda x: x,
@@ -619,15 +761,6 @@ library_functions = [
     lambda x: x**3,
     lambda x, y: x**2 * y,
     lambda x, y: y**2 * x,
-    lambda x: x**4,
-    lambda x, y: x**3 * y,
-    lambda x, y: x**2 * y**2,
-    lambda x, y: x * y**3,
-    lambda x: x**5,
-    lambda x, y: x**4 * y,
-    lambda x, y: x**3 * y**2,
-    lambda x, y: x**2 * y**3,
-    lambda x, y: x * y**4,
 ]
 function_names = [
     lambda x: x,
@@ -636,30 +769,19 @@ function_names = [
     lambda x: x + x + x,
     lambda x, y: x + x + y,
     lambda x, y: x + y + y,
-    lambda x: x + x + x + x,
-    lambda x, y: x + x + x + y,
-    lambda x, y: x + x + y + y,
-    lambda x, y: x + y + y + y,
-    lambda x: x + x + x + x + x,
-    lambda x, y: x + x + x + x + y,
-    lambda x, y: x + x + x + y + y,
-    lambda x, y: x + x + y + y + y,
-    lambda x, y: x + y + y + y + y,
 ]
+
 feature_lib = ps.PDELibrary(
     library_functions=library_functions,
     derivative_order=2,
     spatial_grid=spatial_grid,
-    temporal_grid=dt * np.arange(nt),
     include_interaction=False,
-    implicit_terms=True,
+    include_bias=True,
     function_names=function_names,
     differentiation_method=ps.SpectralDerivative,
 )
-feature_lib.multiindices = np.array([[0, 0, 1], [0, 2, 0], [2, 0, 0]])
-feature_lib.num_derivatives = len(feature_lib.multiindices)
 
-library_functions = [lambda x: x, lambda x: x**2]
+library_functions = [lambda x: np.abs(x) ** 0.5, lambda x: x]
 function_names = [lambda x: x, lambda x: x + x]
 
 parameter_lib = ps.PDELibrary(
@@ -676,81 +798,17 @@ lib = ps.ParameterizedLibrary(
     num_features=2,
 )
 
+opt = ps.STLSQ(threshold=1e-1, alpha=1e-12, normalize_columns=False)
 
-# We run the fit with a constrained SR3 optimizer, which allows us to ensure that the derivative terms remain rotationally invariant. Then we evaluate the scores on the test data.
-
-# In[15]:
-
-
-shape = np.array(xs_train[0].shape)
-shape[-1] = 1
-lib.fit(np.concatenate([xs_train[0], us[0] * np.ones(shape)], axis=-1))
-
-n_targets = 2
-num_mus = 1 + len(library_functions)
-constraint_rhs = np.zeros(4 * num_mus)
-n_features = len(lib.get_feature_names())
-constraint_lhs = np.zeros((4 * num_mus, n_targets * n_features))
-x11inds = np.where(
-    np.array([name.split(" ")[1] for name in lib.get_feature_names()]) == "x0_11"
-)[0]
-x22inds = np.where(
-    np.array([name.split(" ")[1] for name in lib.get_feature_names()]) == "x0_22"
-)[0]
-y11inds = np.where(
-    np.array([name.split(" ")[1] for name in lib.get_feature_names()]) == "x1_11"
-)[0]
-y22inds = np.where(
-    np.array([name.split(" ")[1] for name in lib.get_feature_names()]) == "x1_22"
-)[0]
-
-constraint = 0
-for i in range(num_mus):
-    constraint_lhs[constraint, x11inds[i]] = 1
-    constraint_lhs[constraint, x22inds[i]] = -1
-    constraint = constraint + 1
-    constraint_lhs[constraint, x11inds[i] + n_features] = 1
-    constraint_lhs[constraint, x22inds[i] + n_features] = -1
-    constraint = constraint + 1
-
-    constraint_lhs[constraint, y11inds[i]] = 1
-    constraint_lhs[constraint, y22inds[i]] = -1
-    constraint = constraint + 1
-    constraint_lhs[constraint, y11inds[i] + n_features] = 1
-    constraint_lhs[constraint, y22inds[i] + n_features] = -1
-    constraint = constraint + 1
-
-opt = ps.ConstrainedSR3(
-    constraint_rhs=constraint_rhs,
-    constraint_lhs=constraint_lhs,
-    thresholder="l1",
-    tol=1e-3,
-    threshold=1e-2,
-)
-if __name__ == "testing":
-    opt = ps.ConstrainedSR3(
-        constraint_rhs=constraint_rhs,
-        constraint_lhs=constraint_lhs,
-        thresholder="l1",
-        tol=1e-3,
-        threshold=1e-6,
-    )
-
-model = ps.SINDy(feature_library=lib, optimizer=opt, feature_names=["X", "Y", "mu"])
+model = ps.SINDy(feature_library=lib, optimizer=opt, feature_names=["X", "Z", "mu"])
 
 start = timeit.default_timer()
-model.fit(xs_train, u=us, t=dt, multiple_trajectories=True)
+model.fit(xs_train[:6], u=us[:6], t=dt, multiple_trajectories=True)
 model.print()
 stop = timeit.default_timer()
 print(stop - start)
-print(
-    model.score(
-        xs_test, u=us, t=dt, multioutput="raw_values", multiple_trajectories=True
-    )
-)
-
 scores = []
-for i in range(len(xs_train)):
+for i in range(len(us)):
     scores = scores + [
         model.score(
             xs_test[i],
@@ -761,21 +819,196 @@ for i in range(len(xs_train)):
         )
     ]
 
+bs2 = np.linspace(0.9, 1.1, 1000)
+alphas, betas = utils.get_normal_form_parameters(model, 1 - bs2, printcoefs=True)
 
-# Plot the normal-form parameters as a function of $\varepsilon$. The fit agrees with the weakly nonlinear prediction in the $\mu\to 0$ limit, and the variation with $\mu$ represents a correction to the theory. The variations become extreme around the canard explosion that occurs above $\mu^{1/2}=0.35$.
+plt.subplots(2, 2, figsize=(10, 6))
 
-# In[29]:
+plt.subplot(2, 2, 1)
+for x in xs_train[:6]:
+    plt.plot(5.94804 * np.arange(x.shape[2]), np.mean(x[:, :, :, 0], axis=(0, 1)))
+
+plt.ylabel(r"$\langle X \rangle$")
+locs, labels = plt.xticks()
+plt.xticks(locs, [])
+plt.xlim(0, 650 * 5.94804 / 10)
+
+plt.subplot(2, 2, 3)
+for x in xs_train[:6]:
+    plt.plot(5.94804 * np.arange(x.shape[2]), np.mean(x[:, :, :, 1], axis=(0, 1)))
+plt.xlim(0, 650 * 5.94804 / 10)
+
+plt.xlabel("t")
+plt.ylabel(r"$\langle Y \rangle$")
+
+plt.subplot(2, 2, 2)
+plt.scatter((1 - bs)[:6], 1 - np.mean(scores[:6], axis=1))
+plt.scatter((1 - bs)[6:], 1 - np.mean(scores[6:], axis=1))
+plt.yscale("log")
+plt.yscale("log")
+plt.ylabel(r"$1-R^2$")
+plt.xlim(-0.125, 0.125)
+locs, labels = plt.xticks()
+plt.xticks(locs, [])
+plt.xlim(-0.125, 0.125)
+
+plt.subplot(2, 2, 4)
+bs2 = np.linspace(0.875, 1.125, 1000)
+alphas, betas = utils.get_normal_form_parameters(model, 1 - bs2)
+plt.plot((1 - bs2), np.sign(1 - bs2) * (betas / (0.17272)), label=r"$b/b_0$")
+plt.plot((1 - bs2), np.sign(1 - bs2) * (alphas / (2.37882)), label=r"$c/c_0$")
+plt.ylim(0, 3)
+# plt.yscale('log')
+plt.legend()
+plt.ylabel("Normal-form\nparameters")
+plt.xlabel(r"$\mu$")
+plt.xlim(-0.125, 0.125)
+
+plt.tight_layout()
+plt.savefig("figs4.pdf")
+plt.show()
 
 
-bs2 = np.linspace(0.85, 0.995, 1000)
-alphas, betas = utils.get_normal_form_parameters(model, bs2)
+# Do the SINDyCP fit on more informative amplitudes constructed past the Hopf bifurcation, with implicit terms included.  The SINDyCP fit reveals variations in the normal-form parameter that correct the weakly-nonlinear theory away from the instability, and these variations become extreme at the canard explosion.  First, split the trajectories into training and test data and define a quadrative parameter and a quintic feature libraries. Plot the normal-form parameters as a function of $\varepsilon$. The fit agrees with the weakly nonlinear prediction in the $\mu\to 0$ limit, and the variation with $\mu$ represents a correction to the theory. The variations become extreme around the canard explosion that occurs above $\mu^{1/2}=0.35$.
 
-plt.subplots(2, 1, figsize=(5, 4))
+# In[10]:
+
+
+bs = np.linspace(0.88, 0.98, 6)
+n = 128  # Number of spatial points in each direction
+
+xs_train = []
+xs_test = []
+scales = []
+for j in range(len(bs)):
+    A = np.load("data/oregonator/oregonator_" + str(j) + ".npy")
+    scale = np.mean(np.abs(A) ** 2) ** 0.5
+    scales = scales + [scale]
+    xsi = np.array([np.real(A) / scale, np.imag(A) / scale]).transpose([1, 2, 3, 0])
+    xs_train = xs_train + [xsi[:, :, :250]]
+    xs_test = xs_test + [xsi[:, :, 250:]]
+us = (1 - bs).tolist()
+L = 2e2  # Domain size in X and Y directions
+spatial_grid = np.zeros((n, n, 2))
+spatial_grid[:, :, 0] = L / n * np.arange(n)[:, np.newaxis]
+spatial_grid[:, :, 1] = L / n * np.arange(n)[np.newaxis, :]
+dt = 1e-1
+
+library_functions = [
+    lambda x: x,
+    lambda x: x**2,
+    lambda x, y: x * y,
+    lambda x: x**3,
+    lambda x, y: x**2 * y,
+    lambda x, y: y**2 * x,
+]
+function_names = [
+    lambda x: x,
+    lambda x: x + x,
+    lambda x, y: x + y,
+    lambda x: x + x + x,
+    lambda x, y: x + x + y,
+    lambda x, y: x + y + y,
+]
+
+feature_lib0 = ps.PDELibrary(
+    library_functions=library_functions,
+    derivative_order=2,
+    spatial_grid=spatial_grid,
+    include_interaction=False,
+    include_bias=True,
+    function_names=function_names,
+    differentiation_method=ps.SpectralDerivative,
+)
+
+opt0 = ps.STLSQ(threshold=1e-1, alpha=1e-12, normalize_columns=False)
+
+model0 = ps.SINDy(
+    feature_library=feature_lib0, optimizer=opt0, feature_names=["X", "Y"]
+)
+
+start = timeit.default_timer()
+model0.fit(xs_train[-1], t=dt, multiple_trajectories=False)
+model0.print()
+stop = timeit.default_timer()
+print(stop - start)
+utils.get_single_normal_form_parameters(model0, printcoefs=True)
+
+scores0 = []
+for i in range(len(us)):
+    scores0 = scores0 + [
+        model0.score(
+            xs_test[i],
+            u=us[i],
+            t=dt,
+            multioutput="raw_values",
+            multiple_trajectories=False,
+        )
+    ]
+
+
+feature_lib = ps.PDELibrary(
+    library_functions=library_functions,
+    derivative_order=2,
+    spatial_grid=spatial_grid,
+    temporal_grid=dt * np.arange(500),
+    include_interaction=False,
+    implicit_terms=True,
+    include_bias=True,
+    function_names=function_names,
+    differentiation_method=ps.SpectralDerivative,
+    multiindices=[[0, 0, 1], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 2, 0], [2, 0, 0]],
+)
+
+library_functions = [lambda x: np.abs(x) ** 0.5, lambda x: x]
+function_names = [lambda x: x, lambda x: x + x]
+
+parameter_lib = ps.PDELibrary(
+    library_functions=library_functions,
+    derivative_order=0,
+    include_interaction=False,
+    function_names=function_names,
+    include_bias=True,
+)
+lib = ps.ParameterizedLibrary(
+    parameter_library=parameter_lib,
+    feature_library=feature_lib,
+    num_parameters=1,
+    num_features=2,
+)
+
+opt = ps.STLSQ(threshold=1e-1, alpha=1e-12, normalize_columns=False)
+model = ps.SINDy(feature_library=lib, optimizer=opt, feature_names=["X", "Y", "mu"])
+
+start = timeit.default_timer()
+model.fit(xs_train, u=us, t=dt, multiple_trajectories=True)
+model.print()
+stop = timeit.default_timer()
+print(stop - start)
+
+scores = []
+for i in range(len(us)):
+    scores = scores + [
+        model.score(
+            xs_test[i],
+            u=us[i],
+            t=dt,
+            multioutput="raw_values",
+            multiple_trajectories=False,
+        )
+    ]
+
+bs2 = np.linspace(0.82, 0.995, 1000)
+alphas, betas = utils.get_normal_form_parameters(model, 1 - bs2, printcoefs=True)
+
+plt.subplots(2, 1, figsize=(3, 4))
 
 plt.subplot(2, 1, 1)
-plt.scatter((1 - bs) ** 0.5, 1 - np.mean(scores, axis=1))
+plt.scatter((1 - bs) ** 0.5, 1 - np.mean(scores, axis=1), c=colors[3])
+plt.scatter((1 - bs) ** 0.5, 1 - np.mean(scores0, axis=1), c=colors[4])
+
 plt.ylabel("$1-R^2$")
-plt.gca().set_xticks([0.1, 0.15, 0.2, 0.25, 0.3, 0.35])
+plt.gca().set_xticks([0.1, 0.2, 0.3, 0.4])
 plt.gca().set_xticklabels([])
 plt.xlim((1 - bs2[-1]) ** 0.5, (1 - bs2[0]) ** 0.5)
 plt.yscale("log")
@@ -783,97 +1016,131 @@ plt.yscale("log")
 plt.subplot(2, 1, 2)
 plt.plot((1 - bs2) ** 0.5, betas / (0.17272), label=r"$b/b_0$")
 plt.plot((1 - bs2) ** 0.5, alphas / (2.37882), label=r"$c/c_0$")
-plt.gca().set_xticks([0.1, 0.15, 0.2, 0.25, 0.3, 0.35])
+plt.gca().set_xticks([0.1, 0.2, 0.3, 0.4])
 plt.ylim(0, 5)
 plt.legend()
 plt.ylabel("Normal-form\nparameters")
 plt.xlabel(r"$\mu^{1/2}$")
 plt.xlim((1 - bs2[-1]) ** 0.5, (1 - bs2[0]) ** 0.5)
-plt.savefig("fig2.pdf")
+plt.savefig("fig2a.pdf")
 plt.show()
 
 
-# Calculate a finely resolved trajectory above the canard explosion, with $\mu=0.16$. The dynamics exhibit more extreme spatiotemporal variations than exhibited by the CGLE.
+# Compare the Canard explosions in the SINDyCP model and the Oregonator model
 
 # In[11]:
 
 
-bs = [0.84]
-n = 256  # Number of spatial points in each direction
-Nt = 200  # Number of temporal interpolation points
+bs3 = np.linspace(0.82, 0.98, 18)
 
-if __name__ == "testing":
-    Nt = 20
-    n = 64
+Xs2 = []
+Ys2 = []
+Zs2 = []
+for b in bs3:
+    t1 = 1e3 / (1 - b)  # Domain size in t directions
+    dt = 5.94804 / 100
 
-if not os.path.exists("data/oregonator"):
-    os.mkdir("data/oregonator")
-if not np.all(
-    [
-        os.path.exists("data/oregonator/canard_" + str(i) + ".npy")
-        for i in range(len(bs))
+    X, Y, Z = utils.get_homogeneous_oregonator_trajectory(b, t1, dt)
+    Xs2 = Xs2 + [X]
+    Ys2 = Ys2 + [Y]
+    Zs2 = Zs2 + [Z]
+
+slope, intercept, r_value, p_value, std_err = linregress((1 - bs) ** 0.5, scales)
+scales3 = intercept + slope * (1 - bs3) ** 0.5
+
+Xs = []
+Ys = []
+for b in bs3:
+    t1 = 2e1  # Domain size in t directions
+    dt = 1e-2
+
+    X, Y = utils.get_homogeneous_oregonator_trajectory_fit(model, b, t1, dt)
+    Xs = Xs + [X]
+    Ys = Ys + [Y]
+
+amps = []
+amps2 = []
+
+for i in range(0, len(bs3)):
+    X = Xs[i]
+    Y = Ys[i]
+    nt = X.shape[0]
+    period = int(np.median(np.diff(find_peaks(X[nt // 2 :])[0]))) + 1
+    amps = amps + [
+        np.mean((scales3[i] * X[-period:]) ** 2 + (scales3[i] * Y[-period:]) ** 2)
     ]
-):
-    for j in range(len(bs)):
-        if not os.path.exists("data/oregonator/canard_" + str(j) + ".npy"):
-            b = bs[j]
-            print(j, b)
-            L = 1 / (1 - b) ** 0.5  # Domain size in X and Y directions
-            spatial_grid = np.zeros((n, n, 2))
-            spatial_grid[:, :, 0] = L / n * np.arange(n)[:, np.newaxis]
-            spatial_grid[:, :, 1] = L / n * np.arange(n)[np.newaxis, :]
-            t1 = 2e2 / (1 - b)  # Domain size in t directions
-            if __name__ == "testing":
-                t1 = 20
-            dt = 5.94804
-            X0, Y0, Z0 = utils.get_oregonator_ic(2e-1, 0, spatial_grid)
-            u0 = np.concatenate([X0.ravel(), Y0.ravel(), Z0.ravel()])
 
-            start = timeit.default_timer()
+for i in range(0, len(bs3)):
+    X = Xs2[i]
+    Z = Zs2[i]
+    nt = X.shape[0]
+    period = int(np.median(np.diff(find_peaks(X[nt // 2 :])[0]))) + 1
+    x0 = np.mean(X[-10 * period :])
+    z0 = np.mean(Z[-10 * period :])
+    A2 = np.mean(
+        (
+            ((X[-300 * period :] - x0) / x0 + 1j * (Z[-300 * period :] - z0) / z0)
+            * np.exp(-1j * 2 * np.pi / period * np.arange(300 * period))
+        ).reshape(300, -1),
+        axis=1,
+    )
+    amps2 = amps2 + [np.mean(np.abs(A2) ** 2)]
 
-            X, Y, Z = utils.get_oregonator_trajectory(u0, b, t1, dt, spatial_grid)
+plt.subplots(1, 2, figsize=(8, 4))
+plt.subplot(1, 2, 1)
+for i in range(0, len(bs3), 4):
+    X = Xs[i]
+    Y = Ys[i]
+    nt = X.shape[0]
+    period = int(np.median(np.diff(find_peaks(X[nt // 2 :])[0]))) + 1
+    plt.plot(
+        (scales3[i] * X[-period:]),
+        (scales3[i] * Y[-period:]),
+        ls="--",
+        c=colors[i // 4],
+    )
 
-            x = np.array([X, Y, Z]).transpose(1, 2, 3, 0)
-            fi = interp1d(np.arange(x.shape[2]), x, axis=2)
-            x = fi(np.arange(Nt) / (Nt - 1) * (x.shape[2] - 1))
-            plt.plot(np.mean(x[:, :, :, 0], axis=(0, 1)))
-            plt.plot(np.mean(x[:, :, :, 2], axis=(0, 1)))
-            plt.show()
-            plt.imshow(x[:, :, -1, 0])
-            plt.show()
+    X = Xs2[i]
+    Z = Zs2[i]
+    nt = X.shape[0]
+    period = int(np.median(np.diff(find_peaks(X[nt // 2 :])[0]))) + 1
+    x0 = np.mean(X[-10 * period :])
+    z0 = np.mean(Z[-10 * period :])
+    A2 = np.mean(
+        (
+            ((X[-300 * period :] - x0) / x0 + 1j * (Z[-300 * period :] - z0) / z0)
+            * np.exp(-1j * 2 * np.pi / period * np.arange(300 * period))
+        ).reshape(300, -1),
+        axis=1,
+    )
+    plt.plot(
+        np.real(A2),
+        np.imag(A2),
+        c=colors[i // 4],
+        label=r"$\mu^{1/2}=%.3f$" % ((1 - bs3[i]) ** 0.5),
+    )
 
-            np.save("data/oregonator/canard_" + str(j), x)
-            stop = timeit.default_timer()
-            print(stop - start)
+plt.xlabel(r"$X$")
+plt.ylabel(r"$Y$")
+plt.legend()
 
+plt.subplot(1, 2, 2)
+plt.scatter((1 - bs3) ** 0.5, amps, label="SINDyCP fit", c=colors[i // 4 + 1])
+plt.scatter((1 - bs3) ** 0.5, amps2, label="Oregonator model", c=colors[i // 4 + 2])
+plt.xlabel(r"$\mu^{1/2}$")
+plt.ylabel(r"$\overline{A^2}$")
+plt.legend()
 
-# In[12]:
-
-
-plt.figure(figsize=(3, 4))
-x = np.load("data/oregonator/canard_0.npy")
-plt.imshow(x[:, :, -1, 0])
-plt.clim(2e-6, 8e-6)
-plt.xticks([])
-plt.yticks([])
-plt.savefig("fig2c.pdf")
+plt.tight_layout()
+plt.savefig("figs8.pdf")
 plt.show()
-plt.figure(figsize=(3, 4))
-x = np.load("data/oregonator/oregonator_4.npy")
-plt.imshow(x[:, :, -1, 0])
-plt.clim(2e-6, 8e-6)
-plt.xticks([])
-plt.yticks([])
-plt.savefig("fig2d.pdf")
-plt.show()
-# utils.animate_oregonator()
 
 
 # ### Effects of noise on CGLE fits
 
 # Here we perform both differential and weak SINDyCP fits on the four previous trajectories with various intensities of injected noise. We generate two new test trajectories to assess the performance of the fits. We also generate five new training trajectories with random parameter values in the amplitude turbulence parameter regime and perform the SINDyCP fits on noisy data with a varying number of length of trajectories. Since these fits take a while, we use previously saved score results here if they are present.
 
-# In[30]:
+# In[17]:
 
 
 utils.cgle_weak_noise_sweeps()
@@ -882,21 +1149,8 @@ utils.cgle_noise_sweeps()
 
 # Plot results
 
-# In[3]:
+# In[18]:
 
-
-colors = [
-    "#ff7f0e",
-    "#2ca02c",
-    "#1f77b4",
-    "#d62728",
-    "#9467bd",
-    "#8c564b",
-    "#e377c2",
-    "#7f7f7f",
-    "#bcbd22",
-    "#17becf",
-]
 
 fig, ax = plt.subplots(1, 2, figsize=(6, 3))
 
@@ -1000,18 +1254,15 @@ plt.show()
 #
 # which is a model pattern formation equation for studying nonlinear dynamics including defect formations. Depending on the values of the parameters $r$, $b_3$ and $b_5$, the system can relax to either a uniform steady state, a periodic steady state, or a symmetry-broken steady state exhibiting localized states. We demonstrate the potential for SINDyCP to extrapolate by predicting the existence of localized states from training data collected when only the uniform state is stable.
 
-# In[4]:
+# In[31]:
 
 
 nx = 256
 N = nx
 L = 2 * np.pi * 32
-t1 = 10
-if __name__ == "testing":
-    t1 = 1e0
-    nx = 64
+t1 = 5
 t3 = 0
-dt = 0.01
+dt = 0.02
 
 nt = int((t1 - t3) / dt)
 
@@ -1024,7 +1275,7 @@ spatiotemporal_grid[:, :, 1] = dt * np.arange(int(t1 / dt))
 
 # Randomly generate a relationship between the normal-form parameters $(r, b_3, b_5)$ and an experimental control parameter $\varepsilon$
 
-# In[5]:
+# In[32]:
 
 
 np.random.seed(66)
@@ -1065,47 +1316,133 @@ epsilons = np.arange(0, 3, 0.1)
 inds = np.intersect1d(
     np.where(r_func(epsilons) < 0)[0], np.where(b3_func(epsilons) > 0)[0]
 )
-plt.plot(epsilons, r_func(epsilons))
-plt.plot(epsilons, b3_func(epsilons))
-plt.plot(epsilons, b5_func(epsilons))
-plt.xlabel(r"$\varepsilon$")
-plt.ylabel("Normal form\n parameters")
-plt.show()
 
 
-# In[6]:
+# Generate the high-$\varepsilon$ and low-$\varepsilon$ training and testing data
+
+# In[33]:
 
 
-num_trajectories = 3
-np.random.seed(1)
+num_trajectories = 5
+np.random.seed(100)
 epsilons_train = 1 + 2 * (np.random.random(size=num_trajectories))
 rs = r_func(epsilons_train)
 b3s = b3_func(epsilons_train)
 b5s = b5_func(epsilons_train)
 k = 2
 
-np.random.seed(10)
-
-xs = []
+xs_train = []
+xs_test = []
 for i in range(len(rs)):
-    print(i)
     u0 = utils.get_sh_ic(1.0, spatial_grid)
     us = utils.get_sh_trajectory(u0, rs[i], b3s[i], b5s[i], t1, dt, spatial_grid)
-    xs = xs + [us]
+    xs_train = xs_train + [us]
+for i in range(len(rs)):
+    u0 = utils.get_sh_ic(1.0, spatial_grid)
+    us = utils.get_sh_trajectory(u0, rs[i], b3s[i], b5s[i], t1, dt, spatial_grid)
+    xs_test = xs_test + [us]
+
+num_trajectories = 5
+np.random.seed(100)
+epsilons_train2 = -1 + 2 * (np.random.random(size=num_trajectories))
+trajectories = 100
+rs = r_func(epsilons_train2)
+b3s = b3_func(epsilons_train2)
+b5s = b5_func(epsilons_train2)
+k = 2
+
+xs_train2 = []
+xs_test2 = []
+seeds = np.arange(num_trajectories)
+for i in range(len(rs)):
+    np.random.seed(seeds[i])
+    u0 = utils.get_sh_ic(1.0, spatial_grid)
+    us = utils.get_sh_trajectory(u0, rs[i], b3s[i], b5s[i], t1, dt, spatial_grid)
+    xs_train2 = xs_train2 + [us]
+for i in range(len(rs)):
+    np.random.seed(seeds[i])
+    u0 = utils.get_sh_ic(1.0, spatial_grid)
+    us = utils.get_sh_trajectory(u0, rs[i], b3s[i], b5s[i], t1, dt, spatial_grid)
+    xs_test2 = xs_test2 + [us]
 
 
-# Fit the data with weak SINDyCP
+# Fit the high-$\varepsilon$ data with weak SINDyCP with noise intensity $\sigma=0.05$ and $\sigma=0.01$
 
-# In[7]:
+# In[34]:
+
+
+noise_scale = 0.05
+np.random.seed(1)
+xs_train_noisy = [
+    xs_train[i] + noise_scale * np.random.normal(size=xs_train[i].shape)
+    for i in range(len(xs_train))
+]
+xs_test_noisy = [
+    xs_test[i] + noise_scale * np.random.normal(size=xs_test[i].shape)
+    for i in range(len(xs_test))
+]
+
+noise_scale = 0.01
+np.random.seed(1)
+xs_train_noisy2 = [
+    xs_train[i] + noise_scale * np.random.normal(size=xs_train[i].shape)
+    for i in range(len(xs_train))
+]
+xs_test_noisy2 = [
+    xs_test[i] + noise_scale * np.random.normal(size=xs_test[i].shape)
+    for i in range(len(xs_test))
+]
+
+fig, ax = plt.subplots(2, 5, figsize=(12, 5))
+for i in range(len(xs_train)):
+    plt.subplot(2, 5, i + 1)
+    plt.imshow(
+        ps.FiniteDifference(d=1, axis=1)._differentiate(xs_train_noisy[i], t=dt),
+        aspect=xs_train[0].shape[1] / xs_train[0].shape[0],
+        cmap="seismic",
+    )
+    plt.gca().set_yticks([0, 64, 128, 192, 256])
+    plt.gca().set_yticklabels([])
+    if i == 0:
+        plt.ylabel(r"$x/2\pi$")
+        plt.gca().set_yticklabels([0, 8, 16, 24, 32])
+    plt.gca().set_xticks([0, 50, 100, 150, 200, 250])
+    plt.gca().set_xticklabels([])
+    plt.title(r"$\varepsilon=%.3f$" % (epsilons_train[i]))
+    plt.clim(-2, 2)
+for i in range(len(xs_train)):
+    plt.subplot(2, 5, i + 6)
+    plt.imshow(
+        ps.FiniteDifference(d=1, axis=1)._differentiate(xs_train_noisy2[i], t=dt),
+        aspect=xs_train[0].shape[1] / xs_train[0].shape[0],
+        cmap="seismic",
+    )
+    plt.gca().set_yticks([0, 64, 128, 192, 256])
+    plt.gca().set_yticklabels([])
+    if i == 0:
+        plt.ylabel(r"$x/2\pi$")
+        plt.gca().set_yticklabels([0, 8, 16, 24, 32])
+    plt.gca().set_xticks([0, 50, 100, 150, 200, 250])
+    plt.gca().set_xticklabels([0, 1, 2, 3, 4, 5])
+    plt.xlabel("$t$")
+    plt.clim(-2, 2)
+
+plt.tight_layout()
+cb = plt.colorbar(ax=ax[:][:], fraction=0.015)
+cb.set_label(r"$\dot{u}$", rotation="horizontal", loc="top")
+plt.savefig("figs5.pdf")
+plt.show()
+
+
+# In[35]:
 
 
 start = timeit.default_timer()
 library_functions = [lambda x: x, lambda x: x**3, lambda x: x**5]
 function_names = [lambda x: x, lambda x: x + x + x, lambda x: x + x + x + x + x]
 seed = 100
-K = 500
-if __name__ == "testing":
-    K = 1
+K = 1000
+H_xt = [L / 32, t1 / 5]
 np.random.seed(seed)
 feature_lib = ps.WeakPDELibrary(
     library_functions=library_functions,
@@ -1113,8 +1450,9 @@ feature_lib = ps.WeakPDELibrary(
     spatiotemporal_grid=spatiotemporal_grid,
     include_interaction=False,
     function_names=function_names,
+    multiindices=[[2], [4]],
     K=K,
-    H_xt=[L / 20, t1 / 20],
+    H_xt=H_xt,
 )
 library_functions = [lambda x: x, lambda x: x**2]
 function_names = [lambda x: x, lambda x: x + "^2"]
@@ -1127,7 +1465,7 @@ parameter_lib = ps.WeakPDELibrary(
     function_names=function_names,
     include_bias=True,
     K=K,
-    H_xt=[L / 20, t1 / 20],
+    H_xt=H_xt,
 )
 lib = ps.ParameterizedLibrary(
     parameter_library=parameter_lib,
@@ -1135,272 +1473,213 @@ lib = ps.ParameterizedLibrary(
     num_parameters=1,
     num_features=1,
 )
-opt = ps.STLSQ(threshold=1e-3, alpha=1e-4, normalize_columns=False)
+opt = ps.STLSQ(threshold=1e-3, alpha=1e-12, normalize_columns=False)
 model = ps.SINDy(feature_library=lib, optimizer=opt, feature_names=["u", "epsilon"])
-noise_scale = 0.01
-xs_noisy = [
-    xs[i] * (1 + noise_scale * np.random.normal(size=xs[i].shape))
-    for i in range(len(xs))
-]
+
 model.fit(
-    xs_noisy, u=epsilons_train.tolist(), t=dt, multiple_trajectories=True, unbias=True
+    xs_train_noisy,
+    u=epsilons_train.tolist(),
+    t=dt,
+    multiple_trajectories=True,
 )
 model.print()
 stop = timeit.default_timer()
 print(stop - start)
 print(lib.get_feature_names(["u", "epsilon"]))
-print(model.score(xs, u=epsilons_train.tolist(), t=dt, multiple_trajectories=True))
-
-
-# Define some functions to store the fit results
-
-# In[8]:
-
-
-uxcoeff_fit = np.array(
-    [
-        opt.coef_[0, np.where(np.array(model.get_feature_names()) == "1 u_1")[0][0]],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon u_1")[0][0]
-        ],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon^2 u_1")[0][0]
-        ],
-    ]
+utils.get_sh_coefficients(model, print_coeffs=True)
+print(
+    model.score(
+        xs_test_noisy, u=epsilons_train.tolist(), t=dt, multiple_trajectories=True
+    )
 )
-uxxcoeff_fit = np.array(
-    [
-        opt.coef_[0, np.where(np.array(model.get_feature_names()) == "1 u_11")[0][0]],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon u_11")[0][0]
-        ],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon^2 u_11")[0][0]
-        ],
-    ]
+
+print()
+
+model.fit(
+    xs_train_noisy2,
+    u=epsilons_train.tolist(),
+    t=dt,
+    multiple_trajectories=True,
+    unbias=True,
 )
-uxxxcoeff_fit = np.array(
-    [
-        opt.coef_[0, np.where(np.array(model.get_feature_names()) == "1 u_111")[0][0]],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon u_111")[0][0]
-        ],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon^2 u_111")[0][0]
-        ],
-    ]
-)
-uxxxxcoeff_fit = np.array(
-    [
-        opt.coef_[0, np.where(np.array(model.get_feature_names()) == "1 u_1111")[0][0]],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon u_1111")[0][0]
-        ],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon^2 u_1111")[0][0]
-        ],
-    ]
+model.print()
+stop = timeit.default_timer()
+print(stop - start)
+print(lib.get_feature_names(["u", "epsilon"]))
+(
+    r_func_fit,
+    b3_func_fit,
+    b5_func_fit,
+    uxx_func_fit,
+    uxxxx_func_fit,
+) = utils.get_sh_coefficients(model, print_coeffs=True)
+print(
+    model.score(
+        xs_test_noisy2, u=epsilons_train.tolist(), t=dt, multiple_trajectories=True
+    )
 )
 
 
-def ux_func_fit(epsilons):
-    epsilons = np.asarray(epsilons)
-    return np.sum(
-        uxcoeff_fit[np.newaxis, :]
-        * epsilons[:, np.newaxis] ** np.arange(len(rcoeff))[np.newaxis, :],
-        axis=1,
+# Fit the low-$\varepsilon$ data with weak SINDyCP with noise intensity $\sigma=0.05$ and $\sigma=0.01$
+
+# In[36]:
+
+
+noise_scale = 0.05
+np.random.seed(1)
+xs_train_noisy3 = [
+    xs_train2[i] + noise_scale * np.random.normal(size=xs_train2[i].shape)
+    for i in range(len(xs_train2))
+]
+xs_test_noisy3 = [
+    xs_test2[i] + noise_scale * np.random.normal(size=xs_test2[i].shape)
+    for i in range(len(xs_test2))
+]
+
+noise_scale = 0.01
+np.random.seed(1)
+xs_train_noisy4 = [
+    xs_train2[i] + noise_scale * np.random.normal(size=xs_train2[i].shape)
+    for i in range(len(xs_train2))
+]
+xs_test_noisy4 = [
+    xs_test2[i] + noise_scale * np.random.normal(size=xs_test2[i].shape)
+    for i in range(len(xs_test2))
+]
+
+fig, ax = plt.subplots(2, 5, figsize=(12, 5))
+
+for i in range(len(xs_train)):
+    plt.subplot(2, 5, i + 1)
+    plt.imshow(
+        ps.FiniteDifference(d=1, axis=1)._differentiate(xs_train_noisy3[i], t=dt),
+        aspect=xs_train2[0].shape[1] / xs_train2[0].shape[0],
+        cmap="seismic",
     )
+    plt.gca().set_yticks([0, 64, 128, 192, 256])
+    plt.gca().set_yticklabels([])
+    if i == 0:
+        plt.ylabel(r"$x/2\pi$")
+        plt.gca().set_yticklabels([0, 8, 16, 24, 32])
+    plt.gca().set_xticks([0, 50, 100, 150, 200, 250])
+    plt.gca().set_xticklabels([0, 1, 2, 3, 4, 5])
+    plt.gca().set_xticklabels([])
+    plt.title(r"$\varepsilon=%.3f$" % (epsilons_train2[i]))
 
-
-def uxx_func_fit(epsilons):
-    epsilons = np.asarray(epsilons)
-    return np.sum(
-        uxxcoeff_fit[np.newaxis, :]
-        * epsilons[:, np.newaxis] ** np.arange(len(rcoeff))[np.newaxis, :],
-        axis=1,
+    plt.clim(-2, 2)
+for i in range(len(xs_train)):
+    plt.subplot(2, 5, i + 6)
+    plt.imshow(
+        ps.FiniteDifference(d=1, axis=1)._differentiate(xs_train_noisy4[i], t=dt),
+        aspect=xs_train[0].shape[1] / xs_train[0].shape[0],
+        cmap="seismic",
     )
+    plt.gca().set_yticks([0, 64, 128, 192, 256])
+    plt.gca().set_yticklabels([])
+    if i == 0:
+        plt.ylabel(r"$x/2\pi$")
+        plt.gca().set_yticklabels([0, 8, 16, 24, 32])
+    plt.gca().set_xticks([0, 50, 100, 150, 200, 250])
+    plt.gca().set_xticklabels([0, 1, 2, 3, 4, 5])
+    plt.xlabel("$t$")
+    plt.clim(-2, 2)
 
 
-def uxxx_func_fit(epsilons):
-    epsilons = np.asarray(epsilons)
-    return np.sum(
-        uxxxcoeff_fit[np.newaxis, :]
-        * epsilons[:, np.newaxis] ** np.arange(len(rcoeff))[np.newaxis, :],
-        axis=1,
-    )
+plt.tight_layout()
+cb = plt.colorbar(ax=ax[:][:], fraction=0.015)
+cb.set_label(r"$\dot{u}$", rotation="horizontal", loc="top")
+plt.savefig("figs6.pdf")
+plt.show()
 
 
-def uxxxx_func_fit(epsilons):
-    epsilons = np.asarray(epsilons)
-    return np.sum(
-        uxxxxcoeff_fit[np.newaxis, :]
-        * epsilons[:, np.newaxis] ** np.arange(len(rcoeff))[np.newaxis, :],
-        axis=1,
-    )
+# In[37]:
 
 
-rcoeff_fit = np.array(
-    [
-        opt.coef_[0, np.where(np.array(model.get_feature_names()) == "1 u")[0][0]] + 1,
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon u")[0][0]
-        ],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon^2 u")[0][0]
-        ],
-    ]
+start = timeit.default_timer()
+library_functions = [
+    lambda x: x,
+    lambda x: x**2,
+    lambda x: x**3,
+    lambda x: x**4,
+    lambda x: x**5,
+]
+function_names = [
+    lambda x: x,
+    lambda x: x + x,
+    lambda x: x + x + x,
+    lambda x: x + x + x + x,
+    lambda x: x + x + x + x + x,
+]
+library_functions = [lambda x: x, lambda x: x**3, lambda x: x**5]
+function_names = [lambda x: x, lambda x: x + x + x, lambda x: x + x + x + x + x]
+
+
+model.fit(
+    xs_train_noisy3,
+    u=epsilons_train2.tolist(),
+    t=dt,
+    multiple_trajectories=True,
+    unbias=True,
 )
-b3coeff_fit = np.array(
-    [
-        opt.coef_[0, np.where(np.array(model.get_feature_names()) == "1 uuu")[0][0]],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon uuu")[0][0]
-        ],
-        opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon^2 uuu")[0][0]
-        ],
-    ]
-)
-b5coeff_fit = np.array(
-    [
-        -opt.coef_[0, np.where(np.array(model.get_feature_names()) == "1 uuuuu")[0][0]],
-        -opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon uuuuu")[0][0]
-        ],
-        -opt.coef_[
-            0, np.where(np.array(model.get_feature_names()) == "epsilon^2 uuuuu")[0][0]
-        ],
-    ]
+model.print()
+stop = timeit.default_timer()
+print(stop - start)
+print(lib.get_feature_names(["u", "epsilon"]))
+utils.get_sh_coefficients(model, print_coeffs=True)
+print(
+    model.score(
+        xs_test_noisy3, u=epsilons_train2.tolist(), t=dt, multiple_trajectories=True
+    )
 )
 
-
-def r_func_fit(epsilons):
-    epsilons = np.asarray(epsilons)
-    return np.sum(
-        rcoeff_fit[np.newaxis, :]
-        * epsilons[:, np.newaxis] ** np.arange(len(rcoeff))[np.newaxis, :],
-        axis=1,
+print()
+model.fit(
+    xs_train_noisy4,
+    u=epsilons_train2.tolist(),
+    t=dt,
+    multiple_trajectories=True,
+    unbias=True,
+)
+model.print()
+stop = timeit.default_timer()
+print(stop - start)
+print(lib.get_feature_names(["u", "epsilon"]))
+utils.get_sh_coefficients(model, print_coeffs=True)
+print(
+    model.score(
+        xs_test_noisy4, u=epsilons_train2.tolist(), t=dt, multiple_trajectories=True
     )
-
-
-def b3_func_fit(epsilons):
-    epsilons = np.asarray(epsilons)
-    return np.sum(
-        b3coeff_fit[np.newaxis, :]
-        * epsilons[:, np.newaxis] ** np.arange(len(b3coeff))[np.newaxis, :],
-        axis=1,
-    )
-
-
-def b5_func_fit(epsilons):
-    epsilons = np.asarray(epsilons)
-    return np.sum(
-        b5coeff_fit[np.newaxis, :]
-        * epsilons[:, np.newaxis] ** np.arange(len(b5coeff))[np.newaxis, :],
-        axis=1,
-    )
-
-
-# Stability of continuation orbits. The solutions have been continued with auto07p and their stability determined and saved.
-
-# In[9]:
-
-
-i = 0
-odd_unstable_xs = []
-odd_unstable_ys = []
-while os.path.exists("data/auto/odd/unstable_" + str(i) + ".npy"):
-    branchx, branchy = np.load("data/auto/odd/unstable_" + str(i) + ".npy")
-    odd_unstable_xs.append(branchx)
-    odd_unstable_ys.append(branchy)
-    i = i + 1
-
-i = 0
-odd_stable_xs = []
-odd_stable_ys = []
-while os.path.exists("data/auto/odd/stable_" + str(i) + ".npy"):
-    branchx, branchy = np.load("data/auto/odd/stable_" + str(i) + ".npy")
-    odd_stable_xs.append(branchx)
-    odd_stable_ys.append(branchy)
-    i = i + 1
-
-i = 0
-even_unstable_xs = []
-even_unstable_ys = []
-while os.path.exists("data/auto/even/unstable_" + str(i) + ".npy"):
-    branchx, branchy = np.load("data/auto/even/unstable_" + str(i) + ".npy")
-    even_unstable_xs.append(branchx)
-    even_unstable_ys.append(branchy)
-    i = i + 1
-
-i = 0
-even_stable_xs = []
-even_stable_ys = []
-while os.path.exists("data/auto/even/stable_" + str(i) + ".npy"):
-    branchx, branchy = np.load("data/auto/even/stable_" + str(i) + ".npy")
-    even_stable_xs.append(branchx)
-    even_stable_ys.append(branchy)
-    i = i + 1
-
-i = 0
-periodic_unstable_xs = []
-periodic_unstable_ys = []
-while os.path.exists("data/auto/periodic/unstable_" + str(i) + ".npy"):
-    branchx, branchy = np.load("data/auto/periodic/unstable_" + str(i) + ".npy")
-    periodic_unstable_xs.append(branchx)
-    periodic_unstable_ys.append(branchy)
-    i = i + 1
-
-i = 0
-periodic_stable_xs = []
-periodic_stable_ys = []
-while os.path.exists("data/auto/periodic/stable_" + str(i) + ".npy"):
-    branchx, branchy = np.load("data/auto/periodic/stable_" + str(i) + ".npy")
-    periodic_stable_xs.append(branchx)
-    periodic_stable_ys.append(branchy)
-    i = i + 1
+)
 
 
 # Plot the normal form parameters and continuation results
 
-# In[10]:
+# In[38]:
 
 
-colors = [
-    "#ff7f0e",
-    "#2ca02c",
-    "#1f77b4",
-    "#d62728",
-    "#9467bd",
-    "#8c564b",
-    "#e377c2",
-    "#7f7f7f",
-    "#bcbd22",
-    "#17becf",
-]
-
-plt.subplots(2, 1, figsize=(3, 4))
+plt.subplots(2, 1, figsize=(4, 6))
 
 plt.subplot(2, 1, 1)
 plt.plot(np.arange(-1, 4, 1), np.zeros(5), c="black")
 for epsilon in epsilons_train:
     plt.plot([epsilon, epsilon], [-0.1, 1], ls=":", c="red")
-plt.plot([0.1, 0.1], [-0.1, 1], ls=":", c="black")
+plt.plot([0.0, 0.0], [-0.1, 1], ls=":", c="black")
 
-for i in range(len(odd_stable_xs)):
-    plt.plot(odd_stable_xs[i], odd_stable_ys[i], c=colors[3])
-for i in range(len(odd_unstable_xs)):
-    plt.plot(odd_unstable_xs[i], odd_unstable_ys[i], ls=":", c=colors[3])
-
-for i in range(len(even_stable_xs)):
-    plt.plot(even_stable_xs[i], even_stable_ys[i], c=colors[4])
-for i in range(len(even_unstable_xs)):
-    plt.plot(even_unstable_xs[i], even_unstable_ys[i], ls=":", c=colors[4])
-
-for i in range(len(periodic_stable_xs)):
-    plt.plot(periodic_stable_xs[i], periodic_stable_ys[i], c=colors[5])
-for i in range(len(periodic_unstable_xs)):
-    plt.plot(periodic_unstable_xs[i], periodic_unstable_ys[i], ls=":", c=colors[5])
+unstable, stable = utils.get_auto_branches("data/auto/odd")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[5])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[5])
+unstable, stable = utils.get_auto_branches("data/auto/even")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[6])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[6])
+unstable, stable = utils.get_auto_branches("data/auto/periodic")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[7])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[7])
 
 plt.xlim(-1, 3)
 plt.ylim(-0.1, 1)
@@ -1413,7 +1692,7 @@ mn = np.min([r_func(epsilons), b3_func(epsilons), b5_func(epsilons)])
 mx = np.max([r_func(epsilons), b3_func(epsilons), b5_func(epsilons)])
 for epsilon in epsilons_train:
     plt.plot([epsilon, epsilon], [mx, mn], ls=":", c="red")
-plt.plot([0.1, 0.1], [mx, mn], ls=":", c="black")
+plt.plot([0, 0], [mx, mn], ls=":", c="black")
 
 line1 = plt.plot(epsilons, r_func(epsilons), label="$d$")
 line2 = plt.plot(epsilons, b3_func(epsilons), label="$e$")
@@ -1451,18 +1730,14 @@ plt.show()
 
 # Extrapolate the model to parameters with twentry random initial conditions. The fit correctly predicts the localized states!
 
-# In[11]:
+# In[39]:
 
 
 def sh_fit(t, u, epsilon):
-    ux = np.real(ps.SpectralDerivative(d=1, axis=0)._differentiate(u, L / nx))
     uxx = np.real(ps.SpectralDerivative(d=2, axis=0)._differentiate(u, L / nx))
-    uxxx = np.real(ps.SpectralDerivative(d=3, axis=0)._differentiate(u, L / nx))
     uxxxx = np.real(ps.SpectralDerivative(d=4, axis=0)._differentiate(u, L / nx))
     return (
-        ux_func_fit([epsilon])[0] * ux
-        + uxx_func_fit([epsilon])[0] * uxx
-        + uxxx_func_fit([epsilon])[0] * uxxx
+        +uxx_func_fit([epsilon])[0] * uxx
         + uxxxx_func_fit([epsilon])[0] * uxxxx
         + (r_func_fit([epsilon])[0] - 1) * u
         + b3_func_fit([epsilon])[0] * u**3
@@ -1473,17 +1748,15 @@ def sh_fit(t, u, epsilon):
 nx = 256
 L = 2 * np.pi * 16
 t1 = 50
-if __name__ == "testing":
-    n = 64
-    t1 = 10
 N = nx
 dt = 1
 
-epsilon = 0.1
+epsilon = 0.0
 k = 2
 
 xs_test = []
-seeds = [13, 15]
+seeds = [1, 5]
+start = timeit.default_timer()
 for i in seeds:
     np.random.seed(i)
     ks = np.arange(-20, 21) / L
@@ -1516,18 +1789,20 @@ for i in seeds:
         u = sol.y[:, -1]
         us[n] = u
     xs_test.append(np.transpose(us)[:, :, np.newaxis])
+stop = timeit.default_timer()
+print(stop - start)
 
 
-# In[12]:
+# In[40]:
 
 
-plt.subplots(2, 1, figsize=(3, 4))
+plt.subplots(2, 1, figsize=(4, 6))
 
 plt.subplot(2, 1, 1)
 u = xs_test[0][:, -1]
 ux = ps.SpectralDerivative(d=1, axis=0)._differentiate(u, L / nx)
 u = np.roll(u, nx // 2 - np.argmax(ux) + 1)
-plt.plot(u, c=colors[3])
+plt.plot(u, c=colors[5])
 plt.ylim(-1.6, 1.6)
 plt.ylabel("$u$")
 plt.gca().set_xticks([0, 128, 256])
@@ -1536,7 +1811,7 @@ plt.gca().set_xticklabels([])
 plt.subplot(2, 1, 2)
 u = xs_test[1][:, -1]
 u = np.roll(u, nx // 2 - np.argmin(u) + 1)
-plt.plot(u, c=colors[4])
+plt.plot(u, c=colors[6])
 plt.ylim(-1.6, 1.6)
 plt.xlabel("$x$")
 plt.ylabel("$u$")
@@ -1544,3 +1819,143 @@ plt.gca().set_xticks([0, 128, 256])
 plt.gca().set_xticklabels(["$-L/2$", "$0$", "$L/2$"])
 
 plt.savefig("fig4b.pdf")
+
+
+# Compare the snaking bifurcations for the fits and the actual equations
+
+# In[41]:
+
+
+plt.subplots(1, 3, figsize=(12, 5))
+
+unstable, stable = utils.get_auto_branches("data/auto/odd")
+plt.subplot(1, 3, 1)
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[0])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[0])
+unstable, stable = utils.get_auto_branches("data/auto/even")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[0])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[0])
+unstable, stable = utils.get_auto_branches("data/auto/periodic")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[0])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[0])
+plt.xlabel(r"$\varepsilon$")
+plt.ylabel("Norm")
+plt.ylim(0, 1)
+plt.xlim(-0.5, 1)
+plt.gca().set_xticks([-0.5, 0, 0.5])
+plt.gca().set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+plt.title("Actual equations")
+
+unstable, stable = utils.get_auto_branches("data/auto/odd2")
+plt.subplot(1, 3, 3)
+lab = True
+for branch in stable:
+    if lab:
+        plt.plot(branch[0], branch[1], c=colors[1], label=r"$\sigma=0.01$")
+        lab = False
+    else:
+        plt.plot(branch[0], branch[1], c=colors[1])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[1])
+unstable, stable = utils.get_auto_branches("data/auto/even2")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[1])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[1])
+unstable, stable = utils.get_auto_branches("data/auto/periodic2")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[1])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[1])
+unstable, stable = utils.get_auto_branches("data/auto/odd4")
+lab = True
+for branch in stable:
+    if lab:
+        plt.plot(branch[0], branch[1], c=colors[2], label=r"$\sigma=0.05$")
+        lab = False
+    else:
+        plt.plot(branch[0], branch[1], c=colors[2])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[2])
+unstable, stable = utils.get_auto_branches("data/auto/even4")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[2])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[2])
+unstable, stable = utils.get_auto_branches("data/auto/periodic4")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[2])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[2])
+plt.legend()
+plt.xlabel(r"$\varepsilon$")
+plt.ylim(0, 1)
+plt.xlim(-0.5, 1)
+plt.gca().set_xticks([-0.5, 0, 0.5])
+plt.gca().set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+plt.gca().set_yticklabels([])
+plt.title(r"Low-$\varepsilon$ fits")
+
+unstable, stable = utils.get_auto_branches("data/auto/odd3")
+plt.subplot(1, 3, 2)
+lab = True
+for branch in stable:
+    if lab:
+        plt.plot(branch[0], branch[1], c=colors[1], label=r"$\sigma=0.01$")
+        lab = False
+    else:
+        plt.plot(branch[0], branch[1], c=colors[1])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[1])
+unstable, stable = utils.get_auto_branches("data/auto/even3")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[1])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[1])
+unstable, stable = utils.get_auto_branches("data/auto/periodic3")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[1])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[1])
+unstable, stable = utils.get_auto_branches("data/auto/odd5")
+lab = True
+for branch in stable:
+    if lab:
+        plt.plot(branch[0], branch[1], c=colors[2], label=r"$\sigma=0.05$")
+        lab = False
+    else:
+        plt.plot(branch[0], branch[1], c=colors[2])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[2])
+unstable, stable = utils.get_auto_branches("data/auto/even5")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[2])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[2])
+unstable, stable = utils.get_auto_branches("data/auto/periodic5")
+for branch in stable:
+    plt.plot(branch[0], branch[1], c=colors[2])
+for branch in unstable:
+    plt.plot(branch[0], branch[1], ls=":", c=colors[2])
+plt.legend()
+
+plt.xlabel(r"$\varepsilon$")
+plt.ylim(0, 1)
+plt.xlim(-0.5, 1)
+plt.gca().set_xticks([-0.5, 0, 0.5])
+plt.gca().set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+plt.gca().set_yticklabels([])
+plt.title(r"High-$\varepsilon$ fits")
+
+plt.tight_layout()
+plt.savefig("figs7.pdf")
+plt.show()
+
+
+# In[ ]:

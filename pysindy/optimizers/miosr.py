@@ -53,10 +53,6 @@ class MIOSR(BaseOptimizer):
         optimality (either per dimension or jointly depending on the
         above sparsity settings).
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
         The left hand side matrix C of Cw <= d.
@@ -94,6 +90,9 @@ class MIOSR(BaseOptimizer):
     verbose : bool, optional (default False)
         If True, prints out the Gurobi solver log.
 
+    unbias: bool
+        Required to be false, maintained for supertype compatibility
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -112,7 +111,6 @@ class MIOSR(BaseOptimizer):
         group_sparsity=None,
         alpha=0.01,
         regression_timeout=10,
-        fit_intercept=False,
         constraint_lhs=None,
         constraint_rhs=None,
         constraint_order="target",
@@ -120,11 +118,12 @@ class MIOSR(BaseOptimizer):
         copy_X=True,
         initial_guess=None,
         verbose=False,
+        unbias=False,
     ):
-        super(MIOSR, self).__init__(
+        super().__init__(
             normalize_columns=normalize_columns,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
+            unbias=unbias,
         )
 
         if target_sparsity is not None and (
@@ -135,7 +134,8 @@ class MIOSR(BaseOptimizer):
             raise ValueError("constraint_order must be one of {'target', 'feature'}")
         if alpha < 0:
             raise ValueError("alpha cannot be negative")
-
+        if unbias and constraint_lhs is not None:
+            raise ValueError("MIOSR is incompatible with unbiasing. Set unbias=False")
         self.target_sparsity = target_sparsity
         self.group_sparsity = group_sparsity
         self.constraint_lhs = constraint_lhs

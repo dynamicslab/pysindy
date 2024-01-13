@@ -237,7 +237,7 @@ class GeneralizedLibrary(BaseFeatureLibrary):
                 else:
                     xps.append(lib.transform([x])[0])
 
-            xp = AxesArray(np.concatenate(xps, axis=xps[0].ax_coord), xps[0].__dict__)
+            xp = AxesArray(np.concatenate(xps, axis=xps[0].ax_coord), xps[0].axes)
             xp_full = xp_full + [xp]
         return xp_full
 

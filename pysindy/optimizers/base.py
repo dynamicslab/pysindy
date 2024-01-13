@@ -144,7 +144,8 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self : returns an instance of self
         """
         x_ = AxesArray(np.asarray(x_), {"ax_sample": 0, "ax_coord": 1})
-        y = AxesArray(np.asarray(y), {"ax_sample": 0, "ax_coord": 1})
+        y_axes = {"ax_sample": 0} if y.ndim == 1 else {"ax_sample": 0, "ax_coord": 1}
+        y = AxesArray(np.asarray(y), y_axes)
         x_, y = drop_nan_samples(x_, y)
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 

@@ -587,7 +587,7 @@ def test_specific_bad_parameters(error, optimizer, params, data_lorenz):
 def test_bad_optimizers(data_derivative_1d):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-
+    x_dot = x_dot.reshape(-1, 1)
     with pytest.raises(InvalidParameterError):
         # Error: optimizer does not have a callable fit method
         opt = WrappedOptimizer(DummyEmptyModel())

@@ -225,7 +225,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                         dtype=x.dtype,
                         order=self.order,
                     ),
-                    x.__dict__,
+                    x.axes,
                 )
                 for i, comb in enumerate(combinations):
                     xp[..., i] = x[..., comb].prod(-1)

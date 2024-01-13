@@ -247,6 +247,7 @@ def test_sindypi_library_bad_params(params):
         pytest.lazy_fixture("ode_library"),
         pytest.lazy_fixture("sindypi_library"),
     ],
+    ids=type,
 )
 def test_fit_transform(data_lorenz, library):
     x, t = data_lorenz

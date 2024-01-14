@@ -1,6 +1,7 @@
 import numpy as np
 
 from .base import BaseDifferentiation
+from pysindy.utils.axes import AxesArray
 
 
 class FiniteDifference(BaseDifferentiation):
@@ -94,12 +95,12 @@ class FiniteDifference(BaseDifferentiation):
             self.stencil
             - t[
                 (self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2,
-                np.newaxis,
+                "coord",
             ]
         )[:, np.newaxis, :] ** pows
-        b = np.zeros(self.n_stencil)
-        b[self.d] = np.math.factorial(self.d)
-        return np.linalg.solve(matrices, [b])
+        b = AxesArray(np.zeros((1, self.n_stencil)), self.stencil.axes)
+        b[0, self.d] = np.math.factorial(self.d)
+        return np.linalg.solve(matrices, b)
 
     def _coefficients_boundary_forward(self, t):
         # use the same stencil for each boundary point,

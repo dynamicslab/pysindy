@@ -549,6 +549,19 @@ def _einsum(
     return AxesArray(calc, axes=out_axes)
 
 
+@implements(np.linalg.solve)
+def solve(a: AxesArray, b: AxesArray):
+    result = np.linalg.solve(np.asarray(a), np.asarray(b))
+    a_rev = a._ax_map.reverse_map
+    contracted_axis_name = a_rev[sorted(a_rev)[-1]]
+    b_rev = b._ax_map.reverse_map
+    rest_of_names = [b_rev[k] for k in sorted(b_rev)]
+    axes = _AxisMapping.fwd_from_names(
+        [*rest_of_names[:-2], contracted_axis_name, rest_of_names[-1]]
+    )
+    return AxesArray(result, axes)
+
+
 def standardize_indexer(
     arr: np.ndarray, key: Indexer | Sequence[Indexer]
 ) -> tuple[Sequence[StandardIndexer], tuple[KeyIndex, ...]]:

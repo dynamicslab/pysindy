@@ -276,13 +276,7 @@ class PDELibrary(BaseFeatureLibrary):
         def derivative_string(multiindex):
             ret = ""
             for axis in range(self.ind_range):
-                if self.implicit_terms and (
-                    axis
-                    in [
-                        self.spatiotemporal_grid.ax_time,
-                        self.spatiotemporal_grid.ax_sample,
-                    ]
-                ):
+                if self.implicit_terms and (axis == self.spatiotemporal_grid.ax_time,):
                     str_deriv = "t"
                 else:
                     str_deriv = str(axis + 1)

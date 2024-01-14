@@ -482,7 +482,9 @@ def transpose(a: AxesArray, axes: Optional[Union[Tuple[int], List[int]]] = None)
 def _einsum(
     subscripts: str, *operands: AxesArray, out: Optional[NDArray] = None, **kwargs
 ) -> AxesArray:
-    calc = np.einsum(subscripts, *operands, out=out, **kwargs)
+    calc = np.einsum(
+        subscripts, *(np.asarray(arr) for arr in operands), out=out, **kwargs
+    )
     try:
         # explicit mode
         lscripts, rscript = "->".split(subscripts)

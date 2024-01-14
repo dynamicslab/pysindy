@@ -691,13 +691,15 @@ def concat_sample_axis(x_list: List[AxesArray]):
     """Concatenate all trajectories and axes used to create samples."""
     new_arrs = []
     for x in x_list:
-        sample_axes = (
-            x.ax_spatial
-            + ([x.ax_time] if x.ax_time is not None else [])
-            + ([x.ax_sample] if x.ax_sample is not None else [])
-        )
+        sample_ax_names = ("ax_spatial", "ax_time", "ax_sample")
+        sample_ax_inds = []
+        for name in sample_ax_names:
+            ax_inds = getattr(x, name, [])
+            if isinstance(ax_inds, int):
+                ax_inds = [ax_inds]
+            sample_ax_inds += ax_inds
         new_axes = {"ax_sample": 0, "ax_coord": 1}
-        n_samples = np.prod([x.shape[ax] for ax in sample_axes])
+        n_samples = np.prod([x.shape[ax] for ax in sample_ax_inds])
         arr = AxesArray(x.reshape((n_samples, x.shape[x.ax_coord])), new_axes)
         new_arrs.append(arr)
     return np.concatenate(new_arrs, axis=new_arrs[0].ax_sample)

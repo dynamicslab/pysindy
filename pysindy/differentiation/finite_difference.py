@@ -201,20 +201,20 @@ class FiniteDifference(BaseDifferentiation):
 
     def _accumulate(self, coeffs, x):
         # slice to select the stencil indices
-        s = [slice(None)] * len(x.shape)
+        s = [slice(None)] * x.ndim
         s[self.axis] = self.stencil_inds
 
-        # a new axis is introduced after self.axis for the stencil indices
+        # a new axis is introduced before self.axis for the stencil indices
         # To contract with the coefficients, roll by -self.axis to put it first
         # Then roll back by self.axis to return the order
-        trans = np.roll(np.arange(len(x.shape) + 1), -self.axis)
+        trans = np.roll(np.arange(x.ndim + 1), -self.axis)
         return np.transpose(
             np.einsum(
                 "ij...,ij->j...",
                 np.transpose(x[tuple(s)], axes=trans),
                 np.transpose(coeffs),
             ),
-            np.roll(np.arange(len(x.shape)), self.axis),
+            np.roll(np.arange(x.ndim), self.axis),
         )
 
     def _differentiate(self, x, t):

@@ -1,13 +1,23 @@
+"""
+A module that defines one external class, AxesArray, to act like a numpy array
+but keep track of axis definitions.
+
+TODO: Add developer documentation here.
+"""
+from __future__ import annotations
+
 import copy
 import warnings
 from enum import Enum
 from typing import Collection
+from typing import Dict
 from typing import List
 from typing import Literal
 from typing import NewType
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import TypeVar
 from typing import Union
 
 import numpy as np
@@ -34,9 +44,7 @@ Literal[Sentinels.ADV_NAME]
 
 
 class _AxisMapping:
-    """Convenience wrapper for a two-way map between axis names and
-    indexes.
-    """
+    """Convenience wrapper for a two-way map between axis names and indexes."""
 
     fwd_map: dict[str, list[int]]
     reverse_map: dict[int, str]
@@ -74,6 +82,13 @@ class _AxisMapping:
                 f"{len(self.reverse_map)} axes labeled for array with {in_ndim} axes",
                 AxesWarning,
             )
+
+    @staticmethod
+    def fwd_from_names(names: List[str]) -> dict[str, Sequence[int]]:
+        fwd_map: dict[str, Sequence[int]] = {}
+        for ax_ind, name in enumerate(names):
+            _compat_dict_append(fwd_map, name, [ax_ind])
+        return fwd_map
 
     @staticmethod
     def _compat_axes(in_dict: dict[str, list[int]]) -> dict[str, Union[list[int], int]]:
@@ -397,7 +412,7 @@ def reshape(a: AxesArray, newshape: int | tuple[int], order="C"):
             )
         base_name = a._ax_map.reverse_map[curr_base]
         if a.shape[curr_base] == newshape[curr_new]:
-            _compat_axes_append(new_axes, base_name, curr_new)
+            _compat_dict_append(new_axes, base_name, curr_new)
             curr_base += 1
         elif newshape[curr_new] == 1:
             raise ValueError(
@@ -422,7 +437,7 @@ def reshape(a: AxesArray, newshape: int | tuple[int], order="C"):
                     )
                 curr_base += 1
 
-            _compat_axes_append(new_axes, base_name, curr_new)
+            _compat_dict_append(new_axes, base_name, curr_new)
 
     return AxesArray(out, axes=new_axes)
 
@@ -441,9 +456,78 @@ def transpose(a: AxesArray, axes: Optional[Union[Tuple[int], List[int]]] = None)
     new_axes = {}
     old_reverse = a._ax_map.reverse_map
     for new_ind, old_ind in enumerate(axes):
-        _compat_axes_append(new_axes, old_reverse[old_ind], new_ind)
+        _compat_dict_append(new_axes, old_reverse[old_ind], new_ind)
 
     return AxesArray(out, new_axes)
+
+
+@implements(np.einsum)
+def _einsum(
+    subscripts: str, *operands: AxesArray, out: Optional[NDArray] = None, **kwargs
+) -> AxesArray:
+    calc = np.einsum(subscripts, *operands, out=out, **kwargs)
+    try:
+        # explicit mode
+        lscripts, rscript = "->".split(subscripts)
+    except ValueError:
+        # implicit mode
+        lscripts = subscripts
+        rscripts = "".join(
+            sorted(c for c in set(subscripts) if subscripts.count(c) > 1 and c != ",")
+        )
+    # 0-dimensional case, may just be better to check type of "calc":
+    if rscripts == "":
+        return calc
+    allscript_names: List[Dict[str, List[str]]] = []
+    # script -> axis name for each left script
+    for lscr, op in zip(lscripts, operands):
+        script_names: Dict[str, List[str]] = {}
+        allscript_names.append(script_names)
+        # handle script ellipses
+        try:
+            ell_ind = lscr.index("...")
+            ell_width = op.ndim - (len(lscr) - 3)
+            ell_expand = range(ell_ind, ell_ind + ell_width)
+            ell_names = [op._ax_map.reverse_map[ax_ind] for ax_ind in ell_expand]
+            script_names["..."] = ell_names
+        except ValueError:
+            ell_ind = len(lscr)
+            ell_width = 0
+        # handle script non-ellipsis chars
+        shift = 0
+        for ax_ind, char in enumerate(lscr):
+            if char == ".":
+                shift += 1
+                continue
+            if ax_ind < ell_ind:
+                scr_name = op._ax_map.reverse_map[ax_ind]
+            else:
+                scr_name = op._ax_map.reverse_map[ax_ind - 3 + ell_width]
+            _compat_dict_append(script_names, char, [scr_name])
+
+    # assemble output reverse map
+    out_names = []
+    shift = 0
+
+    def _join_unique_names(l_of_s: List[str]) -> str:
+        ordered_uniques = dict.fromkeys(l_of_s).keys()
+        return "_".join(ax_name.lstrip("ax_") for ax_name in ordered_uniques)
+
+    for char in rscript.replace("...", "."):
+        if char == ".":
+            for script_names in allscript_names:
+                out_names += script_names.get("...", [])
+        else:
+            ax_names = []
+            for script_names in allscript_names:
+                ax_names += script_names.get(char, [])
+            ax_names = "ax_" + _join_unique_names(ax_names)
+            out_names.append(ax_names)
+
+    out_axes = _AxisMapping.fwd_from_names(out_names)
+    if isinstance(out, AxesArray):
+        out._ax_map = _AxisMapping(out_axes, calc.ndim)
+    return AxesArray(calc, axes=out_axes)
 
 
 def standardize_indexer(
@@ -630,22 +714,26 @@ def wrap_axes(axes: dict, obj):
     return obj
 
 
-def _compat_axes_append(
-    axes_dict: dict[str, Union[int, list[int]]],
-    ax_name: str,
-    newaxis: Union[int, list[int]],
+T = TypeVar("T")  # TODO: Bind to a non-sequence after type-negation PEP
+
+
+def _compat_dict_append(
+    compat_dict: dict[str, Union[T, list[T]]],
+    key: str,
+    item_or_list: Union[T, list[T]],
 ) -> None:
-    if isinstance(newaxis, int):
+    """Add an element or list of elements to a dictionary, preserving old values"""
+    if not isinstance(item_or_list, list):
         try:
-            axes_dict[ax_name].append(newaxis)
+            compat_dict[key].append(item_or_list)
         except KeyError:
-            axes_dict[ax_name] = newaxis
+            compat_dict[key] = item_or_list
         except AttributeError:
-            axes_dict[ax_name] = [axes_dict[ax_name], newaxis]
+            compat_dict[key] = [compat_dict[key], item_or_list]
     else:
         try:
-            axes_dict[ax_name] += newaxis
+            compat_dict[key] += item_or_list
         except KeyError:
-            axes_dict[ax_name] = newaxis
+            compat_dict[key] = item_or_list
         except AttributeError:
-            axes_dict[ax_name] = [axes_dict[ax_name], *newaxis]
+            compat_dict[key] = [compat_dict[key], *item_or_list]

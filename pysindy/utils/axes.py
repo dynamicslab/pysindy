@@ -188,6 +188,12 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
     * ``np.reshape``
     * ``np.transpose``
 
+    Indexing:
+        AxesArray supports all of the basic and advanced indexing of numpy
+        arrays, with the addition that new axes can be inserted with a string
+        name for the axis.  If ``None`` or ``np.newaxis`` are passed, the
+        axis is named "unk".
+
     Parameters:
         input_array: the data to create the array.
         axes: A dictionary of axis labels to shape indices.  Axes labels must
@@ -364,6 +370,14 @@ def implements(numpy_function):
         return func
 
     return decorator
+
+
+@implements(np.ix_)
+def ix_(*args: AxesArray):
+    calc = np.ix_(*(np.asarray(arg) for arg in args))
+    ax_names = [list(arr.axes)[0] for arr in args]
+    axes = _AxisMapping.fwd_from_names(ax_names)
+    return tuple(AxesArray(arr, axes) for arr in calc)
 
 
 @implements(np.concatenate)

@@ -7,6 +7,13 @@ from numpy.testing import assert_raises
 from pysindy import AxesArray
 
 
+def test_concat_out():
+    arr = AxesArray(np.arange(3).reshape(1, 3), {"ax_a": 0, "ax_b": 1})
+    arr_out = np.empty((2, 3)).view(AxesArray)
+    result = np.concatenate((arr, arr), axis=0, out=arr_out)
+    assert_equal(result, arr_out)
+
+
 def test_reduce_mean_noinf_recursion():
     arr = AxesArray(np.array([[1]]), {})
     np.mean(arr, axis=0)

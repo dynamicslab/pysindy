@@ -389,7 +389,7 @@ def concatenate(arrays, axis=0, out=None, dtype=None, casting="same_kind"):
             raise TypeError("Concatenating >1 AxesArray with incompatible axes")
     result = np.concatenate(parents, axis, out=out, dtype=dtype, casting=casting)
     if isinstance(out, AxesArray):
-        out.__dict__ = ax_list[0]
+        out._ax_map = _AxisMapping(ax_list[0], in_ndim=result.ndim)
     return AxesArray(result, axes=ax_list[0])
 
 

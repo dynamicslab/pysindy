@@ -487,19 +487,19 @@ def _einsum(
     )
     try:
         # explicit mode
-        lscripts, rscript = "->".split(subscripts)
+        lscripts, rscript = subscripts.split("->")
     except ValueError:
         # implicit mode
         lscripts = subscripts
-        rscripts = "".join(
+        rscript = "".join(
             sorted(c for c in set(subscripts) if subscripts.count(c) > 1 and c != ",")
         )
     # 0-dimensional case, may just be better to check type of "calc":
-    if rscripts == "":
+    if rscript == "":
         return calc
     allscript_names: List[Dict[str, List[str]]] = []
     # script -> axis name for each left script
-    for lscr, op in zip(lscripts, operands):
+    for lscr, op in zip(lscripts.split(","), operands):
         script_names: Dict[str, List[str]] = {}
         allscript_names.append(script_names)
         # handle script ellipses
@@ -540,8 +540,8 @@ def _einsum(
             ax_names = []
             for script_names in allscript_names:
                 ax_names += script_names.get(char, [])
-            ax_names = "ax_" + _join_unique_names(ax_names)
-            out_names.append(ax_names)
+            ax_name = "ax_" + _join_unique_names(ax_names)
+            out_names.append(ax_name)
 
     out_axes = _AxisMapping.fwd_from_names(out_names)
     if isinstance(out, AxesArray):
@@ -550,7 +550,7 @@ def _einsum(
 
 
 @implements(np.linalg.solve)
-def solve(a: AxesArray, b: AxesArray):
+def solve(a: AxesArray, b: AxesArray) -> AxesArray:
     result = np.linalg.solve(np.asarray(a), np.asarray(b))
     a_rev = a._ax_map.reverse_map
     contracted_axis_name = a_rev[sorted(a_rev)[-1]]

@@ -550,12 +550,20 @@ def einsum(
 def linalg_solve(a: AxesArray, b: AxesArray) -> AxesArray:
     result = np.linalg.solve(np.asarray(a), np.asarray(b))
     a_rev = a._ax_map.reverse_map
-    contracted_axis_name = a_rev[sorted(a_rev)[-1]]
+    a_names = [a_rev[k] for k in sorted(a_rev)]
+    contracted_axis_name = a_names[-1]
     b_rev = b._ax_map.reverse_map
-    rest_of_names = [b_rev[k] for k in sorted(b_rev)]
-    axes = _AxisMapping.fwd_from_names(
-        [*rest_of_names[:-2], contracted_axis_name, rest_of_names[-1]]
+    b_names = [b_rev[k] for k in sorted(b_rev)]
+    match_axes_list = a_names[:-1]
+    start = max(b.ndim - a.ndim, 0)
+    end = start + len(match_axes_list)
+    align = slice(start, end)
+    if match_axes_list != b_names[align]:
+        raise ValueError("Mismatch in operand axis names when aligning A and b")
+    all_names = (
+        b_names[: align.stop - 1] + [contracted_axis_name] + b_names[align.stop :]
     )
+    axes = _AxisMapping.fwd_from_names(all_names)
     return AxesArray(result, axes)
 
 

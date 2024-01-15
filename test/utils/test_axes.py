@@ -538,10 +538,50 @@ def test_linalg_solve_align_right():
     assert_array_equal(result, super_result)
 
 
+def test_linalg_solve_align_right_xl():
+    axesA = {"ax_sample": 0, "ax_feature": 1}
+    arrA = AxesArray(np.arange(4).reshape(2, 2), axesA)
+    axesb = {"ax_prob": 0, "ax_sample": 1, "ax_target": 2}
+    arrb = AxesArray(np.arange(8).reshape(2, 2, 2), axesb)
+    result = np.linalg.solve(arrA, arrb)
+    expected_axes = {"ax_prob": 0, "ax_feature": 1, "ax_target": 2}
+    assert result.axes == expected_axes
+    super_result = np.linalg.solve(np.asarray(arrA), np.asarray(arrb))
+    assert_array_equal(result, super_result)
+
+
 def test_linalg_solve_incompatible_left():
     axesA = {"ax_prob": 0, "ax_sample": 1, "ax_coord": 2}
     arrA = AxesArray(np.arange(8).reshape(2, 2, 2), axesA)
     axesb = {"ax_foo": 0, "ax_sample": 1}
     arrb = AxesArray(np.arange(4).reshape(2, 2), axesb)
-    with pytest.raises(ValueError, match="fdsafds"):
+    with pytest.raises(ValueError, match="Mismatch in operand axis names"):
         np.linalg.solve(arrA, arrb)
+
+
+def test_tensordot_int_axes():
+    ...
+
+
+def test_tensordot_list_axes():
+    ...
+
+
+def test_einsum_implicit():
+    ...
+
+
+def test_einsum_trace():
+    ...
+
+
+def test_einsum_diag():
+    ...
+
+
+def test_einsum_contraction():
+    ...
+
+
+def test_einsum_mixed():
+    ...

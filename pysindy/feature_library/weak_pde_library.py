@@ -474,11 +474,11 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 )
             weights1 = weights1 + [weights2]
 
-        # TODO: get rest of code to work with AxesArray
-        deaxify = lambda arr_list: [np.asarray(arr) for arr in arr_list]
-        tweights = deaxify(tweights)
-        weights0 = deaxify(weights0)
-        weights1 = deaxify(weights1)
+        # TODO: get rest of code to work with AxesArray.  Too unsure of
+        # which axis labels to use at this point to continue
+        tweights = [np.asarray(arr) for arr in tweights]
+        weights0 = [np.asarray(arr) for arr in weights0]
+        weights1 = [[np.asarray(arr) for arr in sublist] for sublist in weights1]
         # Product weights over the axes for time derivatives, shaped as inds_k
         self.fulltweights = []
         deriv = np.zeros(self.grid_ndim)

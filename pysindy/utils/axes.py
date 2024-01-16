@@ -582,16 +582,17 @@ def _tensordot_to_einsum(
     if isinstance(axes, int):
         if axes > 26:
             raise ValueError("Too many axes")
-        sub_a = f"...{[chr(code) for code in lc_ord[:axes]]}"
-        sub_b_li = f"{[chr(code) for code in lc_ord[:axes]]}..."
-        sub = sub_a + sub_b_li
+        sub_a = "..." + "".join([chr(code) for code in lc_ord[:axes]])
+        sub_b = "".join([chr(code) for code in lc_ord[:axes]]) + "..."
     else:
-        sub_a = f"{[chr(code) for code in lc_ord[:a_ndim]]}"
+        sub_a = "".join([chr(code) for code in lc_ord[:a_ndim]])
         sub_b_li = [chr(code) for code in lc_ord[a_ndim : a_ndim + b_ndim]]
         for a_ind, b_ind in zip(*axes):
-            sub_b_li[b_ind] - sub_a[a_ind]
+            if a_ind > 26 or b_ind > 26:
+                raise ValueError("Too many axes")
+            sub_b_li[b_ind] = sub_a[a_ind]
         sub_b = "".join(sub_b_li)
-        sub = f"{sub_a},{sub_b}"
+    sub = f"{sub_a},{sub_b}"
     return sub
 
 

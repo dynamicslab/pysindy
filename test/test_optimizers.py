@@ -1,6 +1,8 @@
 """
 Unit tests for optimizers.
 """
+import pickle
+
 import numpy as np
 import pytest
 from numpy.linalg import norm
@@ -1151,3 +1153,13 @@ def test_trapping_mixed_only():
     constraint_lhs = _antisymm_triple_constraints(3, 3, mixed_terms)
     result = np.tensordot(constraint_lhs, stable_coefs, ((1, 2), (1, 0)))
     assert result[0] == 0
+
+    
+def test_pickle(data_lorenz):
+    x, t = data_lorenz
+    y = PolynomialLibrary(degree=2).fit_transform(x)
+    opt = MIOSR(target_sparsity=7).fit(x, y)
+    expected = opt.coef_
+    new_opt = pickle.loads(pickle.dumps(opt))
+    result = new_opt.coef_
+    np.testing.assert_array_equal(result, expected)

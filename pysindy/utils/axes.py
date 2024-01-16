@@ -117,13 +117,16 @@ def implements(numpy_function):
 
 
 @implements(np.concatenate)
-def concatenate(arrays, axis=0):
+def concatenate(arrays, axis=0, out=None, dtype=None, casting="same_kind"):
     parents = [np.asarray(obj) for obj in arrays]
     ax_list = [obj.__dict__ for obj in arrays if isinstance(obj, AxesArray)]
     for ax1, ax2 in zip(ax_list[:-1], ax_list[1:]):
         if ax1 != ax2:
             raise TypeError("Concatenating >1 AxesArray with incompatible axes")
-    return AxesArray(np.concatenate(parents, axis), axes=ax_list[0])
+    result = np.concatenate(parents, axis, out=out, dtype=dtype, casting=casting)
+    if isinstance(out, AxesArray):
+        out.__dict__ = ax_list[0]
+    return AxesArray(result, axes=ax_list[0])
 
 
 def comprehend_axes(x):

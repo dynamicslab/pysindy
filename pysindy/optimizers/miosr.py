@@ -268,3 +268,12 @@ class MIOSR(BaseOptimizer):
     def complexity(self):
         check_is_fitted(self)
         return np.count_nonzero(self.coef_)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state["model"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.model = None

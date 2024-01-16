@@ -1,3 +1,4 @@
+from typing import List
 from typing import Union
 
 import numpy as np
@@ -232,7 +233,7 @@ class FiniteDifference(BaseDifferentiation):
         )
 
     def _differentiate(
-        self, x: NDArray, t: Union[NDArray, float, list[float]]
+        self, x: NDArray, t: Union[NDArray, float, List[float]]
     ) -> NDArray:
         """
         Apply finite difference method.

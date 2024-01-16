@@ -562,11 +562,9 @@ def test_linalg_solve_incompatible_left():
 def test_ts_to_einsum_int_axes():
     a_str, b_str = axes._tensordot_to_einsum(3, 3, 2).split(",")
     # expecting 'abc,bcf
-    assert a_str[:3] == "..."
-    assert b_str[-3:] == "..."
-    a_str = a_str.lstrip("...")
-    b_str = b_str.rstrip("...")
-    assert a_str == b_str
+    assert a_str[0] not in b_str
+    assert b_str[-1] not in a_str
+    assert a_str[1:] == b_str[:-1]
 
 
 def test_ts_to_einsum_list_axes():
@@ -605,37 +603,46 @@ def test_tensordot_list_axes():
     assert_array_equal(result, super_result)
 
 
+@pytest.mark.skip
 def test_einsum_implicit():
     ...
 
 
+@pytest.mark.skip
 def test_einsum_trace():
     ...
 
 
+@pytest.mark.skip
 def test_einsum_diag():
     ...
 
 
+@pytest.mark.skip
 def test_einsum_1dsum():
     ...
 
 
+@pytest.mark.skip
 def test_einsum_alldsum():
     ...
 
 
+@pytest.mark.skip
 def test_einsum_contraction():
     ...
 
 
+@pytest.mark.skip
 def test_einsum_explicit_ellipsis():
     ...
 
 
+@pytest.mark.skip
 def test_einsum_scalar():
     ...
 
 
+@pytest.mark.skip
 def test_einsum_mixed():
     ...

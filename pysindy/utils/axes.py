@@ -3,6 +3,15 @@ A module that defines one external class, AxesArray, to act like a numpy array
 but keep track of axis definitions.
 
 TODO: Add developer documentation here.
+
+The recommended way to refactor existing code to use AxesArrays is to add them
+at the lowest level possible.  Enter debug mode and see how long the expected
+axes persist throughout array operations.  When AxesArray loses track of the
+correct axes, re-assign them with an AxesArray constructor (which only uses a
+view of the data).
+
+Starting at the macro level runs the risk of triggering a great deal of errors
+from unimplemented functions.
 """
 from __future__ import annotations
 
@@ -601,19 +610,15 @@ def _tensordot_to_einsum(
     a_ndim: int, b_ndim: int, axes: Union[int, Sequence[Sequence[int]]]
 ) -> str:
     lc_ord = range(97, 123)
+    sub_a = "".join([chr(code) for code in lc_ord[:a_ndim]])
     if isinstance(axes, int):
-        if axes > 26:
-            raise ValueError("Too many axes")
-        sub_a = "..." + "".join([chr(code) for code in lc_ord[:axes]])
-        sub_b = "".join([chr(code) for code in lc_ord[:axes]]) + "..."
-    else:
-        sub_a = "".join([chr(code) for code in lc_ord[:a_ndim]])
-        sub_b_li = [chr(code) for code in lc_ord[a_ndim : a_ndim + b_ndim]]
-        for a_ind, b_ind in zip(*axes):
-            if a_ind > 26 or b_ind > 26:
-                raise ValueError("Too many axes")
-            sub_b_li[b_ind] = sub_a[a_ind]
-        sub_b = "".join(sub_b_li)
+        axes = [range(-axes, 0), range(0, axes)]
+    sub_b_li = [chr(code) for code in lc_ord[a_ndim : a_ndim + b_ndim]]
+    if np.array(axes).max() > 26:
+        raise ValueError("Too many axes")
+    for a_ind, b_ind in zip(*axes):
+        sub_b_li[b_ind] = sub_a[a_ind]
+    sub_b = "".join(sub_b_li)
     sub = f"{sub_a},{sub_b}"
     return sub
 

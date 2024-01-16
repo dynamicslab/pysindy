@@ -489,13 +489,43 @@ def einsum(
         # implicit mode
         lscripts = subscripts
         rscript = "".join(
-            sorted(c for c in set(subscripts) if subscripts.count(c) > 1 and c != ",")
+            sorted(c for c in set(subscripts) if subscripts.count(c) == 1 and c != ",")
         )
     # 0-dimensional case, may just be better to check type of "calc":
     if rscript == "":
         return calc
+
+    # assemble output reverse map
+    allscript_names = _label_einsum_scripts(lscripts, operands)
+    out_names = []
+
+    for char in rscript.replace("...", "."):
+        if char == ".":
+            for script_names in allscript_names:
+                out_names += script_names.get("...", [])
+        else:
+            ax_names = []
+            for script_names in allscript_names:
+                ax_names += script_names.get(char, [])
+            ax_name = "ax_" + _join_unique_names(ax_names)
+            out_names.append(ax_name)
+
+    out_axes = _AxisMapping.fwd_from_names(out_names)
+    if isinstance(out, AxesArray):
+        out._ax_map = _AxisMapping(out_axes, calc.ndim)
+    return AxesArray(calc, axes=out_axes)
+
+
+def _join_unique_names(l_of_s: List[str]) -> str:
+    ordered_uniques = dict.fromkeys(l_of_s).keys()
+    return "_".join(ax_name.removeprefix("ax_") for ax_name in ordered_uniques)
+
+
+def _label_einsum_scripts(
+    lscripts: list[str], operands: tuple[AxesArray]
+) -> list[dict[str, str]]:
+    """Create a list of what axis name each script refers to in its operand."""
     allscript_names: List[Dict[str, List[str]]] = []
-    # script -> axis name for each left script
     for lscr, op in zip(lscripts.split(","), operands):
         script_names: Dict[str, List[str]] = {}
         allscript_names.append(script_names)
@@ -520,30 +550,7 @@ def einsum(
             else:
                 scr_name = op._ax_map.reverse_map[ax_ind - 3 + ell_width]
             _compat_dict_append(script_names, char, [scr_name])
-
-    # assemble output reverse map
-    out_names = []
-    shift = 0
-
-    def _join_unique_names(l_of_s: List[str]) -> str:
-        ordered_uniques = dict.fromkeys(l_of_s).keys()
-        return "_".join(ax_name.lstrip("ax_") for ax_name in ordered_uniques)
-
-    for char in rscript.replace("...", "."):
-        if char == ".":
-            for script_names in allscript_names:
-                out_names += script_names.get("...", [])
-        else:
-            ax_names = []
-            for script_names in allscript_names:
-                ax_names += script_names.get(char, [])
-            ax_name = "ax_" + _join_unique_names(ax_names)
-            out_names.append(ax_name)
-
-    out_axes = _AxisMapping.fwd_from_names(out_names)
-    if isinstance(out, AxesArray):
-        out._ax_map = _AxisMapping(out_axes, calc.ndim)
-    return AxesArray(calc, axes=out_axes)
+    return allscript_names
 
 
 @implements(np.linalg.solve)

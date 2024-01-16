@@ -197,6 +197,11 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
             be of the format "ax_name".  indices can be either an int or a
             list of ints.
 
+    Attributes:
+        axes: dictionary of axis name to dimension index/indices
+        ax_<ax_name>: lookup ax_name in axes
+        n_<ax_name>: lookup shape of subarray defined by ax_name
+
     Raises:
         * AxesWarning if axes does not match shape of input_array.
         * ValueError if assigning the same axis index to multiple meanings or
@@ -206,7 +211,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
 
     _ax_map: _AxisMapping
 
-    def __new__(cls, input_array: NDArray, axes: dict[str, int | list[int]]):
+    def __new__(cls, input_array: NDArray, axes: CompatDict[int]):
         obj = np.asarray(input_array).view(cls)
         if axes is None:
             axes = {}
@@ -225,6 +230,16 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
     @property
     def shape(self):
         return super().shape
+
+    def insert_axis(
+        self, axis: Union[Collection[int], int], new_name: str
+    ) -> CompatDict[int]:
+        """Create the constructor axes dict from this array, with new axis/axes"""
+        return self._ax_map.insert_axis(axis, new_name)
+
+    def remove_axis(self, axis: Union[Collection[int], int]) -> CompatDict[int]:
+        """Create the constructor axes dict from this array, without axis/axes"""
+        return self._ax_map.remove_axis(axis)
 
     def __getattr__(self, name):
         # TODO: replace with structural pattern matching on Oct 2025 (3.9 EOL)

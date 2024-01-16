@@ -88,20 +88,25 @@ class FiniteDifference(BaseDifferentiation):
 
     def _coefficients(self, t):
         nt = len(t)
-        self.stencil_inds = np.array(
-            [np.arange(i, nt - self.n_stencil + i + 1) for i in range(self.n_stencil)]
+        self.stencil_inds = AxesArray(
+            np.array(
+                [
+                    np.arange(i, nt - self.n_stencil + i + 1)
+                    for i in range(self.n_stencil)
+                ]
+            ),
+            {"ax_offset": 0, "ax_ti": 1},
         )
-        self.stencil = np.transpose(t[self.stencil_inds])
-
+        self.stencil = AxesArray(
+            np.transpose(t[self.stencil_inds]), {"ax_time": 0, "ax_offset": 1}
+        )
         pows = np.arange(self.n_stencil)[np.newaxis, :, np.newaxis]
-        matrices = (
+        dt_endpoints = (
             self.stencil
-            - t[
-                (self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2,
-                "coord",
-            ]
-        )[:, np.newaxis, :] ** pows
-        b = AxesArray(np.zeros((1, self.n_stencil)), self.stencil.axes)
+            - t[(self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2, "offset"]
+        )
+        matrices = dt_endpoints[:, "power", :] ** pows
+        b = AxesArray(np.zeros((1, self.n_stencil)), {"ax_time": 0, "ax_power": 1})
         b[0, self.d] = np.math.factorial(self.d)
         return np.linalg.solve(matrices, b)
 
@@ -212,10 +217,15 @@ class FiniteDifference(BaseDifferentiation):
         # To contract with the coefficients, roll by -self.axis to put it first
         # Then roll back by self.axis to return the order
         trans = np.roll(np.arange(x.ndim + 1), -self.axis)
+        # TODO: assign x's axes much earlier in the call stack
+        x = AxesArray(x, {"ax_unk": list(range(x.ndim))})
+        x_expanded = AxesArray(
+            np.transpose(x[tuple(s)], axes=trans), x.insert_axis(0, "ax_offset")
+        )
         return np.transpose(
             np.einsum(
                 "ij...,ij->j...",
-                np.transpose(x[tuple(s)], axes=trans),
+                x_expanded,
                 np.transpose(coeffs),
             ),
             np.roll(np.arange(x.ndim), self.axis),

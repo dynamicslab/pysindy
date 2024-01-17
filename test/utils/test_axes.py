@@ -292,11 +292,11 @@ def test_adv_indexing_adds_axes():
 
 def test_standardize_basic_indexer():
     arr = np.arange(6).reshape(2, 3)
-    result_indexer, result_fancy = axes.standardize_indexer(arr, Ellipsis)
+    result_indexer, result_fancy = axes._standardize_indexer(arr, Ellipsis)
     assert result_indexer == [slice(None), slice(None)]
     assert result_fancy == ()
 
-    result_indexer, result_fancy = axes.standardize_indexer(
+    result_indexer, result_fancy = axes._standardize_indexer(
         arr, (np.newaxis, 1, 1, Ellipsis)
     )
     assert result_indexer == [None, 1, 1]
@@ -305,11 +305,11 @@ def test_standardize_basic_indexer():
 
 def test_standardize_advanced_indexer():
     arr = np.arange(6).reshape(2, 3)
-    result_indexer, result_fancy = axes.standardize_indexer(arr, [1])
+    result_indexer, result_fancy = axes._standardize_indexer(arr, [1])
     assert result_indexer == [np.ones(1), slice(None)]
     assert result_fancy == (0,)
 
-    result_indexer, result_fancy = axes.standardize_indexer(
+    result_indexer, result_fancy = axes._standardize_indexer(
         arr, (np.newaxis, [1], 1, Ellipsis)
     )
     assert result_indexer == [None, np.ones(1), 1]
@@ -318,7 +318,7 @@ def test_standardize_advanced_indexer():
 
 def test_standardize_bool_indexer():
     arr = np.ones((1, 2))
-    result, result_adv = axes.standardize_indexer(arr, [[True, True]])
+    result, result_adv = axes._standardize_indexer(arr, [[True, True]])
     assert_equal(result, [[0, 0], [0, 1]])
     assert result_adv == (0, 1)
 

@@ -98,11 +98,9 @@ class _AxisMapping:
 
     def __init__(
         self,
-        axes: Optional[dict[str, Union[int, Sequence[int]]]] = None,
-        in_ndim: int = 0,
+        axes: dict[str, Union[int, Sequence[int]]],
+        in_ndim: int,
     ):
-        if axes is None:
-            axes = {}
         self.fwd_map = {}
         self.reverse_map = {}
 
@@ -260,8 +258,6 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
 
     def __new__(cls, input_array: NDArray, axes: CompatDict[int]):
         obj = np.asarray(input_array).view(cls)
-        if axes is None:
-            axes = {}
         in_ndim = len(input_array.shape)
         obj._ax_map = _AxisMapping(axes, in_ndim)
         return obj
@@ -334,9 +330,6 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         output._ax_map = new_map
         return output
 
-    def __array_wrap__(self, out_arr, context=None):
-        return super().__array_wrap__(self, out_arr, context)
-
     def __array_finalize__(self, obj) -> None:
         if obj is None:  # explicit construction via super().__new__()
             return
@@ -348,7 +341,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 not hasattr(self, "_ax_map"),
             )
         ):
-            self._ax_map = _AxisMapping({})
+            self._ax_map = _AxisMapping({}, in_ndim=0)
         # required by ravel() and view() used in numpy testing.  Also for zeros_like...
         elif all(
             (
@@ -357,7 +350,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
                 self.shape == obj.shape,
             )
         ):
-            self._ax_map = _AxisMapping(obj.axes, len(obj.shape))
+            self._ax_map = _AxisMapping(obj.axes, obj.ndim)
         # maybe add errors for incompatible views?
 
     def __array_ufunc__(
@@ -409,14 +402,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
 
     def __array_function__(self, func, types, args, kwargs):
         if func not in HANDLED_FUNCTIONS:
-            arr = super(AxesArray, self).__array_function__(func, types, args, kwargs)
-            if isinstance(arr, AxesArray):
-                return arr
-            elif isinstance(arr, np.ndarray):
-                return AxesArray(arr, axes=self.axes)
-            elif arr is not None:
-                return arr
-            return
+            return super(AxesArray, self).__array_function__(func, types, args, kwargs)
         if not all(issubclass(t, AxesArray) for t in types):
             return NotImplemented
         return HANDLED_FUNCTIONS[func](*args, **kwargs)
@@ -446,7 +432,7 @@ def concatenate(arrays, axis=0, out=None, dtype=None, casting="same_kind"):
     ax_list = [obj.axes for obj in arrays if isinstance(obj, AxesArray)]
     for ax1, ax2 in zip(ax_list[:-1], ax_list[1:]):
         if ax1 != ax2:
-            raise TypeError("Concatenating >1 AxesArray with incompatible axes")
+            raise ValueError("Concatenating >1 AxesArray with incompatible axes")
     result = np.concatenate(parents, axis, out=out, dtype=dtype, casting=casting)
     if isinstance(out, AxesArray):
         out._ax_map = _AxisMapping(ax_list[0], in_ndim=result.ndim)

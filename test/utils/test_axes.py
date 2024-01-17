@@ -11,11 +11,22 @@ from pysindy.utils.axes import _AxisMapping
 from pysindy.utils.axes import AxesWarning
 
 
+def test_axesarray_create():
+    AxesArray(np.array(1), {})
+
+
 def test_concat_out():
     arr = AxesArray(np.arange(3).reshape(1, 3), {"ax_a": 0, "ax_b": 1})
     arr_out = np.empty((2, 3)).view(AxesArray)
     result = np.concatenate((arr, arr), axis=0, out=arr_out)
     assert_equal(result, arr_out)
+
+
+def test_bad_concat():
+    arr = AxesArray(np.arange(3).reshape(1, 3), {"ax_a": 0, "ax_b": 1})
+    arr2 = AxesArray(np.arange(3).reshape(1, 3), {"ax_b": 0, "ax_c": 1})
+    with pytest.raises(ValueError):
+        np.concatenate((arr, arr2), axis=0)
 
 
 def test_reduce_mean_noinf_recursion():
@@ -151,6 +162,14 @@ def test_reshape_outer_product():
     arr = AxesArray(np.arange(4).reshape((2, 2)), {"ax_a": [0, 1]})
     merge = np.reshape(arr, (4,))
     assert merge.axes == {"ax_a": 0}
+
+
+def test_reshape_bad_divmod():
+    arr = AxesArray(np.arange(12).reshape((2, 3, 2)), {"ax_a": [0, 1], "ax_b": 2})
+    with pytest.raises(
+        ValueError, match="Cannot reshape an AxesArray this way.  Array dimension"
+    ):
+        np.reshape(arr, (4, 3))
 
 
 def test_reshape_fill_outer_product():
@@ -332,6 +351,13 @@ def test_reduce_AxisMapping():
     expected = {"ax_a": [0, 1], "ax_b": 2, "ax_d": 3, "ax_e": [4, 5]}
     assert result == expected
     result = ax_map.remove_axis(-4)
+    assert result == expected
+
+
+def test_reduce_all_AxisMapping():
+    ax_map = _AxisMapping({"ax_a": [0, 1], "ax_b": 2}, 3)
+    result = ax_map.remove_axis()
+    expected = {}
     assert result == expected
 
 
@@ -638,9 +664,11 @@ def test_einsum_explicit_ellipsis():
     ...
 
 
-@pytest.mark.skip
 def test_einsum_scalar():
-    ...
+    arr = AxesArray(np.ones(1), {"ax_a": 0})
+    expected = 1
+    result = np.einsum("i,i", arr, arr)
+    assert result == expected
 
 
 @pytest.mark.skip

@@ -38,9 +38,9 @@ class SBR(BaseOptimizer):
 
     slab_shape_nu : float, optional (default 4)
         Controls spread of slab.  For values less than 4,
-        the kurtosis of of nonzero coefficients is undefined.  As value increases
-        past 4, For higher values, the
-        variance and kurtosis approach :math:`s` and :math:`s^2`, respectively
+        the kurtosis of of nonzero coefficients is undefined.  As  the value
+        increases past 4, for higher values, the variance and kurtosis approach
+        :math:`s` and :math:`s^2`, respectively
 
     slab_shape_s : float, optional (default 2)
         Controls spread of slab.  Higher values lead to more spread
@@ -50,15 +50,14 @@ class SBR(BaseOptimizer):
         Rate hyperparameter for the exponential prior distribution over
         the noise standard deviation.
 
-    normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed.
+    num_warmup : int, optional (default 1000)
+        Number of warmup (or "burnin") MCMC samples to generate. These are
+        discarded before analysis and are not included in the posterior samples.
 
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
+    num_samples : int, optional (default 5000)
+        Number of posterior MCMC samples to generate.
 
-    **mcmc_kwargs
+    mcmc_kwargs : dict, optional (default None)
         Instructions for MCMC sampling.
         Keyword arguments are passed to numpyro.infer.MCMC
 

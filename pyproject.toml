@@ -62,7 +62,7 @@ cvxpy = [
     "scs>=2.1, !=2.1.4"
 ]
 numpyro = [
-    "numpyro",
+    "numpyro~=0.13.2",
     "jax"
 ]
 

@@ -111,9 +111,13 @@ class SBR(BaseOptimizer):
         n_features = x.shape[1]
         n_targets = y.shape[1]
 
-        # sample the hyperparameters.
-        tau, c_sq = sample_reg_horseshoe_hyper(
-            self.sparsity_coef_tau0, self.slab_shape_nu, self.slab_shape_s
+        # sample the horseshoe hyperparameters.
+        tau = numpyro.sample("tau", HalfCauchy(self.sparsity_coef_tau0))
+        c_sq = numpyro.sample(
+            "c_sq",
+            InverseGamma(
+                self.slab_shape_nu / 2, self.slab_shape_nu / 2 * self.slab_shape_s**2
+            ),
         )
 
         # sample the parameters compute the predicted outputs.
@@ -139,18 +143,6 @@ class SBR(BaseOptimizer):
 
         # extract the MCMC samples and compute the UQ-SINDy parameters.
         return mcmc
-
-
-def sample_reg_horseshoe_hyper(tau0=0.1, nu=4, s=2):
-    """
-    For details on this prior, please refer to:
-    Hirsh, S. M., Barajas-Solano, D. A., & Kutz, J. N. (2021).
-    parsifying Priors for Bayesian Uncertainty Quantification in
-    Model Discovery (arXiv:2107.02107). arXiv. http://arxiv.org/abs/2107.02107
-    """
-    tau = numpyro.sample("tau", HalfCauchy(tau0))
-    c_sq = numpyro.sample("c_sq", InverseGamma(nu / 2, nu / 2 * s**2))
-    return tau, c_sq
 
 
 def _sample_reg_horseshoe(tau, c_sq, shape):

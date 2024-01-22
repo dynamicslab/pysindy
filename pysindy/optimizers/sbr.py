@@ -34,16 +34,17 @@ class SBR(BaseOptimizer):
     ----------
     sparsity_coef_tau0 : float, optional (default 0.1)
         Sparsity coefficient for regularised horseshoe hyper-prior. Lower
-        value increases the sparsity of the SINDy coefficients. See Hirsh
-        et al. (2021) for more details.
-
+        value increases the sparsity of the SINDy coefficients.
+        
     slab_shape_nu : float, optional (default 4)
-        Shape parameter for the slab region of the regularised horseshoe
-        prior. See Hirsh et al. (2021) for more details
+        Controls spread of slab.  For values less than 4,
+        the kurtosis of of nonzero coefficients is undefined.  As value increases
+        past 4, For higher values, the 
+        variance and kurtosis approach :math:`s` and :math:`s^2`, respectively
 
     slab_shape_s : float, optional (default 2)
-        Shape parameter for the slab region of the regularised horseshoe
-        prior. See Hirsh et al. (2021) for more details
+        Controls spread of slab.  Higher values lead to more spread
+        out nonzero coefficients.
 
     noise_hyper_lambda : float, optional (default 1)
         Rate hyperparameter for the exponential prior distribution over

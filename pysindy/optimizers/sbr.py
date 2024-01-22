@@ -148,13 +148,7 @@ def sample_reg_horseshoe_hyper(tau0=0.1, nu=4, s=2):
     return tau, c_sq
 
 
-def sample_reg_horseshoe(tau, c_sq, shape):
-    """
-    For details on this prior, please refer to:
-    Hirsh, S. M., Barajas-Solano, D. A., & Kutz, J. N. (2021).
-    parsifying Priors for Bayesian Uncertainty Quantification in
-    Model Discovery (arXiv:2107.02107). arXiv. http://arxiv.org/abs/2107.02107
-    """
+def _sample_reg_horseshoe(tau, c_sq, shape):
     lamb = numpyro.sample("lambda", HalfCauchy(1.0), sample_shape=shape)
     lamb_squiggle = jnp.sqrt(c_sq) * lamb / jnp.sqrt(c_sq + tau**2 * lamb**2)
     beta = numpyro.sample(

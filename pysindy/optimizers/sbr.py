@@ -17,8 +17,8 @@ class SBR(BaseOptimizer):
     Sparse Bayesian Regression (SBR) optimizer. This uses the regularised
     horseshoe prior over the SINDy coefficients to achieve sparsification.
 
-    The horseshoe prior contains a "spike" of nonzero probability at the origin, and a "slab" of distribution
-    in cases where a coefficient is nonzero.
+    The horseshoe prior contains a "spike" of nonzero probability at the
+    origin, and a "slab" of distribution in cases where a coefficient is nonzero.
 
     The SINDy coefficients are set as the posterior means of the MCMC NUTS samples.
     Additional statistics can be computed from the MCMC samples stored in
@@ -35,11 +35,11 @@ class SBR(BaseOptimizer):
     sparsity_coef_tau0 : float, optional (default 0.1)
         Sparsity coefficient for regularised horseshoe hyper-prior. Lower
         value increases the sparsity of the SINDy coefficients.
-        
+
     slab_shape_nu : float, optional (default 4)
         Controls spread of slab.  For values less than 4,
         the kurtosis of of nonzero coefficients is undefined.  As value increases
-        past 4, For higher values, the 
+        past 4, For higher values, the
         variance and kurtosis approach :math:`s` and :math:`s^2`, respectively
 
     slab_shape_s : float, optional (default 2)
@@ -77,22 +77,27 @@ class SBR(BaseOptimizer):
         slab_shape_nu=4,
         slab_shape_s=2,
         noise_hyper_lambda=1,
-        normalize_columns=False,
-        copy_X=True,
-        **mcmc_kwargs,
+        num_warmup=1000,
+        num_samples=5000,
+        mcmc_kwargs=None,
+        **kwargs,
     ):
-        super().__init__(
-            copy_X=copy_X,
-            normalize_columns=normalize_columns,
-        )
+        super().__init__(**kwargs)
         # set the hyperparameters
         self.sparsity_coef_tau0 = sparsity_coef_tau0
         self.slab_shape_nu = slab_shape_nu
         self.slab_shape_s = slab_shape_s
         self.noise_hyper_lambda = noise_hyper_lambda
 
-        # store the MCMC kwargs.
-        self.mcmc_kwargs = mcmc_kwargs
+        # set MCMC sampling parameters.
+        self.num_warmup = num_warmup
+        self.num_samples = num_samples
+
+        # set the MCMC kwargs.
+        if mcmc_kwargs is not None:
+            self.mcmc_kwargs = mcmc_kwargs
+        else:
+            self.mcmc_kwargs = {}
 
     def _reduce(self, x, y):
         # set up a sparse regression and sample.
@@ -112,7 +117,7 @@ class SBR(BaseOptimizer):
         )
 
         # sample the parameters compute the predicted outputs.
-        beta = sample_reg_horseshoe(tau, c_sq, (n_targets, n_features))
+        beta = _sample_reg_horseshoe(tau, c_sq, (n_targets, n_features))
         mu = jnp.dot(x, beta.T)
 
         # compute the likelihood.
@@ -127,9 +132,9 @@ class SBR(BaseOptimizer):
 
         # run the MCMC
         kernel = NUTS(self._numpyro_model)
-        num_warmup = kwargs.pop("num_warmup", 2000)
-        num_samples = kwargs.pop("num_samples", 5000)
-        mcmc = MCMC(kernel, num_warmup=num_warmup, num_samples=num_samples, **kwargs)
+        mcmc = MCMC(
+            kernel, num_warmup=self.num_warmup, num_samples=self.num_samples, **kwargs
+        )
         mcmc.run(rng_key_, x=x, y=y)
 
         # extract the MCMC samples and compute the UQ-SINDy parameters.

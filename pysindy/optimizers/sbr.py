@@ -17,12 +17,12 @@ class SBR(BaseOptimizer):
     Sparse Bayesian Regression (SBR) optimizer. This uses the regularised
     horseshoe prior over the SINDy coefficients to achieve sparsification.
 
-    Inference is achieved through NUTS sampling with numpyro, which is a
-    dependency for this optimizer.
+    The horseshoe prior contains a "spike" of nonzero probability at the origin, and a "slab" of distribution
+    in cases where a coefficient is nonzero.
 
-    The SINDy coefficients are set as the posterior means of the MCMC samples.
+    The SINDy coefficients are set as the posterior means of the MCMC NUTS samples.
     Additional statistics can be computed from the MCMC samples stored in
-    the mcmc attribute using e.g. ArviZ.
+    the mcmc_ attribute using e.g. ArviZ.
 
     See the following reference for more details:
 

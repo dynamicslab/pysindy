@@ -1,3 +1,5 @@
+from typing import Optional
+
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -72,13 +74,13 @@ class SBR(BaseOptimizer):
 
     def __init__(
         self,
-        sparsity_coef_tau0=0.1,
-        slab_shape_nu=4,
-        slab_shape_s=2,
-        noise_hyper_lambda=1,
-        num_warmup=1000,
-        num_samples=5000,
-        mcmc_kwargs=None,
+        sparsity_coef_tau0: float = 0.1,
+        slab_shape_nu: float = 4,
+        slab_shape_s: float = 2,
+        noise_hyper_lambda: float = 1,
+        num_warmup: int = 1000,
+        num_samples: int = 5000,
+        mcmc_kwargs: Optional[dict] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)

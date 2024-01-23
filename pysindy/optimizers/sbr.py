@@ -81,9 +81,15 @@ class SBR(BaseOptimizer):
         num_warmup: int = 1000,
         num_samples: int = 5000,
         mcmc_kwargs: Optional[dict] = None,
+        unbias: bool = False,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+
+        if unbias:
+            raise ValueError("SBR is incompatible with unbiasing. Set unbias=False")
+
+        super().__init__(unbias=unbias, **kwargs)
+
         # set the hyperparameters
         self.sparsity_coef_tau0 = sparsity_coef_tau0
         self.slab_shape_nu = slab_shape_nu

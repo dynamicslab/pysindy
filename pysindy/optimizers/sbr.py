@@ -131,14 +131,13 @@ class SBR(BaseOptimizer):
         # set up a jax random key.
         seed = kwargs.pop("seed", 0)
         rng_key = random.PRNGKey(seed)
-        rng_key, rng_key_ = random.split(rng_key)
 
         # run the MCMC
         kernel = NUTS(self._numpyro_model)
         mcmc = MCMC(
             kernel, num_warmup=self.num_warmup, num_samples=self.num_samples, **kwargs
         )
-        mcmc.run(rng_key_, x=x, y=y)
+        mcmc.run(rng_key, x=x, y=y)
 
         # extract the MCMC samples and compute the UQ-SINDy parameters.
         return mcmc

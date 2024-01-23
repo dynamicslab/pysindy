@@ -66,7 +66,7 @@ class SBR(BaseOptimizer):
     coef_ : array, shape (n_features,) or (n_targets, n_features)
         Posterior means of the SINDy coefficients.
 
-    mcmc : numpyro.infer.MCMC
+    mcmc_ : numpyro.infer.MCMC
         Complete traces of the posterior samples.
     """
 
@@ -100,10 +100,10 @@ class SBR(BaseOptimizer):
 
     def _reduce(self, x, y):
         # set up a sparse regression and sample.
-        self.mcmc = self._run_mcmc(x, y, **self.mcmc_kwargs)
+        self.mcmc_ = self._run_mcmc(x, y, **self.mcmc_kwargs)
 
         # set the mean values as the coefficients.
-        self.coef_ = np.array(self.mcmc.get_samples()["beta"].mean(axis=0))
+        self.coef_ = np.array(self.mcmc_.get_samples()["beta"].mean(axis=0))
 
     def _numpyro_model(self, x, y):
         # get the dimensionality of the problem.

@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import factorial
 
 from .base import BaseDifferentiation
 
@@ -98,7 +99,7 @@ class FiniteDifference(BaseDifferentiation):
             ]
         )[:, np.newaxis, :] ** pows
         b = np.zeros(self.n_stencil)
-        b[self.d] = np.math.factorial(self.d)
+        b[self.d] = factorial(self.d)
         return np.linalg.solve(matrices, [b])
 
     def _coefficients_boundary_forward(self, t):
@@ -134,7 +135,7 @@ class FiniteDifference(BaseDifferentiation):
             )
 
         b = np.zeros(self.stencil_inds.shape).T
-        b[:, self.d] = np.math.factorial(self.d)
+        b[:, self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _coefficients_boundary_periodic(self, t):
@@ -187,7 +188,7 @@ class FiniteDifference(BaseDifferentiation):
             )
 
         b = np.zeros(self.stencil_inds.shape).T
-        b[:, self.d] = np.math.factorial(self.d)
+        b[:, self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _constant_coefficients(self, dt):
@@ -196,7 +197,7 @@ class FiniteDifference(BaseDifferentiation):
             np.newaxis, :
         ] ** pows
         b = np.zeros(self.n_stencil)
-        b[self.d] = np.math.factorial(self.d)
+        b[self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _accumulate(self, coeffs, x):

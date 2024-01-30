@@ -26,10 +26,20 @@ class SBR(BaseOptimizer):
     Additional statistics can be computed from the MCMC samples stored in
     the mcmc_ attribute using e.g. ArviZ.
 
+    This implementation differs from the method described in Hirsh et al. (2021)
+    by imposing the error model directly on the derivatives, rather than on the
+    states, circumventing the need to integrate the equation to evaluate the
+    posterior density.
+
+    TODO: Implement the data-generating model described in eq. 2.4 of Hirsh
+    et al. (2021). This could be achieved using the JAX-based solver "diffrax".
+    Se discussion in https://github.com/dynamicslab/pysindy/pull/440 for more
+    details.
+
     See the following reference for more details:
 
         Hirsh, S. M., Barajas-Solano, D. A., & Kutz, J. N. (2021).
-        parsifying Priors for Bayesian Uncertainty Quantification in
+        Sparsifying Priors for Bayesian Uncertainty Quantification in
         Model Discovery (arXiv:2107.02107). arXiv. http://arxiv.org/abs/2107.02107
 
     Parameters

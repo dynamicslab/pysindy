@@ -1,6 +1,8 @@
 """
 Unit tests for optimizers.
 """
+import pickle
+
 import numpy as np
 import pytest
 from numpy.linalg import norm
@@ -1129,3 +1131,13 @@ def test_remove_and_decrement():
         existing_vals=existing_vals, vals_to_remove=vals_to_remove
     )
     np.testing.assert_array_equal(expected, result)
+
+
+def test_pickle(data_lorenz):
+    x, t = data_lorenz
+    y = PolynomialLibrary(degree=2).fit_transform(x)
+    opt = MIOSR(target_sparsity=7).fit(x, y)
+    expected = opt.coef_
+    new_opt = pickle.loads(pickle.dumps(opt))
+    result = new_opt.coef_
+    np.testing.assert_array_equal(result, expected)

@@ -3,6 +3,7 @@ from typing import Union
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.special import factorial
 
 from .base import BaseDifferentiation
 from pysindy.utils.axes import AxesArray
@@ -59,7 +60,7 @@ class FiniteDifference(BaseDifferentiation):
     def __init__(
         self,
         order=2,
-        d=1,
+        d: int = 1,
         axis=0,
         is_uniform=False,
         drop_endpoints=False,
@@ -108,7 +109,7 @@ class FiniteDifference(BaseDifferentiation):
         )
         matrices = dt_endpoints[:, "power", :] ** pows
         b = AxesArray(np.zeros((1, self.n_stencil)), {"ax_time": 0, "ax_power": 1})
-        b[0, self.d] = np.math.factorial(self.d)
+        b[0, self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _coefficients_boundary_forward(self, t):
@@ -144,7 +145,7 @@ class FiniteDifference(BaseDifferentiation):
             )
 
         b = np.zeros(self.stencil_inds.shape).T
-        b[:, self.d] = np.math.factorial(self.d)
+        b[:, self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _coefficients_boundary_periodic(self, t):
@@ -197,7 +198,7 @@ class FiniteDifference(BaseDifferentiation):
             )
 
         b = np.zeros(self.stencil_inds.shape).T
-        b[:, self.d] = np.math.factorial(self.d)
+        b[:, self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _constant_coefficients(self, dt):
@@ -206,7 +207,7 @@ class FiniteDifference(BaseDifferentiation):
             np.newaxis, :
         ] ** pows
         b = np.zeros(self.n_stencil)
-        b[self.d] = np.math.factorial(self.d)
+        b[self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _accumulate(self, coeffs, x):

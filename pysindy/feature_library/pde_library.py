@@ -234,13 +234,7 @@ class PDELibrary(BaseFeatureLibrary):
         def derivative_string(multiindex):
             ret = ""
             for axis in range(self.ind_range):
-                if self.implicit_terms and (
-                    axis
-                    in [
-                        self.spatiotemporal_grid.ax_time,
-                        self.spatiotemporal_grid.ax_sample,
-                    ]
-                ):
+                if self.implicit_terms and (axis == self.spatiotemporal_grid.ax_time,):
                     str_deriv = "t"
                 else:
                     str_deriv = str(axis + 1)
@@ -345,7 +339,7 @@ class PDELibrary(BaseFeatureLibrary):
 
             # derivative terms
             shape[-1] = n_features * self.num_derivatives
-            library_derivatives = np.empty(shape, dtype=x.dtype)
+            library_derivatives = AxesArray(np.empty(shape, dtype=x.dtype), x.axes)
             library_idx = 0
             for multiindex in self.multiindices:
                 derivs = x
@@ -395,8 +389,8 @@ class PDELibrary(BaseFeatureLibrary):
                     library_idx : library_idx
                     + n_library_terms * self.num_derivatives * n_features,
                 ] = np.reshape(
-                    library_functions[..., np.newaxis, :]
-                    * library_derivatives[..., :, np.newaxis],
+                    library_functions[..., "coord", :]
+                    * library_derivatives[..., :, "coord"],
                     shape,
                 )
                 library_idx += n_library_terms * self.num_derivatives * n_features

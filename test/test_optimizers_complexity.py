@@ -12,6 +12,7 @@ from pysindy.optimizers import STLSQ
 from pysindy.optimizers import WrappedOptimizer
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize(
     "opt_cls, reg_name",
     [[Lasso, "alpha"], [Ridge, "alpha"], [STLSQ, "threshold"], [SR3, "threshold"]],

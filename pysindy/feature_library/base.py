@@ -63,10 +63,9 @@ class BaseFeatureLibrary(TransformerMixin):
         return x
 
     def calc_trajectory(self, diff_method, x, t):
-        axes = x.__dict__
         x_dot = diff_method(x, t=t)
-        x = AxesArray(diff_method.smoothed_x_, axes)
-        return x, AxesArray(x_dot, axes)
+        x = AxesArray(diff_method.smoothed_x_, x.axes)
+        return x, AxesArray(x_dot, x.axes)
 
     def get_spatial_grid(self):
         return None
@@ -337,7 +336,7 @@ class TensoredLibrary(BaseFeatureLibrary):
         self.libraries = libraries
         self.inputs_per_library = inputs_per_library
 
-    def _combinations(self, lib_i, lib_j):
+    def _combinations(self, lib_i: AxesArray, lib_j: AxesArray) -> AxesArray:
         """
         Compute combinations of the numerical libraries.
 
@@ -351,7 +350,7 @@ class TensoredLibrary(BaseFeatureLibrary):
             lib_i.shape[lib_i.ax_coord] * lib_j.shape[lib_j.ax_coord]
         )
         lib_full = np.reshape(
-            lib_i[..., :, np.newaxis] * lib_j[..., np.newaxis, :],
+            lib_i[..., :, "coord"] * lib_j[..., "coord", :],
             shape,
         )
 

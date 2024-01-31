@@ -10,8 +10,6 @@ from ..utils import get_prox
 from ..utils import get_regularization
 from .base import BaseOptimizer
 
-warnings.filterwarnings("ignore", category=UserWarning)
-
 
 class SR3(BaseOptimizer):
     """

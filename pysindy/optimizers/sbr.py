@@ -29,7 +29,9 @@ class SBR(BaseOptimizer):
     This implementation differs from the method described in Hirsh et al. (2021)
     by imposing the error model directly on the derivatives, rather than on the
     states, circumventing the need to integrate the equation to evaluate the
-    posterior density.
+    posterior density. One consequence of this is that the noise standard
+    deviation "sigma" is with respect to the derivatives instead of the states
+    and hence should not be interpreted.
 
     TODO: Implement the data-generating model described in eq. 2.4 of Hirsh
     et al. (2021). This could be achieved using the JAX-based solver "diffrax".

@@ -21,8 +21,21 @@ jobs:
           ref: ${{ github.ref }}
           path: "examples"
           ext: ".ipynb"
+
+  setup-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.9"
+      - name: Install dependencies
+        run: |
+          pip install .[cvxpy,miosr] sympy
+
   run-notebooks:
-    needs: find-notebooks
+    needs: [find-notebooks,setup-python]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

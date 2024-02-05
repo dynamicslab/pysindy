@@ -1,0 +1,34 @@
+on:
+  push:
+    branches:
+      - notebooks-review
+  # Uncomment in actual merge
+  # schedule:
+  #   # run twice a month during times when hopefully few other jobs are scheduled
+  #   - cron: '0 12 5,20 * *'
+
+jobs:
+  find-notebooks:
+    runs-on: ubuntu-latest
+    outputs:
+      paths: ${{ steps.find-notebooks.outputs.paths }}
+    steps:
+      - name: List Files
+        id: find-notebooks
+        uses: mirko-felice/list-files-action@v3.0.5
+        with:
+          repo: ${{ github.repository }}
+          ref: ${{ github.ref }}
+          path: "examples"
+          ext: ".ipynb"
+  run-notebooks:
+    needs: find-notebooks
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        files: ${{ fromJson(needs.find-notebooks.outputs.paths) }}
+    steps:
+      - name: output results
+        run: |
+          echo ${{ matrix.files }}

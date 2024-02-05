@@ -22,8 +22,13 @@ jobs:
           path: "examples"
           ext: ".ipynb"
 
-  setup-python:
+  run-notebooks:
+    needs: find-notebooks
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        files: ${{ fromJson(needs.find-notebooks.outputs.paths) }}
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -32,16 +37,7 @@ jobs:
           python-version: "3.9"
       - name: Install dependencies
         run: |
-          pip install .[cvxpy,miosr] sympy
-
-  run-notebooks:
-    needs: [find-notebooks,setup-python]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        files: ${{ fromJson(needs.find-notebooks.outputs.paths) }}
-    steps:
-      - name: output results
+          pip install .[cvxpy,miosr] sympy nbconvert jupyter matplotlib seaborn pandas dysts
+      - name: Run Notebook
         run: |
-          echo ${{ matrix.files }}
+          jupyter nbconvert --execute --to notebook  --inplace ${{ matrix.files }}

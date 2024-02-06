@@ -327,6 +327,7 @@ def test_sindypi_fit(params):
     model.fit(x_train, t=t)
     assert np.shape(opt.coef_) == (10, 10)
 
+
 @pytest.mark.parametrize(
     "params",
     [
@@ -347,6 +348,7 @@ def test_sindypi_fit(params):
 def test_sbr_bad_parameters(params):
     with pytest.raises(ValueError):
         SBR(**params)
+
 
 @pytest.mark.parametrize(
     "params",

@@ -1,11 +1,7 @@
 on:
-  push:
-    branches:
-      - notebooks-review
-  # Uncomment in actual merge
-  # schedule:
-  #   # run twice a month during times when hopefully few other jobs are scheduled
-  #   - cron: '0 12 5,20 * *'
+  schedule:
+    # run twice a month during times when hopefully few other jobs are scheduled
+    - cron: '0 12 6,21 * *'
 
 jobs:
   find-notebooks:

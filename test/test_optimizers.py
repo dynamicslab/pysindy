@@ -1,7 +1,6 @@
 """
 Unit tests for optimizers.
 """
-
 import pickle
 
 import numpy as np
@@ -355,10 +354,10 @@ def test_sbr_fit(data_lorenz):
     x, t = data_lorenz
     opt = SBR(num_warmup=10, num_samples=10)
     sindy = SINDy(optimizer=opt).fit(x=x, t=t)
-    assert hasattr(opt, "mcmc_")
+    assert hasattr(sindy.optimizer, "mcmc_")
 
     expected_names = ["beta", "c_sq", "lambda", "sigma", "tau"]
-    result_names = opt.mcmc_.get_samples().keys()
+    result_names = sindy.optimizer.mcmc_.get_samples().keys()
     assert all(expected in result_names for expected in expected_names)
 
 

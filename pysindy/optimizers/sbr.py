@@ -24,7 +24,7 @@ class SBR(BaseOptimizer):
 
     The SINDy coefficients are set as the posterior means of the MCMC NUTS samples.
     Additional statistics can be computed from the MCMC samples stored in
-    the mcmc_ attribute using e.g. ArviZ.
+    the mcmc attribute using e.g. ArviZ.
 
     This implementation differs from the method described in Hirsh et al. (2021)
     by imposing the error model directly on the derivatives, rather than on the

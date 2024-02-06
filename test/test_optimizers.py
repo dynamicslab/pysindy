@@ -327,6 +327,26 @@ def test_sindypi_fit(params):
     model.fit(x_train, t=t)
     assert np.shape(opt.coef_) == (10, 10)
 
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(sparsity_coef_tau0=0),
+        dict(sparsity_coef_tau0=-1),
+        dict(slab_shape_nu=0),
+        dict(slab_shape_nu=-1),
+        dict(slab_shape_s=0),
+        dict(slab_shape_s=-1),
+        dict(noise_hyper_lambda=0),
+        dict(noise_hyper_lambda=-1),
+        dict(num_warmup=0.5),
+        dict(num_warmup=-1),
+        dict(num_samples=0.5),
+        dict(num_samples=-1),
+    ],
+)
+def test_sbr_bad_parameters(params):
+    with pytest.raises(ValueError):
+        SBR(**params)
 
 @pytest.mark.parametrize(
     "params",

@@ -1172,10 +1172,17 @@ def test_remove_and_decrement():
     np.testing.assert_array_equal(expected, result)
 
 
-def test_pickle(data_lorenz):
+@pytest.mark.parametrize(
+    ("opt_cls", "opt_args"),
+    (
+        (MIOSR, {"target_sparsity": 7}),
+        (SBR, {"num_warmup": 10, "num_samples": 10}),
+    ),
+)
+def test_pickle(data_lorenz, opt_cls, opt_args):
     x, t = data_lorenz
     y = PolynomialLibrary(degree=2).fit_transform(x)
-    opt = MIOSR(target_sparsity=7).fit(x, y)
+    opt = opt_cls(**opt_args).fit(x, y)
     expected = opt.coef_
     new_opt = pickle.loads(pickle.dumps(opt))
     result = new_opt.coef_

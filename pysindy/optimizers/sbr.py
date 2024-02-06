@@ -102,6 +102,22 @@ class SBR(BaseOptimizer):
 
         super().__init__(unbias=unbias, **kwargs)
 
+        # check that hyperparameters are positive.
+        if sparsity_coef_tau0 <= 0:
+            raise ValueError("sparsity_coef_tau0 must be positive")
+        if slab_shape_nu <= 0:
+            raise ValueError("slab_shape_nu must be positive")
+        if slab_shape_s <= 0:
+            raise ValueError("slab_shape_s must be positive")
+        if noise_hyper_lambda <= 0:
+            raise ValueError("noise_hyper_lambda must be positive")
+
+        # check that samples are positive integers.
+        if not isinstance(num_warmup, int) or num_warmup < 0:
+            raise ValueError("num_warmup must be a positive integer")
+        if not isinstance(num_samples, int) or num_samples < 0:
+            raise ValueError("num_samples must be a positive integer")
+
         # set the hyperparameters
         self.sparsity_coef_tau0 = sparsity_coef_tau0
         self.slab_shape_nu = slab_shape_nu

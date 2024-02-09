@@ -21,6 +21,7 @@ from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library import TensoredLibrary
 from pysindy.feature_library import WeakPDELibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
+from pysindy.feature_library.polynomial_library import n_poly_features
 from pysindy.optimizers import SINDyPI
 from pysindy.optimizers import STLSQ
 
@@ -744,3 +745,6 @@ def test_polynomial_combinations(include_interaction, interaction_only, bias, ex
     )
     result = tuple(sorted(list(combos)))
     assert result == expected
+    assert len(expected) == n_poly_features(
+        2, 2, bias, include_interaction, interaction_only
+    )

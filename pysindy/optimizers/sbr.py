@@ -53,10 +53,10 @@ class SBR(BaseOptimizer):
         value increases the sparsity of the SINDy coefficients.
 
     slab_shape_nu : float, optional (default 4)
-        Controls spread of slab.  For values less than 4,
-        the kurtosis of of nonzero coefficients is undefined.  As  the value
-        increases past 4, for higher values, the variance and kurtosis approach
-        :math:`s` and :math:`s^2`, respectively
+        Along with ``slab_shape_s``, controls tails of nonzero coefficients.
+        Specifically, degrees of freedom for Student's-T-shaped slab.
+        Higher values decrease excess kurtosis to zero, lower values >= 4
+        increase kurtosis to infinity. 
 
     slab_shape_s : float, optional (default 2)
         Controls spread of slab.  Higher values lead to more spread

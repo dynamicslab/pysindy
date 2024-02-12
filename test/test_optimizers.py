@@ -350,14 +350,18 @@ def test_sbr_bad_parameters(params):
         SBR(**params)
 
 
-def test_sbr_fit(data_lorenz):
-    x, t = data_lorenz
-    opt = SBR(num_warmup=10, num_samples=10)
-    sindy = SINDy(optimizer=opt).fit(x=x, t=t)
-    assert hasattr(sindy.optimizer, "mcmc_")
-
+def test_sbr_accurate():
+    # It's really hard to tune SBR to get desired shrinkage
+    # This just tests that SBR fits "close" to unregularized regression
+    x = np.tile(np.eye(2), 4).reshape((-1, 2))
+    y = np.tile([[1], [1e-1]], 4).reshape((-1, 1))
+    opt = SBR(num_warmup=50, num_samples=50).fit(x, y)
+    result = opt.coef_
+    unregularized = np.array([[1, 1e-1]])
+    np.testing.assert_allclose(result, unregularized, atol=1e-3)
+    assert hasattr(opt, "mcmc_")
     expected_names = ["beta", "c_sq", "lambda", "sigma", "tau"]
-    result_names = sindy.optimizer.mcmc_.get_samples().keys()
+    result_names = opt.mcmc_.get_samples().keys()
     assert all(expected in result_names for expected in expected_names)
 
 

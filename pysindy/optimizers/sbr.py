@@ -56,7 +56,7 @@ class SBR(BaseOptimizer):
         Along with ``slab_shape_s``, controls tails of nonzero coefficients.
         Specifically, degrees of freedom for Student's-T-shaped slab.
         Higher values decrease excess kurtosis to zero, lower values >= 4
-        increase kurtosis to infinity. 
+        increase kurtosis to infinity.
 
     slab_shape_s : float, optional (default 2)
         Along with ``slab_shape_nu``, controls standard deviation of nonzero
@@ -181,7 +181,6 @@ class SBR(BaseOptimizer):
         return mcmc
 
 
-def _sample_reg_horseshoe(tau, c_sq, shape):
 def _sample_reg_horseshoe(tau: float, c_sq: float, shape: tuple[int, ...]):
     """Create a regularized horseshoe distribution
 
@@ -190,10 +189,10 @@ def _sample_reg_horseshoe(tau: float, c_sq: float, shape: tuple[int, ...]):
     ``c_sq`` when ``lamb`` is big or a Student T-slab when ``c_sq`` is itself
     an inverse Gamma.
 
-    For original work, inluding interpretation of the coefficients, see:
+    For original work, including interpretation of the coefficients, see:
 
     Piironen, J., and Vehtari, A. (2017). Sparsity Information and
-    Regularization in the Horseshoe and Other Shrinkage Priors. Eletronic Journal
+    Regularization in the Horseshoe and Other Shrinkage Priors. Electronic Journal
     of Statistics Vol. 11 pp 5018-5051. https://doi.org/10.1214/17-EJS1337SI
     """
     lamb = numpyro.sample("lambda", HalfCauchy(1.0), sample_shape=shape)

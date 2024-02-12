@@ -1,4 +1,5 @@
 from typing import Optional
+from typing import Tuple
 
 import jax.numpy as jnp
 import numpy as np
@@ -181,7 +182,7 @@ class SBR(BaseOptimizer):
         return mcmc
 
 
-def _sample_reg_horseshoe(tau: float, c_sq: float, shape: tuple[int, ...]):
+def _sample_reg_horseshoe(tau: float, c_sq: float, shape: Tuple[int, ...]):
     """Create a regularized horseshoe distribution
 
     The regularized horseshoe distribution behaves like a horseshoe prior when

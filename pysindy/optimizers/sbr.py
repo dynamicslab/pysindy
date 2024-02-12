@@ -59,8 +59,8 @@ class SBR(BaseOptimizer):
         increase kurtosis to infinity. 
 
     slab_shape_s : float, optional (default 2)
-        Controls spread of slab.  Higher values lead to more spread
-        out nonzero coefficients.
+        Along with ``slab_shape_nu``, controls standard deviation of nonzero
+        coefficients.
 
     noise_hyper_lambda : float, optional (default 1)
         Rate hyperparameter for the exponential prior distribution over

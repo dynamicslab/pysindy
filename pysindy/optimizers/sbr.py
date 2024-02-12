@@ -182,6 +182,20 @@ class SBR(BaseOptimizer):
 
 
 def _sample_reg_horseshoe(tau, c_sq, shape):
+def _sample_reg_horseshoe(tau: float, c_sq: float, shape: tuple[int, ...]):
+    """Create a regularized horseshoe distribution
+
+    The regularized horseshoe distribution behaves like a horseshoe prior when
+    shrinkage ``lamb`` is small, but behaves like a gaussian slab of variance
+    ``c_sq`` when ``lamb`` is big or a Student T-slab when ``c_sq`` is itself
+    an inverse Gamma.
+
+    For original work, inluding interpretation of the coefficients, see:
+
+    Piironen, J., and Vehtari, A. (2017). Sparsity Information and
+    Regularization in the Horseshoe and Other Shrinkage Priors. Eletronic Journal
+    of Statistics Vol. 11 pp 5018-5051. https://doi.org/10.1214/17-EJS1337SI
+    """
     lamb = numpyro.sample("lambda", HalfCauchy(1.0), sample_shape=shape)
     lamb_squiggle = jnp.sqrt(c_sq) * lamb / jnp.sqrt(c_sq + tau**2 * lamb**2)
     beta = numpyro.sample(

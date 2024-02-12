@@ -20,7 +20,9 @@ class SBR(BaseOptimizer):
     horseshoe prior over the SINDy coefficients to achieve sparsification.
 
     The horseshoe prior contains a "spike" of nonzero probability at the
-    origin, and a "slab" of distribution in cases where a coefficient is nonzero.
+    origin, and a Student's-T-shaped "slab" of distribution in cases where a
+    coefficient is nonzero.
+
 
     The SINDy coefficients are set as the posterior means of the MCMC NUTS samples.
     Additional statistics can be computed from the MCMC samples stored in

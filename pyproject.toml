@@ -63,7 +63,8 @@ cvxpy = [
 ]
 sbr = [
     "numpyro",
-    "jax"
+    "jax",
+    "arviz"
 ]
 
 [tool.black]

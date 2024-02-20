@@ -61,6 +61,11 @@ cvxpy = [
     "cvxpy",
     "scs>=2.1, !=2.1.4"
 ]
+sbr = [
+    "numpyro",
+    "jax",
+    "arviz"
+]
 
 [tool.black]
 line-length = 88

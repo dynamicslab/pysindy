@@ -173,11 +173,11 @@ for name, method in diffs:
         feature_names=input_features,
     )
 
-    model.fit(x_train, quiet=True)
+    model.fit(x_train)
     equations_clean[name] = model.equations()
     coefficients_clean[name] = model.coefficients()
 
-    model.fit(x_train_noisy, quiet=True)
+    model.fit(x_train_noisy)
     equations_noisy[name] = model.equations()
     coefficients_noisy[name] = model.coefficients()
 
@@ -260,11 +260,11 @@ for name, method in diffs:
         feature_names=input_features,
     )
 
-    model.fit(x_train, quiet=True)
+    model.fit(x_train)
     equations_clean[name] = model.equations()
     coefficients_clean[name] = model.coefficients()
 
-    model.fit(x_train_noisy, quiet=True)
+    model.fit(x_train_noisy)
     equations_noisy[name] = model.equations()
     coefficients_noisy[name] = model.coefficients()
 

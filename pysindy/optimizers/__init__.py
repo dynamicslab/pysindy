@@ -19,6 +19,10 @@ try:  # Waiting on PEP 690 to lazy import cvxpy
     from .stable_linear_sr3 import StableLinearSR3
 except ImportError:
     pass
+try:
+    from .sbr import SBR
+except ImportError:
+    pass
 from .wrapped_optimizer import WrappedOptimizer
 from .sr3 import SR3
 from .ssr import SSR
@@ -37,4 +41,5 @@ __all__ = [
     "FROLS",
     "SINDyPI",
     "MIOSR",
+    "SBR",
 ]

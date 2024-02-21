@@ -418,3 +418,12 @@ def test_centered_difference_noaxis_vs_axis(data_2d_resolved_pde):
             slow_differences_t,
             atol=atol,
         )
+
+
+def test_multidimensional_differentiation():
+    X = np.random.random(size=(10, 100, 2))
+    t = np.arange(0, 10, 0.1)
+
+    X_dot = SINDyDerivative(kind="kalman", axis=-2)._differentiate(X, t)
+
+    assert X_dot.shape == X.shape

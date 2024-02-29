@@ -346,11 +346,23 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
         elif all(
             (
                 isinstance(obj, AxesArray),
+                hasattr(obj, "_ax_map"),
                 not hasattr(self, "_ax_map"),
                 self.shape == obj.shape,
             )
         ):
             self._ax_map = _AxisMapping(obj.axes, obj.ndim)
+        # Using a poorly-initialized AxesArray
+        # Occurs in MaskedArray.ravel, used in some plotting.  MaskedArray views
+        # of AxesArray lose the axes attributes, and then the _ax_map attributes.
+        # See numpy.ma.core:asanyarray
+        elif all(
+            (
+                isinstance(obj, AxesArray),
+                not hasattr(obj, "_ax_map"),
+            )
+        ):
+            self._ax_map = _AxisMapping({"ax_unk": 0}, in_ndim=1)
         # maybe add errors for incompatible views?
 
     def __array_ufunc__(
@@ -416,6 +428,16 @@ def _implements(numpy_function):
         return func
 
     return decorator
+
+
+@_implements(np.ravel)
+def ravel(a, order="C"):
+    out = np.ravel(np.asarray(a), order=order)
+    is_1d_already = len(a.shape) == 1
+    if is_1d_already:
+        return AxesArray(out, a.axes)
+    else:
+        return AxesArray(out, {"ax_unk": 0})
 
 
 @_implements(np.ix_)

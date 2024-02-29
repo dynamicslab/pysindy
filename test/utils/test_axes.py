@@ -629,6 +629,27 @@ def test_tensordot_list_axes():
     assert_array_equal(result, super_result)
 
 
+def test_ravel_1d():
+    arr = AxesArray(np.array([1, 2]), axes={"ax_a": 0})
+    result = np.ravel(arr)
+    assert_array_equal(result, arr)
+    assert result.axes == arr.axes
+
+
+def test_ravel_nd():
+    arr = AxesArray(np.array([[1, 2], [3, 4]]), axes={"ax_a": 0, "ax_b": 1})
+    result = np.ravel(arr)
+    expected = np.ravel(np.asarray(arr))
+    assert_array_equal(result, expected)
+    assert result.axes == {"ax_unk": 0}
+
+
+def test_ma_ravel():
+    arr = AxesArray(np.array([1, 2]), axes={"ax_a": 0})
+    marr = np.ma.MaskedArray(arr)
+    np.ma.ravel(marr)
+
+
 @pytest.mark.skip
 def test_einsum_implicit():
     ...

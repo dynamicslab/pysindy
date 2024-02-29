@@ -97,17 +97,24 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         unbias: bool = True,
     ):
         super().__init__(fit_intercept=False, copy_X=copy_X)
-
-        if max_iter <= 0:
-            raise ValueError("max_iter must be positive")
-
         self.max_iter = max_iter
         self.iters = 0
-        if np.ndim(initial_guess) == 1:
-            initial_guess = initial_guess.reshape(1, -1)
         self.initial_guess = initial_guess
         self.normalize_columns = normalize_columns
         self.unbias = unbias
+        self.__post_init_guard()
+
+    # See name mangling rules for double underscore rationale
+    def __post_init_guard(self):
+        """Conduct initialization post-init, as required by scikitlearn API."""
+        if np.ndim(self.initial_guess) == 1:
+            self.initial_guess = self.initial_guess.reshape(1, -1)
+        if self.max_iter <= 0:
+            raise ValueError("max_iter must be positive")
+
+    def set_params(self, **kwargs):
+        super().set_params(**kwargs)
+        self.__post_init_guard
 
     # Force subclasses to implement this
     @abc.abstractmethod

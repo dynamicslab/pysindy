@@ -203,6 +203,7 @@ class STLSQ(BaseOptimizer):
         n_targets = y.shape[1]
         n_features_selected = np.sum(ind)
         sparse_sub = [np.array(self.sparse_ind)] * y.shape[1]
+        optvar = np.zeros((n_targets, n_features))
 
         # Print initial values for each term in the optimization
         if self.verbose:
@@ -266,9 +267,7 @@ class STLSQ(BaseOptimizer):
                 break
         else:
             warnings.warn(
-                "STLSQ._reduce did not converge after {} iterations.".format(
-                    self.max_iter
-                ),
+                "STLSQ did not converge after {self.max_iter} iterations.",
                 ConvergenceWarning,
             )
         if self.sparse_ind is None:

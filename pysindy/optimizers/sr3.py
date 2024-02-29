@@ -342,8 +342,8 @@ class SR3(BaseOptimizer):
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 
+        coef_full = coef_sparse.copy()
         if self.use_trimming:
-            coef_full = coef_sparse.copy()
             trimming_array = np.repeat(1.0 - self.trimming_fraction, n_samples)
             self.history_trimming_ = [trimming_array]
         else:
@@ -392,9 +392,7 @@ class SR3(BaseOptimizer):
                 break
         else:
             warnings.warn(
-                "SR3._reduce did not converge after {} iterations.".format(
-                    self.max_iter
-                ),
+                f"SR3 did not converge after {self.max_iter} iterations.",
                 ConvergenceWarning,
             )
         self.coef_ = coef_sparse.T

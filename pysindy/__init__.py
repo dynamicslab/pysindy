@@ -20,6 +20,7 @@ from .differentiation import SINDyDerivative
 from .differentiation import SmoothedFiniteDifference
 from .feature_library import ConcatLibrary
 from .feature_library import TensoredLibrary
+from .feature_library import TrimmedLibrary
 from .feature_library import GeneralizedLibrary
 from .feature_library import CustomLibrary
 from .feature_library import FourierLibrary

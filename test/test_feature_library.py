@@ -19,6 +19,7 @@ from pysindy.feature_library import PDELibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.feature_library import SINDyPILibrary
 from pysindy.feature_library import TensoredLibrary
+from pysindy.feature_library import TrimmedLibrary
 from pysindy.feature_library import WeakPDELibrary
 from pysindy.feature_library.base import BaseFeatureLibrary
 from pysindy.optimizers import SINDyPI
@@ -393,6 +394,9 @@ def test_concat(data_lorenz):
     check_is_fitted(concat_lib)
     concat_lib.fit_transform(x)
     check_is_fitted(concat_lib)
+    model = SINDy(feature_library=concat_lib)
+    model.fit(x, t=t)
+    model.print()
 
 
 def test_tensored(data_lorenz):
@@ -405,6 +409,25 @@ def test_tensored(data_lorenz):
     check_is_fitted(tensored_lib)
     tensored_lib.fit_transform(x)
     check_is_fitted(tensored_lib)
+    model = SINDy(feature_library=tensored_lib)
+    model.fit(x, t=t)
+    model.print()
+
+
+def test_trimmed(data_lorenz):
+    x, t = data_lorenz
+    ident_lib = IdentityLibrary()
+    poly_lib = PolynomialLibrary()
+    tensored_lib = ident_lib * poly_lib
+    trimmed_lib = TrimmedLibrary(tensored_lib, drop_inds=[0, 1])
+    assert isinstance(trimmed_lib, TrimmedLibrary)
+    trimmed_lib.fit(x)
+    check_is_fitted(trimmed_lib)
+    trimmed_lib.fit_transform(x)
+    check_is_fitted(trimmed_lib)
+    model = SINDy(feature_library=trimmed_lib)
+    model.fit(x, t=t)
+    model.print()
 
 
 @pytest.mark.parametrize(

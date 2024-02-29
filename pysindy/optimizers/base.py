@@ -12,7 +12,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model._base import _preprocess_data
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
-from sklearn.utils.validation import check_X_y
 
 from ..utils import AxesArray
 from ..utils import drop_nan_samples
@@ -93,7 +92,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         max_iter=20,
         normalize_columns=False,
         initial_guess=None,
-        copy_X=True,
+        copy_X=False,
         unbias: bool = True,
     ):
         super().__init__(fit_intercept=False, copy_X=copy_X)
@@ -147,8 +146,8 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         y_axes = {"ax_sample": 0} if y.ndim == 1 else {"ax_sample": 0, "ax_coord": 1}
         y = AxesArray(np.asarray(y), y_axes)
         x_, y = drop_nan_samples(x_, y)
-        x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
+        # This calls check_X_y
         x, y, X_offset, y_offset, X_scale = _preprocess_data(
             x_,
             y,
@@ -169,13 +168,12 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         self.Theta_ = x
 
-        x_normed = np.copy(x)
         if self.normalize_columns:
             reg = 1 / np.linalg.norm(x, 2, axis=0)
-            x_normed = x * reg
+            x *= reg
 
         if self.initial_guess is None:
-            self.coef_ = np.linalg.lstsq(x_normed, y, rcond=None)[0].T
+            self.coef_ = np.linalg.lstsq(x, y, rcond=None)[0].T
         else:
             if not self.initial_guess.shape == coef_shape:
                 raise ValueError(
@@ -186,13 +184,11 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         self.history_ = [self.coef_]
 
-        x_normed = np.asarray(x_normed)
-
-        self._reduce(x_normed, y, **reduce_kws)
+        self._reduce(x, y, **reduce_kws)
         self.ind_ = np.abs(self.coef_) > 1e-14
 
         if self.unbias:
-            self._unbias(x_normed, y)
+            self._unbias(x, y)
 
         # Rescale coefficients to original units
         if self.normalize_columns:

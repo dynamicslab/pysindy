@@ -54,9 +54,11 @@ def obj_function(m, L_obj, Q_obj, P_obj):
 
 # Define some setup and plotting functions
 # Build the skew-symmetric nonlinearity constraints
-def make_constraints(r):
+def make_constraints(r, include_bias=True):
     q = 0
-    N = int((r**2 + 3 * r) / 2.0) + 1  # + 1 for constant term
+    N = int((r**2 + 3 * r) / 2.0)
+    if include_bias is True:
+        N = N + 1  # + 1 for constant term
     p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
     constraint_zeros = np.zeros(p)
     constraint_matrix = np.zeros((p, r * N))

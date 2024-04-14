@@ -1,4 +1,5 @@
 import warnings
+from typing import Tuple
 
 try:
     import cvxpy as cp
@@ -38,6 +39,9 @@ class ConstrainedSR3(SR3):
         Champion, Kathleen, et al. "A unified sparse optimization framework
         to learn parsimonious physics-informed models from data."
         IEEE Access 8 (2020): 169259-169271.
+
+        Zheng, Peng, et al. "A unified framework for sparse relaxed
+        regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
 
     Parameters
     ----------
@@ -93,9 +97,6 @@ class ConstrainedSR3(SR3):
         is deprecated in sklearn versions >= 1.0 and will be removed. Note that
         this parameter is incompatible with the constraints!
 
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
-
     initial_guess : np.ndarray, optional (default None)
         Shape should be (n_features) or (n_targets, n_features).
         Initial guess for coefficients ``coef_``, (v in the mathematical equations)
@@ -138,6 +139,15 @@ class ConstrainedSR3(SR3):
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
 
+    history_ : list
+        History of sparse coefficients. ``history_[k]`` contains the
+        sparse coefficients (v in the optimization objective function)
+        at iteration k.
+
+    objective_history_ : list
+        History of the value of the objective at each step. Note that
+        the trapping SINDy problem is nonconvex, meaning that this value
+        may increase and decrease as the algorithm works.
     """
 
     def __init__(
@@ -249,17 +259,22 @@ class ConstrainedSR3(SR3):
         rhs = rhs.reshape(g.shape)
         return inv1.dot(rhs)
 
-    def _update_coef_cvxpy(self, x, y, coef_sparse):
-        xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
-        cost = cp.sum_squares(x @ xi - y.flatten())
+    def _create_var_and_part_cost(
+        self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
+    ) -> Tuple[cp.Variable, cp.Expression]:
+        xi = cp.Variable(var_len)
+        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
         elif self.thresholder.lower() == "weighted_l1":
             cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
         elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi)
+            cost = cost + self.threshold * cp.norm2(xi) ** 2
         elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
+            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
+        return xi, cost
+
+    def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
         if self.use_constraints:
             if self.inequality_constraints and self.equality_constraints:
                 # Process inequality constraints then equality constraints
@@ -285,26 +300,26 @@ class ConstrainedSR3(SR3):
         else:
             prob = cp.Problem(cp.Minimize(cost))
 
-        # default solver is OSQP here but switches to ECOS for L2
+        # default solver is SCS/OSQP here but switches to ECOS for L2
         try:
             prob.solve(
                 max_iter=self.max_iter,
-                eps_abs=self.tol,
-                eps_rel=self.tol,
+                eps_abs=tol,
+                eps_rel=tol,
                 verbose=self.verbose_cvxpy,
             )
         # Annoying error coming from L2 norm switching to use the ECOS
         # solver, which uses "max_iters" instead of "max_iter", and
         # similar semantic changes for the other variables.
-        except TypeError:
+        except (TypeError, ValueError):
             try:
-                prob.solve(abstol=self.tol, reltol=self.tol, verbose=self.verbose_cvxpy)
+                prob.solve(max_iters=self.max_iter, verbose=self.verbose_cvxpy)
             except cp.error.SolverError:
                 print("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
+                xi.value = np.zeros(var_len)
         except cp.error.SolverError:
             print("Solver failed, setting coefs to zeros")
-            xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
+            xi.value = np.zeros(var_len)
 
         if xi.value is None:
             warnings.warn(
@@ -313,7 +328,7 @@ class ConstrainedSR3(SR3):
                 ConvergenceWarning,
             )
             return None
-        coef_new = (xi.value).reshape(coef_sparse.shape)
+        coef_new = (xi.value).reshape(coef_prev.shape)
         return coef_new
 
     def _update_sparse_coef(self, coef_full):
@@ -420,7 +435,11 @@ class ConstrainedSR3(SR3):
 
         objective_history = []
         if self.inequality_constraints:
-            coef_sparse = self._update_coef_cvxpy(x_expanded, y, coef_sparse)
+            var_len = coef_sparse.shape[0] * coef_sparse.shape[1]
+            xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
+            coef_sparse = self._update_coef_cvxpy(
+                xi, cost, var_len, coef_sparse, self.tol
+            )
             objective_history.append(self._objective(x, y, 0, coef_full, coef_sparse))
         else:
             for k in range(self.max_iter):
@@ -459,9 +478,8 @@ class ConstrainedSR3(SR3):
                     break
             else:
                 warnings.warn(
-                    "SR3._reduce did not converge after {} iterations.".format(
-                        self.max_iter
-                    ),
+                    f"ConstrainedSR3 did not converge after {self.max_iter}"
+                    " iterations.",
                     ConvergenceWarning,
                 )
         if self.use_constraints and self.constraint_order.lower() == "target":

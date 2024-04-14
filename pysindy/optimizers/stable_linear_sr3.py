@@ -417,9 +417,7 @@ class StableLinearSR3(ConstrainedSR3):
                 break
         else:
             warnings.warn(
-                "StableLinearSR3._reduce did not converge after {} iterations.".format(
-                    self.max_iter
-                ),
+                f"StableLinearSR3 did not converge after {self.max_iter} iterations.",
                 ConvergenceWarning,
             )
 

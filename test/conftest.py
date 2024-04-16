@@ -326,21 +326,11 @@ def generalized_library():
 
 @pytest.fixture
 def sindypi_library(data_lorenz):
-    library_functions = [
-        lambda x: x,
-        lambda x: x**2,
-        lambda x, y: x * y,
-    ]
-    function_names = [
-        lambda s: str(s),
-        lambda s: str(s) + "^2",
-        lambda s, t: str(s) + " " + str(t),
-    ]
+    function_library = PolynomialLibrary(degree=2, include_bias=False)
     _, t = data_lorenz
 
     return PDELibrary(
-        library_functions=library_functions,
-        function_names=function_names,
+        function_library=function_library,
         temporal_grid=t,
         implicit_terms=True,
         derivative_order=1,
@@ -349,40 +339,20 @@ def sindypi_library(data_lorenz):
 
 @pytest.fixture
 def ode_library():
-    library_functions = [
-        lambda x: x,
-        lambda x: x**2,
-        lambda x, y: x * y,
-    ]
-    function_names = [
-        lambda s: str(s),
-        lambda s: str(s) + "^2",
-        lambda s, t: str(s) + " " + str(t),
-    ]
+    function_library = PolynomialLibrary(degree=2, include_bias=False)
 
     return PDELibrary(
-        library_functions=library_functions,
-        function_names=function_names,
+        function_library=function_library,
     )
 
 
 @pytest.fixture
 def pde_library(data_lorenz):
     _, spatial_grid = data_lorenz
-    library_functions = [
-        lambda x: x,
-        lambda x: x**2,
-        lambda x, y: x * y,
-    ]
-    function_names = [
-        lambda s: str(s),
-        lambda s: str(s) + "^2",
-        lambda s, t: str(s) + " " + str(t),
-    ]
+    function_library = PolynomialLibrary(degree=2, include_bias=False)
 
     return PDELibrary(
-        library_functions=library_functions,
-        function_names=function_names,
+        function_library=function_library,
         spatial_grid=spatial_grid,
         derivative_order=4,
     )

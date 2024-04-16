@@ -99,7 +99,6 @@ class SBR(BaseOptimizer):
         unbias: bool = False,
         **kwargs,
     ):
-
         if unbias:
             raise ValueError("SBR is incompatible with unbiasing. Set unbias=False")
 

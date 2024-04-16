@@ -1,4 +1,6 @@
 import warnings
+from copy import deepcopy
+from typing import Optional
 from typing import Tuple
 
 try:
@@ -72,8 +74,8 @@ class ConstrainedSR3(SR3):
 
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
-        The left hand side matrix C of Cw <= d.
-        There should be one row per constraint.
+        The left hand side matrix C of Cw <= d (Or Cw = d for equality
+        constraints). There should be one row per constraint.
 
     constraint_rhs : numpy ndarray, shape (n_constraints,), optional (default None)
         The right hand side vector d of Cw <= d.
@@ -168,7 +170,7 @@ class ConstrainedSR3(SR3):
         thresholds=None,
         equality_constraints=False,
         inequality_constraints=False,
-        constraint_separation_index=0,
+        constraint_separation_index: Optional[bool] = None,
         verbose=False,
         verbose_cvxpy=False,
         unbias=False,
@@ -194,7 +196,7 @@ class ConstrainedSR3(SR3):
         self.constraint_lhs = constraint_lhs
         self.constraint_rhs = constraint_rhs
         self.constraint_order = constraint_order
-        self.use_constraints = (constraint_lhs is not None) and (
+        self.use_constraints = (constraint_lhs is not None) or (
             constraint_rhs is not None
         )
 
@@ -208,7 +210,7 @@ class ConstrainedSR3(SR3):
                 " but user did not specify if the constraints were equality or"
                 " inequality constraints. Assuming equality constraints."
             )
-            self.equality_constraints = True
+            equality_constraints = True
 
         if self.use_constraints:
             if constraint_order not in ("feature", "target"):
@@ -243,6 +245,16 @@ class ConstrainedSR3(SR3):
             )
         self.inequality_constraints = inequality_constraints
         self.equality_constraints = equality_constraints
+        if self.use_constraints and constraint_separation_index is None:
+            if self.inequality_constraints and not self.equality_constraints:
+                constraint_separation_index = len(constraint_lhs)
+            elif self.equality_constraints and not self.inequality_constraints:
+                constraint_separation_index = 0
+            else:
+                raise ValueError(
+                    "If passing both inequality and equality constraints, must specify"
+                    " constraint_separation_index."
+                )
         self.constraint_separation_index = constraint_separation_index
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
@@ -276,30 +288,20 @@ class ConstrainedSR3(SR3):
 
     def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
         if self.use_constraints:
-            if self.inequality_constraints and self.equality_constraints:
-                # Process inequality constraints then equality constraints
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [
-                        self.constraint_lhs[: self.constraint_separation_index, :] @ xi
-                        <= self.constraint_rhs[: self.constraint_separation_index],
-                        self.constraint_lhs[self.constraint_separation_index :, :] @ xi
-                        == self.constraint_rhs[self.constraint_separation_index :],
-                    ],
+            constraints = []
+            if self.equality_constraints:
+                constraints.append(
+                    self.constraint_lhs[self.constraint_separation_index :, :] @ xi
+                    == self.constraint_rhs[self.constraint_separation_index :],
                 )
-            elif self.inequality_constraints:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi <= self.constraint_rhs],
+            if self.inequality_constraints:
+                constraints.append(
+                    self.constraint_lhs[: self.constraint_separation_index, :] @ xi
+                    <= self.constraint_rhs[: self.constraint_separation_index]
                 )
-            else:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi == self.constraint_rhs],
-                )
-        else:
-            prob = cp.Problem(cp.Minimize(cost))
+            prob = cp.Problem(cp.Minimize(cost), constraints)
 
+        prob_clone = deepcopy(prob)
         # default solver is SCS/OSQP here but switches to ECOS for L2
         try:
             prob.solve(
@@ -313,13 +315,20 @@ class ConstrainedSR3(SR3):
         # similar semantic changes for the other variables.
         except (TypeError, ValueError):
             try:
+                prob = prob_clone
                 prob.solve(max_iters=self.max_iter, verbose=self.verbose_cvxpy)
+                xi = prob.variables()[0]
             except cp.error.SolverError:
-                print("Solver failed, setting coefs to zeros")
+                warnings.warn("Solver failed, setting coefs to zeros")
                 xi.value = np.zeros(var_len)
         except cp.error.SolverError:
-            print("Solver failed, setting coefs to zeros")
-            xi.value = np.zeros(var_len)
+            try:
+                prob = prob_clone
+                prob.solve(max_iter=self.max_iter, verbose=self.verbose_cvxpy)
+                xi = prob.variables()[0]
+            except cp.error.SolverError:
+                warnings.warn("Solver failed, setting coefs to zeros")
+                xi.value = np.zeros(var_len)
 
         if xi.value is None:
             warnings.warn(

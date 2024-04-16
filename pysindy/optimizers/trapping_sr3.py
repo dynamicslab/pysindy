@@ -1,16 +1,21 @@
 import warnings
+from itertools import combinations as combo_nr
 from itertools import combinations_with_replacement as combo_wr
 from itertools import product
+from math import comb
 from typing import Tuple
 from typing import Union
 
 import cvxpy as cp
 import numpy as np
+from numpy import intp
 from numpy.typing import NDArray
 from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
+from ..feature_library.polynomial_library import n_poly_features
+from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
 from .constrained_sr3 import ConstrainedSR3
 
@@ -65,10 +70,6 @@ class TrappingSR3(ConstrainedSR3):
     relax_optim :
         If relax_optim = True, use the relax-and-split method. If False,
         try a direct minimization on the largest eigenvalue.
-
-    inequality_constraints : bool, optional (default False)
-        If True, relax_optim must be false or relax_optim = True
-        AND threshold != 0, so that the CVXPY methods are used.
 
     alpha_A :
         Determines the step size in the prox-gradient descent over A.
@@ -161,10 +162,12 @@ class TrappingSR3(ConstrainedSR3):
     def __init__(
         self,
         *,
+        _n_tgts: int = None,
+        _include_bias: bool = False,
+        _interaction_only: bool = False,
         eta: Union[float, None] = None,
         eps_solver: float = 1e-7,
         relax_optim: bool = True,
-        inequality_constraints=False,
         alpha_A: Union[float, None] = None,
         alpha_m: Union[float, None] = None,
         gamma: float = -0.1,
@@ -175,10 +178,56 @@ class TrappingSR3(ConstrainedSR3):
         A0: Union[NDArray, None] = None,
         **kwargs,
     ):
-        super().__init__(thresholder=thresholder, **kwargs)
+        # n_tgts, constraints, etc are data-dependent parameters and belong in
+        # _reduce/fit ().  The following is a hack until we refactor how
+        # constraints are applied in ConstrainedSR3 and MIOSR
+        self._include_bias = _include_bias
+        self._interaction_only = _interaction_only
+        self._n_tgts = _n_tgts
+        if _n_tgts is None:
+            warnings.warn(
+                "Trapping Optimizer initialized without _n_tgts.  It will likely"
+                " be unable to fit data"
+            )
+            _n_tgts = 1
+        if _include_bias:
+            raise ValueError(
+                "Currently not able to include bias until PQ matrices are modified"
+            )
+        if hasattr(kwargs, "constraint_separation_index"):
+            constraint_separation_index = kwargs["constraint_separation_index"]
+        elif kwargs.get("inequality_constraints", False):
+            constraint_separation_index = kwargs["constraint_lhs"].shape[0]
+        else:
+            constraint_separation_index = 0
+        constraint_rhs, constraint_lhs = _make_constraints(
+            _n_tgts, include_bias=_include_bias
+        )
+        constraint_order = kwargs.pop("constraint_order", "feature")
+        if constraint_order == "target":
+            constraint_lhs = np.transpose(constraint_lhs, [0, 2, 1])
+        constraint_lhs = np.reshape(constraint_lhs, (constraint_lhs.shape[0], -1))
+        try:
+            constraint_lhs = np.concatenate(
+                (kwargs.pop("constraint_lhs"), constraint_lhs), 0
+            )
+            constraint_rhs = np.concatenate(
+                (kwargs.pop("constraint_rhs"), constraint_rhs), 0
+            )
+        except KeyError:
+            pass
+
+        super().__init__(
+            constraint_lhs=constraint_lhs,
+            constraint_rhs=constraint_rhs,
+            constraint_separation_index=constraint_separation_index,
+            constraint_order=constraint_order,
+            equality_constraints=True,
+            thresholder=thresholder,
+            **kwargs,
+        )
         self.eps_solver = eps_solver
         self.relax_optim = relax_optim
-        self.inequality_constraints = inequality_constraints
         self.m0 = m0
         self.A0 = A0
         self.alpha_A = alpha_A
@@ -422,22 +471,26 @@ class TrappingSR3(ConstrainedSR3):
         self.PW_history_ = []
         self.PWeigs_history_ = []
         self.history_ = []
-        n_samples, n_features = x.shape
-        n_tgts = y.shape[1]
+        n_samples, n_tgts = y.shape
+        n_features = n_poly_features(
+            n_tgts,
+            2,
+            include_bias=self._include_bias,
+            interaction_only=self._interaction_only,
+        )
         var_len = n_features * n_tgts
-        n_feat_expected = int((n_tgts**2 + 3 * n_tgts) / 2.0)
 
         # Only relevant if the stability term is turned on.
         self.PL_unsym_, self.PL_, self.PQ_ = self._set_Ptensors(n_tgts)
         # make sure dimensions/symmetries are correct
         self.PL_, self.PQ_ = self._check_P_matrix(
-            n_tgts, n_features, n_feat_expected, self.PL_, self.PQ_
+            n_tgts, n_features, n_features, self.PL_, self.PQ_
         )
 
         # Set initial coefficients
         if self.use_constraints and self.constraint_order.lower() == "target":
             self.constraint_lhs = reorder_constraints(
-                self.constraint_lhs, n_features, output_order="target"
+                self.constraint_lhs, n_features, output_order="feature"
             )
         coef_sparse = self.coef_.T
 
@@ -486,7 +539,6 @@ class TrappingSR3(ConstrainedSR3):
         # Begin optimization loop
         self.objective_history_ = []
         for k in range(self.max_iter):
-
             # update P tensor from the newest trap center
             mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
             p = self.PL_ - mPQ
@@ -562,3 +614,93 @@ class TrappingSR3(ConstrainedSR3):
         xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
         cost += cp.lambda_max(cp.reshape(Pmatrix @ xi, (n_tgts, n_tgts))) / self.eta
         return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
+
+
+def _make_constraints(n_tgts: int, **kwargs):
+    """Create constraints for the Quadratic terms in TrappingSR3.
+
+    These are the constraints from equation 5 of the Trapping SINDy paper.
+
+    Args:
+        n_tgts: number of coordinates or modes for which you're fitting an ODE.
+        kwargs: Keyword arguments to PolynomialLibrary such as
+            ``include_bias``.
+
+    Returns:
+        A tuple of the constraint zeros, and a constraint matrix to multiply
+        by the coefficient matrix of Polynomial terms. Number of constraints is
+        ``n_tgts + 2 * math.comb(n_tgts, 2) + math.comb(n_tgts, 3)``.
+        Constraint matrix is of shape ``(n_constraint, n_feature, n_tgt)``.
+        To get "feature" order constraints, use
+        ``np.reshape(constraint_matrix, (n_constraints, -1))``.
+        To get "target" order constraints, transpose axis 1 and 2 before
+        reshaping.
+    """
+    include_bias = kwargs.get("include_bias", False)
+    n_terms = n_poly_features(n_tgts, degree=2, include_bias=include_bias)
+    lib = PolynomialLibrary(2, **kwargs).fit(np.zeros((1, n_tgts)))
+    terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+
+    # index of tgt -> index of its pure quadratic term
+    pure_terms = {np.argmax(exps): t_ind for t_ind, exps in terms if max(exps) == 2}
+    # two indexes of tgts -> index of their mixed quadratic term
+    mixed_terms = {
+        frozenset(np.argwhere(exponent == 1).flatten()): t_ind
+        for t_ind, exponent in terms
+        if max(exponent) == 1 and sum(exponent) == 2
+    }
+    constraint_mat = np.vstack(
+        (
+            _pure_constraints(n_tgts, n_terms, pure_terms),
+            _antisymm_double_constraint(n_tgts, n_terms, pure_terms, mixed_terms),
+            _antisymm_triple_constraints(n_tgts, n_terms, mixed_terms),
+        )
+    )
+
+    return np.zeros(len(constraint_mat)), constraint_mat
+
+
+def _pure_constraints(
+    n_tgts: int, n_terms: int, pure_terms: dict[intp, int]
+) -> NDArray[np.dtype("float")]:
+    """Set constraints for coefficients adorning terms like a_i^3 = 0"""
+    constraint_mat = np.zeros((n_tgts, n_terms, n_tgts))
+    for constr_ind, (tgt_ind, term_ind) in zip(range(n_tgts), pure_terms.items()):
+        constraint_mat[constr_ind, term_ind, tgt_ind] = 1.0
+    return constraint_mat
+
+
+def _antisymm_double_constraint(
+    n_tgts: int,
+    n_terms: int,
+    pure_terms: dict[intp, int],
+    mixed_terms: dict[frozenset[intp] : int],
+) -> NDArray[np.dtype("float")]:
+    """Set constraints for coefficients adorning terms like a_i^2 * a_j=0"""
+    constraint_mat_1 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i^2 * a_j
+    constraint_mat_2 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i * a_j^2
+    for constr_ind, ((tgt_i, tgt_j), mix_term) in zip(
+        range(n_tgts), mixed_terms.items()
+    ):
+        constraint_mat_1[constr_ind, mix_term, tgt_i] = 1.0
+        constraint_mat_1[constr_ind, pure_terms[tgt_i], tgt_j] = 1.0
+        constraint_mat_2[constr_ind, mix_term, tgt_j] = 1.0
+        constraint_mat_2[constr_ind, pure_terms[tgt_j], tgt_i] = 1.0
+
+    return np.concatenate((constraint_mat_1, constraint_mat_2), axis=0)
+
+
+def _antisymm_triple_constraints(
+    n_tgts: int, n_terms: int, mixed_terms: dict[frozenset[intp] : int]
+) -> NDArray[np.dtype("float")]:
+    constraint_mat = np.zeros((comb(n_tgts, 3), n_terms, n_tgts))  # a_ia_ja_k
+
+    def find_symm_term(a, b):
+        return mixed_terms[frozenset({a, b})]
+
+    for constr_ind, (tgt_i, tgt_j, tgt_k) in enumerate(combo_nr(range(n_tgts), 3)):
+        constraint_mat[constr_ind, find_symm_term(tgt_j, tgt_k), tgt_i] = 1
+        constraint_mat[constr_ind, find_symm_term(tgt_k, tgt_i), tgt_j] = 1
+        constraint_mat[constr_ind, find_symm_term(tgt_i, tgt_j), tgt_k] = 1
+
+    return constraint_mat

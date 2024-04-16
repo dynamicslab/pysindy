@@ -334,6 +334,7 @@ def burgers_galerkin(sigma=0.1, nu=0.025, U=1.0):
 # Below this line are models only suitable for SINDy-PI, since they are implicit #
 # and therefore require a library Theta(X, Xdot) rather than just Theta(X) #
 
+
 # Michaelis–Menten model for enzyme kinetics
 def enzyme(t, x, jx=0.6, Vmax=1.5, Km=0.3):
     return jx - Vmax * x / (Km + x)

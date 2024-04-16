@@ -38,7 +38,7 @@ def get_lorenz_trajectories(sigmas, rhos, betas, dt):
             x0_train,
             args=(sigmas[i], betas[i], rhos[i]),
             t_eval=t_train,
-            **integrator_keywords
+            **integrator_keywords,
         ).y.T
         x_trains = x_trains + [x_train]
         t_trains = t_trains + [t_train]
@@ -966,7 +966,7 @@ def get_oregonator_trajectory(u0, b, t1, dt, spatial_grid):
                 args=(b,),
                 y0=ut,
                 first_step=dt,
-                **integrator_keywords
+                **integrator_keywords,
             )
             if not usol.success:
                 print(usol.message)
@@ -1164,7 +1164,7 @@ def get_homogeneous_oregonator_trajectory(b, t1, dt):
             args=(b,),
             y0=ut,
             first_step=dt,
-            **integrator_keywords
+            **integrator_keywords,
         )
         dt = np.diff(usol.t)[-1]
         ut = usol.y[:, -1]
@@ -1267,7 +1267,7 @@ def get_homogeneous_oregonator_trajectory_fit(model, b, t1, dt):
             (t[i], t[i + 1]),
             y0=ut,
             first_step=dt,
-            **integrator_keywords
+            **integrator_keywords,
         )
         #         print(usol.message,end='\r')
         dt = np.diff(usol.t)[-1]

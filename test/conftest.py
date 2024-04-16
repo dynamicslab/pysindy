@@ -60,7 +60,6 @@ def data_1d_bad_shape():
 
 @pytest.fixture(scope="session")
 def data_lorenz():
-
     t = np.linspace(0, 1, 12)
     x0 = [8, 27, -7]
     x = solve_ivp(lorenz, (t[0], t[-1]), x0, t_eval=t).y.T
@@ -70,7 +69,6 @@ def data_lorenz():
 
 @pytest.fixture
 def data_multiple_trajectories():
-
     n_points = [100, 200, 500]
     initial_conditions = [
         [8, 27, -7],
@@ -120,7 +118,6 @@ def diffuse_multiple_trajectories():
 
 @pytest.fixture(scope="session")
 def data_discrete_time():
-
     n_steps = 100
     mu = 3.6
     x = np.zeros((n_steps))
@@ -133,7 +130,6 @@ def data_discrete_time():
 
 @pytest.fixture(scope="session")
 def data_discrete_time_multiple_trajectories():
-
     n_steps = 100
     mus = [1, 2.3, 3.6]
     x = [np.zeros((n_steps)) for mu in mus]
@@ -316,23 +312,6 @@ def custom_library_bias():
 
 
 @pytest.fixture
-def quadratic_library():
-    library_functions = [
-        lambda x: x,
-        lambda x, y: x * y,
-        lambda x: x**2,
-    ]
-    function_names = [
-        lambda x: str(x),
-        lambda x, y: "{} * {}".format(x, y),
-        lambda x: "{}^2".format(x),
-    ]
-    return CustomLibrary(
-        library_functions=library_functions, function_names=function_names
-    )
-
-
-@pytest.fixture
 def generalized_library():
     tensor_array = [[1, 1]]
     return GeneralizedLibrary(
@@ -396,9 +375,10 @@ def data_linear_oscillator_corrupted():
 
 @pytest.fixture(scope="session")
 def data_linear_combination():
-    t = np.linspace(0, 5, 100)
-    x = np.stack((np.exp(t), np.sin(t), np.cos(t)), axis=-1)
-    y = np.stack((x[:, 0] + x[:, 1], x[:, 1] + x[:, 2]), axis=-1)
+    t = np.linspace(0, 3, 100).reshape((-1, 1))
+    lib = PolynomialLibrary(2, include_bias=False)
+    x = lib.fit_transform(np.hstack([t, -2 * t, 3 * t]))
+    y = np.stack((x[:, 0] + x[:, 1], x[:, 1] + x[:, 2], x[:, 0] + x[:, 2]), axis=-1)
 
     return x, y
 
@@ -437,7 +417,6 @@ def data_lorenz_c_2d():
 
 @pytest.fixture(scope="session")
 def data_discrete_time_c():
-
     n_steps = 100
     mu = 3.6
 
@@ -453,7 +432,6 @@ def data_discrete_time_c():
 
 @pytest.fixture(scope="session")
 def data_discrete_time_c_multivariable():
-
     n_steps = 100
     mu = 3.6
 
@@ -470,7 +448,6 @@ def data_discrete_time_c_multivariable():
 
 @pytest.fixture(scope="session")
 def data_discrete_time_multiple_trajectories_c():
-
     n_steps = 100
     mus = [1, 2.3, 3.6]
     u = [0.001 * np.random.randn(n_steps) for mu in mus]

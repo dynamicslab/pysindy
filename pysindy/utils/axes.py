@@ -430,7 +430,6 @@ def _implements(numpy_function):
     return decorator
 
 
-
 @_implements(np.ravel)
 def ravel(a, order="C"):
     out = np.ravel(np.asarray(a), order=order)
@@ -455,7 +454,6 @@ def concatenate(arrays, axis=0, out=None, dtype=None, casting="same_kind"):
     ax_list = [obj.axes for obj in arrays if isinstance(obj, AxesArray)]
     for ax1, ax2 in zip(ax_list[:-1], ax_list[1:]):
         if ax1 != ax2:
-
             raise ValueError("Concatenating >1 AxesArray with incompatible axes")
     result = np.concatenate(parents, axis, out=out, dtype=dtype, casting=casting)
     if isinstance(out, AxesArray):

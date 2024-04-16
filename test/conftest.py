@@ -60,7 +60,6 @@ def data_1d_bad_shape():
 
 @pytest.fixture(scope="session")
 def data_lorenz():
-
     t = np.linspace(0, 1, 12)
     x0 = [8, 27, -7]
     x = solve_ivp(lorenz, (t[0], t[-1]), x0, t_eval=t).y.T
@@ -70,7 +69,6 @@ def data_lorenz():
 
 @pytest.fixture
 def data_multiple_trajectories():
-
     n_points = [100, 200, 500]
     initial_conditions = [
         [8, 27, -7],
@@ -120,7 +118,6 @@ def diffuse_multiple_trajectories():
 
 @pytest.fixture(scope="session")
 def data_discrete_time():
-
     n_steps = 100
     mu = 3.6
     x = np.zeros((n_steps))
@@ -133,7 +130,6 @@ def data_discrete_time():
 
 @pytest.fixture(scope="session")
 def data_discrete_time_multiple_trajectories():
-
     n_steps = 100
     mus = [1, 2.3, 3.6]
     x = [np.zeros((n_steps)) for mu in mus]
@@ -421,7 +417,6 @@ def data_lorenz_c_2d():
 
 @pytest.fixture(scope="session")
 def data_discrete_time_c():
-
     n_steps = 100
     mu = 3.6
 
@@ -437,7 +432,6 @@ def data_discrete_time_c():
 
 @pytest.fixture(scope="session")
 def data_discrete_time_c_multivariable():
-
     n_steps = 100
     mu = 3.6
 
@@ -454,7 +448,6 @@ def data_discrete_time_c_multivariable():
 
 @pytest.fixture(scope="session")
 def data_discrete_time_multiple_trajectories_c():
-
     n_steps = 100
     mus = [1, 2.3, 3.6]
     u = [0.001 * np.random.randn(n_steps) for mu in mus]

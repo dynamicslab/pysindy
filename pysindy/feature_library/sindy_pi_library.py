@@ -393,7 +393,6 @@ class SINDyPILibrary(BaseFeatureLibrary):
                         f_dot.__code__.co_argcount,
                         self.interaction_only,
                     ):
-
                         for i, f in enumerate(self.x_functions):
                             for f_combs in self._combinations(
                                 n_input_features,

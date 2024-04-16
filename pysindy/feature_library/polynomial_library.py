@@ -1,6 +1,7 @@
 from itertools import chain
 from math import comb
 from typing import Iterator
+from typing import Tuple
 
 import numpy as np
 from numpy.typing import NDArray
@@ -80,7 +81,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         include_interaction: bool,
         interaction_only: bool,
         include_bias: bool,
-    ) -> Iterator[tuple[int, ...]]:
+    ) -> Iterator[Tuple[int, ...]]:
         """
         Create selection tuples of input indexes for each polynomail term
 

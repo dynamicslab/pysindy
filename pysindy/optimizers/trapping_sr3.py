@@ -539,7 +539,6 @@ class TrappingSR3(ConstrainedSR3):
         # Begin optimization loop
         self.objective_history_ = []
         for k in range(self.max_iter):
-
             # update P tensor from the newest trap center
             mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
             p = self.PL_ - mPQ

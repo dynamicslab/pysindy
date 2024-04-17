@@ -329,7 +329,7 @@ def test_score_pde(data_1d_random_pde):
     assert model.score(u, t) <= 1
 
 
-def test_fit_multiple_trajectores(data_multiple_trajectories):
+def test_fit_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
     model = SINDy()
 

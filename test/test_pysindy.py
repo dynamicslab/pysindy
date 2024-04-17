@@ -343,8 +343,8 @@ def test_score_pde(data_1d_random_pde):
     assert model.score(u, t) <= 1
 
 
-def test_fit_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_fit_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     model = SINDy()
 
     # Should fail if multiple_trajectories flag is not set
@@ -371,8 +371,8 @@ def test_fit_multiple_trajectories(data_multiple_trajctories):
         model.fit(x, t=t, multiple_trajectories=True)
 
 
-def test_predict_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_predict_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     model = SINDy()
     model.fit(x, t=t, multiple_trajectories=True)
 
@@ -384,8 +384,8 @@ def test_predict_multiple_trajectories(data_multiple_trajctories):
     assert len(p) == len(x)
 
 
-def test_score_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_score_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     model = SINDy()
     model.fit(x, t=t, multiple_trajectories=True)
 
@@ -547,13 +547,13 @@ def test_print_discrete_time_multiple_trajectories(
     assert len(out) > 1
 
 
-def test_differentiate(data_lorenz, data_multiple_trajctories):
+def test_differentiate(data_lorenz, data_multiple_trajectories):
     x, t = data_lorenz
 
     model = SINDy()
     model.differentiate(x, t)
 
-    x, t = data_multiple_trajctories
+    x, t = data_multiple_trajectories
     model.differentiate(x, t, multiple_trajectories=True)
 
     model = SINDy(discrete_time=True)

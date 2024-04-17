@@ -235,8 +235,8 @@ def test_score(data):
     assert model.score(x, u=u, t=t, x_dot=x) <= 1
 
 
-def test_fit_multiple_trajectores(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_fit_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     u = [np.ones((xi.shape[0], 2)) for xi in x]
 
     model = SINDy()
@@ -271,8 +271,8 @@ def test_fit_multiple_trajectores(data_multiple_trajctories):
     check_is_fitted(model)
 
 
-def test_predict_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_predict_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     u = [np.ones((xi.shape[0], 2)) for xi in x]
 
     model = SINDy()
@@ -286,8 +286,8 @@ def test_predict_multiple_trajectories(data_multiple_trajctories):
     assert len(p) == len(x)
 
 
-def test_score_multiple_trajectories(data_multiple_trajctories):
-    x, t = data_multiple_trajctories
+def test_score_multiple_trajectories(data_multiple_trajectories):
+    x, t = data_multiple_trajectories
     u = [np.ones((xi.shape[0], 2)) for xi in x]
 
     model = SINDy()

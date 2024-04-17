@@ -8,7 +8,6 @@ from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import SINDy
-from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import ConcatLibrary
 from pysindy.feature_library import CustomLibrary
 from pysindy.feature_library import FourierLibrary
@@ -711,7 +710,6 @@ def test_sindypi_library(data_lorenz):
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
-        differentiation_method=FiniteDifference(),
     )
     model.fit(x, t=t)
     assert np.shape(sindy_opt.coef_) == (40, 40)
@@ -720,7 +718,6 @@ def test_sindypi_library(data_lorenz):
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
-        differentiation_method=FiniteDifference(),
     )
     model.fit(x, t=t)
     assert np.sum(sindy_opt.coef_ == 0.0) == 40.0 * 39.0 and np.any(

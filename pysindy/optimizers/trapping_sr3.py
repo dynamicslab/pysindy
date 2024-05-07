@@ -2,6 +2,7 @@ import warnings
 from itertools import combinations as combo_nr
 from itertools import combinations_with_replacement as combo_wr
 from itertools import product
+from itertools import repeat
 from math import comb
 from typing import cast
 from typing import Tuple
@@ -310,9 +311,7 @@ class TrappingSR3(ConstrainedSR3):
         # if j == k, delta_{il}delta_{N-r+j,n}
         # if j != k, delta_{il}delta_{r+j+k-1,n}
         PQ_tensor = np.zeros((n_targets, n_targets, n_targets, n_targets, n_features))
-        for (i, j, k, kk), n in product(
-            combo_wr(range(n_targets), 4), range(n_features)
-        ):
+        for i, j, k, kk, n in product(*repeat(range(n_targets), 4), range(n_features)):
             if (j == k) and (n == n_features - n_targets + j) and (i == kk):
                 PQ_tensor[i, j, k, kk, n] = 1.0
             if (j != k) and (n == n_targets + j + k - 1) and (i == kk):

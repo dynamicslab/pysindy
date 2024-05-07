@@ -1222,3 +1222,24 @@ def test_pickle(data_lorenz, opt_cls, opt_args):
     new_opt = pickle.loads(pickle.dumps(opt))
     result = new_opt.coef_
     np.testing.assert_array_equal(result, expected)
+
+
+def test_PL():
+    # terms are [1, x, y, x^2 , xy, y^2]
+    coeffs_bias = np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]])
+    PL_symm_bias, PL_unsymm_bias = TrappingSR3._build_PL(2, True)
+
+    expected_symm = np.array([[2.0, 5.5], [5.5, 9.0]])
+    expected_unsymm = np.array([[2.0, 3], [8, 9.0]])
+    result = np.einsum("ijkl,kl", PL_symm_bias, coeffs_bias)
+    np.testing.assert_array_equal(result, expected_symm)
+    result = np.einsum("ijkl,kl", PL_unsymm_bias, coeffs_bias)
+    np.testing.assert_array_equal(result, expected_unsymm)
+
+    coeffs_no_bias = coeffs_bias[:, 1:]
+    PL_symm_no_bias, PL_unsymm_no_bias = TrappingSR3._build_PL(2, False)
+
+    result = np.einsum("ijkl,kl", PL_symm_no_bias, coeffs_no_bias)
+    np.testing.assert_array_equal(result, expected_symm)
+    result = np.einsum("ijkl,kl", PL_unsymm_no_bias, coeffs_no_bias)
+    np.testing.assert_array_equal(result, expected_unsymm)

@@ -110,7 +110,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         )
 
     @property
-    def powers_(self) -> NDArray[np.dtype("int")]:
+    def powers_(self) -> NDArray[np.int_]:
         """
         The exponents of the polynomial as an array of shape
         (n_features_out, n_features_in), where each item is the exponent of the

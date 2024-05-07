@@ -3,12 +3,14 @@ from itertools import combinations as combo_nr
 from itertools import combinations_with_replacement as combo_wr
 from itertools import product
 from math import comb
+from typing import cast
 from typing import Tuple
 from typing import Union
 
 import cvxpy as cp
 import numpy as np
 from numpy import intp
+from numpy.typing import NBitBase
 from numpy.typing import NDArray
 from scipy.linalg import cho_factor
 from scipy.linalg import cho_solve
@@ -18,6 +20,8 @@ from ..feature_library.polynomial_library import n_poly_features
 from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
 from .constrained_sr3 import ConstrainedSR3
+
+Float4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.floating[NBitBase]]]
 
 
 class TrappingSR3(ConstrainedSR3):
@@ -276,25 +280,40 @@ class TrappingSR3(ConstrainedSR3):
         super().set_params(**kwargs)
         self.__post_init_guard
 
+    @staticmethod
+    def _build_PL(n_targets: int, include_bias: bool) -> tuple[Float4D, Float4D]:
+        n_features = n_poly_features(n_targets, 2, include_bias=include_bias)
+        lib = PolynomialLibrary(2, include_bias=include_bias)
+        lib.fit(np.zeros((1, n_targets)))
+        polyterms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+        linear_indexes = sorted(t_ind for t_ind, exps in polyterms if sum(exps) == 1)
+        PL_tensor_unsym = np.zeros((n_targets, n_targets, n_targets, n_features))
+        tgts, terms = np.ix_(range(n_targets), range(n_targets))
+        PL_tensor_unsym[tgts, terms, tgts, np.array(linear_indexes)[terms]] = 1
+        PL_tensor = (PL_tensor_unsym + np.transpose(PL_tensor_unsym, [1, 0, 2, 3])) / 2
+        return cast(Float4D, PL_tensor), cast(Float4D, PL_tensor_unsym)
+
     def _set_Ptensors(
         self, n_targets: int
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Make the projection tensors used for the algorithm."""
-        N = int((n_targets**2 + 3 * n_targets) / 2.0)
+        n_features = n_poly_features(n_targets, 2, include_bias=self._include_bias)
+        lib = PolynomialLibrary(2, include_bias=self._include_bias).fit(
+            np.zeros((1, n_targets))
+        )
+        polyterms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+        linear_indexes = sorted(t_ind for t_ind, exps in polyterms if sum(exps) == 1)
+        quad_indexes = sorted(t_ind for t_ind, exps in polyterms if sum(exps) == 2)
 
-        # delta_{il}delta_{jk}
-        PL_tensor_unsym = np.zeros((n_targets, n_targets, n_targets, N))
-        for i, j in combo_wr(range(n_targets), 2):
-            PL_tensor_unsym[i, j, i, j] = 1.0
-
-        # Now symmetrize PL
-        PL_tensor = (PL_tensor_unsym + np.transpose(PL_tensor_unsym, [1, 0, 2, 3])) / 2
+        PL_tensor, PL_tensor_unsym = self._build_PL(n_targets, self._include_bias)
 
         # if j == k, delta_{il}delta_{N-r+j,n}
         # if j != k, delta_{il}delta_{r+j+k-1,n}
-        PQ_tensor = np.zeros((n_targets, n_targets, n_targets, n_targets, N))
-        for (i, j, k, kk), n in product(combo_wr(range(n_targets), 4), range(N)):
-            if (j == k) and (n == N - n_targets + j) and (i == kk):
+        PQ_tensor = np.zeros((n_targets, n_targets, n_targets, n_targets, n_features))
+        for (i, j, k, kk), n in product(
+            combo_wr(range(n_targets), 4), range(n_features)
+        ):
+            if (j == k) and (n == n_features - n_targets + j) and (i == kk):
                 PQ_tensor[i, j, k, kk, n] = 1.0
             if (j != k) and (n == n_targets + j + k - 1) and (i == kk):
                 PQ_tensor[i, j, k, kk, n] = 1 / 2

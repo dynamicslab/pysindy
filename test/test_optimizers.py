@@ -1226,8 +1226,10 @@ def test_pickle(data_lorenz, opt_cls, opt_args):
 
 def test_PL():
     # terms are [1, x, y, x^2 , xy, y^2]
+    lib_bias = PolynomialLibrary(2, include_bias=True).fit(np.zeros((1, 2)))
+    polyterms_bias = [(t_ind, exps) for t_ind, exps in enumerate(lib_bias.powers_)]
     coeffs_bias = np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]])
-    PL_symm_bias, PL_unsymm_bias = TrappingSR3._build_PL(2, True)
+    PL_symm_bias, PL_unsymm_bias = TrappingSR3._build_PL(polyterms_bias)
 
     expected_symm = np.array([[2.0, 5.5], [5.5, 9.0]])
     expected_unsymm = np.array([[2.0, 3], [8, 9.0]])
@@ -1236,8 +1238,10 @@ def test_PL():
     result = np.einsum("ijkl,kl", PL_unsymm_bias, coeffs_bias)
     np.testing.assert_array_equal(result, expected_unsymm)
 
+    lib_nobias = PolynomialLibrary(2, include_bias=True).fit(np.zeros((1, 2)))
+    polyterms_nobias = [(t_ind, exps) for t_ind, exps in enumerate(lib_nobias.powers_)]
     coeffs_no_bias = coeffs_bias[:, 1:]
-    PL_symm_no_bias, PL_unsymm_no_bias = TrappingSR3._build_PL(2, False)
+    PL_symm_no_bias, PL_unsymm_no_bias = TrappingSR3._build_PL(polyterms_nobias)
 
     result = np.einsum("ijkl,kl", PL_symm_no_bias, coeffs_no_bias)
     np.testing.assert_array_equal(result, expected_symm)

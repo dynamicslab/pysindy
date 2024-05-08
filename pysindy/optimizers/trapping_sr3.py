@@ -1,6 +1,5 @@
 import warnings
 from itertools import combinations as combo_nr
-from itertools import combinations_with_replacement as combo_wr
 from itertools import product
 from itertools import repeat
 from math import comb
@@ -22,7 +21,11 @@ from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
 from .constrained_sr3 import ConstrainedSR3
 
+Int1D = np.ndarray[tuple[int], np.dtype[np.int_]]
+Float2D = np.ndarray[tuple[int, int], np.dtype[np.floating[NBitBase]]]
 Float4D = np.ndarray[tuple[int, int, int, int], np.dtype[np.floating[NBitBase]]]
+Float5D = np.ndarray[tuple[int, int, int, int, int], np.dtype[np.floating[NBitBase]]]
+FloatND = NDArray[np.floating[NBitBase]]
 
 
 class TrappingSR3(ConstrainedSR3):
@@ -282,40 +285,39 @@ class TrappingSR3(ConstrainedSR3):
         self.__post_init_guard
 
     @staticmethod
-    def _build_PL(n_targets: int, include_bias: bool) -> tuple[Float4D, Float4D]:
-        n_features = n_poly_features(n_targets, 2, include_bias=include_bias)
-        lib = PolynomialLibrary(2, include_bias=include_bias)
-        lib.fit(np.zeros((1, n_targets)))
-        polyterms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
-        linear_indexes = sorted(t_ind for t_ind, exps in polyterms if sum(exps) == 1)
+    def _build_PL(polyterms: list[tuple[int, Int1D]]) -> tuple[Float4D, Float4D]:
+        n_targets, n_features, lin_terms, _, _ = _build_lib_info(polyterms)
+        linear_indexes = sorted(lin_terms.values())
         PL_tensor_unsym = np.zeros((n_targets, n_targets, n_targets, n_features))
         tgts, terms = np.ix_(range(n_targets), range(n_targets))
         PL_tensor_unsym[tgts, terms, tgts, np.array(linear_indexes)[terms]] = 1
         PL_tensor = (PL_tensor_unsym + np.transpose(PL_tensor_unsym, [1, 0, 2, 3])) / 2
         return cast(Float4D, PL_tensor), cast(Float4D, PL_tensor_unsym)
 
+    @staticmethod
+    def _build_PQ(polyterms: list[tuple[int, Int1D]]) -> Float5D:
+        n_targets, n_features, _, pure_terms, mixed_terms = _build_lib_info(polyterms)
+        PQ = np.zeros((n_targets, n_targets, n_targets, n_targets, n_features))
+        for i, j, k, kk, feat in product(
+            *repeat(range(n_targets), 4), range(n_features)
+        ):
+            if (j == k) and (feat == pure_terms[j]) and (i == kk):
+                PQ[i, j, k, kk, feat] = 1.0
+            if (j != k) and (feat == mixed_terms[frozenset({j, k})]) and (i == kk):
+                PQ[i, j, k, kk, feat] = 1 / 2
+        return cast(Float5D, PQ)
+
     def _set_Ptensors(
         self, n_targets: int
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Make the projection tensors used for the algorithm."""
-        n_features = n_poly_features(n_targets, 2, include_bias=self._include_bias)
         lib = PolynomialLibrary(2, include_bias=self._include_bias).fit(
             np.zeros((1, n_targets))
         )
         polyterms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
-        linear_indexes = sorted(t_ind for t_ind, exps in polyterms if sum(exps) == 1)
-        quad_indexes = sorted(t_ind for t_ind, exps in polyterms if sum(exps) == 2)
 
-        PL_tensor, PL_tensor_unsym = self._build_PL(n_targets, self._include_bias)
-
-        # if j == k, delta_{il}delta_{N-r+j,n}
-        # if j != k, delta_{il}delta_{r+j+k-1,n}
-        PQ_tensor = np.zeros((n_targets, n_targets, n_targets, n_targets, n_features))
-        for i, j, k, kk, n in product(*repeat(range(n_targets), 4), range(n_features)):
-            if (j == k) and (n == n_features - n_targets + j) and (i == kk):
-                PQ_tensor[i, j, k, kk, n] = 1.0
-            if (j != k) and (n == n_targets + j + k - 1) and (i == kk):
-                PQ_tensor[i, j, k, kk, n] = 1 / 2
+        PL_tensor, PL_tensor_unsym = self._build_PL(polyterms)
+        PQ_tensor = self._build_PQ(polyterms)
 
         return PL_tensor_unsym, PL_tensor, PQ_tensor
 
@@ -654,11 +656,9 @@ def _make_constraints(n_tgts: int, **kwargs):
         To get "target" order constraints, transpose axis 1 and 2 before
         reshaping.
     """
-    include_bias = kwargs.get("include_bias", False)
-    n_terms = n_poly_features(n_tgts, degree=2, include_bias=include_bias)
     lib = PolynomialLibrary(2, **kwargs).fit(np.zeros((1, n_tgts)))
     terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
-
+    _, n_terms, linear_terms, pure_terms, mixed_terms = _build_lib_info(terms)
     # index of tgt -> index of its pure quadratic term
     pure_terms = {np.argmax(exps): t_ind for t_ind, exps in terms if max(exps) == 2}
     # two indexes of tgts -> index of their mixed quadratic term
@@ -680,7 +680,7 @@ def _make_constraints(n_tgts: int, **kwargs):
 
 def _pure_constraints(
     n_tgts: int, n_terms: int, pure_terms: dict[intp, int]
-) -> NDArray[np.dtype("float")]:
+) -> Float2D:
     """Set constraints for coefficients adorning terms like a_i^3 = 0"""
     constraint_mat = np.zeros((n_tgts, n_terms, n_tgts))
     for constr_ind, (tgt_ind, term_ind) in zip(range(n_tgts), pure_terms.items()):
@@ -692,8 +692,8 @@ def _antisymm_double_constraint(
     n_tgts: int,
     n_terms: int,
     pure_terms: dict[intp, int],
-    mixed_terms: dict[frozenset[intp] : int],
-) -> NDArray[np.dtype("float")]:
+    mixed_terms: dict[frozenset[intp], int],
+) -> Float2D:
     """Set constraints for coefficients adorning terms like a_i^2 * a_j=0"""
     constraint_mat_1 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i^2 * a_j
     constraint_mat_2 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i * a_j^2
@@ -709,8 +709,8 @@ def _antisymm_double_constraint(
 
 
 def _antisymm_triple_constraints(
-    n_tgts: int, n_terms: int, mixed_terms: dict[frozenset[intp] : int]
-) -> NDArray[np.dtype("float")]:
+    n_tgts: int, n_terms: int, mixed_terms: dict[frozenset[intp], int]
+) -> Float2D:
     constraint_mat = np.zeros((comb(n_tgts, 3), n_terms, n_tgts))  # a_ia_ja_k
 
     def find_symm_term(a, b):
@@ -722,3 +722,37 @@ def _antisymm_triple_constraints(
         constraint_mat[constr_ind, find_symm_term(tgt_i, tgt_j), tgt_k] = 1
 
     return constraint_mat
+
+
+def _build_lib_info(
+    polyterms: list[tuple[int, Int1D]]
+) -> tuple[int, int, dict[int, int], dict[int, int], dict[frozenset[int], int]]:
+    """From polynomial, calculate various useful info
+
+    Args:
+        polyterms.  The output of PolynomialLibrary.powers_.  Each term is
+            a tuple of it's index in the ordering and a 1D array of the
+            exponents of each feature.
+
+    Returns:
+        the number of targets
+        the number of features
+        a dictionary from each target to its linear term index
+        a dictionary from each target to its quadratic term index
+        a dictionary from each pair of targets to its mixed term index
+    """
+    try:
+        n_targets = len(polyterms[0][1])
+    except IndexError:
+        raise ValueError("Passed a polynomial library with no terms")
+    n_features = len(polyterms)
+    mixed_terms = {
+        frozenset(np.argwhere(exps == 1).flatten()): t_ind
+        for t_ind, exps in polyterms
+        if max(exps) == 1 and sum(exps) == 2
+    }
+    pure_terms = {np.argmax(exps): t_ind for t_ind, exps in polyterms if max(exps) == 2}
+    linear_terms = {
+        np.argmax(exps): t_ind for t_ind, exps in polyterms if sum(exps) == 1
+    }
+    return n_targets, n_features, linear_terms, pure_terms, mixed_terms

@@ -1224,26 +1224,53 @@ def test_pickle(data_lorenz, opt_cls, opt_args):
     np.testing.assert_array_equal(result, expected)
 
 
-def test_PL():
+@pytest.fixture
+def poly_lib_terms_coef_bias(scope="session"):
+    lib = PolynomialLibrary(2, include_bias=True).fit(np.zeros((1, 2)))
     # terms are [1, x, y, x^2 , xy, y^2]
-    lib_bias = PolynomialLibrary(2, include_bias=True).fit(np.zeros((1, 2)))
-    polyterms_bias = [(t_ind, exps) for t_ind, exps in enumerate(lib_bias.powers_)]
-    coeffs_bias = np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]])
-    PL_symm_bias, PL_unsymm_bias = TrappingSR3._build_PL(polyterms_bias)
+    polyterms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+    coeffs = np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]])
+    return lib, polyterms, coeffs
+
+
+@pytest.fixture
+def poly_lib_terms_coef_nobias(scope="session"):
+    lib = PolynomialLibrary(2, include_bias=False).fit(np.zeros((1, 2)))
+    # terms are [x, y, x^2 , xy, y^2]
+    polyterms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+    coeffs = np.array([[2, 3, 4, 5, 6], [8, 9, 10, 11, 12]])
+    return lib, polyterms, coeffs
+
+
+@pytest.mark.parametrize(
+    "lib_terms_coeffs",
+    (
+        pytest.lazy_fixture("poly_lib_terms_coef_bias"),
+        pytest.lazy_fixture("poly_lib_terms_coef_nobias"),
+    ),
+)
+def test_PL(lib_terms_coeffs):
+    _, terms, coeffs = lib_terms_coeffs
+    PL_symm, PL_unsymm = TrappingSR3._build_PL(terms)
 
     expected_symm = np.array([[2.0, 5.5], [5.5, 9.0]])
-    expected_unsymm = np.array([[2.0, 3], [8, 9.0]])
-    result = np.einsum("ijkl,kl", PL_symm_bias, coeffs_bias)
+    expected_unsymm = np.array([[2.0, 3.0], [8.0, 9.0]])
+    result = np.einsum("ijkl,kl", PL_symm, coeffs)
     np.testing.assert_array_equal(result, expected_symm)
-    result = np.einsum("ijkl,kl", PL_unsymm_bias, coeffs_bias)
+    result = np.einsum("ijkl,kl", PL_unsymm, coeffs)
     np.testing.assert_array_equal(result, expected_unsymm)
 
-    lib_nobias = PolynomialLibrary(2, include_bias=True).fit(np.zeros((1, 2)))
-    polyterms_nobias = [(t_ind, exps) for t_ind, exps in enumerate(lib_nobias.powers_)]
-    coeffs_no_bias = coeffs_bias[:, 1:]
-    PL_symm_no_bias, PL_unsymm_no_bias = TrappingSR3._build_PL(polyterms_nobias)
 
-    result = np.einsum("ijkl,kl", PL_symm_no_bias, coeffs_no_bias)
-    np.testing.assert_array_equal(result, expected_symm)
-    result = np.einsum("ijkl,kl", PL_unsymm_no_bias, coeffs_no_bias)
-    np.testing.assert_array_equal(result, expected_unsymm)
+@pytest.mark.parametrize(
+    "lib_terms_coeffs",
+    (
+        pytest.lazy_fixture("poly_lib_terms_coef_bias"),
+        pytest.lazy_fixture("poly_lib_terms_coef_nobias"),
+    ),
+)
+def test_PQ(lib_terms_coeffs):
+    _, terms, coeffs = lib_terms_coeffs
+    PQ = TrappingSR3._build_PQ(terms)
+    expected = np.array([[[4.0, 2.5], [2.5, 6]], [[10.0, 5.5], [5.5, 12.0]]])
+    result = np.einsum("ijklm,lm", PQ, coeffs)
+    np.testing.assert_array_equal(result, expected)

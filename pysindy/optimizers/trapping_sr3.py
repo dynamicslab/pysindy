@@ -290,25 +290,69 @@ class TrappingSR3(ConstrainedSR3):
 
     @staticmethod
     def _build_PL(polyterms: list[tuple[int, Int1D]]) -> tuple[Float4D, Float4D]:
+        r"""Build the matrix that projects out the linear terms of a library
+
+        Coefficients in each polynomial equation :math:`i\in \{1,\dots, r\}` can
+        be stored in an array arranged as written out on paper (e.g.
+        :math:` f_i(x) = a^i_0 + a^i_1 x_1, a^i_2 x_1x_2, \dots a^i_N x_r^2`) or
+        in a series of matrices :math:`E \in \mathbb R^r`,
+        :math:`L\in \mathbb R^{r\times r}`, and (without loss of generality) in
+        :math:`Q\in \mathbb R^{r \times r \times r}, where each
+        :math:`Q^{(i)}_{j,k}` is symmetric in the last two indexes.
+
+        This function builds the projection tensor for extracting the linear
+        terms :math:`L` from a set of coefficients in the first representation.
+        The function also calculates the projection tensor for extracting the
+        symmetrized version of L
+
+        Args:
+            polyterms: the ordering and meaning of terms in the equations.  Each
+                entry represents a term in the equation and comprises its index
+                and an array of exponents for each variable
+
+        Returns:
+            Two 4th order tensors, the first one symmetric in the first two
+            indexes.
+        """
         n_targets, n_features, lin_terms, _, _ = _build_lib_info(polyterms)
-        linear_indexes = sorted(lin_terms.values())
         PL_tensor_unsym = np.zeros((n_targets, n_targets, n_targets, n_features))
-        tgts, terms = np.ix_(range(n_targets), range(n_targets))
-        PL_tensor_unsym[tgts, terms, tgts, np.array(linear_indexes)[terms]] = 1
+        tgts = range(n_targets)
+        for j in range(n_targets):
+            PL_tensor_unsym[tgts, j, tgts, lin_terms[j]] = 1
         PL_tensor = (PL_tensor_unsym + np.transpose(PL_tensor_unsym, [1, 0, 2, 3])) / 2
         return cast(Float4D, PL_tensor), cast(Float4D, PL_tensor_unsym)
 
     @staticmethod
     def _build_PQ(polyterms: list[tuple[int, Int1D]]) -> Float5D:
+        r"""Build the matrix that projects out the quadratic terms of a library
+
+        Coefficients in each polynomial equation :math:`i\in \{1,\dots, r\}` can
+        be stored in an array arranged as written out on paper (e.g.
+        :math:` f_i(x) = a^i_0 + a^i_1 x_1, a^i_2 x_1x_2, \dots a^i_N x_r^2`) or
+        in a series of matrices :math:`E \in \mathbb R^r`,
+        :math:`L\in \mathbb R^{r\times r}`, and (without loss of generality) in
+        :math:`Q\in \mathbb R^{r \times r \times r}, where each
+        :math:`Q^{(i)}_{j,k}` is symmetric in the last two indexes.
+
+        This function builds the projection tensor for extracting the quadratic
+        forms :math:`Q` from a set of coefficients in the first representation.
+
+        Args:
+            polyterms: the ordering and meaning of terms in the equations.  Each
+                entry represents a term in the equation and comprises its index
+                and an array of exponents for each variable
+
+        Returns:
+            5th order tensor symmetric in second and third indexes.
+        """
         n_targets, n_features, _, pure_terms, mixed_terms = _build_lib_info(polyterms)
         PQ = np.zeros((n_targets, n_targets, n_targets, n_targets, n_features))
-        for i, j, k, kk, feat in product(
-            *repeat(range(n_targets), 4), range(n_features)
-        ):
-            if (j == k) and (feat == pure_terms[j]) and (i == kk):
-                PQ[i, j, k, kk, feat] = 1.0
-            if (j != k) and (feat == mixed_terms[frozenset({j, k})]) and (i == kk):
-                PQ[i, j, k, kk, feat] = 1 / 2
+        tgts = range(n_targets)
+        for j, k in product(*repeat(range(n_targets), 2)):
+            if j == k:
+                PQ[tgts, j, k, tgts, pure_terms[j]] = 1.0
+            if j != k:
+                PQ[tgts, j, k, tgts, mixed_terms[frozenset({j, k})]] = 1 / 2
         return cast(Float5D, PQ)
 
     def _set_Ptensors(

@@ -19,6 +19,7 @@ from .sr3 import SR3
 AnyFloat = np.dtype[np.floating[NBitBase]]
 Int1D = np.ndarray[tuple[int], np.dtype[np.int_]]
 Float2D = np.ndarray[tuple[int, int], AnyFloat]
+Float3D = np.ndarray[tuple[int, int, int], AnyFloat]
 Float4D = np.ndarray[tuple[int, int, int, int], AnyFloat]
 Float5D = np.ndarray[tuple[int, int, int, int, int], AnyFloat]
 FloatND = NDArray[np.floating[NBitBase]]
@@ -380,6 +381,36 @@ class TrappingSR3(SR3):
             self.constraint_order = constraint_order
 
     @staticmethod
+    def _build_PC(polyterms: list[tuple[int, Int1D]]) -> Float3D:
+        r"""Build the matrix that projects out the constant term of a library
+
+        Coefficients in each polynomial equation :math:`i\in \{1,\dots, r\}` can
+        be stored in an array arranged as written out on paper (e.g.
+        :math:` f_i(x) = a^i_0 + a^i_1 x_1, a^i_2 x_1x_2, \dots a^i_N x_r^2`) or
+        in a series of matrices :math:`E \in \mathbb R^r`,
+        :math:`L\in \mathbb R^{r\times r}`, and (without loss of generality) in
+        :math:`Q\in \mathbb R^{r \times r \times r}, where each
+        :math:`Q^{(i)}_{j,k}` is symmetric in the last two indexes.
+
+        This function builds the projection tensor for extracting the constant
+        terms :math:`E` from a set of coefficients in the first representation.
+
+        Args:
+            polyterms: the ordering and meaning of terms in the equations.  Each
+                entry represents a term in the equation and comprises its index
+                and an array of exponents for each variable
+
+        Returns:
+            3rd order tensor
+        """
+        n_targets, n_features, _, _, _ = _build_lib_info(polyterms)
+        c_terms = [ind for ind, exps in polyterms if sum(exps) == 0]
+        PC = np.zeros((n_targets, n_targets, n_features))
+        if c_terms:  # either a length 0 or length 1 list
+            PC[range(n_targets), range(n_targets), c_terms[0]] = 1.0
+        return PC
+
+    @staticmethod
     def _build_PL(polyterms: list[tuple[int, Int1D]]) -> tuple[Float4D, Float4D]:
         r"""Build the matrix that projects out the linear terms of a library
 
@@ -450,17 +481,12 @@ class TrappingSR3(SR3):
         self, n_targets: int
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Make the projection tensors used for the algorithm."""
-        N = self.n_features
-        # If bias term is included, need to shift the tensor index
-        PC_tensor = np.zeros((n_targets, n_targets, N))
-        if self._include_bias:
-            PC_tensor[range(n_targets), range(n_targets), 0] = 1.0
-
         lib = PolynomialLibrary(2, include_bias=self._include_bias).fit(
             np.zeros((1, n_targets))
         )
         polyterms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
 
+        PC_tensor = self._build_PC(polyterms)
         PL_tensor, PL_tensor_unsym = self._build_PL(polyterms)
         PQ_tensor = self._build_PQ(polyterms)
         PT_tensor = PQ_tensor.transpose([1, 0, 2, 3, 4])

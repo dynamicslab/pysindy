@@ -171,7 +171,6 @@ print("Time-averaged derivative error = ", np.nanmean(deriv_error))
 #
 # $$
 # \begin{align}
-# \label{eq:oscillator}
 #     \frac{d}{dt}\begin{bmatrix}
 #     x \\
 #     y \\
@@ -238,6 +237,8 @@ eta = 1.0e8
 
 # run trapping SINDy, reusing previous threshold, max_iter and constraints
 sindy_opt = ps.TrappingSR3(
+    _n_tgts=3,
+    _include_bias=True,
     threshold=threshold,
     eta=eta,
     max_iter=max_iter,
@@ -272,14 +273,17 @@ mean_val = np.sqrt(np.sum(mean_val**2))
 check_stability(r, Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
+terms = sindy_library.get_feature_names()
 Xi_oscillator = np.zeros(Xi.shape)
-Xi_oscillator[:r, :r] = np.asarray([[0.05, 0, 0], [0, -0.01, 3.0], [0, -3.0, -0.01]]).T
-Xi_oscillator[r, 0] = 1.1
-Xi_oscillator[r + 2, 1] = -2
-Xi_oscillator[r + 3, 1] = -1.1
-Xi_oscillator[r + 5, 1] = -5
-Xi_oscillator[r + 2, 2] = 5
-Xi_oscillator[r + 4, 2] = 2
+Xi_oscillator[1 : r + 1, :] = np.asarray(
+    [[mu1, 0, 0], [0, mu2, omega], [0, -omega, mu2]]
+).T
+Xi_oscillator[terms.index("x0 x1"), 0] = sigma
+Xi_oscillator[terms.index("x1 x2"), 1] = alpha
+Xi_oscillator[terms.index("x0^2"), 1] = -sigma
+Xi_oscillator[terms.index("x2^2"), 1] = beta
+Xi_oscillator[terms.index("x1 x2"), 2] = -beta
+Xi_oscillator[terms.index("x1^2"), 2] = -alpha
 coef_pred = np.linalg.norm(Xi_oscillator - Xi) / np.linalg.norm(Xi_oscillator)
 print("Frobenius coefficient error = ", coef_pred)
 
@@ -298,7 +302,8 @@ trapping_region(r, x_test_pred, Xi, sindy_opt, "Atmospheric Oscillator")
 # %% [markdown]
 #
 # ### We identified a very accurate and provably stable model but the trapping region looks way too big... what's going on here?
-# The estimate for the size of the trapping region is based on the smallest eigenvalue of $\mathbf{A}^S$. But this system has a big scale-separation, leading to $\lambda_1 = -0.01$ (while $\lambda_3 = -5.4$) and an estimate of the trapping region of $R_m = d/\lambda_1 \approx 300$. This is because our estimate of the trapping region comes from the worst case scenario.
+# The estimate for the size of the trapping region is based on the smallest eigenvalue of $\mathbf{A}^S$.
+# But this system has a big scale-separation, leading to $\lambda_1 = -0.01$ (while $\lambda_3 = -5.4$) and an estimate of the trapping region of $R_m = d/\lambda_1 \approx 300$. This is because our estimate of the trapping region comes from the worst case scenario.
 
 # %% [markdown]
 # # Lorenz model

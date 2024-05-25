@@ -202,10 +202,6 @@ class TrappingSR3(ConstrainedSR3):
                 " be unable to fit data"
             )
             _n_tgts = 1
-        if _include_bias:
-            raise ValueError(
-                "Currently not able to include bias until PQ matrices are modified"
-            )
         if hasattr(kwargs, "constraint_separation_index"):
             constraint_separation_index = kwargs["constraint_separation_index"]
         elif kwargs.get("inequality_constraints", False):

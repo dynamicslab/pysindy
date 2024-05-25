@@ -463,7 +463,6 @@ trapping_region(r, x_test_pred, Xi, sindy_opt, "Lorenz Attractor")
 #
 # $$
 # \begin{align}
-# \label{eq:simpleMHD_model}
 #     \begin{bmatrix}
 #     \dot{V}_1 \\
 #     \dot{V}_2 \\
@@ -525,7 +524,12 @@ alpha_m = 5.0e-1 * eta
 # so this tends to be much slower but often need far fewer algorithm iterations.
 # For this problem, a single (very slow) update is all that is needed!
 sindy_opt = ps.TrappingSR3(
-    threshold=threshold, eta=eta, max_iter=max_iter, verbose=True
+    _n_tgts=6,
+    _include_bias=True,
+    threshold=threshold,
+    eta=eta,
+    max_iter=max_iter,
+    verbose=True,
 )
 # eps_solver=1e-3)  # reduce the solver tolerance for speed
 model = ps.SINDy(
@@ -557,19 +561,22 @@ E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
 print(E_pred)
 
 # compute relative Frobenius error in the model coefficients
+terms = sindy_library.get_feature_names(
+    input_features=["V1", "V2", "V3", "B1", "B2", "B3"]
+)
 Xi_mhd = np.zeros(Xi.shape)
-Xi_mhd[r + 5, 0] = 4.0
-Xi_mhd[r + 14, 0] = -4.0
-Xi_mhd[r + 1, 1] = -7
-Xi_mhd[r + 13, 1] = 7.0
-Xi_mhd[r, 2] = 3.0
-Xi_mhd[r + 12, 2] = -3.0
-Xi_mhd[r + 8, 3] = 2.0
-Xi_mhd[r + 10, 3] = -2.0
-Xi_mhd[r + 4, 4] = -5.0
-Xi_mhd[r + 9, 4] = 5.0
-Xi_mhd[r + 3, 5] = 9.0
-Xi_mhd[r + 6, 5] = -9.0
+Xi_mhd[terms.index("V2 V3"), 0] = 4.0
+Xi_mhd[terms.index("B2 B3"), 0] = -4.0
+Xi_mhd[terms.index("V1 V3"), 1] = -7
+Xi_mhd[terms.index("B1 B3"), 1] = 7.0
+Xi_mhd[terms.index("V1 V2")] = 3.0
+Xi_mhd[terms.index("B1 B2"), 2] = -3.0
+Xi_mhd[terms.index("V2 B3"), 3] = 2.0
+Xi_mhd[terms.index("V3 B2"), 3] = -2.0
+Xi_mhd[terms.index("V1 B3"), 4] = -5.0
+Xi_mhd[terms.index("V3 B1"), 4] = 5.0
+Xi_mhd[terms.index("V1 B2"), 5] = 9.0
+Xi_mhd[terms.index("V2 B1"), 5] = -9.0
 model.print(precision=2)
 coef_pred = np.linalg.norm(Xi_mhd - Xi) / np.linalg.norm(Xi_mhd)
 

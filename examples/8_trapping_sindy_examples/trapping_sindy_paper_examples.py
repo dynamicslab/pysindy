@@ -380,6 +380,8 @@ accel = True  # use acceleration for the update of (m, A), sometimes is faster
 
 # run trapping SINDy
 sindy_opt = ps.TrappingSR3(
+    _n_tgts=3,
+    _include_bias=True,
     threshold=threshold,
     eta=eta,
     alpha_m=alpha_m,
@@ -424,10 +426,13 @@ print("Frobenius error = ", E_pred)
 sigma = 10
 rho = 28
 beta = 8.0 / 3.0
+terms = sindy_library.get_feature_names()
 Xi_lorenz = np.zeros(Xi.shape)
-Xi_lorenz[:r, :r] = np.asarray([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
-Xi_lorenz[r + 1, 1] = -1
-Xi_lorenz[r, 2] = 1
+Xi_lorenz[1 : r + 1, :] = np.asarray(
+    [[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]
+).T
+Xi_lorenz[terms.index("x0 x2"), 1] = -1
+Xi_lorenz[terms.index("x0 x1"), 2] = 1
 coef_pred = np.linalg.norm(Xi_lorenz - Xi) / np.linalg.norm(Xi_lorenz)
 print("Frobenius coefficient error = ", coef_pred)
 

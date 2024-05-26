@@ -115,6 +115,8 @@ def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     print("optimal m: ", opt_m)
     print("As eigvals: ", np.sort(eigvals))
     max_eigval = np.sort(eigvals)[-1]
+    if max_eigval > 0:
+        return False
     C = np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
     L = np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
     Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
@@ -125,6 +127,7 @@ def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     print("Estimate of trapping region size, Rm = ", Rm)
     if not np.isclose(mean_val, 1.0):
         print("Normalized trapping region size, Reff = ", Reff)
+    return True
 
 
 def get_trapping_radius(max_eigval, eps_Q, r, d):

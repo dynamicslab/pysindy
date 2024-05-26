@@ -801,12 +801,18 @@ eta = 1.0e2
 # don't need a threshold if eta is sufficiently small
 # which is good news because CVXPY is much slower
 threshold = 0
-alpha_m = 9e-1 * eta
+alpha_m = 1e-1 * eta
 
 
 # run trapping SINDy
 sindy_opt = ps.TrappingSR3(
-    threshold=threshold, eta=eta, alpha_m=alpha_m, max_iter=max_iter, verbose=True
+    _n_tgts=5,
+    _include_bias=False,
+    threshold=threshold,
+    eta=eta,
+    alpha_m=alpha_m,
+    max_iter=max_iter,
+    verbose=True,
 )
 model = ps.SINDy(
     optimizer=sindy_opt,
@@ -823,20 +829,22 @@ L = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 Q_sum = np.max(np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1]))))
 print("Max deviation from the constraints = ", Q_sum)
-x_train_pred = model.simulate(x_train[0, :], t)
-x_test_pred = model.simulate(a0, t)
+if check_stability(r, Xi, sindy_opt, 1):
+    x_train_pred = model.simulate(x_train[0, :], t, integrator_kws=integrator_keywords)
+    x_test_pred = model.simulate(a0, t, integrator_kws=integrator_keywords)
+    make_progress_plots(r, sindy_opt)
 
-# plotting and analysis
-make_fits(r, t, xdot_test, xdot_test_pred, x_test, x_test_pred, "vonKarman")
-make_lissajou(r, x_train, x_test, x_train_pred, x_test_pred, "VonKarman")
-mean_val = np.mean(x_test_pred, axis=0)
-mean_val = np.sqrt(np.sum(mean_val**2))
-check_stability(r, Xi, sindy_opt, mean_val)
-make_progress_plots(r, sindy_opt)
-A_guess = sindy_opt.A_history_[-1]
-m_guess = sindy_opt.m_history_[-1]
-E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
-print("Frobenius Error = ", E_pred)
+    # plotting and analysis
+    make_fits(r, t, xdot_test, xdot_test_pred, x_test, x_test_pred, "vonKarman")
+    make_lissajou(r, x_train, x_test, x_train_pred, x_test_pred, "VonKarman")
+    mean_val = np.mean(x_test_pred, axis=0)
+    mean_val = np.sqrt(np.sum(mean_val**2))
+    check_stability(r, Xi, sindy_opt, mean_val)
+    make_progress_plots(r, sindy_opt)
+    A_guess = sindy_opt.A_history_[-1]
+    m_guess = sindy_opt.m_history_[-1]
+    E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
+    print("Frobenius Error = ", E_pred)
 
 # Compute time-averaged dX/dt error
 deriv_error = np.zeros(xdot_test.shape[0])

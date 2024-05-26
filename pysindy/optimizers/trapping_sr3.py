@@ -5,6 +5,7 @@ from itertools import repeat
 from math import comb
 from typing import cast
 from typing import NewType
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
@@ -67,11 +68,8 @@ class TrappingSR3(ConstrainedSR3):
 
     Parameters
     ----------
-    evolve_w :
-        If false, don't update w and just minimize over (m, A)
-
     eta :
-        Determines the strength of the stability term ||Pw-A||^2 in the
+        Determines the strength of the stability term :math:`||Pw-A||^2` in the
         optimization. The default value is very large so that the
         algorithm default is to ignore the stability term. In this limit,
         this should be approximately equivalent to the ConstrainedSR3 method.
@@ -80,9 +78,19 @@ class TrappingSR3(ConstrainedSR3):
         If threshold != 0, this specifies the error tolerance in the
         CVXPY (OSQP) solve. Default 1.0e-7 (Default is 1.0e-3 in OSQP.)
 
-    relax_optim :
-        If relax_optim = True, use the relax-and-split method. If False,
-        try a direct minimization on the largest eigenvalue.
+    alpha:
+        Determines the strength of the local stability term :math:`||Qijk||^2`
+        in the optimization. The default value (1e20) is very large so that the
+        algorithm default is to ignore this term.
+
+    beta:
+        Determines the strength of the local stability term
+        :math:`||Qijk + Qjik + Qkij||^2` in the
+        optimization. The default value is very large so that the
+        algorithm default is to ignore this term.
+
+    mod_matrix:
+        ???
 
     alpha_A :
         Determines the step size in the prox-gradient descent over A.
@@ -180,7 +188,9 @@ class TrappingSR3(ConstrainedSR3):
         _interaction_only: bool = False,
         eta: Union[float, None] = None,
         eps_solver: float = 1e-7,
-        relax_optim: bool = True,
+        alpha: Optional[float] = None,
+        beta: Optional[float] = None,
+        mod_matrix: Optional[NDArray] = None,
         alpha_A: Union[float, None] = None,
         alpha_m: Union[float, None] = None,
         gamma: float = -0.1,
@@ -236,7 +246,6 @@ class TrappingSR3(ConstrainedSR3):
             **kwargs,
         )
         self.eps_solver = eps_solver
-        self.relax_optim = relax_optim
         self.m0 = m0
         self.A0 = A0
         self.alpha_A = alpha_A
@@ -528,37 +537,6 @@ class TrappingSR3(ConstrainedSR3):
             )
         return coef_sparse
 
-    def _solve_m_direct(self, n_tgts, coef_sparse):
-        """
-        If using the direct formulation of trapping SINDy, solves the
-        entire problem in CVXPY regardless of the threshold value.
-        Note that this is a convex-composite (i.e. technically nonconvex)
-        problem, solved in CVXPY, so convergence/quality guarantees are
-        not available here!
-        """
-
-        if np.all(self.PL_ == 0) and np.all(self.PQ_ == 0):
-            return np.zeros(n_tgts), coef_sparse  # no optimization over m
-        else:
-            m_cp = cp.Variable(n_tgts)
-            L = np.tensordot(self.PL_, coef_sparse, axes=([3, 2], [0, 1]))
-            Q = np.reshape(
-                np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])),
-                (n_tgts, n_tgts * n_tgts),
-            )
-            Ls = 0.5 * (L + L.T).flatten()
-            cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (n_tgts, n_tgts)))
-            prob_m = cp.Problem(cp.Minimize(cost_m))
-
-            # default solver is SCS here
-            prob_m.solve(eps=self.eps_solver, verbose=self.verbose_cvxpy)
-
-            m = m_cp.value
-            if m is None:
-                print("Infeasible solve over m, increase/decrease eta")
-                return None
-            return m
-
     def _reduce(self, x, y):
         """
         Perform at most ``self.max_iter`` iterations of the
@@ -651,24 +629,18 @@ class TrappingSR3(ConstrainedSR3):
             Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
 
             coef_prev = coef_sparse
-            if self.relax_optim:
-                if self.threshold > 0.0:
-                    # sparse relax_and_split
-                    coef_sparse = self._update_coef_sparse_rs(
-                        var_len, x_expanded, y, Pmatrix, A, coef_prev
-                    )
-                else:
-                    coef_sparse = self._update_coef_nonsparse_rs(
-                        Pmatrix, A, coef_prev, xTx, xTy
-                    )
-                trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
-                    trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
+            if self.threshold > 0.0:
+                # sparse relax_and_split
+                coef_sparse = self._update_coef_sparse_rs(
+                    var_len, x_expanded, y, Pmatrix, A, coef_prev
                 )
             else:
-                coef_sparse = self._update_coef_direct(
-                    var_len, x_expanded, y, Pmatrix, coef_prev, n_tgts
+                coef_sparse = self._update_coef_nonsparse_rs(
+                    Pmatrix, A, coef_prev, xTx, xTy
                 )
-                trap_ctr = self._solve_m_direct(n_tgts, coef_sparse)
+            trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
+                trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
+            )
 
             # If problem over xi becomes infeasible, break out of the loop
             if coef_sparse is None:
@@ -715,11 +687,6 @@ class TrappingSR3(ConstrainedSR3):
         H = xTx + pTp / self.eta
         P_transpose_A = np.dot(Pmatrix.T, A.flatten())
         return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
-
-    def _update_coef_direct(self, var_len, x_expanded, y, Pmatrix, coef_prev, n_tgts):
-        xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
-        cost += cp.lambda_max(cp.reshape(Pmatrix @ xi, (n_tgts, n_tgts))) / self.eta
-        return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
 
 
 def _make_constraints(n_tgts: int, **kwargs):

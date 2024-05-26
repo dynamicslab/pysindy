@@ -1,4 +1,7 @@
 import warnings
+from copy import deepcopy
+from typing import Optional
+from typing import Tuple
 
 try:
     import cvxpy as cp
@@ -39,6 +42,9 @@ class ConstrainedSR3(SR3):
         to learn parsimonious physics-informed models from data."
         IEEE Access 8 (2020): 169259-169271.
 
+        Zheng, Peng, et al. "A unified framework for sparse relaxed
+        regularized regression: Sr3." IEEE Access 7 (2018): 1404-1423.
+
     Parameters
     ----------
     threshold : float, optional (default 0.1)
@@ -66,14 +72,10 @@ class ConstrainedSR3(SR3):
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
-        The left hand side matrix C of Cw <= d.
-        There should be one row per constraint.
+        The left hand side matrix C of Cw <= d (Or Cw = d for equality
+        constraints). There should be one row per constraint.
 
     constraint_rhs : numpy ndarray, shape (n_constraints,), optional (default None)
         The right hand side vector d of Cw <= d.
@@ -96,9 +98,6 @@ class ConstrainedSR3(SR3):
         by dividing by the L2-norm. Note that the 'normalize' option in sklearn
         is deprecated in sklearn versions >= 1.0 and will be removed. Note that
         this parameter is incompatible with the constraints!
-
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
 
     initial_guess : np.ndarray, optional (default None)
         Shape should be (n_features) or (n_targets, n_features).
@@ -128,6 +127,10 @@ class ConstrainedSR3(SR3):
         output should be verbose or not. Only relevant for optimizers that
         use the CVXPY package in some capabity.
 
+    unbias: bool (default False)
+        See base class for definition.  Most options are incompatible
+        with unbiasing.
+
     Attributes
     ----------
     coef_ : array, shape (n_features,) or (n_targets, n_features)
@@ -138,11 +141,15 @@ class ConstrainedSR3(SR3):
         Weight vector(s) that are not subjected to the regularization.
         This is the w in the objective function.
 
-    unbias : boolean
-        Whether to perform an extra step of unregularized linear regression
-        to unbias the coefficients for the identified support.
-        ``unbias`` is automatically set to False if a constraint is used and
-        is otherwise left uninitialized.
+    history_ : list
+        History of sparse coefficients. ``history_[k]`` contains the
+        sparse coefficients (v in the optimization objective function)
+        at iteration k.
+
+    objective_history_ : list
+        History of the value of the objective at each step. Note that
+        the trapping SINDy problem is nonconvex, meaning that this value
+        may increase and decrease as the algorithm works.
     """
 
     def __init__(
@@ -158,17 +165,17 @@ class ConstrainedSR3(SR3):
         constraint_rhs=None,
         constraint_order="target",
         normalize_columns=False,
-        fit_intercept=False,
         copy_X=True,
         initial_guess=None,
         thresholds=None,
         equality_constraints=False,
         inequality_constraints=False,
-        constraint_separation_index=0,
+        constraint_separation_index: Optional[bool] = None,
         verbose=False,
         verbose_cvxpy=False,
+        unbias=False,
     ):
-        super(ConstrainedSR3, self).__init__(
+        super().__init__(
             threshold=threshold,
             nu=nu,
             tol=tol,
@@ -178,10 +185,10 @@ class ConstrainedSR3(SR3):
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
             initial_guess=initial_guess,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
             verbose=verbose,
+            unbias=unbias,
         )
 
         self.verbose_cvxpy = verbose_cvxpy
@@ -189,7 +196,7 @@ class ConstrainedSR3(SR3):
         self.constraint_lhs = constraint_lhs
         self.constraint_rhs = constraint_rhs
         self.constraint_order = constraint_order
-        self.use_constraints = (constraint_lhs is not None) and (
+        self.use_constraints = (constraint_lhs is not None) or (
             constraint_rhs is not None
         )
 
@@ -203,15 +210,18 @@ class ConstrainedSR3(SR3):
                 " but user did not specify if the constraints were equality or"
                 " inequality constraints. Assuming equality constraints."
             )
-            self.equality_constraints = True
+            equality_constraints = True
 
         if self.use_constraints:
             if constraint_order not in ("feature", "target"):
                 raise ValueError(
                     "constraint_order must be either 'feature' or 'target'"
                 )
-
-            self.unbias = False
+            if unbias:
+                raise ValueError(
+                    "Constraints are incompatible with an unbiasing step.  Set"
+                    " unbias=False"
+                )
 
         if inequality_constraints and not cvxpy_flag:
             raise ValueError(
@@ -235,6 +245,16 @@ class ConstrainedSR3(SR3):
             )
         self.inequality_constraints = inequality_constraints
         self.equality_constraints = equality_constraints
+        if self.use_constraints and constraint_separation_index is None:
+            if self.inequality_constraints and not self.equality_constraints:
+                constraint_separation_index = len(constraint_lhs)
+            elif self.equality_constraints and not self.inequality_constraints:
+                constraint_separation_index = 0
+            else:
+                raise ValueError(
+                    "If passing both inequality and equality constraints, must specify"
+                    " constraint_separation_index."
+                )
         self.constraint_separation_index = constraint_separation_index
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
@@ -251,62 +271,66 @@ class ConstrainedSR3(SR3):
         rhs = rhs.reshape(g.shape)
         return inv1.dot(rhs)
 
-    def _update_coef_cvxpy(self, x, y, coef_sparse):
-        xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
-        cost = cp.sum_squares(x @ xi - y.flatten())
+    def _create_var_and_part_cost(
+        self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
+    ) -> Tuple[cp.Variable, cp.Expression]:
+        xi = cp.Variable(var_len)
+        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
         if self.thresholder.lower() == "l1":
             cost = cost + self.threshold * cp.norm1(xi)
         elif self.thresholder.lower() == "weighted_l1":
             cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
         elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi)
+            cost = cost + self.threshold * cp.norm2(xi) ** 2
         elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
-        if self.use_constraints:
-            if self.inequality_constraints and self.equality_constraints:
-                # Process inequality constraints then equality constraints
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [
-                        self.constraint_lhs[: self.constraint_separation_index, :] @ xi
-                        <= self.constraint_rhs[: self.constraint_separation_index],
-                        self.constraint_lhs[self.constraint_separation_index :, :] @ xi
-                        == self.constraint_rhs[self.constraint_separation_index :],
-                    ],
-                )
-            elif self.inequality_constraints:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi <= self.constraint_rhs],
-                )
-            else:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi == self.constraint_rhs],
-                )
-        else:
-            prob = cp.Problem(cp.Minimize(cost))
+            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
+        return xi, cost
 
-        # default solver is OSQP here but switches to ECOS for L2
+    def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
+        if self.use_constraints:
+            constraints = []
+            if self.equality_constraints:
+                constraints.append(
+                    self.constraint_lhs[self.constraint_separation_index :, :] @ xi
+                    == self.constraint_rhs[self.constraint_separation_index :],
+                )
+            if self.inequality_constraints:
+                constraints.append(
+                    self.constraint_lhs[: self.constraint_separation_index, :] @ xi
+                    <= self.constraint_rhs[: self.constraint_separation_index]
+                )
+            prob = cp.Problem(cp.Minimize(cost), constraints)
+        else:
+            cp.Problem(cp.Minimize(cost))
+
+        prob_clone = deepcopy(prob)
+        # default solver is SCS/OSQP here but switches to ECOS for L2
         try:
             prob.solve(
                 max_iter=self.max_iter,
-                eps_abs=self.tol,
-                eps_rel=self.tol,
+                eps_abs=tol,
+                eps_rel=tol,
                 verbose=self.verbose_cvxpy,
             )
         # Annoying error coming from L2 norm switching to use the ECOS
         # solver, which uses "max_iters" instead of "max_iter", and
         # similar semantic changes for the other variables.
-        except TypeError:
+        except (TypeError, ValueError):
             try:
-                prob.solve(abstol=self.tol, reltol=self.tol, verbose=self.verbose_cvxpy)
+                prob = prob_clone
+                prob.solve(max_iters=self.max_iter, verbose=self.verbose_cvxpy)
+                xi = prob.variables()[0]
             except cp.error.SolverError:
-                print("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
+                warnings.warn("Solver failed, setting coefs to zeros")
+                xi.value = np.zeros(var_len)
         except cp.error.SolverError:
-            print("Solver failed, setting coefs to zeros")
-            xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
+            try:
+                prob = prob_clone
+                prob.solve(max_iter=self.max_iter, verbose=self.verbose_cvxpy)
+                xi = prob.variables()[0]
+            except cp.error.SolverError:
+                warnings.warn("Solver failed, setting coefs to zeros")
+                xi.value = np.zeros(var_len)
 
         if xi.value is None:
             warnings.warn(
@@ -315,7 +339,7 @@ class ConstrainedSR3(SR3):
                 ConvergenceWarning,
             )
             return None
-        coef_new = (xi.value).reshape(coef_sparse.shape)
+        coef_new = (xi.value).reshape(coef_prev.shape)
         return coef_new
 
     def _update_sparse_coef(self, coef_full):
@@ -422,7 +446,11 @@ class ConstrainedSR3(SR3):
 
         objective_history = []
         if self.inequality_constraints:
-            coef_sparse = self._update_coef_cvxpy(x_expanded, y, coef_sparse)
+            var_len = coef_sparse.shape[0] * coef_sparse.shape[1]
+            xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
+            coef_sparse = self._update_coef_cvxpy(
+                xi, cost, var_len, coef_sparse, self.tol
+            )
             objective_history.append(self._objective(x, y, 0, coef_full, coef_sparse))
         else:
             for k in range(self.max_iter):
@@ -461,9 +489,8 @@ class ConstrainedSR3(SR3):
                     break
             else:
                 warnings.warn(
-                    "SR3._reduce did not converge after {} iterations.".format(
-                        self.max_iter
-                    ),
+                    f"ConstrainedSR3 did not converge after {self.max_iter}"
+                    " iterations.",
                     ConvergenceWarning,
                 )
         if self.use_constraints and self.constraint_order.lower() == "target":

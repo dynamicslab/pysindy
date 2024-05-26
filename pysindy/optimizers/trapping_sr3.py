@@ -68,9 +68,6 @@ class TrappingSR3(SR3):
 
     Parameters
     ----------
-    evolve_w : bool, optional (default True)
-        If false, don't update w and just minimize over (m, A)
-
     threshold : float, optional (default 0.1)
         Determines the strength of the regularization. When the
         regularization function R is the L0 norm, the regularization
@@ -246,7 +243,6 @@ class TrappingSR3(SR3):
 
     def __init__(
         self,
-        evolve_w=True,
         threshold=0.1,
         eps_solver=1e-7,
         inequality_constraints=False,
@@ -330,7 +326,6 @@ class TrappingSR3(SR3):
             raise ValueError("tol and tol_m must be positive")
 
         self.mod_matrix = mod_matrix
-        self.evolve_w = evolve_w
         self.eps_solver = eps_solver
         self.inequality_constraints = inequality_constraints
         self.m0 = m0
@@ -350,24 +345,17 @@ class TrappingSR3(SR3):
         self.PW_history_ = []
         self.PWeigs_history_ = []
         self.history_ = []
-        self.objective_history = objective_history
         self.unbias = False
         self.verbose_cvxpy = verbose_cvxpy
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
         )
-        if inequality_constraints:
-            if not evolve_w:
-                raise ValueError(
-                    "Use of inequality constraints requires solving for xi "
-                    " (evolve_w=True)."
-                )
-            if not self.use_constraints:
-                raise ValueError(
-                    "Use of inequality constraints requires constraint_rhs "
-                    "and constraint_lhs "
-                    "variables to be passed to the Optimizer class."
-                )
+        if inequality_constraints and not self.use_constraints:
+            raise ValueError(
+                "Use of inequality constraints requires constraint_rhs "
+                "and constraint_lhs "
+                "variables to be passed to the Optimizer class."
+            )
 
         if self.use_constraints:
             if constraint_order not in ("feature", "target"):
@@ -788,34 +776,31 @@ class TrappingSR3(SR3):
 
             # update w
             coef_prev = coef_sparse
-            if self.evolve_w:
-                if (self.threshold > 0.0) or self.inequality_constraints:
-                    coef_sparse = self._solve_sparse_relax_and_split(
-                        r, n_features, x_expanded, y, Pmatrix, A, coef_prev
-                    )
-                else:
-                    # if threshold = 0, there is analytic expression
-                    # for the solve over the coefficients,
-                    # which is coded up here separately
-                    pTp = np.dot(Pmatrix.T, Pmatrix)
-                    # notice reshaping PQ here requires fortran-ordering
-                    PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
-                    PQ = np.reshape(PQ, (r * r * r, r * n_features), "F")
-                    PQTPQ = np.dot(PQ.T, PQ)
-                    PQ = np.reshape(self.PQ_, (r, r, r, r * n_features), "F")
-                    PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
-                    PQ_ep = (
-                        PQ
-                        + np.transpose(PQ, [1, 2, 0, 3])
-                        + np.transpose(PQ, [2, 0, 1, 3])
-                    )
-                    PQ_ep = np.reshape(PQ_ep, (r * r * r, r * n_features), "F")
-                    PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
-                    H = xTx + pTp / self.eta + PQTPQ / self.alpha + PQTPQ_ep / self.beta
-                    P_transpose_A = np.dot(Pmatrix.T, A.flatten())
-                    coef_sparse = self._solve_nonsparse_relax_and_split(
-                        H, xTy, P_transpose_A, coef_prev
-                    )
+            if (self.threshold > 0.0) or self.inequality_constraints:
+                coef_sparse = self._solve_sparse_relax_and_split(
+                    r, n_features, x_expanded, y, Pmatrix, A, coef_prev
+                )
+            else:
+                # if threshold = 0, there is analytic expression
+                # for the solve over the coefficients,
+                # which is coded up here separately
+                pTp = np.dot(Pmatrix.T, Pmatrix)
+                # notice reshaping PQ here requires fortran-ordering
+                PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
+                PQ = np.reshape(PQ, (r * r * r, r * n_features), "F")
+                PQTPQ = np.dot(PQ.T, PQ)
+                PQ = np.reshape(self.PQ_, (r, r, r, r * n_features), "F")
+                PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
+                PQ_ep = (
+                    PQ + np.transpose(PQ, [1, 2, 0, 3]) + np.transpose(PQ, [2, 0, 1, 3])
+                )
+                PQ_ep = np.reshape(PQ_ep, (r * r * r, r * n_features), "F")
+                PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
+                H = xTx + pTp / self.eta + PQTPQ / self.alpha + PQTPQ_ep / self.beta
+                P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+                coef_sparse = self._solve_nonsparse_relax_and_split(
+                    H, xTy, P_transpose_A, coef_prev
+                )
 
             # If problem over xi becomes infeasible, break out of the loop
             if coef_sparse is None:

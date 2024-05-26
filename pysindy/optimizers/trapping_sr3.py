@@ -1,11 +1,30 @@
 import warnings
+from itertools import combinations as combo_nr
+from itertools import product
+from itertools import repeat
+from math import comb
+from typing import cast
+from typing import NewType
 
 import cvxpy as cp
 import numpy as np
+from numpy.typing import NBitBase
+from numpy.typing import NDArray
 from sklearn.exceptions import ConvergenceWarning
 
+from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
 from .sr3 import SR3
+
+AnyFloat = np.dtype[np.floating[NBitBase]]
+Int1D = np.ndarray[tuple[int], np.dtype[np.int_]]
+Float2D = np.ndarray[tuple[int, int], AnyFloat]
+Float3D = np.ndarray[tuple[int, int, int], AnyFloat]
+Float4D = np.ndarray[tuple[int, int, int, int], AnyFloat]
+Float5D = np.ndarray[tuple[int, int, int, int, int], AnyFloat]
+FloatND = NDArray[np.floating[NBitBase]]
+NFeat = NewType("NFeat", int)
+NTarget = NewType("NTarget", int)
 
 
 class TrappingSR3(SR3):
@@ -361,173 +380,120 @@ class TrappingSR3(SR3):
             self.unbias = False
             self.constraint_order = constraint_order
 
-    def _set_Ptensors(self, r):
+    @staticmethod
+    def _build_PC(polyterms: list[tuple[int, Int1D]]) -> Float3D:
+        r"""Build the matrix that projects out the constant term of a library
+
+        Coefficients in each polynomial equation :math:`i\in \{1,\dots, r\}` can
+        be stored in an array arranged as written out on paper (e.g.
+        :math:` f_i(x) = a^i_0 + a^i_1 x_1, a^i_2 x_1x_2, \dots a^i_N x_r^2`) or
+        in a series of matrices :math:`E \in \mathbb R^r`,
+        :math:`L\in \mathbb R^{r\times r}`, and (without loss of generality) in
+        :math:`Q\in \mathbb R^{r \times r \times r}, where each
+        :math:`Q^{(i)}_{j,k}` is symmetric in the last two indexes.
+
+        This function builds the projection tensor for extracting the constant
+        terms :math:`E` from a set of coefficients in the first representation.
+
+        Args:
+            polyterms: the ordering and meaning of terms in the equations.  Each
+                entry represents a term in the equation and comprises its index
+                and an array of exponents for each variable
+
+        Returns:
+            3rd order tensor
+        """
+        n_targets, n_features, _, _, _ = _build_lib_info(polyterms)
+        c_terms = [ind for ind, exps in polyterms if sum(exps) == 0]
+        PC = np.zeros((n_targets, n_targets, n_features))
+        if c_terms:  # either a length 0 or length 1 list
+            PC[range(n_targets), range(n_targets), c_terms[0]] = 1.0
+        return PC
+
+    @staticmethod
+    def _build_PL(polyterms: list[tuple[int, Int1D]]) -> tuple[Float4D, Float4D]:
+        r"""Build the matrix that projects out the linear terms of a library
+
+        Coefficients in each polynomial equation :math:`i\in \{1,\dots, r\}` can
+        be stored in an array arranged as written out on paper (e.g.
+        :math:` f_i(x) = a^i_0 + a^i_1 x_1, a^i_2 x_1x_2, \dots a^i_N x_r^2`) or
+        in a series of matrices :math:`E \in \mathbb R^r`,
+        :math:`L\in \mathbb R^{r\times r}`, and (without loss of generality) in
+        :math:`Q\in \mathbb R^{r \times r \times r}, where each
+        :math:`Q^{(i)}_{j,k}` is symmetric in the last two indexes.
+
+        This function builds the projection tensor for extracting the linear
+        terms :math:`L` from a set of coefficients in the first representation.
+        The function also calculates the projection tensor for extracting the
+        symmetrized version of L
+
+        Args:
+            polyterms: the ordering and meaning of terms in the equations.  Each
+                entry represents a term in the equation and comprises its index
+                and an array of exponents for each variable
+
+        Returns:
+            Two 4th order tensors, the first one symmetric in the first two
+            indexes.
+        """
+        n_targets, n_features, lin_terms, _, _ = _build_lib_info(polyterms)
+        PL_tensor_unsym = np.zeros((n_targets, n_targets, n_targets, n_features))
+        tgts = range(n_targets)
+        for j in range(n_targets):
+            PL_tensor_unsym[tgts, j, tgts, lin_terms[j]] = 1
+        PL_tensor = (PL_tensor_unsym + np.transpose(PL_tensor_unsym, [1, 0, 2, 3])) / 2
+        return cast(Float4D, PL_tensor), cast(Float4D, PL_tensor_unsym)
+
+    @staticmethod
+    def _build_PQ(polyterms: list[tuple[int, Int1D]]) -> Float5D:
+        r"""Build the matrix that projects out the quadratic terms of a library
+
+        Coefficients in each polynomial equation :math:`i\in \{1,\dots, r\}` can
+        be stored in an array arranged as written out on paper (e.g.
+        :math:` f_i(x) = a^i_0 + a^i_1 x_1, a^i_2 x_1x_2, \dots a^i_N x_r^2`) or
+        in a series of matrices :math:`E \in \mathbb R^r`,
+        :math:`L\in \mathbb R^{r\times r}`, and (without loss of generality) in
+        :math:`Q\in \mathbb R^{r \times r \times r}, where each
+        :math:`Q^{(i)}_{j,k}` is symmetric in the last two indexes.
+
+        This function builds the projection tensor for extracting the quadratic
+        forms :math:`Q` from a set of coefficients in the first representation.
+
+        Args:
+            polyterms: the ordering and meaning of terms in the equations.  Each
+                entry represents a term in the equation and comprises its index
+                and an array of exponents for each variable
+
+        Returns:
+            5th order tensor symmetric in second and third indexes.
+        """
+        n_targets, n_features, _, pure_terms, mixed_terms = _build_lib_info(polyterms)
+        PQ = np.zeros((n_targets, n_targets, n_targets, n_targets, n_features))
+        tgts = range(n_targets)
+        for j, k in product(*repeat(range(n_targets), 2)):
+            if j == k:
+                PQ[tgts, j, k, tgts, pure_terms[j]] = 1.0
+            if j != k:
+                PQ[tgts, j, k, tgts, mixed_terms[frozenset({j, k})]] = 1 / 2
+        return cast(Float5D, PQ)
+
+    def _set_Ptensors(
+        self, n_targets: int
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Make the projection tensors used for the algorithm."""
-        N = self.n_features
-        # If bias term is included, need to shift the tensor index
-        if N > int((r**2 + 3 * r) / 2.0):
-            offset = 1
-        else:
-            offset = 0
+        lib = PolynomialLibrary(2, include_bias=self._include_bias).fit(
+            np.zeros((1, n_targets))
+        )
+        polyterms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
 
-        # If bias term is not included, make it zero
-        PC_tensor = np.zeros((r, r, N))
-        if offset:
-            for i in range(r):
-                PC_tensor[i, i, 0] = 1.0
-
-        # delta_{il}delta_{jk}
-        PL_tensor = np.zeros((r, r, r, N))
-        PL_tensor_unsym = np.zeros((r, r, r, N))
-        for i in range(r):
-            for j in range(r):
-                for k in range(r):
-                    for kk in range(offset, N):
-                        if i == k and j == (kk - offset):
-                            PL_tensor_unsym[i, j, k, kk] = 1.0
-
-        # Now symmetrize PL
-        for i in range(r):
-            for j in range(offset, N):
-                PL_tensor[:, :, i, j] = 0.5 * (
-                    PL_tensor_unsym[:, :, i, j] + PL_tensor_unsym[:, :, i, j].T
-                )
-
-        # if j == k, delta_{il}delta_{N-r+j,n}
-        # if j != k, delta_{il}delta_{r+j*(2*r-j-3)/2+k-1,n} if j<k; swap j & k
-        # in the second delta operator if j > k
-        # PT projects out the transpose of the 1st dimension and 2nd dimension of Q
-        PQ_tensor = np.zeros((r, r, r, r, N))
-        PT_tensor = np.zeros((r, r, r, r, N))
-        for i in range(r):
-            for j in range(r):
-                for k in range(r):
-                    for kk in range(r):
-                        for n in range(N):
-                            if (j == k) and (n == N - r + j) and (i == kk):
-                                PQ_tensor[i, j, k, kk, n] = 1.0
-                                PT_tensor[j, i, k, kk, n] = 1.0
-                            if (
-                                (j != k)
-                                and (
-                                    (n - offset)
-                                    == r
-                                    + np.min([j, k]) * (2 * r - np.min([j, k]) - 3) / 2
-                                    + np.max([j, k])
-                                    - 1
-                                )
-                                and (i == kk)
-                            ):
-                                PQ_tensor[i, j, k, kk, n] = 1 / 2.0
-                                PT_tensor[j, i, k, kk, n] = 1 / 2.0
-
+        PC_tensor = self._build_PC(polyterms)
+        PL_tensor, PL_tensor_unsym = self._build_PL(polyterms)
+        PQ_tensor = self._build_PQ(polyterms)
+        PT_tensor = PQ_tensor.transpose([1, 0, 2, 3, 4])
         # PM is the sum of PQ and PQ which projects out the sum of Qijk and Qjik
         PM_tensor = PQ_tensor + PT_tensor
 
         return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
-
-    def _bad_PL(self, PL):
-        """Check if PL tensor is properly defined"""
-        tol = 1e-10
-        return np.any((np.transpose(PL, [1, 0, 2, 3]) - PL) > tol)
-
-    def _bad_PQ(self, PQ):
-        """Check if PQ tensor is properly defined"""
-        tol = 1e-10
-        return np.any((np.transpose(PQ, [0, 2, 1, 3, 4]) - PQ) > tol)
-
-    def _bad_PT(self, PT):
-        """Check if PT tensor is properly defined"""
-        tol = 1e-10
-        return np.any((np.transpose(PT, [2, 1, 0, 3, 4]) - PT) > tol)
-
-    def _check_P_matrix(self, r, n_features, N):
-        """Check if P tensor is properly defined"""
-        # If these tensors are not passed, or incorrect shape, assume zeros
-        if self.PQ_ is None:
-            self.PQ_ = np.zeros((r, r, r, r, n_features))
-            warnings.warn(
-                "The PQ tensor (a requirement for the stability promotion) was"
-                " not set, so setting this tensor to all zeros. "
-            )
-        elif (self.PQ_).shape != (r, r, r, r, n_features) and (self.PQ_).shape != (
-            r,
-            r,
-            r,
-            r,
-            N,
-        ):
-            self.PQ_ = np.zeros((r, r, r, r, n_features))
-            warnings.warn(
-                "The PQ tensor (a requirement for the stability promotion) was"
-                " initialized with incorrect dimensions, "
-                "so setting this tensor to all zeros "
-                "(with the correct dimensions). "
-            )
-        if self.PT_ is None:
-            self.PT_ = np.zeros((r, r, r, r, n_features))
-            warnings.warn(
-                "The PT tensor (a requirement for the stability promotion) was"
-                " not set, so setting this tensor to all zeros. "
-            )
-        elif (self.PT_).shape != (r, r, r, r, n_features) and (self.PT_).shape != (
-            r,
-            r,
-            r,
-            r,
-            N,
-        ):
-            self.PT_ = np.zeros((r, r, r, r, n_features))
-            warnings.warn(
-                "The PT tensor (a requirement for the stability promotion) was"
-                " initialized with incorrect dimensions, "
-                "so setting this tensor to all zeros "
-                "(with the correct dimensions). "
-            )
-        if self.PL_ is None:
-            self.PL_ = np.zeros((r, r, r, n_features))
-            warnings.warn(
-                "The PL tensor (a requirement for the stability promotion) was"
-                " not set, so setting this tensor to all zeros. "
-            )
-        elif (self.PL_).shape != (r, r, r, n_features) and (self.PL_).shape != (
-            r,
-            r,
-            r,
-            N,
-        ):
-            self.PL_ = np.zeros((r, r, r, n_features))
-            warnings.warn(
-                "The PL tensor (a requirement for the stability promotion) was"
-                " initialized with incorrect dimensions, "
-                "so setting this tensor to all zeros "
-                "(with the correct dimensions). "
-            )
-
-        # Check if the tensor symmetries are properly defined
-        if self._bad_PL(self.PL_):
-            raise ValueError("PL tensor was passed but the symmetries are not correct")
-        if self._bad_PQ(self.PQ_):
-            raise ValueError("PQ tensor was passed but the symmetries are not correct")
-        if self._bad_PT(self.PT_):
-            raise ValueError("PT tensor was passed but the symmetries are not correct")
-
-        # If PL/PQ/PT finite and correct, so trapping theorem is being used,
-        # then make sure library is quadratic and correct shape
-        if (
-            np.any(self.PL_ != 0.0)
-            or np.any(self.PQ_ != 0.0)
-            or np.any(self.PT_ != 0.0)
-        ) and n_features != N:
-            print(
-                "The feature library is the wrong shape or not quadratic, "
-                "so please correct this if you are attempting to use the "
-                "trapping algorithm with the stability term included. Setting "
-                "PL and PQ tensors to zeros for now."
-            )
-            self.PL_ = np.zeros((r, r, r, n_features))
-            self.PQ_ = np.zeros((r, r, r, r, n_features))
-            self.PT_ = np.zeros((r, r, r, r, n_features))
 
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
         """Solves the coefficient update analytically if threshold = 0"""
@@ -742,6 +708,8 @@ class TrappingSR3(SR3):
         self.n_features = n_features
         r = y.shape[1]
         N = n_features  # int((r ** 2 + 3 * r) / 2.0)
+        if N > int((r**2 + 3 * r) / 2.0):
+            self._include_bias = True
 
         if self.mod_matrix is None:
             self.mod_matrix = np.eye(r)
@@ -756,15 +724,13 @@ class TrappingSR3(SR3):
             self.PT_,
             self.PM_,
         ) = self._set_Ptensors(r)
-        # make sure dimensions/symmetries are correct
-        self._check_P_matrix(r, n_features, N)
 
         # Set initial coefficients
         if self.use_constraints and self.constraint_order.lower() == "target":
             self.constraint_lhs = reorder_constraints(
                 self.constraint_lhs, n_features, output_order="target"
             )
-        coef_sparse = self.coef_.T
+        coef_sparse: np.ndarray[tuple[NFeat, NTarget], AnyFloat] = self.coef_.T
 
         # Print initial values for each term in the optimization
         if self.verbose:
@@ -897,3 +863,123 @@ class TrappingSR3(SR3):
 
         self.coef_ = coef_sparse.T
         self.objective_history = objective_history
+
+
+def _make_constraints(n_tgts: int, **kwargs):
+    """Create constraints for the Quadratic terms in TrappingSR3.
+
+    These are the constraints from equation 5 of the Trapping SINDy paper.
+
+    Args:
+        n_tgts: number of coordinates or modes for which you're fitting an ODE.
+        kwargs: Keyword arguments to PolynomialLibrary such as
+            ``include_bias``.
+
+    Returns:
+        A tuple of the constraint zeros, and a constraint matrix to multiply
+        by the coefficient matrix of Polynomial terms. Number of constraints is
+        ``n_tgts + 2 * math.comb(n_tgts, 2) + math.comb(n_tgts, 3)``.
+        Constraint matrix is of shape ``(n_constraint, n_feature, n_tgt)``.
+        To get "feature" order constraints, use
+        ``np.reshape(constraint_matrix, (n_constraints, -1))``.
+        To get "target" order constraints, transpose axis 1 and 2 before
+        reshaping.
+    """
+    lib = PolynomialLibrary(2, **kwargs).fit(np.zeros((1, n_tgts)))
+    terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+    _, n_terms, linear_terms, pure_terms, mixed_terms = _build_lib_info(terms)
+    # index of tgt -> index of its pure quadratic term
+    pure_terms = {np.argmax(exps): t_ind for t_ind, exps in terms if max(exps) == 2}
+    # two indexes of tgts -> index of their mixed quadratic term
+    mixed_terms = {
+        frozenset(np.argwhere(exponent == 1).flatten()): t_ind
+        for t_ind, exponent in terms
+        if max(exponent) == 1 and sum(exponent) == 2
+    }
+    constraint_mat = np.vstack(
+        (
+            _pure_constraints(n_tgts, n_terms, pure_terms),
+            _antisymm_double_constraint(n_tgts, n_terms, pure_terms, mixed_terms),
+            _antisymm_triple_constraints(n_tgts, n_terms, mixed_terms),
+        )
+    )
+
+    return np.zeros(len(constraint_mat)), constraint_mat
+
+
+def _pure_constraints(n_tgts: int, n_terms: int, pure_terms: dict[int, int]) -> Float2D:
+    """Set constraints for coefficients adorning terms like a_i^3 = 0"""
+    constraint_mat = np.zeros((n_tgts, n_terms, n_tgts))
+    for constr_ind, (tgt_ind, term_ind) in zip(range(n_tgts), pure_terms.items()):
+        constraint_mat[constr_ind, term_ind, tgt_ind] = 1.0
+    return constraint_mat
+
+
+def _antisymm_double_constraint(
+    n_tgts: int,
+    n_terms: int,
+    pure_terms: dict[int, int],
+    mixed_terms: dict[frozenset[int], int],
+) -> Float2D:
+    """Set constraints for coefficients adorning terms like a_i^2 * a_j=0"""
+    constraint_mat_1 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i^2 * a_j
+    constraint_mat_2 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i * a_j^2
+    for constr_ind, ((tgt_i, tgt_j), mix_term) in zip(
+        range(n_tgts), mixed_terms.items()
+    ):
+        constraint_mat_1[constr_ind, mix_term, tgt_i] = 1.0
+        constraint_mat_1[constr_ind, pure_terms[tgt_i], tgt_j] = 1.0
+        constraint_mat_2[constr_ind, mix_term, tgt_j] = 1.0
+        constraint_mat_2[constr_ind, pure_terms[tgt_j], tgt_i] = 1.0
+
+    return np.concatenate((constraint_mat_1, constraint_mat_2), axis=0)
+
+
+def _antisymm_triple_constraints(
+    n_tgts: int, n_terms: int, mixed_terms: dict[frozenset[int], int]
+) -> Float2D:
+    constraint_mat = np.zeros((comb(n_tgts, 3), n_terms, n_tgts))  # a_ia_ja_k
+
+    def find_symm_term(a, b):
+        return mixed_terms[frozenset({a, b})]
+
+    for constr_ind, (tgt_i, tgt_j, tgt_k) in enumerate(combo_nr(range(n_tgts), 3)):
+        constraint_mat[constr_ind, find_symm_term(tgt_j, tgt_k), tgt_i] = 1
+        constraint_mat[constr_ind, find_symm_term(tgt_k, tgt_i), tgt_j] = 1
+        constraint_mat[constr_ind, find_symm_term(tgt_i, tgt_j), tgt_k] = 1
+
+    return constraint_mat
+
+
+def _build_lib_info(
+    polyterms: list[tuple[int, Int1D]]
+) -> tuple[int, int, dict[int, int], dict[int, int], dict[frozenset[int], int]]:
+    """From polynomial, calculate various useful info
+
+    Args:
+        polyterms.  The output of PolynomialLibrary.powers_.  Each term is
+            a tuple of it's index in the ordering and a 1D array of the
+            exponents of each feature.
+
+    Returns:
+        the number of targets
+        the number of features
+        a dictionary from each target to its linear term index
+        a dictionary from each target to its quadratic term index
+        a dictionary from each pair of targets to its mixed term index
+    """
+    try:
+        n_targets = len(polyterms[0][1])
+    except IndexError:
+        raise ValueError("Passed a polynomial library with no terms")
+    n_features = len(polyterms)
+    mixed_terms = {
+        frozenset(np.argwhere(exps == 1).flatten()): t_ind
+        for t_ind, exps in polyterms
+        if max(exps) == 1 and sum(exps) == 2
+    }
+    pure_terms = {np.argmax(exps): t_ind for t_ind, exps in polyterms if max(exps) == 2}
+    linear_terms = {
+        np.argmax(exps): t_ind for t_ind, exps in polyterms if sum(exps) == 1
+    }
+    return n_targets, n_features, linear_terms, pure_terms, mixed_terms

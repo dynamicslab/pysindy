@@ -5,6 +5,8 @@ from itertools import repeat
 from math import comb
 from typing import cast
 from typing import NewType
+from typing import Optional
+from typing import Union
 
 import cvxpy as cp
 import numpy as np
@@ -14,7 +16,7 @@ from sklearn.exceptions import ConvergenceWarning
 
 from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
-from .sr3 import SR3
+from .constrained_sr3 import ConstrainedSR3
 
 AnyFloat = np.dtype[np.floating[NBitBase]]
 Int1D = np.ndarray[tuple[int], np.dtype[np.int_]]
@@ -27,7 +29,7 @@ NFeat = NewType("NFeat", int)
 NTarget = NewType("NTarget", int)
 
 
-class TrappingSR3(SR3):
+class TrappingSR3(ConstrainedSR3):
     """
     Generalized trapping variant of sparse relaxed regularized regression.
     This optimizer can be used to identify quadratically nonlinear systems with
@@ -243,91 +245,78 @@ class TrappingSR3(SR3):
 
     def __init__(
         self,
-        threshold=0.1,
-        eps_solver=1e-7,
-        inequality_constraints=False,
-        eta=None,
-        alpha=None,
-        beta=None,
-        mod_matrix=None,
-        alpha_A=None,
-        alpha_m=None,
-        gamma=-0.1,
-        tol=1e-5,
-        tol_m=1e-5,
-        thresholder="l1",
-        thresholds=None,
-        max_iter=30,
-        accel=False,
-        normalize_columns=False,
-        fit_intercept=False,
-        copy_X=True,
-        m0=None,
-        A0=None,
-        objective_history=None,
-        constraint_lhs=None,
-        constraint_rhs=None,
-        constraint_order="target",
-        verbose=False,
-        verbose_cvxpy=False,
+        *,
+        _n_tgts: int = None,
+        _include_bias: bool = False,
+        _interaction_only: bool = False,
+        method: str = "global",
+        eta: Union[float, None] = None,
+        eps_solver: float = 1e-7,
+        alpha: Optional[float] = None,
+        beta: Optional[float] = None,
+        mod_matrix: Optional[NDArray] = None,
+        alpha_A: Union[float, None] = None,
+        alpha_m: Union[float, None] = None,
+        gamma: float = -0.1,
+        tol_m: float = 1e-5,
+        thresholder: str = "l1",
+        accel: bool = False,
+        m0: Union[NDArray, None] = None,
+        A0: Union[NDArray, None] = None,
+        **kwargs,
     ):
-        super(TrappingSR3, self).__init__(
-            threshold=threshold,
-            max_iter=max_iter,
-            normalize_columns=normalize_columns,
-            fit_intercept=fit_intercept,
-            copy_X=copy_X,
-            thresholder=thresholder,
-            thresholds=thresholds,
-            verbose=verbose,
-        )
-        if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
-            raise ValueError("Regularizer must be (weighted) L1 or L2")
-        if eta is None:
+        # n_tgts, constraints, etc are data-dependent parameters and belong in
+        # _reduce/fit ().  The following is a hack until we refactor how
+        # constraints are applied in ConstrainedSR3 and MIOSR
+        self._include_bias = _include_bias
+        self._interaction_only = _interaction_only
+        self._n_tgts = _n_tgts
+        if _n_tgts is None:
             warnings.warn(
-                "eta was not set, so defaulting to eta = 1e20 "
-                "with alpha_m = 1e-2 * eta, alpha_A = eta. Here eta is so "
-                "large that the stability term in the optimization "
-                "will be ignored."
+                "Trapping Optimizer initialized without _n_tgts.  It will likely"
+                " be unable to fit data"
             )
-            eta = 1e20
-            alpha_m = 1e18
-            alpha_A = 1e20
+            _n_tgts = 1
+        if method == "global":
+            if hasattr(kwargs, "constraint_separation_index"):
+                constraint_separation_index = kwargs["constraint_separation_index"]
+            elif kwargs.get("inequality_constraints", False):
+                constraint_separation_index = kwargs["constraint_lhs"].shape[0]
+            else:
+                constraint_separation_index = 0
+            constraint_rhs, constraint_lhs = _make_constraints(
+                _n_tgts, include_bias=_include_bias
+            )
+            constraint_order = kwargs.pop("constraint_order", "feature")
+            if constraint_order == "target":
+                constraint_lhs = np.transpose(constraint_lhs, [0, 2, 1])
+            constraint_lhs = np.reshape(constraint_lhs, (constraint_lhs.shape[0], -1))
+            try:
+                constraint_lhs = np.concatenate(
+                    (kwargs.pop("constraint_lhs"), constraint_lhs), 0
+                )
+                constraint_rhs = np.concatenate(
+                    (kwargs.pop("constraint_rhs"), constraint_rhs), 0
+                )
+            except KeyError:
+                pass
+
+            super().__init__(
+                constraint_lhs=constraint_lhs,
+                constraint_rhs=constraint_rhs,
+                constraint_separation_index=constraint_separation_index,
+                constraint_order=constraint_order,
+                equality_constraints=True,
+                thresholder=thresholder,
+                **kwargs,
+            )
+        elif method == "local":
+            super().__init__(thresholder=thresholder, **kwargs)
         else:
-            if alpha_m is None:
-                alpha_m = eta * 1e-2
-            if alpha_A is None:
-                alpha_A = eta
-        if eta <= 0:
-            raise ValueError("eta must be positive")
-        if alpha is None:
-            alpha = 1e20
-            warnings.warn(
-                "alpha was not set, so defaulting to alpha = 1e20 "
-                "which is so"
-                "large that the ||Qijk|| term in the optimization "
-                "will be essentially ignored."
-            )
-        if beta is None:
-            beta = 1e20
-            warnings.warn(
-                "beta was not set, so defaulting to beta = 1e20 "
-                "which is so"
-                "large that the ||Qijk + Qjik + Qkij|| "
-                "term in the optimization will be essentially ignored."
-            )
-        if alpha_m < 0 or alpha_m > eta:
-            raise ValueError("0 <= alpha_m <= eta")
-        if alpha_A < 0 or alpha_A > eta:
-            raise ValueError("0 <= alpha_A <= eta")
-        if gamma >= 0:
-            raise ValueError("gamma must be negative")
-        if tol <= 0 or tol_m <= 0 or eps_solver <= 0:
-            raise ValueError("tol and tol_m must be positive")
+            raise ValueError(f"Can either use 'global' or 'local' method, not {method}")
 
         self.mod_matrix = mod_matrix
         self.eps_solver = eps_solver
-        self.inequality_constraints = inequality_constraints
         self.m0 = m0
         self.A0 = A0
         self.alpha_A = alpha_A
@@ -336,37 +325,68 @@ class TrappingSR3(SR3):
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
-        self.tol = tol
         self.tol_m = tol_m
         self.accel = accel
-        self.A_history_ = []
-        self.m_history_ = []
-        self.p_history_ = []
-        self.PW_history_ = []
-        self.PWeigs_history_ = []
-        self.history_ = []
         self.unbias = False
-        self.verbose_cvxpy = verbose_cvxpy
         self.use_constraints = (constraint_lhs is not None) and (
             constraint_rhs is not None
         )
-        if inequality_constraints and not self.use_constraints:
-            raise ValueError(
-                "Use of inequality constraints requires constraint_rhs "
-                "and constraint_lhs "
-                "variables to be passed to the Optimizer class."
+        self.__post_init_guard()
+
+    def __post_init_guard(self):
+        """Conduct initialization post-init, as required by scikitlearn API"""
+        if self.thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
+            raise ValueError("Regularizer must be (weighted) L1 or L2")
+        if self.eta is None:
+            warnings.warn(
+                "eta was not set, so defaulting to eta = 1e20 "
+                "with alpha_m = 1e-2 * eta, alpha_A = eta. Here eta is so "
+                "large that the stability term in the optimization "
+                "will be ignored."
+            )
+            self.eta = 1e20
+            self.alpha_m = 1e18
+            self.alpha_A = 1e20
+        else:
+            if self.alpha_m is None:
+                self.alpha_m = self.eta * 1e-2
+            if self.alpha_A is None:
+                self.alpha_A = self.eta
+        if self.eta <= 0:
+            raise ValueError("eta must be positive")
+        if self.alpha is None:
+            self.alpha = 1e20
+            warnings.warn(
+                "alpha was not set, so defaulting to alpha = 1e20 "
+                "which is so"
+                "large that the ||Qijk|| term in the optimization "
+                "will be essentially ignored."
+            )
+        if self.beta is None:
+            self.beta = 1e20
+            warnings.warn(
+                "beta was not set, so defaulting to beta = 1e20 "
+                "which is so"
+                "large that the ||Qijk + Qjik + Qkij|| "
+                "term in the optimization will be essentially ignored."
             )
 
-        if self.use_constraints:
-            if constraint_order not in ("feature", "target"):
-                raise ValueError(
-                    "constraint_order must be either 'feature' or 'target'"
-                )
+        if self.alpha_m < 0 or self.alpha_m > self.eta:
+            raise ValueError("0 <= alpha_m <= eta")
+        if self.alpha_A < 0 or self.alpha_A > self.eta:
+            raise ValueError("0 <= alpha_A <= eta")
+        if self.gamma >= 0:
+            raise ValueError("gamma must be negative")
+        if self.tol <= 0 or self.tol_m <= 0 or self.eps_solver <= 0:
+            raise ValueError("tol and tol_m must be positive")
+        if self.inequality_constraints and self.threshold == 0.0:
+            raise ValueError(
+                "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
+            )
 
-            self.constraint_lhs = constraint_lhs
-            self.constraint_rhs = constraint_rhs
-            self.unbias = False
-            self.constraint_order = constraint_order
+    def set_params(self, **kwargs):
+        super().set_params(**kwargs)
+        self.__post_init_guard()
 
     @staticmethod
     def _build_PC(polyterms: list[tuple[int, Int1D]]) -> Float3D:

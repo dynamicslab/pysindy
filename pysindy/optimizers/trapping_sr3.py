@@ -201,6 +201,9 @@ class TrappingSR3(ConstrainedSR3):
         A0: Union[NDArray, None] = None,
         **kwargs,
     ):
+        self.alpha = alpha
+        self.beta = beta
+        self.mod_matrix = mod_matrix
         # n_tgts, constraints, etc are data-dependent parameters and belong in
         # _reduce/fit ().  The following is a hack until we refactor how
         # constraints are applied in ConstrainedSR3 and MIOSR
@@ -285,10 +288,8 @@ class TrappingSR3(ConstrainedSR3):
             raise ValueError("gamma must be negative")
         if self.tol <= 0 or self.tol_m <= 0 or self.eps_solver <= 0:
             raise ValueError("tol and tol_m must be positive")
-        if self.inequality_constraints and self.relax_optim and self.threshold == 0.0:
-            raise ValueError(
-                "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
-            )
+        if self.inequality_constraints and self.threshold == 0.0:
+            raise ValueError("Inequality constraints requires threshold!=0")
 
     def set_params(self, **kwargs):
         super().set_params(**kwargs)

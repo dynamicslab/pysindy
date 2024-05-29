@@ -520,9 +520,6 @@ eta = 1.0e10
 alpha_m = 5.0e-1 * eta
 
 
-# run trapping SINDy with "relax_optim = False" here, uses CVXPY now
-# so this tends to be much slower but often need far fewer algorithm iterations.
-# For this problem, a single (very slow) update is all that is needed!
 sindy_opt = ps.TrappingSR3(
     _n_tgts=6,
     _include_bias=True,
@@ -594,7 +591,6 @@ print("Time-averaged derivative error = ", np.nanmean(deriv_error))
 #
 # $$
 # \begin{align}
-# \label{eq:burgers}
 #     \dot{u} &= -(U + u)\partial_x u + \nu \partial_{xx}^2u + g(x,t),
 # \end{align}
 # $$
@@ -605,7 +601,6 @@ print("Time-averaged derivative error = ", np.nanmean(deriv_error))
 #
 # $$
 # \begin{equation}
-# \label{eq:burgers_galerkin}
 #     \dot{a}_k = \left( \delta_{|k|1} \sigma - \nu k^2  - ikU \right) a_k - \sum_{\ell=-r}^{r} i \ell a_{\ell} a_{k - \ell}.
 # \end{equation}
 # $$

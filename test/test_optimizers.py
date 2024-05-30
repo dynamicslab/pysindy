@@ -510,7 +510,6 @@ def test_stable_linear_sr3_linear_library():
     [
         dict(),
         dict(accel=True),
-        dict(relax_optim=False),
     ],
 )
 @pytest.mark.parametrize(
@@ -938,7 +937,7 @@ def test_constrained_inequality_constraints(data_lorenz, params):
 )
 def test_trapping_cost_function(params):
     expected = params.pop("expected")
-    opt = TrappingSR3(relax_optim=True, **params)
+    opt = TrappingSR3(**params)
     x = np.eye(2)
     y = np.ones(2)
     xi, cost = opt._create_var_and_part_cost(2, x, y)
@@ -960,17 +959,6 @@ def test_trapping_inequality_constraints():
         constraint_rhs=constraint_rhs,
         constraint_order="feature",
         inequality_constraints=True,
-        relax_optim=True,
-    )
-    opt.fit(x, y)
-    assert np.all(np.dot(constraint_matrix, (opt.coef_).flatten()) <= constraint_rhs)
-    # Run Trapping SR3 with CVXPY for the m solve
-    opt = TrappingSR3(
-        constraint_lhs=constraint_matrix,
-        constraint_rhs=constraint_rhs,
-        constraint_order="feature",
-        inequality_constraints=True,
-        relax_optim=False,
     )
     opt.fit(x, y)
     assert np.all(np.dot(constraint_matrix, (opt.coef_).flatten()) <= constraint_rhs)
@@ -1023,7 +1011,6 @@ def test_inequality_constraints_reqs():
             constraint_rhs=constraint_rhs,
             constraint_order="feature",
             inequality_constraints=True,
-            relax_optim=True,
         )
 
 

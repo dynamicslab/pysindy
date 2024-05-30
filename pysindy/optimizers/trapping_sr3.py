@@ -5,6 +5,7 @@ from itertools import repeat
 from math import comb
 from typing import cast
 from typing import NewType
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
@@ -25,6 +26,7 @@ from .constrained_sr3 import ConstrainedSR3
 AnyFloat = np.dtype[np.floating[NBitBase]]
 Int1D = np.ndarray[tuple[int], np.dtype[np.int_]]
 Float2D = np.ndarray[tuple[int, int], AnyFloat]
+Float3D = np.ndarray[tuple[int, int, int], AnyFloat]
 Float4D = np.ndarray[tuple[int, int, int, int], AnyFloat]
 Float5D = np.ndarray[tuple[int, int, int, int, int], AnyFloat]
 FloatND = NDArray[np.floating[NBitBase]]
@@ -66,11 +68,8 @@ class TrappingSR3(ConstrainedSR3):
 
     Parameters
     ----------
-    evolve_w :
-        If false, don't update w and just minimize over (m, A)
-
     eta :
-        Determines the strength of the stability term ||Pw-A||^2 in the
+        Determines the strength of the stability term :math:`||Pw-A||^2` in the
         optimization. The default value is very large so that the
         algorithm default is to ignore the stability term. In this limit,
         this should be approximately equivalent to the ConstrainedSR3 method.
@@ -79,9 +78,19 @@ class TrappingSR3(ConstrainedSR3):
         If threshold != 0, this specifies the error tolerance in the
         CVXPY (OSQP) solve. Default 1.0e-7 (Default is 1.0e-3 in OSQP.)
 
-    relax_optim :
-        If relax_optim = True, use the relax-and-split method. If False,
-        try a direct minimization on the largest eigenvalue.
+    alpha:
+        Determines the strength of the local stability term :math:`||Qijk||^2`
+        in the optimization. The default value (1e20) is very large so that the
+        algorithm default is to ignore this term.
+
+    beta:
+        Determines the strength of the local stability term
+        :math:`||Qijk + Qjik + Qkij||^2` in the
+        optimization. The default value is very large so that the
+        algorithm default is to ignore this term.
+
+    mod_matrix:
+        ???
 
     alpha_A :
         Determines the step size in the prox-gradient descent over A.
@@ -179,7 +188,9 @@ class TrappingSR3(ConstrainedSR3):
         _interaction_only: bool = False,
         eta: Union[float, None] = None,
         eps_solver: float = 1e-7,
-        relax_optim: bool = True,
+        alpha: Optional[float] = None,
+        beta: Optional[float] = None,
+        mod_matrix: Optional[NDArray] = None,
         alpha_A: Union[float, None] = None,
         alpha_m: Union[float, None] = None,
         gamma: float = -0.1,
@@ -190,6 +201,9 @@ class TrappingSR3(ConstrainedSR3):
         A0: Union[NDArray, None] = None,
         **kwargs,
     ):
+        self.alpha = alpha
+        self.beta = beta
+        self.mod_matrix = mod_matrix
         # n_tgts, constraints, etc are data-dependent parameters and belong in
         # _reduce/fit ().  The following is a hack until we refactor how
         # constraints are applied in ConstrainedSR3 and MIOSR
@@ -202,10 +216,6 @@ class TrappingSR3(ConstrainedSR3):
                 " be unable to fit data"
             )
             _n_tgts = 1
-        if _include_bias:
-            raise ValueError(
-                "Currently not able to include bias until PQ matrices are modified"
-            )
         if hasattr(kwargs, "constraint_separation_index"):
             constraint_separation_index = kwargs["constraint_separation_index"]
         elif kwargs.get("inequality_constraints", False):
@@ -239,7 +249,6 @@ class TrappingSR3(ConstrainedSR3):
             **kwargs,
         )
         self.eps_solver = eps_solver
-        self.relax_optim = relax_optim
         self.m0 = m0
         self.A0 = A0
         self.alpha_A = alpha_A
@@ -279,14 +288,42 @@ class TrappingSR3(ConstrainedSR3):
             raise ValueError("gamma must be negative")
         if self.tol <= 0 or self.tol_m <= 0 or self.eps_solver <= 0:
             raise ValueError("tol and tol_m must be positive")
-        if self.inequality_constraints and self.relax_optim and self.threshold == 0.0:
-            raise ValueError(
-                "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
-            )
+        if self.inequality_constraints and self.threshold == 0.0:
+            raise ValueError("Inequality constraints requires threshold!=0")
 
     def set_params(self, **kwargs):
         super().set_params(**kwargs)
         self.__post_init_guard
+
+    @staticmethod
+    def _build_PC(polyterms: list[tuple[int, Int1D]]) -> Float3D:
+        r"""Build the matrix that projects out the constant term of a library
+
+        Coefficients in each polynomial equation :math:`i\in \{1,\dots, r\}` can
+        be stored in an array arranged as written out on paper (e.g.
+        :math:` f_i(x) = a^i_0 + a^i_1 x_1, a^i_2 x_1x_2, \dots a^i_N x_r^2`) or
+        in a series of matrices :math:`E \in \mathbb R^r`,
+        :math:`L\in \mathbb R^{r\times r}`, and (without loss of generality) in
+        :math:`Q\in \mathbb R^{r \times r \times r}, where each
+        :math:`Q^{(i)}_{j,k}` is symmetric in the last two indexes.
+
+        This function builds the projection tensor for extracting the constant
+        terms :math:`E` from a set of coefficients in the first representation.
+
+        Args:
+            polyterms: the ordering and meaning of terms in the equations.  Each
+                entry represents a term in the equation and comprises its index
+                and an array of exponents for each variable
+
+        Returns:
+            3rd order tensor
+        """
+        n_targets, n_features, _, _, _ = _build_lib_info(polyterms)
+        c_terms = [ind for ind, exps in polyterms if sum(exps) == 0]
+        PC = np.zeros((n_targets, n_targets, n_features))
+        if c_terms:  # either a length 0 or length 1 list
+            PC[range(n_targets), range(n_targets), c_terms[0]] = 1.0
+        return PC
 
     @staticmethod
     def _build_PL(polyterms: list[tuple[int, Int1D]]) -> tuple[Float4D, Float4D]:
@@ -357,17 +394,21 @@ class TrappingSR3(ConstrainedSR3):
 
     def _set_Ptensors(
         self, n_targets: int
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[Float3D, Float4D, Float4D, Float5D, Float5D, Float5D]:
         """Make the projection tensors used for the algorithm."""
         lib = PolynomialLibrary(2, include_bias=self._include_bias).fit(
             np.zeros((1, n_targets))
         )
         polyterms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
 
+        PC_tensor = self._build_PC(polyterms)
         PL_tensor, PL_tensor_unsym = self._build_PL(polyterms)
         PQ_tensor = self._build_PQ(polyterms)
+        PT_tensor = PQ_tensor.transpose([1, 0, 2, 3, 4])
+        # PM is the sum of PQ and PQ which projects out the sum of Qijk and Qjik
+        PM_tensor = cast(Float5D, PQ_tensor + PT_tensor)
 
-        return PL_tensor_unsym, PL_tensor, PQ_tensor
+        return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
 
     @staticmethod
     def _check_P_matrix(
@@ -497,37 +538,6 @@ class TrappingSR3(ConstrainedSR3):
             )
         return coef_sparse
 
-    def _solve_m_direct(self, n_tgts, coef_sparse):
-        """
-        If using the direct formulation of trapping SINDy, solves the
-        entire problem in CVXPY regardless of the threshold value.
-        Note that this is a convex-composite (i.e. technically nonconvex)
-        problem, solved in CVXPY, so convergence/quality guarantees are
-        not available here!
-        """
-
-        if np.all(self.PL_ == 0) and np.all(self.PQ_ == 0):
-            return np.zeros(n_tgts), coef_sparse  # no optimization over m
-        else:
-            m_cp = cp.Variable(n_tgts)
-            L = np.tensordot(self.PL_, coef_sparse, axes=([3, 2], [0, 1]))
-            Q = np.reshape(
-                np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])),
-                (n_tgts, n_tgts * n_tgts),
-            )
-            Ls = 0.5 * (L + L.T).flatten()
-            cost_m = cp.lambda_max(cp.reshape(Ls - m_cp @ Q, (n_tgts, n_tgts)))
-            prob_m = cp.Problem(cp.Minimize(cost_m))
-
-            # default solver is SCS here
-            prob_m.solve(eps=self.eps_solver, verbose=self.verbose_cvxpy)
-
-            m = m_cp.value
-            if m is None:
-                print("Infeasible solve over m, increase/decrease eta")
-                return None
-            return m
-
     def _reduce(self, x, y):
         """
         Perform at most ``self.max_iter`` iterations of the
@@ -549,7 +559,14 @@ class TrappingSR3(ConstrainedSR3):
         var_len = n_features * n_tgts
 
         # Only relevant if the stability term is turned on.
-        self.PL_unsym_, self.PL_, self.PQ_ = self._set_Ptensors(n_tgts)
+        (
+            self.PC_,
+            self.PL_unsym_,
+            self.PL_,
+            self.PQ_,
+            self.PT_,
+            self.PM_,
+        ) = self._set_Ptensors(n_tgts)
         # make sure dimensions/symmetries are correct
         self.PL_, self.PQ_ = self._check_P_matrix(
             n_tgts, n_features, n_features, self.PL_, self.PQ_
@@ -613,24 +630,18 @@ class TrappingSR3(ConstrainedSR3):
             Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
 
             coef_prev = coef_sparse
-            if self.relax_optim:
-                if self.threshold > 0.0:
-                    # sparse relax_and_split
-                    coef_sparse = self._update_coef_sparse_rs(
-                        var_len, x_expanded, y, Pmatrix, A, coef_prev
-                    )
-                else:
-                    coef_sparse = self._update_coef_nonsparse_rs(
-                        Pmatrix, A, coef_prev, xTx, xTy
-                    )
-                trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
-                    trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
+            if self.threshold > 0.0:
+                # sparse relax_and_split
+                coef_sparse = self._update_coef_sparse_rs(
+                    var_len, x_expanded, y, Pmatrix, A, coef_prev
                 )
             else:
-                coef_sparse = self._update_coef_direct(
-                    var_len, x_expanded, y, Pmatrix, coef_prev, n_tgts
+                coef_sparse = self._update_coef_nonsparse_rs(
+                    Pmatrix, A, coef_prev, xTx, xTy
                 )
-                trap_ctr = self._solve_m_direct(n_tgts, coef_sparse)
+            trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
+                trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
+            )
 
             # If problem over xi becomes infeasible, break out of the loop
             if coef_sparse is None:
@@ -677,11 +688,6 @@ class TrappingSR3(ConstrainedSR3):
         H = xTx + pTp / self.eta
         P_transpose_A = np.dot(Pmatrix.T, A.flatten())
         return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
-
-    def _update_coef_direct(self, var_len, x_expanded, y, Pmatrix, coef_prev, n_tgts):
-        xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
-        cost += cp.lambda_max(cp.reshape(Pmatrix @ xi, (n_tgts, n_tgts))) / self.eta
-        return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
 
 
 def _make_constraints(n_tgts: int, **kwargs):

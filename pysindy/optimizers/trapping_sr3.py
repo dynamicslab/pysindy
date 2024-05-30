@@ -71,127 +71,71 @@ class TrappingSR3(ConstrainedSR3):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
-        Determines the strength of the regularization. When the
-        regularization function R is the L0 norm, the regularization
-        is equivalent to performing hard thresholding, and lambda
-        is chosen to threshold at the value given by this parameter.
-        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
-
-    eta : float, optional (default 1.0e20)
-        Determines the strength of the stability term ||Pw-A||^2 in the
+    eta :
+        Determines the strength of the stability term :math:`||Pw-A||^2` in the
         optimization. The default value is very large so that the
         algorithm default is to ignore the stability term. In this limit,
         this should be approximately equivalent to the ConstrainedSR3 method.
 
-    alpha_m : float, optional (default eta * 0.1)
-        Determines the step size in the prox-gradient descent over m.
-        For convergence, need alpha_m <= eta / ||w^T * PQ^T * PQ * w||.
-        Typically 0.01 * eta <= alpha_m <= 0.1 * eta.
+    eps_solver :
+        If threshold != 0, this specifies the error tolerance in the
+        CVXPY (OSQP) solve. Default is 1.0e-3 in OSQP.
 
-    alpha_A : float, optional (default eta)
+    alpha:
+        Determines the strength of the local stability term :math:`||Qijk||^2`
+        in the optimization. The default value (1e20) is very large so that the
+        algorithm default is to ignore this term.
+
+    beta:
+        Determines the strength of the local stability term
+        :math:`||Qijk + Qjik + Qkij||^2` in the
+        optimization. The default value is very large so that the
+        algorithm default is to ignore this term.
+
+    mod_matrix:
+        Lyapunov matrix.  Trapping theorems apply to energy
+        :math:`\\propto \\dot y \\cdot y`, but also to any
+        :math:`\\propto \\dot y P \\cdot y` for Lyapunov matrix :math:`P`.
+        Defaults to the identity matrix.
+
+    alpha_A :
         Determines the step size in the prox-gradient descent over A.
         For convergence, need alpha_A <= eta, so typically
         alpha_A = eta is used.
 
-    alpha : float, optional (default 1.0e20)
-        Determines the strength of the local stability term ||Qijk||^2 in the
-        optimization. The default value is very large so that the
-        algorithm default is to ignore this term.
+    alpha_m :
+        Determines the step size in the prox-gradient descent over m.
+        For convergence, need alpha_m <= eta / ||w^T * PQ^T * PQ * w||.
+        Typically 0.01 * eta <= alpha_m <= 0.1 * eta.  (default eta * 0.1)
 
-    beta : float, optional (default 1.0e20)
-        Determines the strength of the local stability term
-        ||Qijk + Qjik + Qkij||^2 in the
-        optimization. The default value is very large so that the
-        algorithm default is to ignore this term.
-
-    gamma : float, optional (default 0.1)
+    gamma :
         Determines the negative interval that matrix A is projected onto.
         For most applications gamma = 0.1 - 1.0 works pretty well.
 
-    tol : float, optional (default 1e-5)
-        Tolerance used for determining convergence of the optimization
-        algorithm over w.
-
-    tol_m : float, optional (default 1e-5)
+    tol_m :
         Tolerance used for determining convergence of the optimization
         algorithm over m.
 
-    thresholder : string, optional (default 'L1')
+    thresholder :
         Regularization function to use. For current trapping SINDy,
         only the L1 and L2 norms are implemented. Note that other convex norms
         could be straightforwardly implemented, but L0 requires
-        reformulation because of nonconvexity.
+        reformulation because of nonconvexity. (default 'L1')
 
-    thresholds : np.ndarray, shape (n_targets, n_features), optional \
-            (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
-
-    eps_solver : float, optional (default 1.0e-7)
-        If threshold != 0, this specifies the error tolerance in the
-        CVXPY (OSQP) solve. Default is 1.0e-3 in OSQP.
-
-    inequality_constraints : bool, optional (default False)
-        If True, CVXPY methods are used.
-
-    max_iter : int, optional (default 30)
-        Maximum iterations of the optimization algorithm.
-
-    accel : bool, optional (default False)
+    accel :
         Whether or not to use accelerated prox-gradient descent for (m, A).
+        (default False)
 
-    m0 : np.ndarray, shape (n_targets), optional (default None)
-        Initial guess for vector m in the optimization. Otherwise
-        each component of m is randomly initialized in [-1, 1].
+    m0 :
+        Initial guess for trap center in the optimization. Default None
+        initializes vector elements randomly in [-1, 1]. shape (n_targets)
 
-    A0 : np.ndarray, shape (n_targets, n_targets), optional (default None)
-        Initial guess for vector A in the optimization. Otherwise
-        A is initialized as A = diag(gamma).
-
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
-
-    normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed.
-
-    verbose : bool, optional (default False)
-        If True, prints out the different error terms every iteration.
-
-    verbose_cvxpy : bool, optional (default False)
-        Boolean flag which is passed to CVXPY solve function to indicate if
-        output should be verbose or not. Only relevant for optimizers that
-        use the CVXPY package in some capabity.
+    A0 :
+        Initial guess for vector A in the optimization.  Shape (n_targets, n_targets)
+        Default None, meaning A is initialized as A = diag(gamma).
 
     Attributes
     ----------
-    coef_ : array, shape (n_features,) or (n_targets, n_features)
-        Regularized weight vector(s). This is the v in the objective
-        function.
-
-    history_ : list
-        History of sparse coefficients. ``history_[k]`` contains the
-        sparse coefficients (v in the optimization objective function)
-        at iteration k.
-
-    objective_history_ : list
-        History of the value of the objective at each step. Note that
-        the trapping SINDy problem is nonconvex, meaning that this value
-        may increase and decrease as the algorithm works.
-
     A_history_ : list
         History of the auxiliary variable A that approximates diag(PW).
 
@@ -223,6 +167,11 @@ class TrappingSR3(ConstrainedSR3):
                             n_targets, n_targets, n_features)
         Transpose of 1st dimension and 2nd dimension of quadratic coefficient
         part of the P matrix in ||Pw - A||^2
+
+    objective_history_ : list
+        History of the value of the objective at each step. Note that
+        the trapping SINDy problem is nonconvex, meaning that this value
+        may increase and decrease as the algorithm works.
 
     Examples
     --------
@@ -330,10 +279,6 @@ class TrappingSR3(ConstrainedSR3):
         self.gamma = gamma
         self.tol_m = tol_m
         self.accel = accel
-        self.unbias = False
-        self.use_constraints = (constraint_lhs is not None) and (
-            constraint_rhs is not None
-        )
         self.__post_init_guard()
 
     def __post_init_guard(self):
@@ -383,9 +328,9 @@ class TrappingSR3(ConstrainedSR3):
         if self.tol <= 0 or self.tol_m <= 0 or self.eps_solver <= 0:
             raise ValueError("tol and tol_m must be positive")
         if self.inequality_constraints and self.threshold == 0.0:
-            raise ValueError(
-                "Ineq. constr. -> threshold!=0 + relax_optim=True or relax_optim=False."
-            )
+            raise ValueError("Inequality constraints requires threshold!=0")
+        if self.mod_matrix is None:
+            self.mod_matrix = np.eye(self._n_tgts)
 
     def set_params(self, **kwargs):
         super().set_params(**kwargs)
@@ -490,7 +435,7 @@ class TrappingSR3(ConstrainedSR3):
 
     def _set_Ptensors(
         self, n_targets: int
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[Float3D, Float4D, Float4D, Float5D, Float5D, Float5D]:
         """Make the projection tensors used for the algorithm."""
         lib = PolynomialLibrary(2, include_bias=self._include_bias).fit(
             np.zeros((1, n_targets))
@@ -502,7 +447,7 @@ class TrappingSR3(ConstrainedSR3):
         PQ_tensor = self._build_PQ(polyterms)
         PT_tensor = PQ_tensor.transpose([1, 0, 2, 3, 4])
         # PM is the sum of PQ and PQ which projects out the sum of Qijk and Qjik
-        PM_tensor = PQ_tensor + PT_tensor
+        PM_tensor = cast(Float5D, PQ_tensor + PT_tensor)
 
         return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
 
@@ -702,9 +647,6 @@ class TrappingSR3(ConstrainedSR3):
         )
         var_len = n_features * n_tgts
 
-        if self.mod_matrix is None:
-            self.mod_matrix = np.eye(n_tgts)
-
         # Define PL, PQ, PT and PM tensors, only relevant if the stability term in
         # trapping SINDy is turned on.
         (
@@ -750,11 +692,11 @@ class TrappingSR3(ConstrainedSR3):
 
         # initial guess for m
         if self.m0 is not None:
-            m = self.m0
+            trap_ctr = self.m0
         else:
             np.random.seed(1)
-            m = (np.random.rand(n_tgts) - np.ones(n_tgts)) * 2
-        self.m_history_.append(m)
+            trap_ctr = (np.random.rand(n_tgts) - np.ones(n_tgts)) * 2
+        self.m_history_.append(trap_ctr)
 
         # Precompute some objects for optimization
         x_expanded = np.zeros((n_samples, n_tgts, n_features, n_tgts))
@@ -766,14 +708,14 @@ class TrappingSR3(ConstrainedSR3):
 
         # if using acceleration
         tk_prev = 1
-        m_prev = m
+        m_prev = trap_ctr
 
         # Begin optimization loop
         objective_history = []
         for k in range(self.max_iter):
 
             # update P tensor from the newest m
-            mPM = np.tensordot(self.PM_, m, axes=([2], [0]))
+            mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
             p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
             Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
 
@@ -797,24 +739,24 @@ class TrappingSR3(ConstrainedSR3):
                 break
 
             # Now solve optimization for m and A
-            m_prev, m, A, tk_prev = self._solve_m_relax_and_split(
-                n_tgts, n_features, m_prev, m, A, coef_sparse, tk_prev
+            m_prev, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
+                n_tgts, n_features, m_prev, trap_ctr, A, coef_sparse, tk_prev
             )
 
             # If problem over m becomes infeasible, break out of the loop
-            if m is None:
-                m = m_prev
+            if trap_ctr is None:
+                trap_ctr = m_prev
                 break
             self.history_.append(coef_sparse.T)
             PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
 
             # (m,A) update finished, append the result
-            self.m_history_.append(m)
+            self.m_history_.append(trap_ctr)
             self.A_history_.append(A)
             eigvals, eigvecs = np.linalg.eig(PW)
             self.PW_history_.append(PW)
             self.PWeigs_history_.append(np.sort(eigvals))
-            mPM = np.tensordot(self.PM_, m, axes=([2], [0]))
+            mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
             p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
             self.p_history_.append(p)
 
@@ -825,9 +767,8 @@ class TrappingSR3(ConstrainedSR3):
                 self._m_convergence_criterion() < self.tol_m
                 and self._convergence_criterion() < self.tol
             ):
-                # Could not (further) select important features
                 break
-        if k == self.max_iter - 1:
+        else:
             warnings.warn(
                 "TrappingSR3._reduce did not converge after {} iters.".format(
                     self.max_iter

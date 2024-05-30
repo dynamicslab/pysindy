@@ -606,6 +606,31 @@ class TrappingSR3(ConstrainedSR3):
 
         return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
 
+    def _update_coef_nonsparse_rs(
+        self, n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
+    ):
+        pTp = np.dot(Pmatrix.T, Pmatrix)
+        H = xTx + pTp / self.eta
+        P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+
+        if self.method == "local":
+            # notice reshaping PQ here requires fortran-ordering
+            PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
+            PQ = np.reshape(PQ, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F")
+            PQTPQ = np.dot(PQ.T, PQ)
+            PQ = np.reshape(
+                self.PQ_, (n_tgts, n_tgts, n_tgts, n_tgts * n_features), "F"
+            )
+            PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
+            PQ_ep = PQ + np.transpose(PQ, [1, 2, 0, 3]) + np.transpose(PQ, [2, 0, 1, 3])
+            PQ_ep = np.reshape(
+                PQ_ep, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F"
+            )
+            PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
+            H += PQTPQ / self.alpha + PQTPQ_ep / self.beta
+
+        return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
+
     def _solve_m_relax_and_split(self, r, N, m_prev, m, A, coef_sparse, tk_previous):
         """
         If using the relaxation formulation of trapping SINDy, solves the
@@ -762,28 +787,8 @@ class TrappingSR3(ConstrainedSR3):
                 # if threshold = 0, there is analytic expression
                 # for the solve over the coefficients,
                 # which is coded up here separately
-                pTp = np.dot(Pmatrix.T, Pmatrix)
-                # notice reshaping PQ here requires fortran-ordering
-                PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
-                PQ = np.reshape(
-                    PQ, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F"
-                )
-                PQTPQ = np.dot(PQ.T, PQ)
-                PQ = np.reshape(
-                    self.PQ_, (n_tgts, n_tgts, n_tgts, n_tgts * n_features), "F"
-                )
-                PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
-                PQ_ep = (
-                    PQ + np.transpose(PQ, [1, 2, 0, 3]) + np.transpose(PQ, [2, 0, 1, 3])
-                )
-                PQ_ep = np.reshape(
-                    PQ_ep, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F"
-                )
-                PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
-                H = xTx + pTp / self.eta + PQTPQ / self.alpha + PQTPQ_ep / self.beta
-                P_transpose_A = np.dot(Pmatrix.T, A.flatten())
-                coef_sparse = self._solve_nonsparse_relax_and_split(
-                    H, xTy, P_transpose_A, coef_prev
+                coef_sparse = self._update_coef_nonsparse_rs(
+                    Pmatrix, A, coef_prev, xTx, xTy
                 )
 
             # If problem over xi becomes infeasible, break out of the loop

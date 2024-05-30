@@ -6,12 +6,10 @@ from math import comb
 from typing import cast
 from typing import NewType
 from typing import Optional
-from typing import Tuple
 from typing import Union
 
 import cvxpy as cp
 import numpy as np
-from numpy import intp
 from numpy.typing import NBitBase
 from numpy.typing import NDArray
 from sklearn.exceptions import ConvergenceWarning
@@ -88,7 +86,10 @@ class TrappingSR3(ConstrainedSR3):
         algorithm default is to ignore this term.
 
     mod_matrix:
-        ???
+        Lyapunov matrix.  Trapping theorems apply to energy
+        :math:`\\propto \\dot y \\cdot y`, but also to any
+        :math:`\\propto \\dot y P \\cdot y` for Lyapunov matrix :math:`P`.
+        Defaults to the identity matrix.
 
     alpha_A :
         Determines the step size in the prox-gradient descent over A.
@@ -155,8 +156,15 @@ class TrappingSR3(ConstrainedSR3):
                             n_targets, n_targets, n_features)
         Quadratic coefficient part of the P matrix in ||Pw - A||^2
 
-    objective_history_: list
-        History of the objective value at each iteration
+    PT_ : np.ndarray, shape (n_targets, n_targets,
+                            n_targets, n_targets, n_features)
+        Transpose of 1st dimension and 2nd dimension of quadratic coefficient
+        part of the P matrix in ||Pw - A||^2
+
+    objective_history_ : list
+        History of the value of the objective at each step. Note that
+        the trapping SINDy problem is nonconvex, meaning that this value
+        may increase and decrease as the algorithm works.
 
     Examples
     --------
@@ -184,6 +192,7 @@ class TrappingSR3(ConstrainedSR3):
         _n_tgts: int = None,
         _include_bias: bool = False,
         _interaction_only: bool = False,
+        method: str = "global",
         eta: Union[float, None] = None,
         eps_solver: float = 1e-7,
         alpha: Optional[float] = None,
@@ -199,9 +208,6 @@ class TrappingSR3(ConstrainedSR3):
         A0: Union[NDArray, None] = None,
         **kwargs,
     ):
-        self.alpha = alpha
-        self.beta = beta
-        self.mod_matrix = mod_matrix
         # n_tgts, constraints, etc are data-dependent parameters and belong in
         # _reduce/fit ().  The following is a hack until we refactor how
         # constraints are applied in ConstrainedSR3 and MIOSR
@@ -214,44 +220,55 @@ class TrappingSR3(ConstrainedSR3):
                 " be unable to fit data"
             )
             _n_tgts = 1
-        if hasattr(kwargs, "constraint_separation_index"):
-            constraint_separation_index = kwargs["constraint_separation_index"]
-        elif kwargs.get("inequality_constraints", False):
-            constraint_separation_index = kwargs["constraint_lhs"].shape[0]
-        else:
-            constraint_separation_index = 0
-        constraint_rhs, constraint_lhs = _make_constraints(
-            _n_tgts, include_bias=_include_bias
-        )
-        constraint_order = kwargs.pop("constraint_order", "feature")
-        if constraint_order == "target":
-            constraint_lhs = np.transpose(constraint_lhs, [0, 2, 1])
-        constraint_lhs = np.reshape(constraint_lhs, (constraint_lhs.shape[0], -1))
-        try:
-            constraint_lhs = np.concatenate(
-                (kwargs.pop("constraint_lhs"), constraint_lhs), 0
+        if method == "global":
+            if hasattr(kwargs, "constraint_separation_index"):
+                constraint_separation_index = kwargs["constraint_separation_index"]
+            elif kwargs.get("inequality_constraints", False):
+                constraint_separation_index = kwargs["constraint_lhs"].shape[0]
+            else:
+                constraint_separation_index = 0
+            constraint_rhs, constraint_lhs = _make_constraints(
+                _n_tgts, include_bias=_include_bias
             )
-            constraint_rhs = np.concatenate(
-                (kwargs.pop("constraint_rhs"), constraint_rhs), 0
-            )
-        except KeyError:
-            pass
+            constraint_order = kwargs.pop("constraint_order", "feature")
+            if constraint_order == "target":
+                constraint_lhs = np.transpose(constraint_lhs, [0, 2, 1])
+            constraint_lhs = np.reshape(constraint_lhs, (constraint_lhs.shape[0], -1))
+            try:
+                constraint_lhs = np.concatenate(
+                    (kwargs.pop("constraint_lhs"), constraint_lhs), 0
+                )
+                constraint_rhs = np.concatenate(
+                    (kwargs.pop("constraint_rhs"), constraint_rhs), 0
+                )
+            except KeyError:
+                pass
 
-        super().__init__(
-            constraint_lhs=constraint_lhs,
-            constraint_rhs=constraint_rhs,
-            constraint_separation_index=constraint_separation_index,
-            constraint_order=constraint_order,
-            equality_constraints=True,
-            thresholder=thresholder,
-            **kwargs,
-        )
+            super().__init__(
+                constraint_lhs=constraint_lhs,
+                constraint_rhs=constraint_rhs,
+                constraint_separation_index=constraint_separation_index,
+                constraint_order=constraint_order,
+                equality_constraints=True,
+                thresholder=thresholder,
+                **kwargs,
+            )
+            self.method = "global"
+        elif method == "local":
+            super().__init__(thresholder=thresholder, **kwargs)
+            self.method = "local"
+        else:
+            raise ValueError(f"Can either use 'global' or 'local' method, not {method}")
+
+        self.mod_matrix = mod_matrix
         self.eps_solver = eps_solver
         self.m0 = m0
         self.A0 = A0
         self.alpha_A = alpha_A
         self.alpha_m = alpha_m
         self.eta = eta
+        self.alpha = alpha
+        self.beta = beta
         self.gamma = gamma
         self.tol_m = tol_m
         self.accel = accel
@@ -288,6 +305,8 @@ class TrappingSR3(ConstrainedSR3):
             raise ValueError("tol and tol_m must be positive")
         if self.inequality_constraints and self.threshold == 0.0:
             raise ValueError("Inequality constraints requires threshold!=0")
+        if self.mod_matrix is None:
+            self.mod_matrix = np.eye(self._n_tgts)
 
     def set_params(self, **kwargs):
         super().set_params(**kwargs)
@@ -392,7 +411,7 @@ class TrappingSR3(ConstrainedSR3):
 
     def _set_Ptensors(
         self, n_targets: int
-    ) -> Tuple[Float3D, Float4D, Float4D, Float5D, Float5D, Float5D]:
+    ) -> tuple[Float3D, Float4D, Float4D, Float5D, Float5D, Float5D]:
         """Make the projection tensors used for the algorithm."""
         lib = PolynomialLibrary(2, include_bias=self._include_bias).fit(
             np.zeros((1, n_targets))
@@ -407,31 +426,6 @@ class TrappingSR3(ConstrainedSR3):
         PM_tensor = cast(Float5D, PQ_tensor + PT_tensor)
 
         return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
-
-    @staticmethod
-    def _check_P_matrix(
-        n_tgts: int, n_feat: int, n_feat_expected: int, PL: np.ndarray, PQ: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """Check if P tensor is properly defined"""
-        if (
-            PQ is None
-            or PL is None
-            or PQ.shape != (n_tgts, n_tgts, n_tgts, n_tgts, n_feat)
-            or PL.shape != (n_tgts, n_tgts, n_tgts, n_feat)
-            or n_feat != n_feat_expected  # library is not quadratic/incorrect shape
-        ):
-            PL = np.zeros((n_tgts, n_tgts, n_tgts, n_feat))
-            PQ = np.zeros((n_tgts, n_tgts, n_tgts, n_tgts, n_feat))
-            warnings.warn(
-                "PQ and PL tensors not defined, wrong shape, or incompatible with "
-                "feature library shape.  Ensure feature library is quadratic. "
-                "Setting tensors to zero"
-            )
-        if not np.allclose(
-            np.transpose(PL, [1, 0, 2, 3]), PL, atol=1e-10
-        ) or not np.allclose(np.transpose(PQ, [0, 2, 1, 3, 4]), PQ, atol=1e-10):
-            raise ValueError("PQ/PL tensors were passed but have the wrong symmetry")
-        return PL, PQ
 
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
         """Solves the coefficient update analytically if threshold = 0"""
@@ -563,6 +557,7 @@ class TrappingSR3(ConstrainedSR3):
         """
         self.A_history_ = []
         self.m_history_ = []
+        self.p_history_ = []
         self.PW_history_ = []
         self.PWeigs_history_ = []
         self.history_ = []
@@ -584,10 +579,6 @@ class TrappingSR3(ConstrainedSR3):
             self.PT_,
             self.PM_,
         ) = self._set_Ptensors(n_tgts)
-        # make sure dimensions/symmetries are correct
-        self.PL_, self.PQ_ = self._check_P_matrix(
-            n_tgts, n_features, n_features, self.PL_, self.PQ_
-        )
 
         # Set initial coefficients
         if self.use_constraints and self.constraint_order.lower() == "target":
@@ -639,7 +630,7 @@ class TrappingSR3(ConstrainedSR3):
         trap_prev_ctr = trap_ctr
 
         # Begin optimization loop
-        self.objective_history_ = []
+        objective_history = []
         for k in range(self.max_iter):
             # update P tensor from the newest trap center
             mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
@@ -679,7 +670,7 @@ class TrappingSR3(ConstrainedSR3):
             self.PWeigs_history_.append(np.sort(eigvals))
 
             # update objective
-            self.objective_history_.append(self._objective(x, y, coef_sparse, A, PW, k))
+            objective_history.append(self._objective(x, y, coef_sparse, A, PW, k))
 
             if (
                 self._m_convergence_criterion() < self.tol_m
@@ -693,6 +684,7 @@ class TrappingSR3(ConstrainedSR3):
             )
 
         self.coef_ = coef_sparse.T
+        self.objective_history = objective_history
 
 
 def _make_constraints(n_tgts: int, **kwargs):
@@ -737,9 +729,7 @@ def _make_constraints(n_tgts: int, **kwargs):
     return np.zeros(len(constraint_mat)), constraint_mat
 
 
-def _pure_constraints(
-    n_tgts: int, n_terms: int, pure_terms: dict[intp, int]
-) -> Float2D:
+def _pure_constraints(n_tgts: int, n_terms: int, pure_terms: dict[int, int]) -> Float2D:
     """Set constraints for coefficients adorning terms like a_i^3 = 0"""
     constraint_mat = np.zeros((n_tgts, n_terms, n_tgts))
     for constr_ind, (tgt_ind, term_ind) in zip(range(n_tgts), pure_terms.items()):
@@ -750,8 +740,8 @@ def _pure_constraints(
 def _antisymm_double_constraint(
     n_tgts: int,
     n_terms: int,
-    pure_terms: dict[intp, int],
-    mixed_terms: dict[frozenset[intp], int],
+    pure_terms: dict[int, int],
+    mixed_terms: dict[frozenset[int], int],
 ) -> Float2D:
     """Set constraints for coefficients adorning terms like a_i^2 * a_j=0"""
     constraint_mat_1 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i^2 * a_j
@@ -768,7 +758,7 @@ def _antisymm_double_constraint(
 
 
 def _antisymm_triple_constraints(
-    n_tgts: int, n_terms: int, mixed_terms: dict[frozenset[intp], int]
+    n_tgts: int, n_terms: int, mixed_terms: dict[frozenset[int], int]
 ) -> Float2D:
     constraint_mat = np.zeros((comb(n_tgts, 3), n_terms, n_tgts))  # a_ia_ja_k
 

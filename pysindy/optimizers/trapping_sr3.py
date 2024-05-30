@@ -494,6 +494,18 @@ class TrappingSR3(ConstrainedSR3):
             )
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
+    def _update_coef_sparse_rs(self, var_len, x_expanded, y, Pmatrix, A, coef_prev):
+        xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
+        cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+
+        return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
+
+    def _update_coef_nonsparse_rs(self, Pmatrix, A, coef_prev, xTx, xTy):
+        pTp = np.dot(Pmatrix.T, Pmatrix)
+        H = xTx + pTp / self.eta
+        P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+        return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
+
     def _solve_m_relax_and_split(self, m_prev, m, A, coef_sparse, tk_previous):
         """
         If using the relaxation formulation of trapping SINDy, solves the
@@ -635,8 +647,7 @@ class TrappingSR3(ConstrainedSR3):
             Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
 
             coef_prev = coef_sparse
-            if self.threshold > 0.0:
-                # sparse relax_and_split
+            if (self.threshold > 0.0) or self.inequality_constraints:
                 coef_sparse = self._update_coef_sparse_rs(
                     var_len, x_expanded, y, Pmatrix, A, coef_prev
                 )
@@ -682,18 +693,6 @@ class TrappingSR3(ConstrainedSR3):
             )
 
         self.coef_ = coef_sparse.T
-
-    def _update_coef_sparse_rs(self, var_len, x_expanded, y, Pmatrix, A, coef_prev):
-        xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
-        cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
-
-        return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
-
-    def _update_coef_nonsparse_rs(self, Pmatrix, A, coef_prev, xTx, xTy):
-        pTp = np.dot(Pmatrix.T, Pmatrix)
-        H = xTx + pTp / self.eta
-        P_transpose_A = np.dot(Pmatrix.T, A.flatten())
-        return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
 
 
 def _make_constraints(n_tgts: int, **kwargs):

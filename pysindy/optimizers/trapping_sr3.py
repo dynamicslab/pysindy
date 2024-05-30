@@ -14,8 +14,6 @@ import numpy as np
 from numpy import intp
 from numpy.typing import NBitBase
 from numpy.typing import NDArray
-from scipy.linalg import cho_factor
-from scipy.linalg import cho_solve
 from sklearn.exceptions import ConvergenceWarning
 
 from ..feature_library.polynomial_library import n_poly_features
@@ -532,8 +530,15 @@ class TrappingSR3(ConstrainedSR3):
                 H, xTy, P_transpose_A, coef_prev
             ).reshape(coef_prev.shape)
         else:
-            cho = cho_factor(H)
-            coef_sparse = cho_solve(cho, xTy + P_transpose_A / self.eta).reshape(
+            # Alan Kaptanoglu: removed cho factor calculation here
+            # which has numerical issues in certain cases. Easier to chop
+            # things using pinv, but gives dumb results sometimes.
+            warnings.warn(
+                "TrappingSR3._solve_nonsparse_relax_and_split using "
+                "naive pinv() call here, be careful with rcond parameter."
+            )
+            Hinv = np.linalg.pinv(H, rcond=1e-15)
+            coef_sparse = Hinv.dot(xTy + P_transpose_A / self.eta).reshape(
                 coef_prev.shape
             )
         return coef_sparse
@@ -681,6 +686,7 @@ class TrappingSR3(ConstrainedSR3):
     def _update_coef_sparse_rs(self, var_len, x_expanded, y, Pmatrix, A, coef_prev):
         xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
+
         return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
 
     def _update_coef_nonsparse_rs(self, Pmatrix, A, coef_prev, xTx, xTy):

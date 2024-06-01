@@ -72,7 +72,7 @@ class TrappingSR3(ConstrainedSR3):
 
     eps_solver :
         If threshold != 0, this specifies the error tolerance in the
-        CVXPY (OSQP) solve. Default 1.0e-7 (Default is 1.0e-3 in OSQP.)
+        CVXPY (OSQP) solve. Default 1.0e-7
 
     alpha:
         Determines the strength of the local stability term :math:`||Qijk||^2`
@@ -295,6 +295,23 @@ class TrappingSR3(ConstrainedSR3):
                 self.alpha_A = self.eta
         if self.eta <= 0:
             raise ValueError("eta must be positive")
+        if self.alpha is None:
+            self.alpha = 1e20
+            warnings.warn(
+                "alpha was not set, so defaulting to alpha = 1e20 "
+                "which is so"
+                "large that the ||Qijk|| term in the optimization "
+                "will be essentially ignored."
+            )
+        if self.beta is None:
+            self.beta = 1e20
+            warnings.warn(
+                "beta was not set, so defaulting to beta = 1e20 "
+                "which is so"
+                "large that the ||Qijk + Qjik + Qkij|| "
+                "term in the optimization will be essentially ignored."
+            )
+
         if self.alpha_m < 0 or self.alpha_m > self.eta:
             raise ValueError("0 <= alpha_m <= eta")
         if self.alpha_A < 0 or self.alpha_A > self.eta:
@@ -307,6 +324,8 @@ class TrappingSR3(ConstrainedSR3):
             raise ValueError("Inequality constraints requires threshold!=0")
         if self.mod_matrix is None:
             self.mod_matrix = np.eye(self._n_tgts)
+        if self.A0 is None:
+            self.A0 = np.diag(self.gamma * np.ones(self._n_tgts))
 
     def set_params(self, **kwargs):
         super().set_params(**kwargs)
@@ -488,16 +507,51 @@ class TrappingSR3(ConstrainedSR3):
             )
         return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
 
-    def _update_coef_sparse_rs(self, var_len, x_expanded, y, Pmatrix, A, coef_prev):
+    def _update_coef_sparse_rs(
+        self, n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
+    ):
+        """Solve coefficient update with CVXPY if threshold != 0"""
         xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
 
+        # new terms minimizing quadratic piece ||P^Q @ xi||_2^2
+        if self.method == "local":
+            Q = np.reshape(
+                self.PQ_, (n_tgts * n_tgts * n_tgts, n_features * n_tgts), "F"
+            )
+            cost = cost + cp.sum_squares(Q @ xi) / self.alpha
+            Q = np.reshape(self.PQ_, (n_tgts, n_tgts, n_tgts, n_features * n_tgts), "F")
+            Q_ep = Q + np.transpose(Q, [1, 2, 0, 3]) + np.transpose(Q, [2, 0, 1, 3])
+            Q_ep = np.reshape(
+                Q_ep, (n_tgts * n_tgts * n_tgts, n_features * n_tgts), "F"
+            )
+            cost = cost + cp.sum_squares(Q_ep @ xi) / self.beta
+
         return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
 
-    def _update_coef_nonsparse_rs(self, Pmatrix, A, coef_prev, xTx, xTy):
+    def _update_coef_nonsparse_rs(
+        self, n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
+    ):
         pTp = np.dot(Pmatrix.T, Pmatrix)
         H = xTx + pTp / self.eta
         P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+
+        if self.method == "local":
+            # notice reshaping PQ here requires fortran-ordering
+            PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
+            PQ = np.reshape(PQ, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F")
+            PQTPQ = np.dot(PQ.T, PQ)
+            PQ = np.reshape(
+                self.PQ_, (n_tgts, n_tgts, n_tgts, n_tgts * n_features), "F"
+            )
+            PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
+            PQ_ep = PQ + np.transpose(PQ, [1, 2, 0, 3]) + np.transpose(PQ, [2, 0, 1, 3])
+            PQ_ep = np.reshape(
+                PQ_ep, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F"
+            )
+            PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
+            H += PQTPQ / self.alpha + PQTPQ_ep / self.beta
+
         return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
 
     def _solve_m_relax_and_split(self, m_prev, m, A, coef_sparse, tk_previous):
@@ -570,7 +624,6 @@ class TrappingSR3(ConstrainedSR3):
         )
         var_len = n_features * n_tgts
 
-        # Only relevant if the stability term is turned on.
         (
             self.PC_,
             self.PL_unsym_,
@@ -600,13 +653,7 @@ class TrappingSR3(ConstrainedSR3):
                 "{: >10} ... {: >10} ... {: >10} ... {: >10} ... {: >10}".format(*row)
             )
 
-        # initial A
-        if self.A0 is not None:
-            A = self.A0
-        elif np.any(self.PQ_ != 0.0):
-            A = np.diag(self.gamma * np.ones(n_tgts))
-        else:
-            A = np.diag(np.zeros(n_tgts))
+        A = self.A0
         self.A_history_.append(A)
 
         # initial guess for m
@@ -640,20 +687,21 @@ class TrappingSR3(ConstrainedSR3):
             coef_prev = coef_sparse
             if (self.threshold > 0.0) or self.inequality_constraints:
                 coef_sparse = self._update_coef_sparse_rs(
-                    var_len, x_expanded, y, Pmatrix, A, coef_prev
+                    n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
                 )
             else:
                 coef_sparse = self._update_coef_nonsparse_rs(
-                    Pmatrix, A, coef_prev, xTx, xTy
+                    n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
                 )
-            trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
-                trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
-            )
 
             # If problem over xi becomes infeasible, break out of the loop
             if coef_sparse is None:
                 coef_sparse = coef_prev
                 break
+
+            trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
+                trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
+            )
 
             # If problem over m becomes infeasible, break out of the loop
             if trap_ctr is None:

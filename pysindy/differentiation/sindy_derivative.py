@@ -83,11 +83,11 @@ class SINDyDerivative(BaseDifferentiation):
         flat_x = x.reshape((t.size, int(x.size / t.size)))
         flat_x_dot = differentiator.d(flat_x, t, axis=0)
         if self.save_smooth:
-            self.smoothed_x_ = differentiator.x(flat_x, t, axis=0)
+            smoothed_x_ = differentiator.x(flat_x, t, axis=0)
         else:
-            self.smoothed_x_ = flat_x
+            smoothed_x_ = flat_x
         x_dot = flat_x_dot.reshape(x_shape)
-        self.smoothed_x_ = self.smoothed_x_.reshape(x_shape)
+        smoothed_x_ = smoothed_x_.reshape(x_shape)
         x_dot = np.moveaxis(x_dot, 0, self.axis)
-        self.smoothed_x_ = np.moveaxis(self.smoothed_x_, 0, self.axis)
+        self.smoothed_x_ = np.moveaxis(smoothed_x_, 0, self.axis)
         return x_dot

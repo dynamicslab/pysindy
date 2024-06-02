@@ -533,7 +533,10 @@ class TrappingSR3(ConstrainedSR3):
                     "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
                     " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
                 )
-        return R2 + stability_term + L1 + alpha_term + beta_term
+        if self.method == "global":
+            return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
+        else:
+            return R2 + stability_term + L1 + alpha_term + beta_term
 
     def _update_coef_sparse_rs(
         self, n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev

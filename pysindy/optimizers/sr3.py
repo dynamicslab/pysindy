@@ -74,10 +74,6 @@ class SR3(BaseOptimizer):
         Initial guess for coefficients ``coef_``.
         If None, least-squares is used to obtain an initial guess.
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     normalize_columns : boolean, optional (default False)
         Normalize the columns of x (the SINDy library terms) before regression
         by dividing by the L2-norm. Note that the 'normalize' option in sklearn
@@ -101,6 +97,10 @@ class SR3(BaseOptimizer):
     verbose : bool, optional (default False)
         If True, prints out the different error terms every
         max_iter / 10 iterations.
+
+    unbias: bool (default False)
+        See base class for definition.  Most options are incompatible
+        with unbiasing.
 
     Attributes
     ----------
@@ -147,18 +147,18 @@ class SR3(BaseOptimizer):
         trimming_fraction=0.0,
         trimming_step_size=1.0,
         max_iter=30,
-        fit_intercept=False,
         copy_X=True,
         initial_guess=None,
         normalize_columns=False,
         verbose=False,
+        unbias=False,
     ):
         super(SR3, self).__init__(
             max_iter=max_iter,
             initial_guess=initial_guess,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
+            unbias=unbias,
         )
 
         if threshold < 0:
@@ -169,6 +169,11 @@ class SR3(BaseOptimizer):
             raise ValueError("tol must be positive")
         if (trimming_fraction < 0) or (trimming_fraction > 1):
             raise ValueError("trimming fraction must be between 0 and 1")
+        if trimming_fraction > 0 and unbias:
+            raise ValueError(
+                "Unbiasing counteracts some of the effects of trimming.  Either set"
+                " unbias=False or trimming_fraction=0.0"
+            )
         if thresholder.lower() not in (
             "l0",
             "l1",
@@ -337,8 +342,8 @@ class SR3(BaseOptimizer):
         coef_sparse = self.coef_.T
         n_samples, n_features = x.shape
 
+        coef_full = coef_sparse.copy()
         if self.use_trimming:
-            coef_full = coef_sparse.copy()
             trimming_array = np.repeat(1.0 - self.trimming_fraction, n_samples)
             self.history_trimming_ = [trimming_array]
         else:
@@ -359,8 +364,7 @@ class SR3(BaseOptimizer):
                 "Total Error: |y-Xw|^2 + |w-u|^2/v + R(u)",
             ]
             print(
-                "{: >10} ... {: >10} ... {: >10} ... {: >10}"
-                " ... {: >10}".format(*row)
+                "{: >10} ... {: >10} ... {: >10} ... {: >10} ... {: >10}".format(*row)
             )
         objective_history = []
 
@@ -388,9 +392,7 @@ class SR3(BaseOptimizer):
                 break
         else:
             warnings.warn(
-                "SR3._reduce did not converge after {} iterations.".format(
-                    self.max_iter
-                ),
+                f"SR3 did not converge after {self.max_iter} iterations.",
                 ConvergenceWarning,
             )
         self.coef_ = coef_sparse.T

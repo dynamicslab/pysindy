@@ -5,6 +5,8 @@ from itertools import repeat
 from math import comb
 from typing import cast
 from typing import NewType
+from typing import Optional
+from typing import Union
 
 import cvxpy as cp
 import numpy as np
@@ -12,12 +14,14 @@ from numpy.typing import NBitBase
 from numpy.typing import NDArray
 from sklearn.exceptions import ConvergenceWarning
 
+from ..feature_library.polynomial_library import n_poly_features
 from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
-from .sr3 import SR3
+from .constrained_sr3 import ConstrainedSR3
 
 AnyFloat = np.dtype[np.floating[NBitBase]]
 Int1D = np.ndarray[tuple[int], np.dtype[np.int_]]
+Float1D = np.ndarray[tuple[int], AnyFloat]
 Float2D = np.ndarray[tuple[int, int], AnyFloat]
 Float3D = np.ndarray[tuple[int, int, int], AnyFloat]
 Float4D = np.ndarray[tuple[int, int, int, int], AnyFloat]
@@ -27,7 +31,7 @@ NFeat = NewType("NFeat", int)
 NTarget = NewType("NTarget", int)
 
 
-class TrappingSR3(SR3):
+class TrappingSR3(ConstrainedSR3):
     """
     Generalized trapping variant of sparse relaxed regularized regression.
     This optimizer can be used to identify quadratically nonlinear systems with
@@ -68,130 +72,71 @@ class TrappingSR3(SR3):
 
     Parameters
     ----------
-    evolve_w : bool, optional (default True)
-        If false, don't update w and just minimize over (m, A)
-
-    threshold : float, optional (default 0.1)
-        Determines the strength of the regularization. When the
-        regularization function R is the L0 norm, the regularization
-        is equivalent to performing hard thresholding, and lambda
-        is chosen to threshold at the value given by this parameter.
-        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
-
-    eta : float, optional (default 1.0e20)
-        Determines the strength of the stability term ||Pw-A||^2 in the
+    eta :
+        Determines the strength of the stability term :math:`||Pw-A||^2` in the
         optimization. The default value is very large so that the
         algorithm default is to ignore the stability term. In this limit,
         this should be approximately equivalent to the ConstrainedSR3 method.
 
-    alpha_m : float, optional (default eta * 0.1)
-        Determines the step size in the prox-gradient descent over m.
-        For convergence, need alpha_m <= eta / ||w^T * PQ^T * PQ * w||.
-        Typically 0.01 * eta <= alpha_m <= 0.1 * eta.
+    eps_solver :
+        If threshold != 0, this specifies the error tolerance in the
+        CVXPY (OSQP) solve. Default 1.0e-7
 
-    alpha_A : float, optional (default eta)
+    alpha:
+        Determines the strength of the local stability term :math:`||Qijk||^2`
+        in the optimization. The default value (1e20) is very large so that the
+        algorithm default is to ignore this term.
+
+    beta:
+        Determines the strength of the local stability term
+        :math:`||Qijk + Qjik + Qkij||^2` in the
+        optimization. The default value is very large so that the
+        algorithm default is to ignore this term.
+
+    mod_matrix:
+        Lyapunov matrix.  Trapping theorems apply to energy
+        :math:`\\propto \\dot y \\cdot y`, but also to any
+        :math:`\\propto \\dot y P \\cdot y` for Lyapunov matrix :math:`P`.
+        Defaults to the identity matrix.
+
+    alpha_A :
         Determines the step size in the prox-gradient descent over A.
         For convergence, need alpha_A <= eta, so typically
         alpha_A = eta is used.
 
-    alpha : float, optional (default 1.0e20)
-        Determines the strength of the local stability term ||Qijk||^2 in the
-        optimization. The default value is very large so that the
-        algorithm default is to ignore this term.
+    alpha_m :
+        Determines the step size in the prox-gradient descent over m.
+        For convergence, need alpha_m <= eta / ||w^T * PQ^T * PQ * w||.
+        Typically 0.01 * eta <= alpha_m <= 0.1 * eta.  (default eta * 0.1)
 
-    beta : float, optional (default 1.0e20)
-        Determines the strength of the local stability term
-        ||Qijk + Qjik + Qkij||^2 in the
-        optimization. The default value is very large so that the
-        algorithm default is to ignore this term.
-
-    gamma : float, optional (default 0.1)
+    gamma :
         Determines the negative interval that matrix A is projected onto.
         For most applications gamma = 0.1 - 1.0 works pretty well.
 
-    tol : float, optional (default 1e-5)
-        Tolerance used for determining convergence of the optimization
-        algorithm over w.
-
-    tol_m : float, optional (default 1e-5)
+    tol_m :
         Tolerance used for determining convergence of the optimization
         algorithm over m.
 
-    thresholder : string, optional (default 'L1')
+    thresholder :
         Regularization function to use. For current trapping SINDy,
         only the L1 and L2 norms are implemented. Note that other convex norms
         could be straightforwardly implemented, but L0 requires
-        reformulation because of nonconvexity.
+        reformulation because of nonconvexity. (default 'L1')
 
-    thresholds : np.ndarray, shape (n_targets, n_features), optional \
-            (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
-
-    eps_solver : float, optional (default 1.0e-7)
-        If threshold != 0, this specifies the error tolerance in the
-        CVXPY (OSQP) solve. Default is 1.0e-3 in OSQP.
-
-    inequality_constraints : bool, optional (default False)
-        If True, CVXPY methods are used.
-
-    max_iter : int, optional (default 30)
-        Maximum iterations of the optimization algorithm.
-
-    accel : bool, optional (default False)
+    accel :
         Whether or not to use accelerated prox-gradient descent for (m, A).
+        (default False)
 
-    m0 : np.ndarray, shape (n_targets), optional (default None)
-        Initial guess for vector m in the optimization. Otherwise
-        each component of m is randomly initialized in [-1, 1].
+    m0 :
+        Initial guess for trap center in the optimization. Default None
+        initializes vector elements randomly in [-1, 1]. shape (n_targets)
 
-    A0 : np.ndarray, shape (n_targets, n_targets), optional (default None)
-        Initial guess for vector A in the optimization. Otherwise
-        A is initialized as A = diag(gamma).
-
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
-
-    normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed.
-
-    verbose : bool, optional (default False)
-        If True, prints out the different error terms every iteration.
-
-    verbose_cvxpy : bool, optional (default False)
-        Boolean flag which is passed to CVXPY solve function to indicate if
-        output should be verbose or not. Only relevant for optimizers that
-        use the CVXPY package in some capabity.
+    A0 :
+        Initial guess for vector A in the optimization.  Shape (n_targets, n_targets)
+        Default None, meaning A is initialized as A = diag(gamma).
 
     Attributes
     ----------
-    coef_ : array, shape (n_features,) or (n_targets, n_features)
-        Regularized weight vector(s). This is the v in the objective
-        function.
-
-    history_ : list
-        History of sparse coefficients. ``history_[k]`` contains the
-        sparse coefficients (v in the optimization objective function)
-        at iteration k.
-
-    objective_history_ : list
-        History of the value of the objective at each step. Note that
-        the trapping SINDy problem is nonconvex, meaning that this value
-        may increase and decrease as the algorithm works.
-
     A_history_ : list
         History of the auxiliary variable A that approximates diag(PW).
 
@@ -224,6 +169,11 @@ class TrappingSR3(SR3):
         Transpose of 1st dimension and 2nd dimension of quadratic coefficient
         part of the P matrix in ||Pw - A||^2
 
+    objective_history_ : list
+        History of the value of the objective at each step. Note that
+        the trapping SINDy problem is nonconvex, meaning that this value
+        may increase and decrease as the algorithm works.
+
     Examples
     --------
     >>> import numpy as np
@@ -246,93 +196,80 @@ class TrappingSR3(SR3):
 
     def __init__(
         self,
-        evolve_w=True,
-        threshold=0.1,
-        eps_solver=1e-7,
-        inequality_constraints=False,
-        eta=None,
-        alpha=None,
-        beta=None,
-        mod_matrix=None,
-        alpha_A=None,
-        alpha_m=None,
-        gamma=-0.1,
-        tol=1e-5,
-        tol_m=1e-5,
-        thresholder="l1",
-        thresholds=None,
-        max_iter=30,
-        accel=False,
-        normalize_columns=False,
-        fit_intercept=False,
-        copy_X=True,
-        m0=None,
-        A0=None,
-        objective_history=None,
-        constraint_lhs=None,
-        constraint_rhs=None,
-        constraint_order="target",
-        verbose=False,
-        verbose_cvxpy=False,
+        *,
+        _n_tgts: int = None,
+        _include_bias: bool = False,
+        _interaction_only: bool = False,
+        method: str = "global",
+        eta: Union[float, None] = None,
+        eps_solver: float = 1e-7,
+        alpha: Optional[float] = None,
+        beta: Optional[float] = None,
+        mod_matrix: Optional[NDArray] = None,
+        alpha_A: Union[float, None] = None,
+        alpha_m: Union[float, None] = None,
+        gamma: float = -0.1,
+        tol_m: float = 1e-5,
+        thresholder: str = "l1",
+        accel: bool = False,
+        m0: Union[NDArray, None] = None,
+        A0: Union[NDArray, None] = None,
+        **kwargs,
     ):
-        super(TrappingSR3, self).__init__(
-            threshold=threshold,
-            max_iter=max_iter,
-            normalize_columns=normalize_columns,
-            fit_intercept=fit_intercept,
-            copy_X=copy_X,
-            thresholder=thresholder,
-            thresholds=thresholds,
-            verbose=verbose,
-        )
-        if thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
-            raise ValueError("Regularizer must be (weighted) L1 or L2")
-        if eta is None:
+        # n_tgts, constraints, etc are data-dependent parameters and belong in
+        # _reduce/fit ().  The following is a hack until we refactor how
+        # constraints are applied in ConstrainedSR3 and MIOSR
+        self._include_bias = _include_bias
+        self._interaction_only = _interaction_only
+        self._n_tgts = _n_tgts
+        if _n_tgts is None:
             warnings.warn(
-                "eta was not set, so defaulting to eta = 1e20 "
-                "with alpha_m = 1e-2 * eta, alpha_A = eta. Here eta is so "
-                "large that the stability term in the optimization "
-                "will be ignored."
+                "Trapping Optimizer initialized without _n_tgts.  It will likely"
+                " be unable to fit data"
             )
-            eta = 1e20
-            alpha_m = 1e18
-            alpha_A = 1e20
+            _n_tgts = 1
+        if method == "global":
+            if hasattr(kwargs, "constraint_separation_index"):
+                constraint_separation_index = kwargs["constraint_separation_index"]
+            elif kwargs.get("inequality_constraints", False):
+                constraint_separation_index = kwargs["constraint_lhs"].shape[0]
+            else:
+                constraint_separation_index = 0
+            constraint_rhs, constraint_lhs = _make_constraints(
+                _n_tgts, include_bias=_include_bias
+            )
+            constraint_order = kwargs.pop("constraint_order", "feature")
+            if constraint_order == "target":
+                constraint_lhs = np.transpose(constraint_lhs, [0, 2, 1])
+            constraint_lhs = np.reshape(constraint_lhs, (constraint_lhs.shape[0], -1))
+            try:
+                constraint_lhs = np.concatenate(
+                    (kwargs.pop("constraint_lhs"), constraint_lhs), 0
+                )
+                constraint_rhs = np.concatenate(
+                    (kwargs.pop("constraint_rhs"), constraint_rhs), 0
+                )
+            except KeyError:
+                pass
+
+            super().__init__(
+                constraint_lhs=constraint_lhs,
+                constraint_rhs=constraint_rhs,
+                constraint_separation_index=constraint_separation_index,
+                constraint_order=constraint_order,
+                equality_constraints=True,
+                thresholder=thresholder,
+                **kwargs,
+            )
+            self.method = "global"
+        elif method == "local":
+            super().__init__(thresholder=thresholder, **kwargs)
+            self.method = "local"
         else:
-            if alpha_m is None:
-                alpha_m = eta * 1e-2
-            if alpha_A is None:
-                alpha_A = eta
-        if eta <= 0:
-            raise ValueError("eta must be positive")
-        if alpha is None:
-            alpha = 1e20
-            warnings.warn(
-                "alpha was not set, so defaulting to alpha = 1e20 "
-                "which is so"
-                "large that the ||Qijk|| term in the optimization "
-                "will be essentially ignored."
-            )
-        if beta is None:
-            beta = 1e20
-            warnings.warn(
-                "beta was not set, so defaulting to beta = 1e20 "
-                "which is so"
-                "large that the ||Qijk + Qjik + Qkij|| "
-                "term in the optimization will be essentially ignored."
-            )
-        if alpha_m < 0 or alpha_m > eta:
-            raise ValueError("0 <= alpha_m <= eta")
-        if alpha_A < 0 or alpha_A > eta:
-            raise ValueError("0 <= alpha_A <= eta")
-        if gamma >= 0:
-            raise ValueError("gamma must be negative")
-        if tol <= 0 or tol_m <= 0 or eps_solver <= 0:
-            raise ValueError("tol and tol_m must be positive")
+            raise ValueError(f"Can either use 'global' or 'local' method, not {method}")
 
         self.mod_matrix = mod_matrix
-        self.evolve_w = evolve_w
         self.eps_solver = eps_solver
-        self.inequality_constraints = inequality_constraints
         self.m0 = m0
         self.A0 = A0
         self.alpha_A = alpha_A
@@ -341,44 +278,69 @@ class TrappingSR3(SR3):
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
-        self.tol = tol
         self.tol_m = tol_m
         self.accel = accel
-        self.A_history_ = []
-        self.m_history_ = []
-        self.p_history_ = []
-        self.PW_history_ = []
-        self.PWeigs_history_ = []
-        self.history_ = []
-        self.objective_history = objective_history
-        self.unbias = False
-        self.verbose_cvxpy = verbose_cvxpy
-        self.use_constraints = (constraint_lhs is not None) and (
-            constraint_rhs is not None
-        )
-        if inequality_constraints:
-            if not evolve_w:
-                raise ValueError(
-                    "Use of inequality constraints requires solving for xi "
-                    " (evolve_w=True)."
-                )
-            if not self.use_constraints:
-                raise ValueError(
-                    "Use of inequality constraints requires constraint_rhs "
-                    "and constraint_lhs "
-                    "variables to be passed to the Optimizer class."
-                )
+        self.__post_init_guard()
 
-        if self.use_constraints:
-            if constraint_order not in ("feature", "target"):
-                raise ValueError(
-                    "constraint_order must be either 'feature' or 'target'"
-                )
+    def __post_init_guard(self):
+        """Conduct initialization post-init, as required by scikitlearn API"""
+        if self.thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
+            raise ValueError("Regularizer must be (weighted) L1 or L2")
+        if self.eta is None:
+            warnings.warn(
+                "eta was not set, so defaulting to eta = 1e20 "
+                "with alpha_m = 1e-2 * eta, alpha_A = eta. Here eta is so "
+                "large that the stability term in the optimization "
+                "will be ignored."
+            )
+            self.eta = 1e20
+            self.alpha_m = 1e18
+            self.alpha_A = 1e20
+        else:
+            if self.alpha_m is None:
+                self.alpha_m = self.eta * 1e-2
+            if self.alpha_A is None:
+                self.alpha_A = self.eta
+        if self.eta <= 0:
+            raise ValueError("eta must be positive")
+        if self.alpha is None:
+            self.alpha = 1e20
+            warnings.warn(
+                "alpha was not set, so defaulting to alpha = 1e20 "
+                "which is so"
+                "large that the ||Qijk|| term in the optimization "
+                "will be essentially ignored."
+            )
+        if self.beta is None:
+            self.beta = 1e20
+            warnings.warn(
+                "beta was not set, so defaulting to beta = 1e20 "
+                "which is so"
+                "large that the ||Qijk + Qjik + Qkij|| "
+                "term in the optimization will be essentially ignored."
+            )
 
-            self.constraint_lhs = constraint_lhs
-            self.constraint_rhs = constraint_rhs
-            self.unbias = False
-            self.constraint_order = constraint_order
+        if self.alpha_m < 0 or self.alpha_m > self.eta:
+            raise ValueError("0 <= alpha_m <= eta")
+        if self.alpha_A < 0 or self.alpha_A > self.eta:
+            raise ValueError("0 <= alpha_A <= eta")
+        if self.gamma >= 0:
+            raise ValueError("gamma must be negative")
+        if self.tol <= 0 or self.tol_m <= 0 or self.eps_solver <= 0:
+            raise ValueError("tol and tol_m must be positive")
+        if self.inequality_constraints and self.threshold == 0.0:
+            raise ValueError("Inequality constraints requires threshold!=0")
+        if self.mod_matrix is None:
+            self.mod_matrix = np.eye(self._n_tgts)
+        if self.A0 is None:
+            self.A0 = np.diag(self.gamma * np.ones(self._n_tgts))
+        if self.m0 is None:
+            np.random.seed(1)
+            self.m0 = (np.random.rand(self._n_tgts) - np.ones(self._n_tgts)) * 2
+
+    def set_params(self, **kwargs):
+        super().set_params(**kwargs)
+        self.__post_init_guard()
 
     @staticmethod
     def _build_PC(polyterms: list[tuple[int, Int1D]]) -> Float3D:
@@ -479,7 +441,7 @@ class TrappingSR3(SR3):
 
     def _set_Ptensors(
         self, n_targets: int
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[Float3D, Float4D, Float4D, Float5D, Float5D, Float5D]:
         """Make the projection tensors used for the algorithm."""
         lib = PolynomialLibrary(2, include_bias=self._include_bias).fit(
             np.zeros((1, n_targets))
@@ -491,7 +453,7 @@ class TrappingSR3(SR3):
         PQ_tensor = self._build_PQ(polyterms)
         PT_tensor = PQ_tensor.transpose([1, 0, 2, 3, 4])
         # PM is the sum of PQ and PQ which projects out the sum of Qijk and Qjik
-        PM_tensor = PQ_tensor + PT_tensor
+        PM_tensor = cast(Float5D, PQ_tensor + PT_tensor)
 
         return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
 
@@ -575,107 +537,117 @@ class TrappingSR3(SR3):
                     "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
                     " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
                 )
-        return R2 + stability_term + L1 + alpha_term + beta_term
+        obj = R2 + stability_term + L1
+        if self.method == "local":
+            obj += alpha_term + beta_term
+        return obj
 
-    def _solve_sparse_relax_and_split(self, r, N, x_expanded, y, Pmatrix, A, coef_prev):
+    def _update_coef_sparse_rs(
+        self, n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
+    ):
         """Solve coefficient update with CVXPY if threshold != 0"""
-        xi = cp.Variable(N * r)
-        cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi) ** 2
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
+        xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
 
         # new terms minimizing quadratic piece ||P^Q @ xi||_2^2
-        Q = np.reshape(self.PQ_, (r * r * r, N * r), "F")
-        cost = cost + cp.sum_squares(Q @ xi) / self.alpha
-        Q = np.reshape(self.PQ_, (r, r, r, N * r), "F")
-        Q_ep = Q + np.transpose(Q, [1, 2, 0, 3]) + np.transpose(Q, [2, 0, 1, 3])
-        Q_ep = np.reshape(Q_ep, (r * r * r, N * r), "F")
-        cost = cost + cp.sum_squares(Q_ep @ xi) / self.beta
-
-        # Constraints
-        if self.use_constraints:
-            if self.inequality_constraints:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi <= self.constraint_rhs],
-                )
-            else:
-                prob = cp.Problem(
-                    cp.Minimize(cost),
-                    [self.constraint_lhs @ xi == self.constraint_rhs],
-                )
-        else:
-            prob = cp.Problem(cp.Minimize(cost))
-
-        # default solver is OSQP here but switches to ECOS for L2
-        try:
-            prob.solve(
-                eps_abs=self.eps_solver,
-                eps_rel=self.eps_solver,
-                verbose=self.verbose_cvxpy,
+        if self.method == "local":
+            Q = np.reshape(
+                self.PQ_, (n_tgts * n_tgts * n_tgts, n_features * n_tgts), "F"
             )
-        # Annoying error coming from L2 norm switching to use the ECOS
-        # solver, which uses "max_iters" instead of "max_iter", and
-        # similar semantic changes for the other variables.
-        except TypeError:
-            try:
-                prob.solve(
-                    abstol=self.eps_solver,
-                    reltol=self.eps_solver,
-                    verbose=self.verbose_cvxpy,
-                )
-            except cp.error.SolverError:
-                print("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(N * r)
-        except cp.error.SolverError:
-            print("Solver failed, setting coefs to zeros")
-            xi.value = np.zeros(N * r)
-
-        if xi.value is None:
-            warnings.warn(
-                "Infeasible solve, increase/decrease eta",
-                ConvergenceWarning,
+            cost = cost + cp.sum_squares(Q @ xi) / self.alpha
+            Q = np.reshape(self.PQ_, (n_tgts, n_tgts, n_tgts, n_features * n_tgts), "F")
+            Q_ep = Q + np.transpose(Q, [1, 2, 0, 3]) + np.transpose(Q, [2, 0, 1, 3])
+            Q_ep = np.reshape(
+                Q_ep, (n_tgts * n_tgts * n_tgts, n_features * n_tgts), "F"
             )
-            return None
-        coef_sparse = (xi.value).reshape(coef_prev.shape)
-        return coef_sparse
+            cost = cost + cp.sum_squares(Q_ep @ xi) / self.beta
 
-    def _solve_m_relax_and_split(self, r, N, m_prev, m, A, coef_sparse, tk_previous):
-        """
-        If using the relaxation formulation of trapping SINDy, solves the
-        (m, A) algorithm update.
+        return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
+
+    def _update_coef_nonsparse_rs(
+        self, n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
+    ):
+        pTp = np.dot(Pmatrix.T, Pmatrix)
+        H = xTx + pTp / self.eta
+        P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+
+        if self.method == "local":
+            # notice reshaping PQ here requires fortran-ordering
+            PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
+            PQ = np.reshape(PQ, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F")
+            PQTPQ = np.dot(PQ.T, PQ)
+            PQ = np.reshape(
+                self.PQ_, (n_tgts, n_tgts, n_tgts, n_tgts * n_features), "F"
+            )
+            PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
+            PQ_ep = PQ + np.transpose(PQ, [1, 2, 0, 3]) + np.transpose(PQ, [2, 0, 1, 3])
+            PQ_ep = np.reshape(
+                PQ_ep, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F"
+            )
+            PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
+            H += PQTPQ / self.alpha + PQTPQ_ep / self.beta
+
+        return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
+
+    def _solve_m_relax_and_split(
+        self,
+        trap_ctr_prev: Float1D,
+        trap_ctr: Float1D,
+        A: Float2D,
+        coef_sparse: np.ndarray[tuple[NFeat, NTarget], AnyFloat],
+        tk_previous: float,
+    ) -> tuple[Float1D, Float2D, float]:
+        """Solves the (m, A) algorithm update.
+
+        TODO: explain the optimization this solves, add good names to variables,
+        and refactor/indirect the if global/local trapping conditionals
+
+        Returns the new trap center (m), the new A, and the new acceleration weight
         """
         # prox-grad for (A, m)
         # Accelerated prox gradient descent
+        # Calculate projection matrix from Quad terms to As
         if self.accel:
             tk = (1 + np.sqrt(1 + 4 * tk_previous**2)) / 2.0
-            m_partial = m + (tk_previous - 1.0) / tk * (m - m_prev)
+            m_partial = trap_ctr + (tk_previous - 1.0) / tk * (trap_ctr - trap_ctr_prev)
             tk_previous = tk
-            mPM = np.tensordot(self.PM_, m_partial, axes=([2], [0]))
+            if self.method == "global":
+                mPQ = np.tensordot(m_partial, self.PQ_, axes=([0], [0]))
+            else:
+                mPM = np.tensordot(self.PM_, m_partial, axes=([2], [0]))
         else:
-            mPM = np.tensordot(self.PM_, m, axes=([2], [0]))
-        p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-        PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
-        PMW = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
-        PMW = np.tensordot(self.mod_matrix, PMW, axes=([1], [0]))
+            if self.method == "global":
+                mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
+            else:
+                mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
+        # Calculate As and its quad term components
+        if self.method == "global":
+            p = self.PL_ - mPQ
+            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+            PQW = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
+        else:
+            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
+            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+            PMW = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
+            PMW = np.tensordot(self.mod_matrix, PMW, axes=([1], [0]))
+        # Calculate error in quadratic balance, and adjust trap center
         A_b = (A - PW) / self.eta
-        PMT_PW = np.tensordot(PMW, A_b, axes=([2, 1], [0, 1]))
-        if self.accel:
-            m_new = m_partial - self.alpha_m * PMT_PW
+        if self.method == "global":
+            PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
+            if self.accel:
+                trap_new = m_partial - self.alpha_m * PQWT_PW
+            else:
+                trap_new = trap_ctr_prev - self.alpha_m * PQWT_PW
         else:
-            m_new = m_prev - self.alpha_m * PMT_PW
-        m_current = m_new
+            PMT_PW = np.tensordot(PMW, A_b, axes=([2, 1], [0, 1]))
+            if self.accel:
+                trap_new = m_partial - self.alpha_m * PMT_PW
+            else:
+                trap_new = trap_ctr_prev - self.alpha_m * PMT_PW
 
         # Update A
         A_new = self._update_A(A - self.alpha_A * A_b, PW)
-        return m_current, m_new, A_new, tk_previous
+        return trap_new, A_new, tk_previous
 
     def _solve_nonsparse_relax_and_split(self, H, xTy, P_transpose_A, coef_prev):
         """Update for the coefficients if threshold = 0."""
@@ -703,19 +675,21 @@ class TrappingSR3(SR3):
         TrappingSR3 algorithm.
         Assumes initial guess for coefficients is stored in ``self.coef_``.
         """
+        self.A_history_ = []
+        self.m_history_ = []
+        self.p_history_ = []
+        self.PW_history_ = []
+        self.PWeigs_history_ = []
+        self.history_ = []
+        n_samples, n_tgts = y.shape
+        n_features = n_poly_features(
+            n_tgts,
+            2,
+            include_bias=self._include_bias,
+            interaction_only=self._interaction_only,
+        )
+        var_len = n_features * n_tgts
 
-        n_samples, n_features = x.shape
-        self.n_features = n_features
-        r = y.shape[1]
-        N = n_features  # int((r ** 2 + 3 * r) / 2.0)
-        if N > int((r**2 + 3 * r) / 2.0):
-            self._include_bias = True
-
-        if self.mod_matrix is None:
-            self.mod_matrix = np.eye(r)
-
-        # Define PL, PQ, PT and PM tensors, only relevant if the stability term in
-        # trapping SINDy is turned on.
         (
             self.PC_,
             self.PL_unsym_,
@@ -723,12 +697,12 @@ class TrappingSR3(SR3):
             self.PQ_,
             self.PT_,
             self.PM_,
-        ) = self._set_Ptensors(r)
+        ) = self._set_Ptensors(n_tgts)
 
         # Set initial coefficients
         if self.use_constraints and self.constraint_order.lower() == "target":
             self.constraint_lhs = reorder_constraints(
-                self.constraint_lhs, n_features, output_order="target"
+                self.constraint_lhs, n_features, output_order="feature"
             )
         coef_sparse: np.ndarray[tuple[NFeat, NTarget], AnyFloat] = self.coef_.T
 
@@ -748,101 +722,69 @@ class TrappingSR3(SR3):
                 " ... {: >8} ... {: >10} ... {: >8}".format(*row)
             )
 
-        # initial A
-        if self.A0 is not None:
-            A = self.A0
-        elif np.any(self.PM_ != 0.0):
-            A = np.diag(self.gamma * np.ones(r))
-        else:
-            A = np.diag(np.zeros(r))
+        A = self.A0
         self.A_history_.append(A)
-
-        # initial guess for m
-        if self.m0 is not None:
-            m = self.m0
-        else:
-            np.random.seed(1)
-            m = (np.random.rand(r) - np.ones(r)) * 2
-        self.m_history_.append(m)
+        trap_ctr = self.m0
+        self.m_history_.append(trap_ctr)
 
         # Precompute some objects for optimization
-        x_expanded = np.zeros((n_samples, r, n_features, r))
-        for i in range(r):
+        x_expanded = np.zeros((n_samples, n_tgts, n_features, n_tgts))
+        for i in range(n_tgts):
             x_expanded[:, i, :, i] = x
-        x_expanded = np.reshape(x_expanded, (n_samples * r, r * n_features))
+        x_expanded = np.reshape(x_expanded, (n_samples * n_tgts, n_tgts * n_features))
         xTx = np.dot(x_expanded.T, x_expanded)
         xTy = np.dot(x_expanded.T, y.flatten())
 
         # if using acceleration
         tk_prev = 1
-        m_prev = m
+        trap_prev_ctr = trap_ctr
 
         # Begin optimization loop
         objective_history = []
         for k in range(self.max_iter):
+            # update P tensor from the newest trap center
+            if self.method == "global":
+                mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
+                p = self.PL_ - mPQ
+                Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
+            else:
+                mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
+                p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
+                Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
+            self.p_history_.append(p)
 
-            # update P tensor from the newest m
-            mPM = np.tensordot(self.PM_, m, axes=([2], [0]))
-            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-            Pmatrix = p.reshape(r * r, r * n_features)
-
-            # update w
             coef_prev = coef_sparse
-            if self.evolve_w:
-                if (self.threshold > 0.0) or self.inequality_constraints:
-                    coef_sparse = self._solve_sparse_relax_and_split(
-                        r, n_features, x_expanded, y, Pmatrix, A, coef_prev
-                    )
-                else:
-                    # if threshold = 0, there is analytic expression
-                    # for the solve over the coefficients,
-                    # which is coded up here separately
-                    pTp = np.dot(Pmatrix.T, Pmatrix)
-                    # notice reshaping PQ here requires fortran-ordering
-                    PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
-                    PQ = np.reshape(PQ, (r * r * r, r * n_features), "F")
-                    PQTPQ = np.dot(PQ.T, PQ)
-                    PQ = np.reshape(self.PQ_, (r, r, r, r * n_features), "F")
-                    PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
-                    PQ_ep = (
-                        PQ
-                        + np.transpose(PQ, [1, 2, 0, 3])
-                        + np.transpose(PQ, [2, 0, 1, 3])
-                    )
-                    PQ_ep = np.reshape(PQ_ep, (r * r * r, r * n_features), "F")
-                    PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
-                    H = xTx + pTp / self.eta + PQTPQ / self.alpha + PQTPQ_ep / self.beta
-                    P_transpose_A = np.dot(Pmatrix.T, A.flatten())
-                    coef_sparse = self._solve_nonsparse_relax_and_split(
-                        H, xTy, P_transpose_A, coef_prev
-                    )
+            if (self.threshold > 0.0) or self.inequality_constraints:
+                coef_sparse = self._update_coef_sparse_rs(
+                    n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
+                )
+            else:
+                coef_sparse = self._update_coef_nonsparse_rs(
+                    n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
+                )
 
             # If problem over xi becomes infeasible, break out of the loop
             if coef_sparse is None:
                 coef_sparse = coef_prev
                 break
 
-            # Now solve optimization for m and A
-            m_prev, m, A, tk_prev = self._solve_m_relax_and_split(
-                r, n_features, m_prev, m, A, coef_sparse, tk_prev
+            trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
+                trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
             )
 
             # If problem over m becomes infeasible, break out of the loop
-            if m is None:
-                m = m_prev
+            if trap_ctr is None:
+                trap_ctr = trap_prev_ctr
                 break
             self.history_.append(coef_sparse.T)
             PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
 
             # (m,A) update finished, append the result
-            self.m_history_.append(m)
+            self.m_history_.append(trap_ctr)
             self.A_history_.append(A)
             eigvals, eigvecs = np.linalg.eig(PW)
             self.PW_history_.append(PW)
             self.PWeigs_history_.append(np.sort(eigvals))
-            mPM = np.tensordot(self.PM_, m, axes=([2], [0]))
-            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-            self.p_history_.append(p)
 
             # update objective
             objective_history.append(self._objective(x, y, coef_sparse, A, PW, k))
@@ -851,9 +793,8 @@ class TrappingSR3(SR3):
                 self._m_convergence_criterion() < self.tol_m
                 and self._convergence_criterion() < self.tol
             ):
-                # Could not (further) select important features
                 break
-        if k == self.max_iter - 1:
+        else:
             warnings.warn(
                 "TrappingSR3._reduce did not converge after {} iters.".format(
                     self.max_iter

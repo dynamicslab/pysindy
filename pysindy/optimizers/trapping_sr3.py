@@ -582,7 +582,7 @@ class TrappingSR3(ConstrainedSR3):
 
         return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
 
-    def _solve_m_relax_and_split(self, r, N, m_prev, m, A, coef_sparse, tk_previous):
+    def _solve_m_relax_and_split(self, m_prev, m, A, coef_sparse, tk_previous):
         """
         If using the relaxation formulation of trapping SINDy, solves the
         (m, A) algorithm update.
@@ -711,13 +711,16 @@ class TrappingSR3(ConstrainedSR3):
         # Begin optimization loop
         objective_history = []
         for k in range(self.max_iter):
+            # update P tensor from the newest trap center
+            if self.method == "global":
+                mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
+                p = self.PL_ - mPQ
+                Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
+            else:
+                mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
+                p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
+                Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
 
-            # update P tensor from the newest m
-            mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
-            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-            Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
-
-            # update w
             coef_prev = coef_sparse
             if (self.threshold > 0.0) or self.inequality_constraints:
                 coef_sparse = self._update_coef_sparse_rs(
@@ -734,7 +737,7 @@ class TrappingSR3(ConstrainedSR3):
                 break
 
             trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
-                n_tgts, n_features, trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
+                trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
             )
 
             # If problem over m becomes infeasible, break out of the loop

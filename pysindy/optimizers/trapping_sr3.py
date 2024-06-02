@@ -485,27 +485,51 @@ class TrappingSR3(ConstrainedSR3):
         """Calculate the convergence criterion for the optimization over m"""
         return np.sum(np.abs(self.m_history_[-2] - self.m_history_[-1]))
 
-    def _objective(self, x, y, coef_sparse, A, PW, q):
+    def _objective(self, x, y, coef_sparse, A, PW, k):
         """Objective function"""
         # Compute the errors
         R2 = (y - np.dot(x, coef_sparse)) ** 2
         A2 = (A - PW) ** 2
+        Qijk = np.tensordot(
+            self.mod_matrix,
+            np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])),
+            axes=([1], [0]),
+        )
+        beta2 = (
+            Qijk + np.transpose(Qijk, [1, 2, 0]) + np.transpose(Qijk, [2, 0, 1])
+        ) ** 2
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
+        R2 = 0.5 * np.sum(R2)
+        stability_term = 0.5 * np.sum(A2) / self.eta
+        alpha_term = 0.5 * np.sum(Qijk**2) / self.alpha
+        beta_term = 0.5 * np.sum(beta2) / self.beta
 
         # convoluted way to print every max_iter / 10 iterations
-        if self.verbose and q % max(1, self.max_iter // 10) == 0:
+        if self.verbose and k % max(1, self.max_iter // 10) == 0:
             row = [
-                q,
-                0.5 * np.sum(R2),
-                0.5 * np.sum(A2) / self.eta,
+                k,
+                R2,
+                stability_term,
                 L1,
-                0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1,
+                alpha_term,
+                beta_term,
+                R2 + stability_term + L1 + alpha_term + beta_term,
             ]
-            print(
-                "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                " ... {4:10.4e}".format(*row)
-            )
-        return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
+            if self.threshold == 0:
+                if k % max(int(self.max_iter / 10.0), 1) == 0:
+                    print(
+                        "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
+                        " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
+                    )
+            else:
+                print(
+                    "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
+                    " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
+                )
+        if self.method == "global":
+            return 0.5 * np.sum(R2) + 0.5 * np.sum(A2) / self.eta + L1
+        else:
+            return R2 + stability_term + L1 + alpha_term + beta_term
 
     def _update_coef_sparse_rs(
         self, n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
@@ -643,14 +667,17 @@ class TrappingSR3(ConstrainedSR3):
         # Print initial values for each term in the optimization
         if self.verbose:
             row = [
-                "Iteration",
-                "Data Error",
-                "Stability Error",
-                "L1 Error",
-                "Total Error",
+                "Iter",
+                "|y-Xw|^2",
+                "|Pw-A|^2/eta",
+                "|w|_1",
+                "|Qijk|/a",
+                "|Qijk+...|/b",
+                "Total:",
             ]
             print(
-                "{: >10} ... {: >10} ... {: >10} ... {: >10} ... {: >10}".format(*row)
+                "{: >5} ... {: >8} ... {: >10} ... {: >5}"
+                " ... {: >8} ... {: >10} ... {: >8}".format(*row)
             )
 
         A = self.A0

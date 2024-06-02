@@ -420,10 +420,22 @@ def test_centered_difference_noaxis_vs_axis(data_2d_resolved_pde):
         )
 
 
-def test_multidimensional_differentiation():
-    X = np.random.random(size=(10, 100, 2))
-    t = np.arange(0, 10, 0.1)
-
-    X_dot = SINDyDerivative(kind="kalman", axis=-2)._differentiate(X, t)
-
-    assert X_dot.shape == X.shape
+def test_nd_differentiation():
+    t = np.arange(3)
+    x = np.random.random(size=(2, 3, 2))
+    x[1, :, 1] = 1
+    xdot_sindy = SINDyDerivative(kind="kalman", axis=-2)._differentiate(x, t)
+    xdot_fd = FiniteDifference(axis=-2)._differentiate(x, t)
+    xdot_sindyfd = SINDyDerivative(
+        kind="finite_difference", k=1, axis=-2
+    )._differentiate(x, t)
+    xdot_sfd = SmoothedFiniteDifference(
+        axis=-2, smoother_kws={"window_length": 2, "polyorder": 1}
+    )._differentiate(x, t)
+    xdot_spectral = SpectralDerivative(axis=-2)._differentiate(x, t)
+    zeros = np.zeros(3)
+    np.testing.assert_array_almost_equal(xdot_sindy[1, :, 1], zeros)
+    np.testing.assert_array_almost_equal(xdot_fd[1, :, 1], zeros)
+    np.testing.assert_array_almost_equal(xdot_sindyfd[1, :, 1], zeros)
+    np.testing.assert_array_almost_equal(xdot_sfd[1, :, 1], zeros)
+    np.testing.assert_array_almost_equal(xdot_spectral[1, :, 1], zeros)

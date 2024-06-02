@@ -457,7 +457,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         deriv = np.zeros(self.grid_ndim)
         deriv[-1] = 1
         for k in range(self.K):
-
             ret = np.ones(shapes_k[k])
             for i in range(self.grid_ndim):
                 s = [0] * (self.grid_ndim + 1)
@@ -476,7 +475,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         # Product weights over the axes for pure derivative terms, shaped as inds_k
         self.fullweights0 = []
         for k in range(self.K):
-
             ret = np.ones(shapes_k[k])
             for i in range(self.grid_ndim):
                 s = [0] * (self.grid_ndim + 1)
@@ -922,7 +920,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         for deriv in derivs[
                             np.where(np.all(derivs <= derivs_mixed, axis=1))[0]
                         ]:
-
                             # indices for product rule terms
                             j0 = np.where(np.all(derivs == deriv, axis=1))[0][0]
                             j1 = np.where(

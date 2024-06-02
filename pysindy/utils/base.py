@@ -1,3 +1,4 @@
+import warnings
 from itertools import repeat
 from typing import Sequence
 
@@ -136,24 +137,17 @@ def drop_nan_samples(x, y):
     return x, y
 
 
-def reorder_constraints(c, n_features, output_order="row"):
-    """Reorder constraint matrix."""
-    ret = c.copy()
-
-    if ret.ndim == 1:
-        ret = ret.reshape(1, -1)
-
-    n_targets = ret.shape[1] // n_features
-    shape = (n_targets, n_features)
-
-    if output_order == "row":
-        for i in range(ret.shape[0]):
-            ret[i] = ret[i].reshape(shape).flatten(order="F")
+def reorder_constraints(arr, n_features, output_order="feature"):
+    """Switch between 'feature' and 'target' constraint order."""
+    warnings.warn("Target format constraints are deprecated.", stacklevel=2)
+    n_constraints = arr.shape[0] if arr.ndim > 1 else 1
+    n_tgt = arr.size // n_features // n_constraints
+    if output_order == "feature":
+        starting_shape = (n_constraints, n_tgt, n_features)
     else:
-        for i in range(ret.shape[0]):
-            ret[i] = ret[i].reshape(shape, order="F").flatten()
+        starting_shape = (n_constraints, n_features, n_tgt)
 
-    return ret
+    return arr.reshape(starting_shape).transpose([0, 2, 1]).reshape((n_constraints, -1))
 
 
 def prox_l0(x, threshold):

@@ -66,7 +66,6 @@ class FiniteDifference(BaseDifferentiation):
         drop_endpoints=False,
         periodic=False,
     ):
-
         if order <= 0 or not isinstance(order, int):
             raise ValueError("order must be a positive int")
         if d <= 0:

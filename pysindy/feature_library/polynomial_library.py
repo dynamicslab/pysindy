@@ -1,7 +1,10 @@
 from itertools import chain
+from math import comb
 from typing import Iterator
+from typing import Tuple
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy import sparse
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.utils.validation import check_is_fitted
@@ -73,8 +76,22 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
 
     @staticmethod
     def _combinations(
-        n_features, degree, include_interaction, interaction_only, include_bias
-    ) -> Iterator[tuple]:
+        n_features: int,
+        degree: int,
+        include_interaction: bool,
+        interaction_only: bool,
+        include_bias: bool,
+    ) -> Iterator[Tuple[int, ...]]:
+        """
+        Create selection tuples of input indexes for each polynomail term
+
+        Selection tuple iterates the input indexes present in a single term.
+        For example, (x+y+1)^2 would be in iterator of the tuples:
+        (), (0,), (1,), (0, 0), (0, 1), (1, 1)
+        1    x     y      x^2     x*y     y^2
+
+        Order of terms is preserved regardless of include_interation.
+        """
         if not include_interaction:
             return chain(
                 [()] if include_bias else [],
@@ -93,7 +110,12 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         )
 
     @property
-    def powers_(self):
+    def powers_(self) -> NDArray[np.int_]:
+        """
+        The exponents of the polynomial as an array of shape
+        (n_features_out, n_features_in), where each item is the exponent of the
+        jth input variable in the ith polynomial term.
+        """
         check_is_fitted(self)
         combinations = self._combinations(
             n_features=self.n_features_in_,
@@ -208,10 +230,10 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
             )
             if sparse.isspmatrix(x):
                 columns = []
-                for comb in combinations:
-                    if comb:
+                for combo in combinations:
+                    if combo:
                         out_col = 1
-                        for col_idx in comb:
+                        for col_idx in combo:
                             out_col = x[..., col_idx].multiply(out_col)
                         columns.append(out_col)
                     else:
@@ -227,7 +249,36 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                     ),
                     x.axes,
                 )
-                for i, comb in enumerate(combinations):
-                    xp[..., i] = x[..., comb].prod(-1)
+                for i, combo in enumerate(combinations):
+                    xp[..., i] = x[..., combo].prod(-1)
             xp_full = xp_full + [xp]
         return xp_full
+
+
+def n_poly_features(
+    n_in_feat: int,
+    degree: int,
+    include_bias: bool = False,
+    include_interation: bool = True,
+    interaction_only: bool = False,
+) -> int:
+    """Calculate number of polynomial features
+
+    Args:
+        n_in_feat: number of input features, e.g. 3 for x, y, z
+        degree: polynomial degree, e.g. 2 for quadratic
+        include_bias: whether to include a constant term
+        include_interaction: whether to include terms mixing multiple inputs
+        interaction_only: whether to omit terms of x_m * x_n^p for p > 1
+    """
+    if not include_interation and interaction_only:
+        raise ValueError("Cannot set interaction only if include_interaction is False")
+    n_feat = include_bias
+    if not include_interation:
+        return n_feat + n_in_feat * degree
+    for deg in range(1, degree + 1):
+        if interaction_only:
+            n_feat += comb(n_in_feat, deg)
+        else:
+            n_feat += comb(n_in_feat + deg - 1, deg)
+    return n_feat

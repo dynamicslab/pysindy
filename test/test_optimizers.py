@@ -249,7 +249,8 @@ def test_trapping_bad_parameters(params):
 def test_trapping_objective_print():
     # test error in verbose print logic when max_iter < 10
     opt = TrappingSR3(_n_tgts=1, max_iter=2, verbose=True)
-    arr = np.ones(1)
+    arr = np.ones((1, 1))
+    opt.PQ_ = np.ones((1, 1, 1, 1, 1))
     opt._objective(arr, arr, arr, arr, arr, 1)
 
 

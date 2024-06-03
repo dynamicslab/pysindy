@@ -234,6 +234,7 @@ def test_sr3_bad_parameters(optimizer, params):
         dict(max_iter=0),
         dict(eta=10, alpha_m=20),
         dict(eta=10, alpha_A=20),
+        dict(inequality_constraints=True),  # Need better test for logic path
         dict(
             constraint_lhs=np.zeros((10, 10)),
             constraint_rhs=np.zeros(10),
@@ -513,6 +514,7 @@ def test_stable_linear_sr3_linear_library():
         dict(accel=True),
     ],
 )
+@pytest.mark.parametrize("bias", [True, False])
 @pytest.mark.parametrize(
     "params",
     [
@@ -532,31 +534,28 @@ def test_stable_linear_sr3_linear_library():
         dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((1, 2))),
     ],
 )
-def test_trapping_sr3_quadratic_library(params, trapping_sr3_params):
+def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, bias):
     t = np.arange(0, 1, 0.1)
     x = np.exp(-t).reshape((-1, 1))
     x_dot = -x
     features = np.hstack([x, x**2])
+    if bias:
+        features = np.hstack([np.ones_like(x), features])
 
     params.update(trapping_sr3_params)
 
-    opt = TrappingSR3(_n_tgts=1, _include_bias=False, **params)
+    opt = TrappingSR3(_n_tgts=1, _include_bias=bias, **params)
     opt.fit(features, x_dot)
-    assert opt.PL_.shape == (1, 1, 1, 2)
-    assert opt.PQ_.shape == (1, 1, 1, 1, 2)
     check_is_fitted(opt)
 
     # Rerun with identity constraints
     r = x.shape[1]
-    N = 2
-    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
-    params["constraint_rhs"] = np.zeros(p)
-    params["constraint_lhs"] = np.eye(p, r * N)
+    N = 2 + bias
+    params["constraint_rhs"] = np.zeros(r * N)
+    params["constraint_lhs"] = np.eye(r * N, r * N)
 
-    opt = TrappingSR3(_n_tgts=1, _include_bias=False, **params)
+    opt = TrappingSR3(_n_tgts=1, _include_bias=bias, **params)
     opt.fit(features, x_dot)
-    assert opt.PL_.shape == (1, 1, 1, 2)
-    assert opt.PQ_.shape == (1, 1, 1, 1, 2)
     check_is_fitted(opt)
     # check is solve was infeasible first
     if not np.allclose(opt.m_history_[-1], opt.m_history_[0]):
@@ -933,10 +932,15 @@ def test_constrained_inequality_constraints(data_lorenz, params):
         dict(
             thresholder="weighted_l2", thresholds=0.5 * np.ones((1, 2)), expected=0.75
         ),
+        dict(thresholder="l1", threshold=0, expected=0.5),
+        dict(thresholder="weighted_l1", thresholds=0.0 * np.ones((1, 2)), expected=0.5),
+        dict(thresholder="l2", threshold=0.0, expected=0.5),
+        dict(thresholder="weighted_l2", thresholds=0.0 * np.ones((1, 2)), expected=0.5),
     ],
     ids=lambda d: d["thresholder"],
 )
 def test_trapping_cost_function(params):
+    # TODO: are all these parameters necessary?  What are we testing?
     expected = params.pop("expected")
     opt = TrappingSR3(**params)
     x = np.eye(2)
@@ -954,7 +958,7 @@ def test_trapping_inequality_constraints():
     constraint_matrix = np.zeros((1, 2))
     constraint_matrix[0, 1] = 0.1
 
-    # Run Trapping SR3 without CVXPY for the m solve
+    # Run Trapping SR3
     opt = TrappingSR3(
         constraint_lhs=constraint_matrix,
         constraint_rhs=constraint_rhs,

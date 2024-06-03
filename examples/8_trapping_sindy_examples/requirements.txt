@@ -1,0 +1,3 @@
+dysts
+sympy
+pymech

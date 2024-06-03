@@ -33,30 +33,30 @@ NTarget = NewType("NTarget", int)
 
 class TrappingSR3(ConstrainedSR3):
     """
-    Trapping variant of sparse relaxed regularized regression.
-    This optimizer can be used to identify systems with globally
-    stable (bounded) solutions.
+    Generalized trapping variant of sparse relaxed regularized regression.
+    This optimizer can be used to identify quadratically nonlinear systems with
+    either a-priori globally or locally stable (bounded) solutions.
 
-    Attempts to minimize one of two related objective functions
+    This optimizer can be used to minimize five different objective functions:
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + \\lambda R(w)
+        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(w)
         + 0.5\\|Pw-A\\|^2_2/\\eta + \\delta_0(Cw-d)
-        + \\delta_{\\Lambda}(A)
+        + \\delta_{\\Lambda}(A) + \\alpha \\|Qijk\\|
+        + \\beta \\|Q_{ijk} + Q_{jik} + Q_{kij}\\|
 
-    or
+    where :math:`R(w)` is a regularization function, C is a constraint matrix
+    detailing affine constraints on the model coefficients, A is a proxy for
+    the quadratic contributions to the energy evolution, and
+    :math:`Q_{ijk}` are the quadratic coefficients in the model. For
+    provably globally bounded solutions, use :math:`\\alpha >> 1`,
+    :math:`\\beta >> 1`, and equality constraints. For maximizing the local
+    stability radius of the model one has the choice to do this by
+    (1) minimizing the values in :math:`Q_{ijk}`, (2) promoting models
+    with skew-symmetrix :math:`Q_{ijk}` coefficients, or
+    (3) using inequality constraints for skew-symmetry in :math:`Q_{ijk}`.
 
-    .. math::
-
-        0.5\\|y-Xw\\|^2_2 + \\lambda R(w)
-        + \\delta_0(Cw-d)
-        + 0.5 * maximumeigenvalue(A)/\\eta
-
-    where :math:`R(w)` is a regularization function, which must be convex,
-    :math:`\\delta_0` is an indicator function that provides a hard constraint
-    of CW = d, and :math:\\delta_{\\Lambda} is a term to project the :math:`A`
-    matrix onto the space of negative definite matrices.
     See the following references for more details:
 
         Kaptanoglu, Alan A., et al. "Promoting global stability in
@@ -209,9 +209,6 @@ class TrappingSR3(ConstrainedSR3):
         A0: Union[NDArray, None] = None,
         **kwargs,
     ):
-        self.alpha = alpha
-        self.beta = beta
-        self.mod_matrix = mod_matrix
         # n_tgts, constraints, etc are data-dependent parameters and belong in
         # _reduce/fit ().  The following is a hack until we refactor how
         # constraints are applied in ConstrainedSR3 and MIOSR
@@ -336,7 +333,7 @@ class TrappingSR3(ConstrainedSR3):
 
     def set_params(self, **kwargs):
         super().set_params(**kwargs)
-        self.__post_init_guard
+        self.__post_init_guard()
 
     @staticmethod
     def _build_PC(polyterms: list[tuple[int, Int1D]]) -> Float3D:

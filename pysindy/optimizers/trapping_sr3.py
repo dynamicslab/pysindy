@@ -223,7 +223,7 @@ class TrappingSR3(ConstrainedSR3):
                 "Trapping Optimizer initialized without _n_tgts.  It will likely"
                 " be unable to fit data"
             )
-            _n_tgts = 1
+            self._n_tgts = 1
         if method == "global":
             if hasattr(kwargs, "constraint_separation_index"):
                 constraint_separation_index = kwargs["constraint_separation_index"]
@@ -232,7 +232,7 @@ class TrappingSR3(ConstrainedSR3):
             else:
                 constraint_separation_index = 0
             constraint_rhs, constraint_lhs = _make_constraints(
-                _n_tgts, include_bias=_include_bias
+                self._n_tgts, include_bias=_include_bias
             )
             constraint_order = kwargs.pop("constraint_order", "feature")
             if constraint_order == "target":
@@ -764,7 +764,7 @@ class TrappingSR3(ConstrainedSR3):
                 coef_sparse = coef_prev
                 break
 
-            trap_prev_ctr, trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
+            trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
                 trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
             )
 

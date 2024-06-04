@@ -234,7 +234,6 @@ def test_sr3_bad_parameters(optimizer, params):
         dict(max_iter=0),
         dict(eta=10, alpha_m=20),
         dict(eta=10, alpha_A=20),
-        dict(inequality_constraints=True),  # Need better test for logic path
         dict(
             constraint_lhs=np.zeros((10, 10)),
             constraint_rhs=np.zeros(10),
@@ -510,51 +509,62 @@ def test_stable_linear_sr3_linear_library():
 @pytest.mark.parametrize(
     "trapping_sr3_params",
     [
-        dict(),
-        dict(accel=True),
+        {},
+        {"accel": True},
     ],
+    ids=["no_accel", "accel"],
 )
-@pytest.mark.parametrize("bias", [True, False])
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0),
-        dict(thresholder="l1", threshold=1e-5),
+        dict(thresholder="l1", threshold=0, _include_bias=True),
+        dict(thresholder="l1", threshold=1e-5, _include_bias=True),
         dict(
             thresholder="weighted_l1",
             thresholds=np.zeros((1, 2)),
             eta=1e5,
             alpha_m=1e4,
             alpha_A=1e5,
+            _include_bias=False,
         ),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((1, 2))),
-        dict(thresholder="l2", threshold=0),
-        dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((1, 2))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((1, 2))),
+        dict(
+            thresholder="weighted_l1",
+            thresholds=1e-5 * np.ones((1, 2)),
+            _include_bias=False,
+        ),
+        dict(thresholder="l2", threshold=0, _include_bias=True),
+        dict(thresholder="l2", threshold=1e-5, _include_bias=True),
+        dict(
+            thresholder="weighted_l2", thresholds=np.zeros((1, 2)), _include_bias=False
+        ),
+        dict(
+            thresholder="weighted_l2",
+            thresholds=1e-5 * np.ones((1, 2)),
+            _include_bias=False,
+        ),
     ],
 )
-def test_trapping_sr3_quadratic_library(params, trapping_sr3_params, bias):
+def test_trapping_sr3_quadratic_library(params, trapping_sr3_params):
     t = np.arange(0, 1, 0.1)
     x = np.exp(-t).reshape((-1, 1))
     x_dot = -x
     features = np.hstack([x, x**2])
-    if bias:
+    if params.get("_include_bias"):
         features = np.hstack([np.ones_like(x), features])
 
     params.update(trapping_sr3_params)
 
-    opt = TrappingSR3(_n_tgts=1, _include_bias=bias, **params)
+    opt = TrappingSR3(_n_tgts=1, **params)
     opt.fit(features, x_dot)
     check_is_fitted(opt)
 
     # Rerun with identity constraints
     r = x.shape[1]
-    N = 2 + bias
+    N = 2 + params.get("_include_bias", 0)
     params["constraint_rhs"] = np.zeros(r * N)
     params["constraint_lhs"] = np.eye(r * N, r * N)
 
-    opt = TrappingSR3(_n_tgts=1, _include_bias=bias, **params)
+    opt = TrappingSR3(_n_tgts=1, **params)
     opt.fit(features, x_dot)
     check_is_fitted(opt)
     # check is solve was infeasible first

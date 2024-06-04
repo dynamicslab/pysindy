@@ -3,7 +3,6 @@ Wrapper classes for differentiation methods from the :doc:`derivative:index` pac
 
 Some default values used here may differ from those used in :doc:`derivative:index`.
 """
-import numpy as np
 from derivative import methods
 from numpy import arange
 
@@ -78,16 +77,9 @@ class SINDyDerivative(BaseDifferentiation):
         differentiator = methods[self.kwargs["kind"]](
             **{k: v for k, v in self.kwargs.items() if k != "kind"}
         )
-        x = np.moveaxis(x, self.axis, 0)
-        x_shape = x.shape
-        flat_x = x.reshape((t.size, int(x.size / t.size)))
-        flat_x_dot = differentiator.d(flat_x, t, axis=0)
+        x_dot = differentiator.d(x, t, axis=self.axis)
         if self.save_smooth:
-            smoothed_x_ = differentiator.x(flat_x, t, axis=0)
+            self.smoothed_x_ = differentiator.x(x, t, axis=self.axis)
         else:
-            smoothed_x_ = flat_x
-        x_dot = flat_x_dot.reshape(x_shape)
-        smoothed_x_ = smoothed_x_.reshape(x_shape)
-        x_dot = np.moveaxis(x_dot, 0, self.axis)
-        self.smoothed_x_ = np.moveaxis(smoothed_x_, 0, self.axis)
+            self.smoothed_x_ = x
         return x_dot

@@ -61,7 +61,8 @@ default_role = "any"
 html_sourcelink_suffix = ""
 
 intersphinx_mapping = {
-    "derivative": ("https://derivative.readthedocs.io/en/latest/", None)
+    "derivative": ("https://derivative.readthedocs.io/en/latest/", None),
+    "sklearn": ("https://scikit-learn.org/stable/", None),
 }
 
 # -- Extensions to the  Napoleon GoogleDocstring class ---------------------

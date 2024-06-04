@@ -22,10 +22,6 @@ class FROLS(BaseOptimizer):
 
     Parameters
     ----------
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     normalize_columns : boolean, optional (default False)
         Normalize the columns of x (the SINDy library terms) before regression
         by dividing by the L2-norm. Note that the 'normalize' option in sklearn
@@ -84,19 +80,19 @@ class FROLS(BaseOptimizer):
     def __init__(
         self,
         normalize_columns=False,
-        fit_intercept=False,
         copy_X=True,
         kappa=None,
         max_iter=10,
         alpha=0.05,
         ridge_kw=None,
         verbose=False,
+        unbias=True,
     ):
-        super(FROLS, self).__init__(
-            fit_intercept=fit_intercept,
+        super().__init__(
             copy_X=copy_X,
             max_iter=max_iter,
             normalize_columns=normalize_columns,
+            unbias=unbias,
         )
         self.alpha = alpha
         self.ridge_kw = ridge_kw

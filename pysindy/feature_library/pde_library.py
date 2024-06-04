@@ -1,16 +1,15 @@
 import warnings
-from itertools import combinations
-from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
+from typing import Optional
 
 import numpy as np
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
 from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
+from .polynomial_library import PolynomialLibrary
 from pysindy.differentiation import FiniteDifference
 
 
@@ -19,9 +18,10 @@ class PDELibrary(BaseFeatureLibrary):
 
     Parameters
     ----------
-    library_functions : list of mathematical functions, optional (default None)
-        Functions to include in the library. Each function will be
-        applied to each input variable (but not their derivatives)
+    function_library : BaseFeatureLibrary, optional (default
+        PolynomialLibrary(degree=3,include_bias=False))
+        SINDy library with output features representing library_functions to include
+        in the library, in place of library_functions.
 
     derivative_order : int, optional (default 0)
         Order of derivative to take on each input variable,
@@ -32,17 +32,6 @@ class PDELibrary(BaseFeatureLibrary):
 
     temporal_grid : np.ndarray, optional (default None)
         The temporal grid if using SINDy-PI with PDEs.
-
-    function_names : list of functions, optional (default None)
-        List of functions used to generate feature names for each library
-        function. Each name function must take a string input (representing
-        a variable name), and output a string depiction of the respective
-        mathematical function applied to that variable. For example, if the
-        first library function is sine, the name function might return
-        :math:`\\sin(x)` given :math:`x` as input. The function_names list
-        must be the same length as library_functions.
-        If no list of function names is provided, defaults to using
-        :math:`[ f_0(x),f_1(x), f_2(x), \\ldots ]`.
 
     interaction_only : boolean, optional (default True)
         Whether to omit self-interaction terms.
@@ -64,13 +53,6 @@ class PDELibrary(BaseFeatureLibrary):
         will consist of only pure no-derivative terms and pure derivative
         terms, with no mixed terms.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     implicit_terms : boolean
         Flag to indicate if SINDy-PI (temporal derivatives) is being used
         for the right-hand side of the SINDy fit.
@@ -88,17 +70,8 @@ class PDELibrary(BaseFeatureLibrary):
 
     Attributes
     ----------
-    functions : list of functions
-        Mathematical library functions to be applied to each input feature.
-
-    function_names : list of functions
-        Functions for generating string representations of each library
-        function.
-
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -113,16 +86,13 @@ class PDELibrary(BaseFeatureLibrary):
 
     def __init__(
         self,
-        library_functions=[],
+        function_library: Optional[BaseFeatureLibrary] = None,
         derivative_order=0,
         spatial_grid=None,
         temporal_grid=None,
         interaction_only=True,
-        function_names=None,
         include_bias=False,
         include_interaction=True,
-        library_ensemble=False,
-        ensemble_indices=[0],
         implicit_terms=False,
         multiindices=None,
         differentiation_method=FiniteDifference,
@@ -130,12 +100,8 @@ class PDELibrary(BaseFeatureLibrary):
         is_uniform=None,
         periodic=None,
     ):
-        super(PDELibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
-        self.functions = library_functions
+        self.function_library = function_library
         self.derivative_order = derivative_order
-        self.function_names = function_names
         self.interaction_only = interaction_only
         self.implicit_terms = implicit_terms
         self.include_bias = include_bias
@@ -143,12 +109,8 @@ class PDELibrary(BaseFeatureLibrary):
         self.num_trajectories = 1
         self.differentiation_method = differentiation_method
         self.diff_kwargs = diff_kwargs
-
-        if function_names and (len(library_functions) != len(function_names)):
-            raise ValueError(
-                "library_functions and function_names must have the same"
-                " number of elements"
-            )
+        if function_library is None:
+            self.function_library = PolynomialLibrary(degree=3, include_bias=False)
         if derivative_order < 0:
             raise ValueError("The derivative order must be >0")
 
@@ -241,12 +203,6 @@ class PDELibrary(BaseFeatureLibrary):
             spatiotemporal_grid, comprehend_axes(spatiotemporal_grid)
         )
 
-    @staticmethod
-    def _combinations(n_features, n_args, interaction_only):
-        """Get the combinations of features to be passed to a library function."""
-        comb = combinations if interaction_only else combinations_w_r
-        return comb(range(n_features), n_args)
-
     def get_feature_names(self, input_features=None):
         """Return feature names for output features.
 
@@ -261,45 +217,24 @@ class PDELibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_features = self.n_features_in_
-        else:
-            n_features = self.n_input_features_
+        n_features = self.n_features_in_
 
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
-        if self.function_names is None:
-            self.function_names = list(
-                map(
-                    lambda i: (lambda *x: "f" + str(i) + "(" + ",".join(x) + ")"),
-                    range(n_features),
-                )
-            )
         feature_names = []
+        lib_names = []
 
         # Include constant term
         if self.include_bias:
             feature_names.append("1")
-
         # Include any non-derivative terms
-        for i, f in enumerate(self.functions):
-            for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interaction_only
-            ):
-                feature_names.append(
-                    self.function_names[i](*[input_features[j] for j in c])
-                )
+        lib_names = self.function_library.get_feature_names(input_features)
+        feature_names = feature_names + lib_names
 
         def derivative_string(multiindex):
             ret = ""
             for axis in range(self.ind_range):
-                if self.implicit_terms and (
-                    axis
-                    in [
-                        self.spatiotemporal_grid.ax_time,
-                        self.spatiotemporal_grid.ax_sample,
-                    ]
-                ):
+                if self.implicit_terms and (axis == self.spatiotemporal_grid.ax_time,):
                     str_deriv = "t"
                 else:
                     str_deriv = str(axis + 1)
@@ -308,27 +243,30 @@ class PDELibrary(BaseFeatureLibrary):
             return ret
 
         # Include derivative terms
+        derivative_feature_names = []
         for k in range(self.num_derivatives):
             for j in range(n_features):
-                feature_names.append(
+                derivative_feature_names.append(
                     input_features[j] + "_" + derivative_string(self.multiindices[k])
                 )
+        feature_names = feature_names + derivative_feature_names
+
         # Include mixed non-derivative + derivative terms
-        if self.include_interaction:
-            for k in range(self.num_derivatives):
-                for i, f in enumerate(self.functions):
-                    for c in self._combinations(
-                        n_features,
-                        f.__code__.co_argcount,
-                        self.interaction_only,
-                    ):
-                        for jj in range(n_features):
-                            feature_names.append(
-                                self.function_names[i](*[input_features[j] for j in c])
-                                + input_features[jj]
-                                + "_"
-                                + derivative_string(self.multiindices[k])
-                            )
+        if (
+            self.include_interaction
+            and len(lib_names) > 0
+            and len(derivative_feature_names) > 0
+        ):
+            feature_names = (
+                feature_names
+                + np.char.add(
+                    np.array(lib_names).reshape(1, -1),
+                    np.array(derivative_feature_names).reshape(-1, 1),
+                )
+                .reshape(-1)
+                .tolist()
+            )
+
         return feature_names
 
     @x_sequence_or_item
@@ -344,21 +282,14 @@ class PDELibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_features = x_full[0].shape[x_full[0].ax_coord]
-
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
-
+        x0 = x_full[0]
+        n_features = x0.shape[x0.ax_coord]
+        self.n_features_in_ = n_features
         n_output_features = 0
+
         # Count the number of non-derivative terms
-        n_output_features = 0
-        for f in self.functions:
-            n_args = f.__code__.co_argcount
-            n_output_features += len(
-                list(self._combinations(n_features, n_args, self.interaction_only))
-            )
+        self.function_library.fit(x0.take(0, x0.ax_time))
+        n_output_features = self.function_library.n_output_features_
 
         # Add the mixed derivative library_terms
         if self.include_interaction:
@@ -399,12 +330,8 @@ class PDELibrary(BaseFeatureLibrary):
         for x in x_full:
             n_features = x.shape[x.ax_coord]
 
-            if float(__version__[:3]) >= 1.0:
-                if n_features != self.n_features_in_:
-                    raise ValueError("x shape does not match training shape")
-            else:
-                if n_features != self.n_input_features_:
-                    raise ValueError("x shape does not match training shape")
+            if n_features != self.n_features_in_:
+                raise ValueError("x shape does not match training shape")
 
             shape = np.array(x.shape)
             shape[-1] = self.n_output_features_
@@ -412,7 +339,7 @@ class PDELibrary(BaseFeatureLibrary):
 
             # derivative terms
             shape[-1] = n_features * self.num_derivatives
-            library_derivatives = np.empty(shape, dtype=x.dtype)
+            library_derivatives = AxesArray(np.empty(shape, dtype=x.dtype), x.axes)
             library_idx = 0
             for multiindex in self.multiindices:
                 derivs = x
@@ -433,22 +360,8 @@ class PDELibrary(BaseFeatureLibrary):
                 library_idx += n_features
 
             # library function terms
-            n_library_terms = 0
-            for f in self.functions:
-                for c in self._combinations(
-                    n_features, f.__code__.co_argcount, self.interaction_only
-                ):
-                    n_library_terms += 1
-
-            shape[-1] = n_library_terms
-            library_functions = np.empty(shape, dtype=x.dtype)
-            library_idx = 0
-            for f in self.functions:
-                for c in self._combinations(
-                    n_features, f.__code__.co_argcount, self.interaction_only
-                ):
-                    library_functions[..., library_idx] = f(*[x[..., j] for j in c])
-                    library_idx += 1
+            library_functions = self.function_library.fit_transform(x)
+            n_library_terms = library_functions.shape[-1]
 
             library_idx = 0
 
@@ -476,15 +389,13 @@ class PDELibrary(BaseFeatureLibrary):
                     library_idx : library_idx
                     + n_library_terms * self.num_derivatives * n_features,
                 ] = np.reshape(
-                    library_functions[..., np.newaxis, :]
-                    * library_derivatives[..., :, np.newaxis],
+                    library_functions[..., "coord", :]
+                    * library_derivatives[..., :, "coord"],
                     shape,
                 )
                 library_idx += n_library_terms * self.num_derivatives * n_features
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def get_spatial_grid(self):

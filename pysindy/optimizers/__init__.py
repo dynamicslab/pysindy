@@ -19,7 +19,11 @@ try:  # Waiting on PEP 690 to lazy import cvxpy
     from .stable_linear_sr3 import StableLinearSR3
 except ImportError:
     pass
-from .sindy_optimizer import SINDyOptimizer
+try:
+    from .sbr import SBR
+except ImportError:
+    pass
+from .wrapped_optimizer import WrappedOptimizer
 from .sr3 import SR3
 from .ssr import SSR
 from .stlsq import STLSQ
@@ -28,7 +32,7 @@ from .stlsq import STLSQ
 __all__ = [
     "BaseOptimizer",
     "EnsembleOptimizer",
-    "SINDyOptimizer",
+    "WrappedOptimizer",
     "SR3",
     "STLSQ",
     "ConstrainedSR3",
@@ -38,4 +42,5 @@ __all__ = [
     "FROLS",
     "SINDyPI",
     "MIOSR",
+    "SBR",
 ]

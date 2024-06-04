@@ -16,16 +16,8 @@ import pymech.neksuite as nek
 
 # Initialize quadratic SINDy library, with custom ordering
 # to be consistent with the constraint
-library_functions = [lambda x: x, lambda x, y: x * y, lambda x: x**2]
-library_function_names = [lambda x: x, lambda x, y: x + y, lambda x: x + x]
-sindy_library = ps.CustomLibrary(
-    library_functions=library_functions,
-    function_names=library_function_names,
-    include_bias=True,
-)
-sindy_library_no_bias = ps.CustomLibrary(
-    library_functions=library_functions, function_names=library_function_names
-)
+sindy_library = ps.PolynomialLibrary(include_bias=True)
+sindy_library_no_bias = ps.PolynomialLibrary(include_bias=False)
 
 # Initialize integrator keywords for solve_ivp to replicate the odeint defaults
 integrator_keywords = {}
@@ -123,6 +115,8 @@ def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     print("optimal m: ", opt_m)
     print("As eigvals: ", np.sort(eigvals))
     max_eigval = np.sort(eigvals)[-1]
+    if max_eigval > 0:
+        return False
     C = np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
     L = np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
     Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
@@ -133,6 +127,7 @@ def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     print("Estimate of trapping region size, Rm = ", Rm)
     if not np.isclose(mean_val, 1.0):
         print("Normalized trapping region size, Reff = ", Reff)
+    return True
 
 
 def get_trapping_radius(max_eigval, eps_Q, r, d):

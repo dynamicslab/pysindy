@@ -1,0 +1,39 @@
+on:
+  schedule:
+    # run twice a month during times when hopefully few other jobs are scheduled
+    - cron: '0 12 6,21 * *'
+
+jobs:
+  find-notebooks:
+    runs-on: ubuntu-latest
+    outputs:
+      paths: ${{ steps.find-notebooks.outputs.paths }}
+    steps:
+      - name: List Files
+        id: find-notebooks
+        uses: mirko-felice/list-files-action@v3.0.5
+        with:
+          repo: ${{ github.repository }}
+          ref: ${{ github.ref }}
+          path: "examples"
+          ext: ".ipynb"
+
+  run-notebooks:
+    needs: find-notebooks
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        files: ${{ fromJson(needs.find-notebooks.outputs.paths) }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.9"
+      - name: Install dependencies
+        run: |
+          pip install .[cvxpy,miosr] sympy nbconvert jupyter matplotlib seaborn pandas dysts
+      - name: Run Notebook
+        run: |
+          jupyter nbconvert --execute --to notebook  --inplace ${{ matrix.files }}

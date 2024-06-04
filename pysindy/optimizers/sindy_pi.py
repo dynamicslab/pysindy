@@ -46,10 +46,6 @@ class SINDyPI(SR3):
     max_iter : int, optional (default 10000)
         Maximum iterations of the optimization algorithm.
 
-    fit_intercept : boolean, optional (default False)
-        Whether to calculate the intercept for this model. If set to false, no
-        intercept will be used in calculations.
-
     normalize_columns : boolean, optional (default False)
         This parameter normalizes the columns of Theta before the
         optimization is done. This tends to standardize the columns
@@ -87,12 +83,8 @@ class SINDyPI(SR3):
         Regularized weight vector(s). This is the v in the objective
         function.
 
-    unbias : boolean
-        Whether to perform an extra step of unregularized linear regression
-        to unbias the coefficients for the identified support.
-        ``unbias`` is automatically set to False if a constraint is used and
-        is otherwise left uninitialized.
-
+    unbias: bool
+        Required to be false, maintained for supertype compatibility
     """
 
     def __init__(
@@ -101,22 +93,22 @@ class SINDyPI(SR3):
         tol=1e-5,
         thresholder="l1",
         max_iter=10000,
-        fit_intercept=False,
         copy_X=True,
         thresholds=None,
         model_subset=None,
         normalize_columns=False,
         verbose_cvxpy=False,
+        unbias=False,
     ):
-        super(SINDyPI, self).__init__(
+        super().__init__(
             threshold=threshold,
             thresholds=thresholds,
             tol=tol,
             thresholder=thresholder,
             max_iter=max_iter,
-            fit_intercept=fit_intercept,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
+            unbias=unbias,
         )
 
         if (
@@ -130,7 +122,8 @@ class SINDyPI(SR3):
                 " in current version of SINDy-PI"
             )
 
-        self.unbias = False
+        if self.unbias:
+            raise ValueError("SINDyPI is incompatible with an unbiasing step")
         self.verbose_cvxpy = verbose_cvxpy
         if model_subset is not None:
             if not isinstance(model_subset, list):
@@ -199,8 +192,9 @@ class SINDyPI(SR3):
                 )
                 if xi.value is None:
                     warnings.warn(
-                        "Infeasible solve on iteration " + str(i) + ", try "
-                        "changing your library",
+                        "Infeasible solve on iteration "
+                        + str(i)
+                        + ", try changing your library",
                         ConvergenceWarning,
                     )
                 xi_final[:, i] = xi.value
@@ -216,8 +210,9 @@ class SINDyPI(SR3):
                 )
                 if xi.value is None:
                     warnings.warn(
-                        "Infeasible solve on iteration " + str(i) + ", try "
-                        "changing your library",
+                        "Infeasible solve on iteration "
+                        + str(i)
+                        + ", try changing your library",
                         ConvergenceWarning,
                     )
                 xi_final[:, i] = xi.value

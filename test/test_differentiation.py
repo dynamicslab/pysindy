@@ -423,7 +423,7 @@ def test_centered_difference_noaxis_vs_axis(data_2d_resolved_pde):
 @pytest.mark.parametrize(
     "derivative, kwargs",
     [
-        (SINDyDerivative, {"kind": "kalman", "axis": -2}),
+        (SINDyDerivative, {"kind": "finite_difference", "k": 1, "axis": -2}),
         (FiniteDifference, {"axis": -2}),
         (
             SmoothedFiniteDifference,

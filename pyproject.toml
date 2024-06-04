@@ -27,7 +27,7 @@ classifiers = [
 readme = "README.rst"
 dependencies = [
     "scikit-learn>=1.1, !=1.5.0",
-    "derivative>=0.5.4",
+    "derivative>=0.6.1",
 ]
 
 [project.optional-dependencies]

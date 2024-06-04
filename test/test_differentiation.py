@@ -418,3 +418,24 @@ def test_centered_difference_noaxis_vs_axis(data_2d_resolved_pde):
             slow_differences_t,
             atol=atol,
         )
+
+
+@pytest.mark.parametrize(
+    "derivative, kwargs",
+    [
+        (SINDyDerivative, {"kind": "finite_difference", "k": 1, "axis": -2}),
+        (FiniteDifference, {"axis": -2}),
+        (
+            SmoothedFiniteDifference,
+            {"axis": -2, "smoother_kws": {"window_length": 2, "polyorder": 1}},
+        ),
+        (SpectralDerivative, {"axis": -2}),
+    ],
+)
+def test_nd_differentiation(derivative, kwargs):
+    t = np.arange(3)
+    x = np.random.random(size=(2, 3, 2))
+    x[1, :, 1] = 1
+    xdot = derivative(**kwargs)._differentiate(x, t)
+    expected = np.zeros(3)
+    np.testing.assert_array_almost_equal(xdot[1, :, 1], expected)

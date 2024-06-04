@@ -33,7 +33,8 @@ class SINDyDerivative(BaseDifferentiation):
     for acceptable keywords.
     """
 
-    def __init__(self, save_smooth=True, **kwargs):
+    def __init__(self, axis=0, save_smooth=True, **kwargs):
+        self.axis = axis
         self.kwargs = kwargs
         self.save_smooth = save_smooth
 
@@ -76,9 +77,9 @@ class SINDyDerivative(BaseDifferentiation):
         differentiator = methods[self.kwargs["kind"]](
             **{k: v for k, v in self.kwargs.items() if k != "kind"}
         )
-        x_dot = differentiator.d(x, t, axis=0)
+        x_dot = differentiator.d(x, t, axis=self.axis)
         if self.save_smooth:
-            self.smoothed_x_ = differentiator.x(x, t, axis=0)
+            self.smoothed_x_ = differentiator.x(x, t, axis=self.axis)
         else:
             self.smoothed_x_ = x
         return x_dot

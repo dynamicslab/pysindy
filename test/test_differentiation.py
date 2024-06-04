@@ -420,22 +420,22 @@ def test_centered_difference_noaxis_vs_axis(data_2d_resolved_pde):
         )
 
 
-def test_nd_differentiation():
+@pytest.mark.parametrize(
+    "derivative, kwargs",
+    [
+        (SINDyDerivative, {"kind": "kalman", "axis": -2}),
+        (FiniteDifference, {"axis": -2}),
+        (
+            SmoothedFiniteDifference,
+            {"axis": -2, "smoother_kws": {"window_length": 2, "polyorder": 1}},
+        ),
+        (SpectralDerivative, {"axis": -2}),
+    ],
+)
+def test_nd_differentiation(derivative, kwargs):
     t = np.arange(3)
     x = np.random.random(size=(2, 3, 2))
     x[1, :, 1] = 1
-    xdot_sindy = SINDyDerivative(kind="kalman", axis=-2)._differentiate(x, t)
-    xdot_fd = FiniteDifference(axis=-2)._differentiate(x, t)
-    xdot_sindyfd = SINDyDerivative(
-        kind="finite_difference", k=1, axis=-2
-    )._differentiate(x, t)
-    xdot_sfd = SmoothedFiniteDifference(
-        axis=-2, smoother_kws={"window_length": 2, "polyorder": 1}
-    )._differentiate(x, t)
-    xdot_spectral = SpectralDerivative(axis=-2)._differentiate(x, t)
-    zeros = np.zeros(3)
-    np.testing.assert_array_almost_equal(xdot_sindy[1, :, 1], zeros)
-    np.testing.assert_array_almost_equal(xdot_fd[1, :, 1], zeros)
-    np.testing.assert_array_almost_equal(xdot_sindyfd[1, :, 1], zeros)
-    np.testing.assert_array_almost_equal(xdot_sfd[1, :, 1], zeros)
-    np.testing.assert_array_almost_equal(xdot_spectral[1, :, 1], zeros)
+    xdot = derivative(**kwargs)._differentiate(x, t)
+    expected = np.zeros(3)
+    np.testing.assert_array_almost_equal(xdot[1, :, 1], expected)

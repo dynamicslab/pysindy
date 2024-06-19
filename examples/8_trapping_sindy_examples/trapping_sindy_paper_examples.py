@@ -376,7 +376,7 @@ max_iter = 5000
 eta = 1.0e3
 
 alpha_m = 8e-1 * eta  # default is 1e-2 * eta so this speeds up the code here
-accel = True  # use acceleration for the update of (m, A), sometimes is faster
+accel = False
 
 # run trapping SINDy
 sindy_opt = ps.TrappingSR3(

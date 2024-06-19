@@ -796,7 +796,7 @@ eta = 1.0e2
 # don't need a threshold if eta is sufficiently small
 # which is good news because CVXPY is much slower
 threshold = 0
-alpha_m = 1e-1 * eta
+alpha_m = 9e-1 * eta
 
 
 # run trapping SINDy
@@ -835,11 +835,11 @@ if check_stability(r, Xi, sindy_opt, 1):
     mean_val = np.mean(x_test_pred, axis=0)
     mean_val = np.sqrt(np.sum(mean_val**2))
     check_stability(r, Xi, sindy_opt, mean_val)
-    make_progress_plots(r, sindy_opt)
     A_guess = sindy_opt.A_history_[-1]
     m_guess = sindy_opt.m_history_[-1]
     E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
     print("Frobenius Error = ", E_pred)
+make_progress_plots(r, sindy_opt)
 
 # Compute time-averaged dX/dt error
 deriv_error = np.zeros(xdot_test.shape[0])

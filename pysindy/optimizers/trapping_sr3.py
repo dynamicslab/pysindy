@@ -626,17 +626,18 @@ class TrappingSR3(ConstrainedSR3):
         # Calculate error in quadratic balance, and adjust trap center
         A_b = (A - PW) / self.eta
         if self.method == "global":
+            # PQWT_PW is gradient of some loss in m
             PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
             if self.accel:
                 trap_new = m_partial - self.alpha_m * PQWT_PW
             else:
-                trap_new = trap_ctr_prev - self.alpha_m * PQWT_PW
+                trap_new = trap_ctr - self.alpha_m * PQWT_PW
         else:
             PMT_PW = np.tensordot(PMW, A_b, axes=([2, 1], [0, 1]))
             if self.accel:
                 trap_new = m_partial - self.alpha_m * PMT_PW
             else:
-                trap_new = trap_ctr_prev - self.alpha_m * PMT_PW
+                trap_new = trap_ctr - self.alpha_m * PMT_PW
 
         # Update A
         A_new = self._update_A(A - self.alpha_A * A_b, PW)

@@ -447,9 +447,9 @@ class TrappingSR3(ConstrainedSR3):
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
         """Solves the coefficient update analytically if threshold = 0"""
         g = x_transpose_y + P_transpose_A / self.eta
-        inv1 = np.linalg.pinv(H, rcond=1e-15)
+        inv1 = np.linalg.pinv(H, rcond=1e-10)
         inv2 = np.linalg.pinv(
-            self.constraint_lhs.dot(inv1).dot(self.constraint_lhs.T), rcond=1e-15
+            self.constraint_lhs.dot(inv1).dot(self.constraint_lhs.T), rcond=1e-10
         )
 
         rhs = g.flatten() + self.constraint_lhs.T.dot(inv2).dot(

@@ -740,11 +740,10 @@ class TrappingSR3(ConstrainedSR3):
             if self.method == "global":
                 mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
                 p = self.PL_ - mPQ
-                Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
             else:
                 mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
                 p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-                Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
+            Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
             self.p_history_.append(p)
 
             coef_prev = coef_sparse

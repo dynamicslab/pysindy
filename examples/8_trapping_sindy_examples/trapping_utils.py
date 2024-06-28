@@ -229,29 +229,37 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
                 )
             rhos_plus.append(DA)
             rhos_minus.append(Rm)
-    x = np.arange(len(rhos_minus[1:]))
-    plt.plot(x, rhos_minus[1:], "k--", label=r"$\rho_-$", linewidth=3)
-    plt.plot(x, rhos_plus[1:], label=r"$\rho_+$", linewidth=3, color="k")
-    ax = plt.gca()
-    ax.fill_between(x, rhos_minus[1:], rhos_plus[1:], color="c", label=r"$\dot{K} < 0$")
-    ax.fill_between(
-        x,
-        rhos_plus[1:],
-        np.ones(len(x)) * rhos_plus[-1] * 5,
-        color="r",
-        label="Possibly unstable",
-    )
-    ax.fill_between(
-        x, np.zeros(len(x)), rhos_minus[1:], color="g", label=r"Trapping region"
-    )
-    plt.grid(True)
-    plt.ylabel("Stability radius")
-    plt.xlabel("Algorithm iteration")
-    plt.legend(framealpha=1.0)
-    plt.xlim(1, x[-1])
-    plt.ylim(1, rhos_plus[-1] * 5)
-    plt.xscale("log")
-    plt.yscale("log")
+    try:
+        x = np.arange(len(rhos_minus[1:]))
+        plt.figure()
+        plt.plot(x, rhos_minus[1:], "k--", label=r"$\rho_-$", linewidth=3)
+        plt.plot(x, rhos_plus[1:], label=r"$\rho_+$", linewidth=3, color="k")
+        ax = plt.gca()
+        ax.fill_between(
+            x, rhos_minus[1:], rhos_plus[1:], color="c", label=r"$\dot{K} < 0$"
+        )
+        ax.fill_between(
+            x,
+            rhos_plus[1:],
+            np.ones(len(x)) * rhos_plus[-1] * 5,
+            color="r",
+            label="Possibly unstable",
+        )
+        ax.fill_between(
+            x, np.zeros(len(x)), rhos_minus[1:], color="g", label=r"Trapping region"
+        )
+        plt.grid(True)
+        plt.ylabel("Stability radius")
+        plt.xlabel("Algorithm iteration")
+        plt.legend(framealpha=1.0)
+        plt.xlim(1, x[-1])
+        plt.ylim(1, rhos_plus[-1] * 5)
+        plt.xscale("log")
+        plt.yscale("log")
+    except IndexError:
+        print(
+            "The A^S matrix is not fully Hurwitz so will not plot the stability radii"
+        )
     return rhos_minus, rhos_plus
 
 

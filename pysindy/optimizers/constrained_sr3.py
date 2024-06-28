@@ -300,6 +300,8 @@ class ConstrainedSR3(SR3):
                     <= self.constraint_rhs[: self.constraint_separation_index]
                 )
             prob = cp.Problem(cp.Minimize(cost), constraints)
+        else:
+            prob = cp.Problem(cp.Minimize(cost))
 
         prob_clone = deepcopy(prob)
         # default solver is SCS/OSQP here but switches to ECOS for L2

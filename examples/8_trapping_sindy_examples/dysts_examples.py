@@ -10,7 +10,6 @@ from scipy.integrate import solve_ivp
 from trapping_utils import check_local_stability
 from trapping_utils import integrator_keywords
 from trapping_utils import load_data
-from trapping_utils import make_constraints
 from trapping_utils import make_trap_progress_plots
 from trapping_utils import obj_function
 from trapping_utils import sindy_library
@@ -19,6 +18,7 @@ import pysindy as ps
 
 # ignore warnings
 warnings.filterwarnings("ignore")
+np.random.seed(1)
 
 # %% [markdown]
 # The local stability version of Trapping SINDy reduces to the following unconstrained optimization problem:
@@ -260,23 +260,22 @@ for i in range(len(systems_list)):
     x_test = all_sols_test[systems_list[i]][0]
 
     # run trapping SINDy
-    constraint_zeros, constraint_matrix = make_constraints(r)
     sindy_opt = ps.TrappingSR3(
+        method="global",
+        _n_tgts=r,
+        _include_bias=True,
         threshold=threshold,
         eta=eta,
         alpha_m=alpha_m,
         max_iter=max_iter,
         gamma=-0.1,
-        constraint_lhs=constraint_matrix,
-        constraint_rhs=constraint_zeros,
-        constraint_order="feature",
-        # verbose=True
+        verbose=True,
     )
     model = ps.SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
     )
-    model.fit(x_train, t=t, quiet=True)
+    model.fit(x_train, t=t)
 
     # Check the model coefficients and integrate it
     Xi = model.coefficients().T
@@ -318,16 +317,15 @@ for i in range(len(systems_list)):
     )
     # print('Optimal m = ', opt_m, '\n')
 
-plt.show()
-
 # %% [markdown]
 # ### Verify explicitly that some of the systems have unstable invariant linear or constant subspaces
 # These systems are not globally stable!
 
 # %%
+plt.figure()
 for system in ["BurkeShaw", "NoseHoover", "SprottA", "SprottB"]:
     eq = getattr(flows, system)()
-    eq.ic = [0, 0, 0]
+    eq.ic = np.array([0, 0, 0])
     t_sol, sol = eq.make_trajectory(
         10000,
         pts_per_period=100,
@@ -344,7 +342,6 @@ for system in ["BurkeShaw", "NoseHoover", "SprottA", "SprottB"]:
 
 plt.grid(True)
 plt.legend()
-plt.show()
 
 # %% [markdown]
 # ### Now repeat for locally stable models!
@@ -354,13 +351,14 @@ plt.show()
 # define hyperparameters
 threshold = 0
 max_iter = 5000
-eta = 1.0e3
-alpha_m = 4e-2 * eta  # default is 1e-2 * eta so this speeds up the code here
+eta = 1.0e7
+alpha_m = 0.1 * eta  # default is 1e-2 * eta so this speeds up the code here
 
 stable_systems = [2, 3, 6, 7, 14]
 stable_systems_list = systems_list[stable_systems]
 
 for i in range(len(stable_systems_list)):
+    plt.figure(10, figsize=(16, 3))
     r = dimension_list[stable_systems[i]]
     print(i, stable_systems_list[i], r)
 
@@ -372,18 +370,22 @@ for i in range(len(stable_systems_list)):
     # run trapping SINDy, locally stable variant
     # where the constraints are removed and beta << 1
     sindy_opt = ps.TrappingSR3(
+        method="local",
+        _n_tgts=r,
+        _include_bias=True,
         threshold=threshold,
         eta=eta,
         alpha_m=alpha_m,
         max_iter=max_iter,
         gamma=-0.1,
+        verbose=True,
         beta=1e-9,
     )
     model = ps.SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
     )
-    model.fit(x_train, t=t, quiet=True)
+    model.fit(x_train, t=t)
 
     # Check the model coefficients and integrate it
     Xi = model.coefficients().T
@@ -414,7 +416,7 @@ for i in range(len(stable_systems_list)):
         opt_energy,
     )
     # print('Optimal m = ', opt_m, '\n')
-    plt.figure(figsize=(4, 2))
+    plt.subplot(1, 5, i + 1)
     plt.title("Dynamical System: " + stable_systems_list[i])
     plt.plot(x_test[:, 0], x_test[:, 1], label="Test trajectory")
     plt.plot(x_test_pred[:, 0], x_test_pred[:, 1], label="SINDy model prediction")
@@ -424,11 +426,11 @@ for i in range(len(stable_systems_list)):
     plt.legend()
 
     # Plot the rho_+ and rho_- estimates for the stable systems
-    if opt_energy < 0:
-        plt.figure(figsize=(4, 2))
-        rhos_minus, rhos_plus = make_trap_progress_plots(r, sindy_opt)
-        plt.yscale("log")
-        plt.ylim(1, rhos_plus[-1] * 1.2)
+    plt.figure(11, figsize=(16, 3))
+    plt.subplot(1, 5, i + 1)
+    rhos_minus, rhos_plus = make_trap_progress_plots(r, sindy_opt)
+    plt.yscale("log")
+    plt.ylim(1, rhos_plus[-1] * 1.2)
 
 # %% [markdown]
 # ### Last demonstration: building locally stable reduced-order models for the lid-cavity flow
@@ -466,7 +468,8 @@ class GalerkinROM:
         Q = self.Q[:r, :r, :r]
 
         # RHS of POD-Galerkin model, for time integration
-        rhs = lambda t, x: C + (L @ x) + np.einsum("ijk,j,k->i", Q, x, x)
+        def rhs(t, x):
+            return C + (L @ x) + np.einsum("ijk,j,k->i", Q, x, x)
 
         sol = solve_ivp(rhs, (t[0], t[-1]), x0[:r], t_eval=t, rtol=rtol, atol=atol)
         return sol.y.T
@@ -500,13 +503,16 @@ alpha_m = 1e-4 * eta  # default is 1e-2 * eta so this speeds up the code here
 beta = 1e-5
 max_iter = 100
 sindy_opt = ps.TrappingSR3(
+    method="local",
+    _n_tgts=r,
+    _include_bias=True,
     threshold=threshold,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
     gamma=-0.1,
-    beta=beta,
     verbose=True,
+    beta=beta,
 )
 
 # Fit the model
@@ -515,7 +521,7 @@ model = ps.SINDy(
     feature_library=sindy_library,
 )
 
-model.fit(x_train, t=t_train, quiet=True)
+model.fit(x_train, t=t_train)
 Xi = model.coefficients().T
 check_local_stability(r, Xi, sindy_opt, 1.0)
 
@@ -524,7 +530,7 @@ model_baseline = ps.SINDy(
     optimizer=ps.STLSQ(threshold=0.0),
     feature_library=ps.PolynomialLibrary(),
 )
-model_baseline.fit(x_train, t=t_train, quiet=True)
+model_baseline.fit(x_train, t=t_train)
 
 # %%
 # Simulate the model
@@ -572,7 +578,6 @@ plt.grid()
 
 plt.subplots_adjust(wspace=0.2)
 plt.savefig("cavity_plot.pdf")
-plt.show()
 
 # %%
 plt.figure(figsize=(18, 5))

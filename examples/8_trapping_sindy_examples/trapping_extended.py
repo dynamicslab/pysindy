@@ -34,6 +34,8 @@ from trapping_utils import (
     make_trap_progress_plots,
 )
 
+np.random.seed(10)  # for reproducibility
+
 # %% [markdown]
 # # Lorenz model
 # The Lorenz system originates from a simple fluid model of atmospheric dynamics from Lorenz et al. (1963).
@@ -115,25 +117,23 @@ threshold = 0
 max_iter = 2000
 eta = 1.0e5
 constraint_zeros, constraint_matrix = make_constraints(r)
-alpha_m = 2e-1 * eta  # default is 1e-2 * eta so this speeds up the code here
 
 # run trapping SINDy
 sindy_opt = ps.TrappingSR3(
+    method="global",
+    _n_tgts=3,
+    _include_bias=True,
     threshold=threshold,
     eta=eta,
-    alpha_m=alpha_m,
     max_iter=max_iter,
     gamma=-1,
-    constraint_lhs=constraint_matrix,
-    constraint_rhs=constraint_zeros,
-    constraint_order="feature",
     verbose=True,
 )
 model = ps.SINDy(
     optimizer=sindy_opt,
     feature_library=sindy_library,
 )
-model.fit(x_train, t=t, quiet=True)
+model.fit(x_train, t=t)
 model.print()
 
 # Extract model coefficients and check how well constraint is satisfied
@@ -254,16 +254,18 @@ eta = 1.0e2
 alpha = 1e-20
 beta = 1e20
 threshold = 0
-alpha_m = 1e-1 * eta
 
 # run trapping SINDy... no more constraints!
 sindy_opt = ps.TrappingSR3(
+    method="local",
+    _n_tgts=3,
+    _include_bias=True,
     threshold=threshold,
     eta=eta,
-    alpha_m=alpha_m,
+    max_iter=max_iter,
+    gamma=-1,
     alpha=alpha,
     beta=beta,
-    max_iter=max_iter,
     verbose=True,
 )
 model = ps.SINDy(
@@ -292,19 +294,22 @@ check_stability(r, Xi, sindy_opt, mean_val)
 max_iter = 2000
 eta = 1.0e3
 alpha = 1e20
-beta = 1e-8
+beta = 1e-10
 threshold = 0
-alpha_m = 1e-1 * eta
+alpha_m = 0.9 * eta
 
 # run trapping SINDy... no more constraints!
 sindy_opt = ps.TrappingSR3(
+    method="local",
+    _n_tgts=3,
+    _include_bias=True,
     threshold=threshold,
     eta=eta,
-    gamma=-1,
     alpha_m=alpha_m,
+    max_iter=max_iter,
+    gamma=-1,
     alpha=alpha,
     beta=beta,
-    max_iter=max_iter,
     verbose=True,
 )
 model = ps.SINDy(
@@ -354,9 +359,6 @@ print("Frobenius error = ", E_pred)
 check_local_stability(r, Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
-sigma = 10
-rho = 28
-beta = 8.0 / 3.0
 Xi_lorenz = np.zeros(Xi.shape)
 Xi_lorenz[:r, :r] = np.asarray([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
 Xi_lorenz[r + 1, 1] = -1
@@ -386,13 +388,16 @@ alpha_m = 9e-1 * eta
 
 # run trapping SINDy... no more constraints!
 sindy_opt = ps.TrappingSR3(
+    method="local",
+    _n_tgts=3,
+    _include_bias=True,
     threshold=threshold,
     eta=eta,
     alpha_m=alpha_m,
+    max_iter=max_iter,
     gamma=-1,
     alpha=alpha,
     beta=beta,
-    max_iter=max_iter,
     verbose=True,
     eps_solver=1e-3,
 )
@@ -432,26 +437,29 @@ print(
 
 # %%
 lorenz_noise = np.random.normal(
-    0, mean_val / 2, x_train.shape
-)  # 50% noise added with zero mean
+    0, mean_val / 4, x_train.shape
+)  # 25% noise added with zero mean
 x_train_noise = x_train + lorenz_noise
 
-max_iter = 2000
-eta = 1.0e5
+max_iter = 10000
+eta = 1.0e-2
 alpha = 1e20
-beta = 23e-11
+beta = 1e-14
 threshold = 0
-alpha_m = 1e-1 * eta
+alpha_m = 0.9 * eta
 
 # run trapping SINDy... no more constraints!
 sindy_opt = ps.TrappingSR3(
+    method="local",
+    _n_tgts=3,
+    _include_bias=True,
     threshold=threshold,
     eta=eta,
-    gamma=-1,
     alpha_m=alpha_m,
+    max_iter=max_iter,
+    gamma=-1,
     alpha=alpha,
     beta=beta,
-    max_iter=max_iter,
     verbose=True,
 )
 model = ps.SINDy(
@@ -473,6 +481,7 @@ print(
     "Maximum deviation from having zero totally symmetric part: ",
     np.max(np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))),
 )
+make_trap_progress_plots(r, sindy_opt)
 
 # Calculate the x_dot and x trajectories for train and test sets
 xdot_test = model.differentiate(x_test, t=t)
@@ -481,9 +490,6 @@ x_train_pred = model.simulate(x_train[0, :], t, integrator_kws=integrator_keywor
 x_test_pred = model.simulate(x_test[0, :], t, integrator_kws=integrator_keywords)
 
 # compute relative Frobenius error in the model coefficients
-sigma = 10
-rho = 28
-beta = 8.0 / 3.0
 Xi_lorenz = np.zeros(Xi.shape)
 Xi_lorenz[:r, :r] = np.asarray([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
 Xi_lorenz[r + 1, 1] = -1
@@ -515,9 +521,6 @@ print("Frobenius error = ", E_pred)
 check_local_stability(r, Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
-sigma = 10
-rho = 28
-beta = 8.0 / 3.0
 Xi_lorenz = np.zeros(Xi.shape)
 Xi_lorenz[:r, :r] = np.asarray([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
 Xi_lorenz[r + 1, 1] = -1
@@ -548,4 +551,4 @@ ax2.plot(x_test_pred[:, 0], x_test_pred[:, 1], x_test_pred[:, 2], "k--")
 ax2.set(
     xlabel="$x_0$", ylabel="$x_1$", zlabel="$x_2$", title="true simulation + prediction"
 )
-fig.show()
+plt.show()

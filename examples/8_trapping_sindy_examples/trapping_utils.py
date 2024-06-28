@@ -268,7 +268,6 @@ def make_3d_plots(x_test, x_test_pred, filename):
     ax.set_zticklabels([])
     ax.set_axis_off()
     plt.legend(fontsize=14)
-    plt.show()
 
 
 # Plot the SINDy fits of X and Xdot against the ground truth
@@ -294,8 +293,6 @@ def make_fits(r, t, xdot_test, xdot_test_pred, x_test, x_test_pred, filename):
         plt.legend(fontsize=12)
         if i == r - 1:
             plt.xlabel("t", fontsize=18)
-
-    plt.show()
 
 
 # Plot errors between m_{k+1} and m_k and similarly for the model coefficients
@@ -653,7 +650,6 @@ def trapping_region(r, x_test_pred, Xi, sindy_opt, filename):
     ax.set_yticklabels([])
     ax.set_zticklabels([])
     ax.set_axis_off()
-    plt.show()
 
 
 # Make Lissajou figures with ground truth and SINDy model
@@ -683,4 +679,3 @@ def make_lissajou(r, x_train, x_test, x_train_pred, x_test_pred, filename):
                 plt.ylabel(r"$x_" + str(i) + r"$", fontsize=18)
             if i == r - 1:
                 plt.xlabel(r"$x_" + str(j) + r"$", fontsize=18)
-    plt.show()

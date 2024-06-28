@@ -376,7 +376,6 @@ max_iter = 5000
 eta = 1.0e3
 
 alpha_m = 8e-1 * eta  # default is 1e-2 * eta so this speeds up the code here
-accel = False
 
 # run trapping SINDy
 sindy_opt = ps.TrappingSR3(
@@ -385,7 +384,6 @@ sindy_opt = ps.TrappingSR3(
     threshold=threshold,
     eta=eta,
     alpha_m=alpha_m,
-    accel=accel,
     max_iter=max_iter,
     gamma=-1,
     verbose=True,
@@ -547,6 +545,7 @@ PQ_tensor = sindy_opt.PQ_
 L = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 Q_sum = np.max(np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1]))))
+print((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))
 print("Max deviation from the constraints = ", Q_sum)
 
 # plotting and analysis

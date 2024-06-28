@@ -854,11 +854,9 @@ def _antisymm_double_constraint(
     mixed_terms: dict[frozenset[int], int],
 ) -> Float2D:
     """Set constraints for coefficients adorning terms like a_i^2 * a_j=0"""
-    constraint_mat_1 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i^2 * a_j
-    constraint_mat_2 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i * a_j^2
-    for constr_ind, ((tgt_i, tgt_j), mix_term) in zip(
-        range(n_tgts), mixed_terms.items()
-    ):
+    constraint_mat_1 = np.zeros((len(mixed_terms), n_terms, n_tgts))  # a_i^2 * a_j
+    constraint_mat_2 = np.zeros((len(mixed_terms), n_terms, n_tgts))  # a_i * a_j^2
+    for constr_ind, ((tgt_i, tgt_j), mix_term) in enumerate(mixed_terms.items()):
         constraint_mat_1[constr_ind, mix_term, tgt_i] = 1.0
         constraint_mat_1[constr_ind, pure_terms[tgt_i], tgt_j] = 1.0
         constraint_mat_2[constr_ind, mix_term, tgt_j] = 1.0

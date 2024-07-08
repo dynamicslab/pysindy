@@ -21,7 +21,7 @@ from sklearn.linear_model import Lasso
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
-
+import re
 from pysindy import pysindy
 from pysindy import SINDy
 from pysindy.differentiation import SINDyDerivative
@@ -490,7 +490,9 @@ def test_equations(data, capsys):
     model.print(precision=2)
 
     out, _ = capsys.readouterr()
+    pattern = re.compile(r"\(x0\)' = (.+)\n")
     assert len(out) > 0
+    assert pattern.match(out)
 
 
 def test_print_discrete_time(data_discrete_time, capsys):
@@ -500,7 +502,9 @@ def test_print_discrete_time(data_discrete_time, capsys):
     model.print()
 
     out, _ = capsys.readouterr()
+    pattern = re.compile(r'\(x0\)\[k\+1\] = (.+)\n')
     assert len(out) > 0
+    assert pattern.match(out)
 
 
 def test_print_discrete_time_multiple_trajectories(
@@ -513,7 +517,9 @@ def test_print_discrete_time_multiple_trajectories(
     model.print()
 
     out, _ = capsys.readouterr()
-    assert len(out) > 1
+    pattern = re.compile(r'\(x0\)\[k\+1\] = (.+)\n')
+    assert len(out) > 0
+    assert pattern.match(out)
 
 
 def test_differentiate(data_lorenz, data_multiple_trajectories):

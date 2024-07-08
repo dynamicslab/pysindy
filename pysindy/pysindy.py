@@ -351,7 +351,7 @@ class SINDy(BaseEstimator):
             precision=precision,
         )
 
-    def print(self, lhs=None, precision=3):
+    def print(self, lhs=None, precision=3, flush=False):
         """Print the SINDy model equations.
 
         Parameters
@@ -362,6 +362,9 @@ class SINDy(BaseEstimator):
 
         precision: int, optional (default 3)
             Precision to be used when printing out model coefficients.
+
+        flush: bool, optional (default = False)
+            If flush is true, the output stream is forcibly flushed.
         """
         eqns = self.equations(precision)
         if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
@@ -369,18 +372,17 @@ class SINDy(BaseEstimator):
         else:
             feature_names = self.feature_names
         for i, eqn in enumerate(eqns):
+            names = None
             if self.discrete_time:
-                names = "(" + feature_names[i] + ")"
-                print(names + "[k+1] = " + eqn)
+                names = f"({feature_names[i]})[k+1]"
             elif lhs is None:
                 if not sindy_pi_flag or not isinstance(self.optimizer, SINDyPI):
-                    names = "(" + feature_names[i] + ")"
-                    print(names + "' = " + eqn)
+                    names = f"({feature_names[i]})'"
                 else:
-                    names = feature_names[i]
-                    print(names + " = " + eqn)
+                    names = f"({feature_names[i]})"
             else:
-                print(lhs[i] + " = " + eqn)
+                names = f"{lhs[i]}"
+            print(f"{names} = {eqn}", flush=flush)
 
     def score(self, x, t=None, x_dot=None, u=None, metric=r2_score, **metric_kws):
         """
@@ -657,12 +659,12 @@ class SINDy(BaseEstimator):
                         "variables were not used when the model was fit"
                     )
                 for i in range(1, t):
-                    x[i] = self.predict(x[i - 1 : i])
+                    x[i] = self.predict(x[i - 1: i])
                     if check_stop_condition(x[i]):
                         return x[: i + 1]
             else:
                 for i in range(1, t):
-                    x[i] = self.predict(x[i - 1 : i], u=u[i - 1, np.newaxis])
+                    x[i] = self.predict(x[i - 1: i], u=u[i - 1, np.newaxis])
                     if check_stop_condition(x[i]):
                         return x[: i + 1]
             return x

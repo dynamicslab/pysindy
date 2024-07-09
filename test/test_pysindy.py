@@ -12,6 +12,8 @@ To run tests for just one file, run
 pytest file_to_test.py
 
 """
+import re
+
 import numpy as np
 import pytest
 from sklearn.exceptions import ConvergenceWarning
@@ -21,7 +23,7 @@ from sklearn.linear_model import Lasso
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
-import re
+
 from pysindy import pysindy
 from pysindy import SINDy
 from pysindy.differentiation import SINDyDerivative
@@ -502,7 +504,7 @@ def test_print_discrete_time(data_discrete_time, capsys):
     model.print()
 
     out, _ = capsys.readouterr()
-    pattern = re.compile(r'\(x0\)\[k\+1\] = (.+)\n')
+    pattern = re.compile(r"\(x0\)\[k\+1\] = (.+)\n")
     assert len(out) > 0
     assert pattern.match(out)
 
@@ -517,7 +519,7 @@ def test_print_discrete_time_multiple_trajectories(
     model.print()
 
     out, _ = capsys.readouterr()
-    pattern = re.compile(r'\(x0\)\[k\+1\] = (.+)\n')
+    pattern = re.compile(r"\(x0\)\[k\+1\] = (.+)\n")
     assert len(out) > 0
     assert pattern.match(out)
 

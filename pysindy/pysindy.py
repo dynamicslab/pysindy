@@ -659,12 +659,12 @@ class SINDy(BaseEstimator):
                         "variables were not used when the model was fit"
                     )
                 for i in range(1, t):
-                    x[i] = self.predict(x[i - 1: i])
+                    x[i] = self.predict(x[i - 1 : i])
                     if check_stop_condition(x[i]):
                         return x[: i + 1]
             else:
                 for i in range(1, t):
-                    x[i] = self.predict(x[i - 1: i], u=u[i - 1, np.newaxis])
+                    x[i] = self.predict(x[i - 1 : i], u=u[i - 1, np.newaxis])
                     if check_stop_condition(x[i]):
                         return x[: i + 1]
             return x

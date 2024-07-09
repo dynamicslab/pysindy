@@ -83,8 +83,7 @@ force-exclude = '''
 
 [tool.pytest.ini_options]
 filterwarnings = [
-  "ignore::RuntimeWarning",
-  "ignore::UserWarning",]
+  "ignore::RuntimeWarning",]
 addopts = '-m "not slow and not notebooks"'
 markers = ["slow", "notebooks"]
 

@@ -25,7 +25,6 @@ warnings.filterwarnings("ignore")
 # Import useful functions
 from trapping_utils import (
     integrator_keywords,
-    make_constraints,
     sindy_library,
     make_fits,
     obj_function,
@@ -114,9 +113,9 @@ x_test = solve_ivp(lorenz, t_span, x0, t_eval=t, **integrator_keywords).y.T
 
 # define hyperparameters
 threshold = 0
-max_iter = 2000
-eta = 1.0e5
-constraint_zeros, constraint_matrix = make_constraints(r)
+max_iter = 5000
+eta = 1.0e3
+alpha_m = 8e-1 * eta
 
 # run trapping SINDy
 sindy_opt = ps.TrappingSR3(
@@ -166,10 +165,13 @@ check_local_stability(r, Xi, sindy_opt, mean_val)
 sigma = 10
 rho = 28
 beta = 8.0 / 3.0
+
+terms = sindy_library.get_feature_names()
 Xi_lorenz = np.zeros(Xi.shape)
-Xi_lorenz[:r, :r] = np.asarray([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
-Xi_lorenz[r + 1, 1] = -1
-Xi_lorenz[r, 2] = 1
+Xi_lorenz[1 : r + 1, :] = np.array([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
+Xi_lorenz[terms.index("x0 x2"), 1] = -1
+Xi_lorenz[terms.index("x0 x1"), 2] = 1
+
 coef_pred = np.linalg.norm(Xi_lorenz - Xi) / np.linalg.norm(Xi_lorenz)
 print("Frobenius coefficient error = ", coef_pred)
 
@@ -359,10 +361,6 @@ print("Frobenius error = ", E_pred)
 check_local_stability(r, Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
-Xi_lorenz = np.zeros(Xi.shape)
-Xi_lorenz[:r, :r] = np.asarray([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
-Xi_lorenz[r + 1, 1] = -1
-Xi_lorenz[r, 2] = 1
 coef_pred = np.linalg.norm(Xi_lorenz - Xi) / np.linalg.norm(Xi_lorenz)
 print("Frobenius coefficient error = ", coef_pred)
 
@@ -490,10 +488,6 @@ x_train_pred = model.simulate(x_train[0, :], t, integrator_kws=integrator_keywor
 x_test_pred = model.simulate(x_test[0, :], t, integrator_kws=integrator_keywords)
 
 # compute relative Frobenius error in the model coefficients
-Xi_lorenz = np.zeros(Xi.shape)
-Xi_lorenz[:r, :r] = np.asarray([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
-Xi_lorenz[r + 1, 1] = -1
-Xi_lorenz[r, 2] = 1
 coef_pred = np.linalg.norm(Xi_lorenz - Xi) / np.linalg.norm(Xi_lorenz)
 print("Frobenius coefficient error = ", coef_pred)
 
@@ -521,10 +515,6 @@ print("Frobenius error = ", E_pred)
 check_local_stability(r, Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
-Xi_lorenz = np.zeros(Xi.shape)
-Xi_lorenz[:r, :r] = np.asarray([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
-Xi_lorenz[r + 1, 1] = -1
-Xi_lorenz[r, 2] = 1
 coef_pred = np.linalg.norm(Xi_lorenz - Xi) / np.linalg.norm(Xi_lorenz)
 print("Frobenius coefficient error = ", coef_pred)
 

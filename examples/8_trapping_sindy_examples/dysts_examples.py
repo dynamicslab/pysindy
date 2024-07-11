@@ -184,42 +184,6 @@ true_coefficients = make_dysts_true_coefficients(
     systems_list, all_sols_train, dimension_list, param_list
 )
 
-# Need to reorder the calculated dysts equation coefficients to be
-# consistent with the SINDy library used below
-reorder1 = np.array(
-    [
-        0,
-        1,
-        2,
-        3,
-        5,  # x^2 -> xy
-        6,  # xy -> xz
-        8,  # xz -> yz
-        4,  # y^2 -> x^2
-        7,  # yz -> y^2
-        9,  # z^2 -> z^2
-    ]
-)
-reorder2 = np.array(
-    [
-        0,
-        1,
-        2,
-        3,
-        4,
-        6,  # x^2 -> xy
-        7,  # xy -> xz
-        8,  # xz -> xw
-        10,  # xw -> yz
-        11,  # y^2 -> yw
-        13,  # yz -> zw
-        5,  # yw -> x^2
-        9,  # z^2 -> y^2
-        12,  # zw -> z^2
-        14,  # w^2 -> w^2
-    ]
-)
-
 # %% [markdown]
 # ### Issues with using the trapping theorem with some of the dysts systems
 # The trapping theorem and its variants require that systems are "effectively nonlinear", meaning there are no *invariant* linear subspaces where the system trajectories can escape to infinity.
@@ -293,10 +257,6 @@ for i in range(len(systems_list)):
 
     check_local_stability(r, Xi, sindy_opt, 1.0)
     Xi_true = (true_coefficients[i].T)[: Xi.shape[0], :]
-    if r == 3:
-        Xi_true = Xi_true[reorder1, :]
-    else:
-        Xi_true = Xi_true[reorder2, :]
 
     # run simulated annealing on the true system to make sure the system is amenable to trapping theorem
     boundvals = np.zeros((r, 2))

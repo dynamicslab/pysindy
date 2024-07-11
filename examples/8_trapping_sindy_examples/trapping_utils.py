@@ -44,59 +44,6 @@ def obj_function(m, L_obj, Q_obj, P_obj):
     return eigvals[-1]
 
 
-# Define some setup and plotting functions
-# Build the skew-symmetric nonlinearity constraints
-def make_constraints(r, include_bias=True):
-    q = 0
-    N = int((r**2 + 3 * r) / 2.0)
-    if include_bias is True:
-        N = N + 1  # + 1 for constant term
-    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
-    constraint_zeros = np.zeros(p)
-    constraint_matrix = np.zeros((p, r * N))
-
-    # Set coefficients adorning terms like a_i^3 to zero
-    # [1, x, y, z, xy, xz, yz, x2, y2, z2, 1, ...]
-    # [1 1 1 x x x y y y ...]
-    for i in range(r):
-        # constraint_matrix[q, r * (N - r) + i * (r + 1)] = 1.0
-        constraint_matrix[q, r * (N - r) + i * (r + 1)] = 3.0
-        q = q + 1
-
-    # Set coefficients adorning terms like a_ia_j^2 to be antisymmetric
-    for i in range(r):
-        for j in range(i + 1, r):
-            constraint_matrix[q, r * (N - r + j) + i] = 1.0
-            constraint_matrix[
-                q, r + r * (r + j - 1) + j + r * int(i * (2 * r - i - 3) / 2.0)
-            ] = 1.0
-            q = q + 1
-    for i in range(r):
-        for j in range(0, i):
-            constraint_matrix[q, r * (N - r + j) + i] = 1.0
-            constraint_matrix[
-                q, r + r * (r + i - 1) + j + r * int(j * (2 * r - j - 3) / 2.0)
-            ] = 1.0
-            q = q + 1
-
-    # Set coefficients adorning terms like a_ia_ja_k to be antisymmetric
-    for i in range(r):
-        for j in range(i + 1, r):
-            for k in range(j + 1, r):
-                constraint_matrix[
-                    q, r + r * (r + k - 1) + i + r * int(j * (2 * r - j - 3) / 2.0)
-                ] = (1 / 2.0)
-                constraint_matrix[
-                    q, r + r * (r + k - 1) + j + r * int(i * (2 * r - i - 3) / 2.0)
-                ] = (1 / 2.0)
-                constraint_matrix[
-                    q, r + r * (r + j - 1) + k + r * int(i * (2 * r - i - 3) / 2.0)
-                ] = (1 / 2.0)
-                q = q + 1
-
-    return constraint_zeros, constraint_matrix
-
-
 # Use optimal m, and calculate eigenvalues(PW) to see if identified model is stable
 def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     if mod_matrix is None:

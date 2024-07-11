@@ -545,7 +545,6 @@ PQ_tensor = sindy_opt.PQ_
 L = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 Q_sum = np.max(np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1]))))
-print((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))
 print("Max deviation from the constraints = ", Q_sum)
 
 # plotting and analysis

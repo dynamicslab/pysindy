@@ -1,9 +1,8 @@
-from pkg_resources import DistributionNotFound
-from pkg_resources import get_distribution
+from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
+    __version__ = version(__name__)
+except PackageNotFoundError:
     pass
 
 from . import differentiation

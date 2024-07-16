@@ -12,8 +12,6 @@ To run tests for just one file, run
 pytest file_to_test.py
 
 """
-import re
-
 import numpy as np
 import pytest
 from sklearn.exceptions import ConvergenceWarning

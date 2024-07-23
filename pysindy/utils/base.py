@@ -1,3 +1,4 @@
+import warnings
 from itertools import repeat
 from typing import Sequence
 
@@ -5,6 +6,8 @@ import numpy as np
 from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
+
+from .axes import AxesArray
 
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default
@@ -89,29 +92,31 @@ def validate_no_reshape(x, t=T_DEFAULT):
     return x
 
 
-def validate_control_variables(x, u, trim_last_point=False):
+def validate_control_variables(
+    x: Sequence[AxesArray], u: Sequence[AxesArray], trim_last_point: bool = False
+) -> None:
     """Ensure that control variables u are compatible with the data x.
 
-    Trims last control variable timepoint if set to True
+    Args:
+        x: trajectories of system variables
+        u: trajectories of control variables
+        trim_last_point: whether to remove last time point of controls
     """
     if not isinstance(x, Sequence):
-        raise ValueError("x must be a list when multiple_trajectories is True")
+        raise ValueError("x must be a Sequence")
     if not isinstance(u, Sequence):
-        raise ValueError("u must be a list when multiple_trajectories is True")
+        raise ValueError("u must be a Sequence")
     if len(x) != len(u):
-        raise ValueError(
-            "x and u must be lists of the same length when "
-            "multiple_trajectories is True"
-        )
+        raise ValueError("x and u must be the same length")
 
     def _check_control_shape(x, u, trim_last_point):
         """
         Compare shape of control variable u against x.
         """
-        if u.shape[u.ax_time] != x.shape[x.ax_time]:
+        if u.n_time != x.n_time:
             raise ValueError(
-                "control variables u must have same number of rows as x. "
-                "u has {} rows and x has {} rows".format(u.shape[0], len(x))
+                "control variables u must have same number of time points as x. "
+                f"u has {u.n_time} time points and x has {x.n_time} time points"
             )
         return u[:-1] if trim_last_point else u
 
@@ -121,7 +126,7 @@ def validate_control_variables(x, u, trim_last_point=False):
 
 
 def drop_nan_samples(x, y):
-    """Drops samples from x and y where there is either has a nan value"""
+    """Drops samples from x and y where either has a nan value"""
     x_non_sample_axes = tuple(ax for ax in range(x.ndim) if ax != x.ax_sample)
     y_non_sample_axes = tuple(ax for ax in range(y.ndim) if ax != y.ax_sample)
     x_good_samples = (~np.isnan(x)).any(axis=x_non_sample_axes)
@@ -132,24 +137,17 @@ def drop_nan_samples(x, y):
     return x, y
 
 
-def reorder_constraints(c, n_features, output_order="row"):
-    """Reorder constraint matrix."""
-    ret = c.copy()
-
-    if ret.ndim == 1:
-        ret = ret.reshape(1, -1)
-
-    n_targets = ret.shape[1] // n_features
-    shape = (n_targets, n_features)
-
-    if output_order == "row":
-        for i in range(ret.shape[0]):
-            ret[i] = ret[i].reshape(shape).flatten(order="F")
+def reorder_constraints(arr, n_features, output_order="feature"):
+    """Switch between 'feature' and 'target' constraint order."""
+    warnings.warn("Target format constraints are deprecated.", stacklevel=2)
+    n_constraints = arr.shape[0] if arr.ndim > 1 else 1
+    n_tgt = arr.size // n_features // n_constraints
+    if output_order == "feature":
+        starting_shape = (n_constraints, n_tgt, n_features)
     else:
-        for i in range(ret.shape[0]):
-            ret[i] = ret[i].reshape(shape, order="F").flatten()
+        starting_shape = (n_constraints, n_features, n_tgt)
 
-    return ret
+    return arr.reshape(starting_shape).transpose([0, 2, 1]).reshape((n_constraints, -1))
 
 
 def prox_l0(x, threshold):

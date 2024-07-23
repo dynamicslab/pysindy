@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -26,19 +25,10 @@ class FourierLibrary(BaseFeatureLibrary):
     include_cos : boolean, optional (default True)
         If True, include cosine terms in the library.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default 0)
-        The indices to use for ensembling the library.
-
     Attributes
     ----------
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -64,12 +54,7 @@ class FourierLibrary(BaseFeatureLibrary):
         n_frequencies=1,
         include_sin=True,
         include_cos=True,
-        library_ensemble=False,
-        ensemble_indices=[0],
     ):
-        super(FourierLibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
         if not (include_sin or include_cos):
             raise ValueError("include_sin and include_cos cannot both be False")
         if n_frequencies < 1 or not isinstance(n_frequencies, int):
@@ -93,10 +78,7 @@ class FourierLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
+        n_input_features = self.n_features_in_
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_input_features)]
         feature_names = []
@@ -123,10 +105,7 @@ class FourierLibrary(BaseFeatureLibrary):
         self : instance
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
+        self.n_features_in_ = n_features
         if self.include_sin and self.include_cos:
             self.n_output_features_ = n_features * self.n_frequencies * 2
         else:
@@ -156,10 +135,7 @@ class FourierLibrary(BaseFeatureLibrary):
             n_features = x.shape[x.ax_coord]
             shape = np.array(x.shape)
 
-            if float(__version__[:3]) >= 1.0:
-                n_input_features = self.n_features_in_
-            else:
-                n_input_features = self.n_input_features_
+            n_input_features = self.n_features_in_
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 
@@ -176,6 +152,4 @@ class FourierLibrary(BaseFeatureLibrary):
                         idx += 1
             xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full

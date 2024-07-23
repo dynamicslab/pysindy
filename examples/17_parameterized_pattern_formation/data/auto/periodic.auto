@@ -1,21 +1,16 @@
 import numpy as np
 import os
 
-periodic=run('snaking_E_T',c='periodic_E')
-sols=[]
-pars=[]
-for i in range(len(periodic[0])):
-    u=periodic(i+1)['U(1)']
-    t=periodic(i+1)['t']
-    e=periodic(i+1)['PAR(1)']
-    r=periodic(i+1)['PAR(2)']
-    b=periodic(i+1)['PAR(3)']
-    c=periodic(i+1)['PAR(4)']
-    T=periodic(i+1)['PAR(11)']
-    norm=periodic(i+1)['L2-NORM']
-    sols=sols+[np.vstack([t,u]).T]
-    pars=pars+[[e,r,b,c,T,norm]]
+for j in [2,3,4,5]:
+    periodic=run('snaking_E'+str(j)+'_T',c='periodic_E5')
+    sols=[]
+    pars=[]
+    for i in range(len(periodic[0])):
+        print(i, len(periodic[0]), end='\r')
+        sols=sols+[np.concatenate([periodic(i+1).indepvararray.reshape(1,-1),periodic(i+1).coordarray[:1]]).T]
+        pars=pars+[np.concatenate([np.array(periodic(i+1).PAR.values())[[0,1,2,3,4,5,6,7,8,10]],[(np.sum(np.diff(periodic(i+1).indepvararray)[:,np.newaxis].T*np.abs(periodic(i+1).coordarray[0,:-1])**2))**0.5]])]
 
-np.save('periodic_sols.npy',sols)
-np.save('periodic_pars.npy',pars)
-cl()
+
+    np.save('periodic'+str(j)+'_sols.npy',sols)
+    np.save('periodic'+str(j)+'_pars.npy',pars)
+    cl()

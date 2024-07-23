@@ -1,17 +1,17 @@
 import warnings
-from itertools import combinations
-from itertools import combinations_with_replacement as combinations_w_r
 from itertools import product as iproduct
+from typing import Optional
 
 import numpy as np
 from scipy.special import binom
 from scipy.special import perm
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
+from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
+from .polynomial_library import PolynomialLibrary
 from pysindy.differentiation import FiniteDifference
 
 
@@ -38,9 +38,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     Parameters
     ----------
-    library_functions : list of mathematical functions, optional (default None)
-        Functions to include in the library. Each function will be
-        applied to each input variable (but not their derivatives)
+    function_library : BaseFeatureLibrary, optional (default
+        PolynomialLibrary(degree=3,include_bias=False))
+        SINDy library with output features representing library_functions to include
+        in the library, in place of library_functions.
 
     derivative_order : int, optional (default 0)
         Order of derivative to take on each input variable,
@@ -51,17 +52,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         This variable must be specified with
         at least one dimension corresponding to a temporal grid, so that
         integration by parts can be done in the weak formulation.
-
-    function_names : list of functions, optional (default None)
-        List of functions used to generate feature names for each library
-        function. Each name function must take a string input (representing
-        a variable name), and output a string depiction of the respective
-        mathematical function applied to that variable. For example, if the
-        first library function is sine, the name function might return
-        :math:`\\sin(x)` given :math:`x` as input. The function_names list
-        must be the same length as library_functions.
-        If no list of function names is provided, defaults to using
-        :math:`[ f_0(x),f_1(x), f_2(x), \\ldots ]`.
 
     interaction_only : boolean, optional (default True)
         Whether to omit self-interaction terms.
@@ -99,13 +89,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         Positive integer to define the polynomial degree of the spatial weights
         used for weak/integral SINDy.
 
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
-
     num_pts_per_domain : int, deprecated (default None)
         Included here to retain backwards compatibility with older code
         that uses this parameter. However, it merely raises a
@@ -129,17 +112,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     Attributes
     ----------
-    functions : list of functions
-        Mathematical library functions to be applied to each input feature.
-
-    function_names : list of functions
-        Functions for generating string representations of each library
-        function.
-
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
@@ -163,18 +137,15 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
     def __init__(
         self,
-        library_functions=[],
+        function_library: Optional[BaseFeatureLibrary] = None,
         derivative_order=0,
         spatiotemporal_grid=None,
-        function_names=None,
         interaction_only=True,
         include_bias=False,
         include_interaction=True,
         K=100,
         H_xt=None,
         p=4,
-        library_ensemble=False,
-        ensemble_indices=[0],
         num_pts_per_domain=None,
         implicit_terms=False,
         multiindices=None,
@@ -183,12 +154,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         is_uniform=None,
         periodic=None,
     ):
-        super(WeakPDELibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
-        self.functions = library_functions
+        self.function_library = function_library
         self.derivative_order = derivative_order
-        self.function_names = function_names
         self.interaction_only = interaction_only
         self.implicit_terms = implicit_terms
         self.include_bias = include_bias
@@ -199,17 +166,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.num_trajectories = 1
         self.differentiation_method = differentiation_method
         self.diff_kwargs = diff_kwargs
+        if function_library is None:
+            self.function_library = PolynomialLibrary(degree=3, include_bias=False)
 
-        if function_names and (len(library_functions) != len(function_names)):
-            raise ValueError(
-                "library_functions and function_names must have the same"
-                " number of elements"
-            )
-        if library_functions is None and derivative_order == 0:
-            raise ValueError(
-                "No library functions were specified, and no "
-                "derivatives were asked for. The library is empty."
-            )
         if spatiotemporal_grid is None:
             raise ValueError(
                 "Spatiotemporal grid was not passed, and at least a 1D"
@@ -260,7 +219,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         self.num_derivatives = num_derivatives
         self.multiindices = multiindices
-        self.spatiotemporal_grid = spatiotemporal_grid
+
+        self.spatiotemporal_grid = AxesArray(
+            spatiotemporal_grid, axes=comprehend_axes(spatiotemporal_grid)
+        )
 
         # Weak form checks and setup
         self._weak_form_setup()
@@ -270,12 +232,14 @@ class WeakPDELibrary(BaseFeatureLibrary):
         L_xt = xt2 - xt1
         if self.H_xt is not None:
             if np.isscalar(self.H_xt):
-                self.H_xt = np.array(self.grid_ndim * [self.H_xt])
+                self.H_xt = AxesArray(
+                    np.array(self.grid_ndim * [self.H_xt]), {"ax_coord": 0}
+                )
             if self.grid_ndim != len(self.H_xt):
                 raise ValueError(
                     "The user-defined grid (spatiotemporal_grid) and "
                     "the user-defined sizes of the subdomains for the "
-                    "weak form, do not have the same # of spatiotemporal "
+                    "weak form do not have the same # of spatiotemporal "
                     "dimensions. For instance, if spatiotemporal_grid is 4D, "
                     "then H_xt should be a 4D list of the subdomain lengths."
                 )
@@ -300,8 +264,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self._set_up_weights()
 
     def _get_spatial_endpoints(self):
-        x1 = np.zeros(self.grid_ndim)
-        x2 = np.zeros(self.grid_ndim)
+        x1 = AxesArray(np.zeros(self.grid_ndim), {"ax_coord": 0})
+        x2 = AxesArray(np.zeros(self.grid_ndim), {"ax_coord": 0})
         for i in range(self.grid_ndim):
             inds = [slice(None)] * (self.grid_ndim + 1)
             for j in range(self.grid_ndim):
@@ -321,7 +285,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
 
         # Sample the random domain centers
         xt1, xt2 = self._get_spatial_endpoints()
-        domain_centers = np.zeros((self.K, self.grid_ndim))
+        domain_centers = AxesArray(
+            np.zeros((self.K, self.grid_ndim)), {"ax_sample": 0, "ax_coord": 1}
+        )
         for i in range(self.grid_ndim):
             domain_centers[:, i] = np.random.uniform(
                 xt1[i] + self.H_xt[i], xt2[i] - self.H_xt[i], size=self.K
@@ -336,15 +302,12 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 s = [0] * (self.grid_ndim + 1)
                 s[i] = slice(None)
                 s[-1] = i
-                newinds = np.intersect1d(
-                    np.where(
-                        self.spatiotemporal_grid[tuple(s)]
-                        >= domain_centers[k][i] - self.H_xt[i]
-                    ),
-                    np.where(
-                        self.spatiotemporal_grid[tuple(s)]
-                        <= domain_centers[k][i] + self.H_xt[i]
-                    ),
+                ax_vals = self.spatiotemporal_grid[tuple(s)]
+                cell_left = domain_centers[k][i] - self.H_xt[i]
+                cell_right = domain_centers[k][i] + self.H_xt[i]
+                newinds = AxesArray(
+                    ((ax_vals > cell_left) & (ax_vals < cell_right)).nonzero()[0],
+                    ax_vals.axes,
                 )
                 # If less than two indices along any axis, resample
                 if len(newinds) < 2:
@@ -361,6 +324,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 self.inds_k = self.inds_k + [inds]
                 k = k + 1
 
+        # TODO: fix meaning of axes in XT_k
         # Values of the spatiotemporal grid on the domain cells
         XT_k = [
             self.spatiotemporal_grid[np.ix_(*self.inds_k[k])] for k in range(self.K)
@@ -483,12 +447,16 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 )
             weights1 = weights1 + [weights2]
 
+        # TODO: get rest of code to work with AxesArray.  Too unsure of
+        # which axis labels to use at this point to continue
+        tweights = [np.asarray(arr) for arr in tweights]
+        weights0 = [np.asarray(arr) for arr in weights0]
+        weights1 = [[np.asarray(arr) for arr in sublist] for sublist in weights1]
         # Product weights over the axes for time derivatives, shaped as inds_k
         self.fulltweights = []
         deriv = np.zeros(self.grid_ndim)
         deriv[-1] = 1
         for k in range(self.K):
-
             ret = np.ones(shapes_k[k])
             for i in range(self.grid_ndim):
                 s = [0] * (self.grid_ndim + 1)
@@ -501,13 +469,12 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 )
 
             self.fulltweights = self.fulltweights + [
-                ret * np.product(H_xt_k[k] ** (1.0 - deriv))
+                ret * np.prod(H_xt_k[k] ** (1.0 - deriv))
             ]
 
         # Product weights over the axes for pure derivative terms, shaped as inds_k
         self.fullweights0 = []
         for k in range(self.K):
-
             ret = np.ones(shapes_k[k])
             for i in range(self.grid_ndim):
                 s = [0] * (self.grid_ndim + 1)
@@ -519,7 +486,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     weights0[i][lefts[i][k] : rights[i][k] + 1], dims
                 )
 
-            self.fullweights0 = self.fullweights0 + [ret * np.product(H_xt_k[k])]
+            self.fullweights0 = self.fullweights0 + [ret * np.prod(H_xt_k[k])]
 
         # Product weights over the axes for mixed derivative terms, shaped as inds_k
         self.fullweights1 = []
@@ -543,16 +510,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         dims,
                     )
 
-                weights2 = weights2 + [ret * np.product(H_xt_k[k] ** (1.0 - deriv))]
+                weights2 = weights2 + [ret * np.prod(H_xt_k[k] ** (1.0 - deriv))]
             self.fullweights1 = self.fullweights1 + [weights2]
-
-    @staticmethod
-    def _combinations(n_features, n_args, interaction_only):
-        """
-        Get the combinations of features to be passed to a library function.
-        """
-        comb = combinations if interaction_only else combinations_w_r
-        return comb(range(n_features), n_args)
 
     def _phi(self, x, d, p):
         """
@@ -708,33 +667,18 @@ class WeakPDELibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_features = self.n_features_in_
-        else:
-            n_features = self.n_input_features_
+        n_features = self.n_features_in_
         if input_features is None:
             input_features = ["x%d" % i for i in range(n_features)]
-        if self.function_names is None:
-            self.function_names = list(
-                map(
-                    lambda i: (lambda *x: "f" + str(i) + "(" + ",".join(x) + ")"),
-                    range(n_features),
-                )
-            )
         feature_names = []
+        lib_names = []
 
         # Include constant term
         if self.include_bias:
             feature_names.append("1")
-
         # Include any non-derivative terms
-        for i, f in enumerate(self.functions):
-            for c in self._combinations(
-                n_features, f.__code__.co_argcount, self.interaction_only
-            ):
-                feature_names.append(
-                    self.function_names[i](*[input_features[j] for j in c])
-                )
+        lib_names = self.function_library.get_feature_names(input_features)
+        feature_names = feature_names + lib_names
 
         if self.grid_ndim != 0:
 
@@ -762,21 +706,14 @@ class WeakPDELibrary(BaseFeatureLibrary):
             # Include mixed non-derivative + integral terms
             if self.include_interaction:
                 for k in range(self.num_derivatives):
-                    for i, f in enumerate(self.functions):
-                        for c in self._combinations(
-                            n_features,
-                            f.__code__.co_argcount,
-                            self.interaction_only,
-                        ):
-                            for jj in range(n_features):
-                                feature_names.append(
-                                    self.function_names[i](
-                                        *[input_features[j] for j in c]
-                                    )
-                                    + input_features[jj]
-                                    + "_"
-                                    + derivative_string(self.multiindices[k])
-                                )
+                    for jj in range(n_features):
+                        for lib_name in lib_names:
+                            feature_names.append(
+                                lib_name
+                                + input_features[jj]
+                                + "_"
+                                + derivative_string(self.multiindices[k])
+                            )
         return feature_names
 
     @x_sequence_or_item
@@ -792,20 +729,14 @@ class WeakPDELibrary(BaseFeatureLibrary):
         -------
         self : instance
         """
-        n_features = x_full[0].shape[x_full[0].ax_coord]
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
-
+        x0 = x_full[0]
+        n_features = x0.shape[x0.ax_coord]
+        self.n_features_in_ = n_features
         n_output_features = 0
 
         # Count the number of non-derivative terms
-        for f in self.functions:
-            n_args = f.__code__.co_argcount
-            n_output_features += len(
-                list(self._combinations(n_features, n_args, self.interaction_only))
-            )
+        self.function_library.fit(x0.take(0, x0.ax_time))
+        n_output_features = self.function_library.n_output_features_
 
         if self.grid_ndim != 0:
             # Add the mixed derivative library_terms
@@ -854,23 +785,11 @@ class WeakPDELibrary(BaseFeatureLibrary):
             self.x_k = [x[np.ix_(*self.inds_k[k])] for k in range(self.K)]
 
             # library function terms
-            n_library_terms = 0
-            for f in self.functions:
-                for c in self._combinations(
-                    n_features, f.__code__.co_argcount, self.interaction_only
-                ):
-                    n_library_terms += 1
-            library_functions = np.empty((self.K, n_library_terms), dtype=x.dtype)
 
             # Evaluate the functions on the indices of domain cells
-            funcs = np.zeros((*x.shape[:-1], n_library_terms))
-            func_idx = 0
-            for f in self.functions:
-                for c in self._combinations(
-                    n_features, f.__code__.co_argcount, self.interaction_only
-                ):
-                    funcs[..., func_idx] = f(*[x[..., j] for j in c])
-                    func_idx += 1
+            funcs = self.function_library.fit_transform(x)
+            n_library_terms = funcs.shape[-1]
+            library_functions = np.empty((self.K, n_library_terms), dtype=x.dtype)
 
             # library function terms
             for k in range(self.K):  # loop over domain cells
@@ -937,6 +856,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     self.dfx_k_j = []
 
                     for j in range(self.num_derivatives):
+                        funcs_derivs[j + 1] = funcs
+                        x_derivs[j + 1] = x
                         for axis in range(self.ind_range):
                             s = [0] * (self.grid_ndim + 1)
                             s[axis] = slice(None, None, None)
@@ -950,7 +871,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                     axis=axis,
                                     **self.diff_kwargs,
                                 )._differentiate(
-                                    funcs, self.spatiotemporal_grid[tuple(s)]
+                                    funcs_derivs[j + 1],
+                                    self.spatiotemporal_grid[tuple(s)],
                                 )
                             if self.multiindices[j][axis] > 0 and self.multiindices[j][
                                 axis
@@ -959,7 +881,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                     d=self.multiindices[j][axis],
                                     axis=axis,
                                     **self.diff_kwargs,
-                                )._differentiate(x, self.spatiotemporal_grid[tuple(s)])
+                                )._differentiate(
+                                    x_derivs[j + 1], self.spatiotemporal_grid[tuple(s)]
+                                )
 
                     # Extract the function and feature derivatives on the domains
                     self.dx_k_j = [
@@ -996,21 +920,20 @@ class WeakPDELibrary(BaseFeatureLibrary):
                         for deriv in derivs[
                             np.where(np.all(derivs <= derivs_mixed, axis=1))[0]
                         ]:
+                            # indices for product rule terms
+                            j0 = np.where(np.all(derivs == deriv, axis=1))[0][0]
+                            j1 = np.where(
+                                np.all(derivs == derivs_mixed - deriv, axis=1)
+                            )[0][0]
+                            j2 = np.where(np.all(derivs == derivs_pure, axis=1))[0][0]
+
                             for k in range(self.K):
                                 # Weights are either in fullweights0 or fullweights1
-                                j0 = np.where(np.all(derivs == deriv, axis=1))[0][0]
                                 if j0 == 0:
                                     weights = self.fullweights0[k]
                                 else:
                                     weights = self.fullweights1[k][j0 - 1]
 
-                                # indices for product rule terms
-                                j1 = np.where(
-                                    np.all(derivs == derivs_mixed - deriv, axis=1)
-                                )[0][0]
-                                j2 = np.where(np.all(derivs == derivs_pure, axis=1))[0][
-                                    0
-                                ]
                                 # Calculate the integral by taking the dot product
                                 # of the weights and data x_k over each axis.
                                 # Integration by parts gives power of (-1).
@@ -1025,7 +948,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                         tuple(np.arange(self.grid_ndim)),
                                         tuple(np.arange(self.grid_ndim)),
                                     ),
-                                ) * np.product(
+                                ) * np.prod(
                                     binom(derivs_mixed, deriv)
                                 )
                         # collect the results
@@ -1066,10 +989,8 @@ class WeakPDELibrary(BaseFeatureLibrary):
                     library_idx += n_library_terms * self.num_derivatives * n_features
 
             xp_full = xp_full + [AxesArray(xp, {"ax_sample": 0, "ax_coord": 1})]
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full
 
     def calc_trajectory(self, diff_method, x, t):
         x_dot = self.convert_u_dot_integral(x)
-        return AxesArray(x_dot, {"ax_sample": 0, "ax_coord": 1})
+        return x, AxesArray(x_dot, {"ax_sample": 0, "ax_coord": 1})

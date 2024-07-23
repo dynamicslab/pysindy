@@ -1,6 +1,12 @@
+from typing import List
+from typing import Union
+
 import numpy as np
+from numpy.typing import NDArray
+from scipy.special import factorial
 
 from .base import BaseDifferentiation
+from pysindy.utils.axes import AxesArray
 
 
 class FiniteDifference(BaseDifferentiation):
@@ -54,13 +60,12 @@ class FiniteDifference(BaseDifferentiation):
     def __init__(
         self,
         order=2,
-        d=1,
+        d: int = 1,
         axis=0,
         is_uniform=False,
         drop_endpoints=False,
         periodic=False,
     ):
-
         if order <= 0 or not isinstance(order, int):
             raise ValueError("order must be a positive int")
         if d <= 0:
@@ -84,22 +89,27 @@ class FiniteDifference(BaseDifferentiation):
 
     def _coefficients(self, t):
         nt = len(t)
-        self.stencil_inds = np.array(
-            [np.arange(i, nt - self.n_stencil + i + 1) for i in range(self.n_stencil)]
+        self.stencil_inds = AxesArray(
+            np.array(
+                [
+                    np.arange(i, nt - self.n_stencil + i + 1)
+                    for i in range(self.n_stencil)
+                ]
+            ),
+            {"ax_offset": 0, "ax_ti": 1},
         )
-        self.stencil = np.transpose(t[self.stencil_inds])
-
+        self.stencil = AxesArray(
+            np.transpose(t[self.stencil_inds]), {"ax_time": 0, "ax_offset": 1}
+        )
         pows = np.arange(self.n_stencil)[np.newaxis, :, np.newaxis]
-        matrices = (
+        dt_endpoints = (
             self.stencil
-            - t[
-                (self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2,
-                np.newaxis,
-            ]
-        )[:, np.newaxis, :] ** pows
-        b = np.zeros(self.n_stencil)
-        b[self.d] = np.math.factorial(self.d)
-        return np.linalg.solve(matrices, [b])
+            - t[(self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2, "offset"]
+        )
+        matrices = dt_endpoints[:, "power", :] ** pows
+        b = AxesArray(np.zeros((1, self.n_stencil)), {"ax_time": 0, "ax_power": 1})
+        b[0, self.d] = factorial(self.d)
+        return np.linalg.solve(matrices, b)
 
     def _coefficients_boundary_forward(self, t):
         # use the same stencil for each boundary point,
@@ -134,7 +144,7 @@ class FiniteDifference(BaseDifferentiation):
             )
 
         b = np.zeros(self.stencil_inds.shape).T
-        b[:, self.d] = np.math.factorial(self.d)
+        b[:, self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _coefficients_boundary_periodic(self, t):
@@ -187,7 +197,7 @@ class FiniteDifference(BaseDifferentiation):
             )
 
         b = np.zeros(self.stencil_inds.shape).T
-        b[:, self.d] = np.math.factorial(self.d)
+        b[:, self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _constant_coefficients(self, dt):
@@ -196,28 +206,35 @@ class FiniteDifference(BaseDifferentiation):
             np.newaxis, :
         ] ** pows
         b = np.zeros(self.n_stencil)
-        b[self.d] = np.math.factorial(self.d)
+        b[self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _accumulate(self, coeffs, x):
         # slice to select the stencil indices
-        s = [slice(None)] * len(x.shape)
+        s = [slice(None)] * x.ndim
         s[self.axis] = self.stencil_inds
 
-        # a new axis is introduced after self.axis for the stencil indices
+        # a new axis is introduced before self.axis for the stencil indices
         # To contract with the coefficients, roll by -self.axis to put it first
         # Then roll back by self.axis to return the order
-        trans = np.roll(np.arange(len(x.shape) + 1), -self.axis)
+        trans = np.roll(np.arange(x.ndim + 1), -self.axis)
+        # TODO: assign x's axes much earlier in the call stack
+        x = AxesArray(x, {"ax_unk": list(range(x.ndim))})
+        x_expanded = AxesArray(
+            np.transpose(x[tuple(s)], axes=trans), x.insert_axis(0, "ax_offset")
+        )
         return np.transpose(
             np.einsum(
                 "ij...,ij->j...",
-                np.transpose(x[tuple(s)], axes=trans),
+                x_expanded,
                 np.transpose(coeffs),
             ),
-            np.roll(np.arange(len(x.shape)), self.axis),
+            np.roll(np.arange(x.ndim), self.axis),
         )
 
-    def _differentiate(self, x, t):
+    def _differentiate(
+        self, x: NDArray, t: Union[NDArray, float, List[float]]
+    ) -> NDArray:
         """
         Apply finite difference method.
         """
@@ -248,6 +265,7 @@ class FiniteDifference(BaseDifferentiation):
                     s[self.axis] = slice(start, stop)
                     interior = interior + x[tuple(s)] * coeffs[i]
         else:
+            t = AxesArray(np.array(t), axes={"ax_time": 0})
             coeffs = self._coefficients(t)
             interior = self._accumulate(coeffs, x)
         s[self.axis] = slice((self.n_stencil - 1) // 2, -(self.n_stencil - 1) // 2)
@@ -282,4 +300,5 @@ class FiniteDifference(BaseDifferentiation):
                     ]
                 )
             x_dot[tuple(s)] = boundary
+        self.smoothed_x_ = x
         return x_dot

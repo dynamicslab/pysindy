@@ -59,6 +59,7 @@ class SpectralDerivative(BaseDifferentiation):
         freqs[: n // 2 + 1] = positives * 2 * np.pi / (n * t)
         freqs[n // 2 + 1 :] = (negatives - n) * 2 * np.pi / (n * t)
 
+        self.smoothed_x_ = x
         if x.dtype is complex:
             return np.fft.ifft(
                 np.reshape(1j * freqs, dims) ** self.d * q, axis=self.axis

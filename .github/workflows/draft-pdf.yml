@@ -1,4 +1,10 @@
-on: [push]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   paper:
@@ -6,7 +12,7 @@ jobs:
     name: Paper Draft
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Build draft PDF
         uses: openjournals/openjournals-draft-action@master
         with:
@@ -14,7 +20,7 @@ jobs:
           # This should be the path to the paper within your repo.
           paper-path: docs/JOSS2/paper.md
       - name: Upload
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: paper
           # This is the output path where Pandoc will write the compiled

@@ -1,4 +1,3 @@
-from sklearn import __version__
 from sklearn.utils.validation import check_is_fitted
 
 from .base import BaseFeatureLibrary
@@ -12,21 +11,12 @@ class IdentityLibrary(BaseFeatureLibrary):
 
     Attributes
     ----------
-    n_input_features_ : int
+    n_features_in_ : int
         The total number of input features.
-        WARNING: This is deprecated in scikit-learn version 1.0 and higher so
-        we check the sklearn.__version__ and switch to n_features_in if needed.
 
     n_output_features_ : int
         The total number of output features. The number of output features
         is equal to the number of input features.
-
-    library_ensemble : boolean, optional (default False)
-        Whether or not to use library bagging (regress on subset of the
-        candidate terms in the library)
-
-    ensemble_indices : integer array, optional (default [0])
-        The indices to use for ensembling the library.
 
     Examples
     --------
@@ -41,15 +31,6 @@ class IdentityLibrary(BaseFeatureLibrary):
     >>> lib.get_feature_names()
     ['x0', 'x1']
     """
-
-    def __init__(
-        self,
-        library_ensemble=False,
-        ensemble_indices=[0],
-    ):
-        super(IdentityLibrary, self).__init__(
-            library_ensemble=library_ensemble, ensemble_indices=ensemble_indices
-        )
 
     def get_feature_names(self, input_features=None):
         """
@@ -66,10 +47,7 @@ class IdentityLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
-        if float(__version__[:3]) >= 1.0:
-            n_input_features = self.n_features_in_
-        else:
-            n_input_features = self.n_input_features_
+        n_input_features = self.n_features_in_
         if input_features:
             if len(input_features) == n_input_features:
                 return input_features
@@ -92,10 +70,7 @@ class IdentityLibrary(BaseFeatureLibrary):
         self : instance
         """
         n_features = x_full[0].shape[x_full[0].ax_coord]
-        if float(__version__[:3]) >= 1.0:
-            self.n_features_in_ = n_features
-        else:
-            self.n_input_features_ = n_features
+        self.n_features_in_ = n_features
         self.n_output_features_ = n_features
         return self
 
@@ -118,15 +93,9 @@ class IdentityLibrary(BaseFeatureLibrary):
         xp_full = []
         for x in x_full:
             n_features = x.shape[x.ax_coord]
-
-            if float(__version__[:3]) >= 1.0:
-                n_input_features = self.n_features_in_
-            else:
-                n_input_features = self.n_input_features_
+            n_input_features = self.n_features_in_
             if n_features != n_input_features:
                 raise ValueError("x shape does not match training shape")
 
             xp_full = xp_full + [x.copy()]
-        if self.library_ensemble:
-            xp_full = self._ensemble(xp_full)
         return xp_full

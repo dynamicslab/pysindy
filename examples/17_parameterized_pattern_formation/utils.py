@@ -4,11 +4,10 @@ import timeit
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import solve_ivp
+from scipy.interpolate import interp1d
 
 import pysindy as ps
 from pysindy.utils import lorenz
-
-plt.ion()
 
 integrator_keywords = {}
 integrator_keywords["rtol"] = 1e-12
@@ -39,7 +38,7 @@ def get_lorenz_trajectories(sigmas, rhos, betas, dt):
             x0_train,
             args=(sigmas[i], betas[i], rhos[i]),
             t_eval=t_train,
-            **integrator_keywords
+            **integrator_keywords,
         ).y.T
         x_trains = x_trains + [x_train]
         t_trains = t_trains + [t_train]
@@ -967,7 +966,7 @@ def get_oregonator_trajectory(u0, b, t1, dt, spatial_grid):
                 args=(b,),
                 y0=ut,
                 first_step=dt,
-                **integrator_keywords
+                **integrator_keywords,
             )
             if not usol.success:
                 print(usol.message)
@@ -981,6 +980,148 @@ def get_oregonator_trajectory(u0, b, t1, dt, spatial_grid):
     except KeyboardInterrupt:
         print("keyboard!")
     return X, Y, Z
+
+
+def generate_oregonator_trajectories():
+    # Generate amplitudes for the main SINDyCP fit
+    bs = np.linspace(0.88, 0.98, 6)
+    n = 128  # Number of spatial points in each direction
+    Nt = 1000  # Number of temporal interpolation points
+
+    spatial_grid = np.zeros((n, n, 2))
+    spatial_grid[:, :, 0] = 1.0 / n * np.arange(n)[:, np.newaxis]
+    spatial_grid[:, :, 1] = 1.0 / n * np.arange(n)[np.newaxis, :]
+    X0, Y0, Z0 = get_oregonator_ic(2e-1, 0, spatial_grid)
+    u0 = np.concatenate([X0.ravel(), Y0.ravel(), Z0.ravel()])
+
+    if not os.path.exists("data/oregonator"):
+        os.mkdir("data/oregonator")
+    if not np.all(
+        [
+            os.path.exists("data/oregonator/oregonator_" + str(i) + ".npy")
+            for i in range(len(bs))
+        ]
+    ):
+        for j in range(len(bs)):
+            if not os.path.exists("data/oregonator/oregonator_" + str(j) + ".npy"):
+                b = bs[j]
+                print(j, b)
+                L = 1 / (1 - b) ** 0.5  # Domain size in X and Y directions
+                spatial_grid = np.zeros((n, n, 2))
+                spatial_grid[:, :, 0] = L / n * np.arange(n)[:, np.newaxis]
+                spatial_grid[:, :, 1] = L / n * np.arange(n)[np.newaxis, :]
+                t1 = 5e2 / (1 - b)  # Domain size in t directions
+                dt = 5.94804 / 10
+
+                start = timeit.default_timer()
+
+                X, Y, Z = get_oregonator_trajectory(u0, b, t1, dt, spatial_grid)
+
+                Nt = X.shape[2] // 5 // 10 * 10
+                X0 = np.mean(X[:, :, -Nt:], axis=(0, 1, 2))
+                Z0 = np.mean(Z[:, :, -Nt:], axis=(0, 1, 2))
+                nt = X[:, :, Nt:].shape[2] // 10 * 10
+                A = np.mean(
+                    (
+                        ((X[:, :, Nt:] - X0) / X0 + 1j * (Z[:, :, Nt:] - Z0) / Z0)
+                        * np.exp(
+                            -1j * 2 * np.pi / 10 * np.arange(X[:, :, Nt:].shape[2])
+                        )
+                    )[:, :, :nt].reshape(n, n, nt // 10, 10),
+                    axis=3,
+                )
+
+                f = interp1d(np.arange(A.shape[2]) / A.shape[2], A, axis=2)
+                A = f(np.arange(500) / 500)
+
+                np.save("data/oregonator/oregonator_" + str(j), A)
+
+                stop = timeit.default_timer()
+                print(stop - start)
+
+    # Generate trajectories for Hopf identification
+    bs = np.concatenate([np.linspace(1.05, 1.1, 6), np.linspace(0.95, 0.99, 5)])
+    n = 128  # Numbedr of spatial points in each direction
+
+    b0 = 0.95
+    L = 1 / np.abs(1 - b0) ** 0.5  # Domain size in X and Y directions
+    spatial_grid = np.zeros((n, n, 2))
+    spatial_grid[:, :, 0] = L / n * np.arange(n)[:, np.newaxis]
+    spatial_grid[:, :, 1] = L / n * np.arange(n)[np.newaxis, :]
+    t1 = 2e1 / np.abs(1 - b0)  # Domain size in t directions
+    dt = 5.94804 / 10
+    X0, Y0, Z0 = get_oregonator_ic(2e-1, 0, spatial_grid)
+
+    u0 = np.concatenate([X0.ravel(), Y0.ravel(), Z0.ravel()])
+
+    if not os.path.exists("data/oregonator"):
+        os.mkdir("data/oregonator")
+    if not np.all(
+        [
+            os.path.exists("data/oregonator/oregonator2_" + str(i) + ".npy")
+            for i in range(len(bs))
+        ]
+    ):
+        b = b0
+        t1 = 2e2 / np.abs(1 - b0)
+        X0, Y0, Z0 = get_oregonator_ic(2e-1, 0, spatial_grid)
+        u0 = np.concatenate([X0.ravel(), Y0.ravel(), Z0.ravel()])
+        X, Y, Z = get_oregonator_trajectory(u0, b, t1, dt, spatial_grid)
+
+        u0 = np.concatenate(
+            [X[:, :, -1].ravel(), Y[:, :, -1].ravel(), Z[:, :, -1].ravel()]
+        )
+        t1 = 2e1 / np.abs(1 - b0)
+        for j in range(len(bs)):
+            if not os.path.exists("data/oregonator/oregonator2_" + str(j) + ".npy"):
+                b = bs[j]
+                print(j, b)
+
+                start = timeit.default_timer()
+                X, Y, Z = get_oregonator_trajectory(u0, b, t1, dt, spatial_grid)
+                x = np.array([X, Y, Z]).transpose(1, 2, 3, 0)
+
+                np.save("data/oregonator/oregonator2_" + str(j), x)
+                stop = timeit.default_timer()
+                print(stop - start)
+
+    # Generate fine data above the Canard explosion
+    bs = [0.84, 0.96]
+    n = 256  # Number of spatial points in each direction
+    Nt = 200  # Number of temporal interpolation points
+
+    if not os.path.exists("data/oregonator"):
+        os.mkdir("data/oregonator")
+    if not np.all(
+        [
+            os.path.exists("data/oregonator/canard_" + str(i) + ".npy")
+            for i in range(len(bs))
+        ]
+    ):
+        for j in range(len(bs)):
+            if not os.path.exists("data/oregonator/canard_" + str(j) + ".npy"):
+                b = bs[j]
+                print(j, b)
+                L = 1 / (1 - b) ** 0.5  # Domain size in X and Y directions
+                spatial_grid = np.zeros((n, n, 2))
+                spatial_grid[:, :, 0] = L / n * np.arange(n)[:, np.newaxis]
+                spatial_grid[:, :, 1] = L / n * np.arange(n)[np.newaxis, :]
+                t1 = 2e2 / (1 - b)  # Domain size in t directions
+                dt = 5.94804
+                X0, Y0, Z0 = get_oregonator_ic(2e-1, 0, spatial_grid)
+                u0 = np.concatenate([X0.ravel(), Y0.ravel(), Z0.ravel()])
+
+                start = timeit.default_timer()
+
+                X, Y, Z = get_oregonator_trajectory(u0, b, t1, dt, spatial_grid)
+
+                x = np.array([X, Y, Z]).transpose(1, 2, 3, 0)
+                fi = interp1d(np.arange(x.shape[2]), x, axis=2)
+                x = fi(np.arange(Nt) / (Nt - 1) * (x.shape[2] - 1))
+
+                np.save("data/oregonator/canard_" + str(j), x)
+                stop = timeit.default_timer()
+                print(stop - start)
 
 
 def get_homogeneous_oregonator_trajectory(b, t1, dt):
@@ -1023,7 +1164,7 @@ def get_homogeneous_oregonator_trajectory(b, t1, dt):
             args=(b,),
             y0=ut,
             first_step=dt,
-            **integrator_keywords
+            **integrator_keywords,
         )
         dt = np.diff(usol.t)[-1]
         ut = usol.y[:, -1]
@@ -1033,16 +1174,8 @@ def get_homogeneous_oregonator_trajectory(b, t1, dt):
     return X, Y, Z
 
 
-def get_normal_form_parameters(model, bs):
-    """
-    Calculate the nonlinear transformation to compute the normal form parameters.
-    Parameters:
-        model: A fit SINDy model for the Oregonator model with a ParameterizedLibrary.
-        bs: Values of the b parameter to calculate the normal-form parameters
-    """
+def get_homogeneous_oregonator_trajectory_fit(model, b, t1, dt):
     lib = model.feature_library
-    opt = model.optimizer
-
     Xts = np.where(
         [
             feat.split(" ")[1] == "X_t"
@@ -1094,6 +1227,145 @@ def get_normal_form_parameters(model, bs):
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
+
+    A = np.zeros((2, 2))
+    mu = 1 - b
+    mus = [1, np.abs(mu) ** 0.5, mu]
+    A[:, 0] = np.array([1, 0]) - model.optimizer.coef_[:, Xts].dot(mus)
+    A[:, 1] = np.array([0, 1]) - model.optimizer.coef_[:, Yts].dot(mus)
+    Ainv = np.linalg.inv(A)
+
+    def cgle_homogeneous(t, u):
+        X, Y = u
+        f = (
+            model.optimizer.coef_[:, Xs].dot(mus) * X
+            + model.optimizer.coef_[:, Ys].dot(mus) * Y
+            + model.optimizer.coef_[:, XXs].dot(mus) * X * X
+            + model.optimizer.coef_[:, XYs].dot(mus) * X * Y
+            + model.optimizer.coef_[:, YYs].dot(mus) * Y * Y
+            + model.optimizer.coef_[:, XXXs].dot(mus) * X * X * X
+            + model.optimizer.coef_[:, XXYs].dot(mus) * X * X * Y
+            + model.optimizer.coef_[:, XYYs].dot(mus) * X * Y * Y
+            + model.optimizer.coef_[:, YYYs].dot(mus) * Y * Y * Y
+        )
+        return Ainv.dot(f)
+
+    nt = int(np.round(t1 / dt))
+    t = dt * np.arange(nt)
+    X = np.zeros((nt))
+    Y = np.zeros((nt))
+
+    u0 = np.array([1, 1]) * 1.1
+    ut = u0
+    X[0] = ut[0]
+    Y[0] = ut[1]
+    dt = t[1] - t[0] / 2
+    print("%.3f" % (b), end="\r")
+    for i in range(len(t) - 1):
+        usol = solve_ivp(
+            cgle_homogeneous,
+            (t[i], t[i + 1]),
+            y0=ut,
+            first_step=dt,
+            **integrator_keywords,
+        )
+        #         print(usol.message,end='\r')
+        dt = np.diff(usol.t)[-1]
+        ut = usol.y[:, -1]
+        X[i + 1] = ut[0]
+        Y[i + 1] = ut[1]
+    return X, Y
+
+
+def get_normal_form_parameters(model, us, printcoefs=False):
+    """
+    Calculate the nonlinear transformation to compute the normal form parameters.
+    Parameters:
+        model: A fit SINDy model for the Oregonator model with a ParameterizedLibrary.
+        bs: Values of the b parameter to calculate the normal-form parameters
+    """
+    lib = model.feature_library
+    opt = model.optimizer
+
+    Xts = np.where(
+        [
+            feat.split(" ")[1] == "X_t"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    Yts = np.where(
+        [
+            feat.split(" ")[1] == "Y_t"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    consts = np.where(
+        [feat.split(" ")[1] == "1" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    Xs = np.where(
+        [feat.split(" ")[1] == "X" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    Ys = np.where(
+        [feat.split(" ")[1] == "Y" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    XXs = np.where(
+        [feat.split(" ")[1] == "XX" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    XYs = np.where(
+        [feat.split(" ")[1] == "XY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    YYs = np.where(
+        [feat.split(" ")[1] == "YY" for feat in lib.get_feature_names(["X", "Y", "mu"])]
+    )[0]
+    XXXs = np.where(
+        [
+            feat.split(" ")[1] == "XXX"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    XXYs = np.where(
+        [
+            feat.split(" ")[1] == "XXY"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    XYYs = np.where(
+        [
+            feat.split(" ")[1] == "XYY"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    YYYs = np.where(
+        [
+            feat.split(" ")[1] == "YYY"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    X1s = np.where(
+        [
+            feat.split(" ")[1] == "X_1"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    Y1s = np.where(
+        [
+            feat.split(" ")[1] == "Y_1"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    X2s = np.where(
+        [
+            feat.split(" ")[1] == "X_2"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    Y2s = np.where(
+        [
+            feat.split(" ")[1] == "Y_2"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+
     X11s = np.where(
         [
             feat.split(" ")[1] == "X_11"
@@ -1106,20 +1378,145 @@ def get_normal_form_parameters(model, bs):
             for feat in lib.get_feature_names(["X", "Y", "mu"])
         ]
     )[0]
+    X12s = np.where(
+        [
+            feat.split(" ")[1] == "X_12"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    Y12s = np.where(
+        [
+            feat.split(" ")[1] == "Y_12"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    X22s = np.where(
+        [
+            feat.split(" ")[1] == "X_22"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
+    Y22s = np.where(
+        [
+            feat.split(" ")[1] == "Y_22"
+            for feat in lib.get_feature_names(["X", "Y", "mu"])
+        ]
+    )[0]
 
-    mus = (1 - bs)[np.newaxis, :] ** (np.arange(len(Xs))[:, np.newaxis] * 0.5)
+    if printcoefs:
+        for i in range(2):
+            print(r"\dot{%s}&=" % (["X", "Y"][i]))
+            if len(Xts) > 0:
+                print(
+                    r"(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)\dot{X}+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)\dot{Y}\nonumber\\"
+                    % tuple(
+                        np.concatenate([opt.coef_[:, Xts][i].T, opt.coef_[:, Yts][i].T])
+                    )
+                )
+            print(
+                r"(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)X+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)Y\nonumber\\"
+                % tuple(
+                    np.concatenate(
+                        [
+                            opt.coef_[:, consts][i].T,
+                            opt.coef_[:, Xs][i].T,
+                            opt.coef_[:, Ys][i].T,
+                        ]
+                    )
+                )
+            )
+            print(
+                r"&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)XX+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)XY\nonumber\\&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)YY\nonumber\\"
+                % tuple(
+                    np.concatenate(
+                        [
+                            opt.coef_[:, XXs][i].T,
+                            opt.coef_[:, XYs][i].T,
+                            opt.coef_[:, YYs][i].T,
+                        ]
+                    )
+                )
+            )
+            print(
+                r"&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)XXX+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)XXY\nonumber\\&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)XYY+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)YYY\nonumber\\"
+                % tuple(
+                    np.concatenate(
+                        [
+                            opt.coef_[:, XXXs][i].T,
+                            opt.coef_[:, XXYs][i].T,
+                            opt.coef_[:, XYYs][i].T,
+                            opt.coef_[:, YYYs][i].T,
+                        ]
+                    )
+                )
+            )
+            print(
+                r"&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)X_{x}+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)X_{y}\nonumber\\"
+                % tuple(
+                    np.concatenate([opt.coef_[:, X1s][i].T, opt.coef_[:, X2s][i].T])
+                )
+            )
+            print(
+                r"&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)Y_{x}+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)Y_{y}\nonumber\\"
+                % tuple(
+                    np.concatenate([opt.coef_[:, Y1s][i].T, opt.coef_[:, Y2s][i].T])
+                )
+            )
+            print(
+                r"&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)X_{xx}+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)X_{xy}\nonumber\\&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)X_{yy}\nonumber\\"
+                % tuple(
+                    np.concatenate(
+                        [
+                            opt.coef_[:, X11s][i].T,
+                            opt.coef_[:, X12s][i].T,
+                            opt.coef_[:, X22s][i].T,
+                        ]
+                    )
+                )
+            )
+            print(
+                r"&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)Y_{xx}+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)Y_{xy}\nonumber\\&+(%.3f+%.3f\sqrt{\lvert\mu\rvert}+%.3f\mu)Y_{yy}\\"
+                % tuple(
+                    np.concatenate(
+                        [
+                            opt.coef_[:, Y11s][i].T,
+                            opt.coef_[:, Y12s][i].T,
+                            opt.coef_[:, Y22s][i].T,
+                        ]
+                    )
+                )
+            )
+            print()
 
-    D = np.zeros((len(bs), 2, 2))
+    if model.feature_library.libraries_[0].include_bias:
+        mus = np.concatenate(
+            [
+                [np.ones(len(us))],
+                np.array(
+                    [func(us) for func in model.feature_library.libraries_[0].functions]
+                ),
+            ]
+        )
+    else:
+        mus = np.array(
+            [func(us) for func in model.feature_library.libraries_[0].functions]
+        )
+
+    D = np.zeros((len(us), 2, 2))
     D[:, :, 0] = mus.T.dot(opt.coef_[:, X11s].T)
     D[:, :, 1] = mus.T.dot(opt.coef_[:, Y11s].T)
 
-    A = np.zeros((len(bs), 2, 2))
-    A[:, :, 0] = [1, 0] - (mus.T.dot(opt.coef_[:, Xts].T))
-    A[:, :, 1] = [0, 1] - (mus.T.dot(opt.coef_[:, Yts].T))
+    A = np.zeros((len(us), 2, 2))
+    A[:, :, 0] = [1, 0]
+    A[:, :, 1] = [0, 1]
+    if len(Xts) > 0:
+        A[:, :, 0] = A[:, :, 0] - (mus.T.dot(opt.coef_[:, Xts].T))
+    if len(Yts) > 0:
+        A[:, :, 1] = A[:, :, 1] - (mus.T.dot(opt.coef_[:, Yts].T))
 
-    J = np.zeros((len(bs), 2, 2))
-    Fxx = np.zeros((len(bs), 2, 2, 2))
-    Fxxx = np.zeros((len(bs), 2, 2, 2, 2))
+    J = np.zeros((len(us), 2, 2))
+    Fxx = np.zeros((len(us), 2, 2, 2))
+    Fxxx = np.zeros((len(us), 2, 2, 2, 2))
     J[:, :, 0] = mus.T.dot(opt.coef_[:, Xs].T)
     J[:, :, 1] = mus.T.dot(opt.coef_[:, Ys].T)
     Fxx[:, :, 0, 0] = (mus.T.dot(opt.coef_[:, XXs].T)) * 2
@@ -1179,6 +1576,55 @@ def get_normal_form_parameters(model, bs):
     betas = np.einsum("ni,nij,njk,nk->n", ut, np.linalg.inv(A), D, u)
 
     return -np.imag(alphas) / np.real(alphas), np.imag(betas) / np.real(betas)
+
+
+def get_linear_eigenvalues(model, bs, printcoefs=False):
+    """
+    Calculate the nonlinear transformation to compute the normal form parameters.
+    Parameters:
+        model: A fit SINDy model for the Oregonator model with a ParameterizedLibrary.
+        bs: Values of the b parameter to calculate the normal-form parameters
+    """
+    lib = model.feature_library
+    opt = model.optimizer
+
+    Xs = np.where(
+        [feat.split(" ")[1] == "X" for feat in lib.get_feature_names(["X", "Z", "mu"])]
+    )[0]
+    Zs = np.where(
+        [feat.split(" ")[1] == "Z" for feat in lib.get_feature_names(["X", "Z", "mu"])]
+    )[0]
+    if printcoefs:
+        print(
+            r"(%.3f+%.3f\mu)\tilde{X}+(%.3f+%.3f\mu)\tilde{Z}"
+            % tuple(np.concatenate([opt.coef_[:, Xs][0].T, opt.coef_[:, Zs][0].T]))
+        )
+        print(
+            r"(%.3f+%.3f\mu)\tilde{X}+(%.3f+%.3f\mu)\tilde{Z}"
+            % tuple(np.concatenate([opt.coef_[:, Xs][1].T, opt.coef_[:, Zs][1].T]))
+        )
+
+    if model.feature_library.libraries_[0].include_bias:
+        mus = np.concatenate(
+            [
+                [np.ones(len(bs))],
+                np.array(
+                    [func(bs) for func in model.feature_library.libraries_[0].functions]
+                ),
+            ]
+        )
+    else:
+        mus = np.array(
+            [func(bs) for func in model.feature_library.libraries_[0].functions]
+        )
+
+    J = np.zeros((len(bs), 2, 2), dtype=np.complex128)
+    J[:, :, 0] = mus.T.dot(opt.coef_[:, Xs].T)
+    J[:, :, 1] = mus.T.dot(opt.coef_[:, Zs].T)
+
+    lambdas, Us = np.linalg.eig(J)
+
+    return lambdas, J
 
 
 def animate_oregonator():
@@ -1363,3 +1809,356 @@ def get_sh_trajectory(u0, r, b3, b5, t1, dt, spatial_grid):
         us[n] = u
 
     return np.transpose(us)[:, :, np.newaxis]
+
+
+def get_sh_coefficients(model, print_coeffs=False):
+    opt = model.optimizer
+    uxxcoeff_fit = np.array(
+        [
+            opt.coef_[
+                0, np.where(np.array(model.get_feature_names()) == "1 u_11")[0][0]
+            ],
+            opt.coef_[
+                0, np.where(np.array(model.get_feature_names()) == "epsilon u_11")[0][0]
+            ],
+            opt.coef_[
+                0,
+                np.where(np.array(model.get_feature_names()) == "epsilon^2 u_11")[0][0],
+            ],
+        ]
+    )
+    uxxxxcoeff_fit = np.array(
+        [
+            opt.coef_[
+                0, np.where(np.array(model.get_feature_names()) == "1 u_1111")[0][0]
+            ],
+            opt.coef_[
+                0,
+                np.where(np.array(model.get_feature_names()) == "epsilon u_1111")[0][0],
+            ],
+            opt.coef_[
+                0,
+                np.where(np.array(model.get_feature_names()) == "epsilon^2 u_1111")[0][
+                    0
+                ],
+            ],
+        ]
+    )
+
+    def uxx_func_fit(epsilons):
+        epsilons = np.asarray(epsilons)
+        return np.sum(
+            uxxcoeff_fit[np.newaxis, :]
+            * epsilons[:, np.newaxis] ** np.arange(len(uxxcoeff_fit))[np.newaxis, :],
+            axis=1,
+        )
+
+    def uxxxx_func_fit(epsilons):
+        epsilons = np.asarray(epsilons)
+        return np.sum(
+            uxxxxcoeff_fit[np.newaxis, :]
+            * epsilons[:, np.newaxis] ** np.arange(len(uxxxxcoeff_fit))[np.newaxis, :],
+            axis=1,
+        )
+
+    rcoeff_fit = np.array(
+        [
+            opt.coef_[0, np.where(np.array(model.get_feature_names()) == "1 u")[0][0]]
+            + 1,
+            opt.coef_[
+                0, np.where(np.array(model.get_feature_names()) == "epsilon u")[0][0]
+            ],
+            opt.coef_[
+                0, np.where(np.array(model.get_feature_names()) == "epsilon^2 u")[0][0]
+            ],
+        ]
+    )
+    b3coeff_fit = np.array(
+        [
+            opt.coef_[
+                0, np.where(np.array(model.get_feature_names()) == "1 uuu")[0][0]
+            ],
+            opt.coef_[
+                0, np.where(np.array(model.get_feature_names()) == "epsilon uuu")[0][0]
+            ],
+            opt.coef_[
+                0,
+                np.where(np.array(model.get_feature_names()) == "epsilon^2 uuu")[0][0],
+            ],
+        ]
+    )
+    b5coeff_fit = np.array(
+        [
+            -opt.coef_[
+                0, np.where(np.array(model.get_feature_names()) == "1 uuuuu")[0][0]
+            ],
+            -opt.coef_[
+                0,
+                np.where(np.array(model.get_feature_names()) == "epsilon uuuuu")[0][0],
+            ],
+            -opt.coef_[
+                0,
+                np.where(np.array(model.get_feature_names()) == "epsilon^2 uuuuu")[0][
+                    0
+                ],
+            ],
+        ]
+    )
+
+    def r_func_fit(epsilons):
+        epsilons = np.asarray(epsilons)
+        return np.sum(
+            rcoeff_fit[np.newaxis, :]
+            * epsilons[:, np.newaxis] ** np.arange(len(rcoeff_fit))[np.newaxis, :],
+            axis=1,
+        )
+
+    def b3_func_fit(epsilons):
+        epsilons = np.asarray(epsilons)
+        return np.sum(
+            b3coeff_fit[np.newaxis, :]
+            * epsilons[:, np.newaxis] ** np.arange(len(b3coeff_fit))[np.newaxis, :],
+            axis=1,
+        )
+
+    def b5_func_fit(epsilons):
+        epsilons = np.asarray(epsilons)
+        return np.sum(
+            b5coeff_fit[np.newaxis, :]
+            * epsilons[:, np.newaxis] ** np.arange(len(b5coeff_fit))[np.newaxis, :],
+            axis=1,
+        )
+
+    if print_coeffs:
+        print(
+            "D2=(%.3f+%.3f*E+%.3f*E*E)/(%.3f+%.3f*E+%.3f*E*E)"
+            % tuple(np.concatenate([uxxcoeff_fit, -uxxxxcoeff_fit]))
+        )
+        print(
+            "U1=(-1.000+%.3f+%.3f*E+%.3f*E*E)/(%.3f+%.3f*E+%.3f*E*E)"
+            % tuple(np.concatenate([rcoeff_fit, -uxxxxcoeff_fit]))
+        )
+        print(
+            "U3=(%.3f+%.3f*E+%.3f*E*E)/(%.3f+%.3f*E+%.3f*E*E)"
+            % tuple(np.concatenate([b3coeff_fit, -uxxxxcoeff_fit]))
+        )
+        print(
+            "U5=-(%.3f+%.3f*E+%.3f*E*E)/(%.3f+%.3f*E+%.3f*E*E)"
+            % tuple(np.concatenate([b5coeff_fit, -uxxxxcoeff_fit]))
+        )
+
+        print(
+            r"(%.3f+%.3f\varepsilon+%.3f\varepsilon^2)u_{xx}\nonumber\\"
+            % tuple(uxxcoeff_fit)
+        )
+        print(
+            r"&+(%.3f+%.3f\varepsilon+%.3f\varepsilon^2)u_{xxxx}\nonumber\\"
+            % tuple(uxxxxcoeff_fit)
+        )
+        print(
+            r"&+(-1.000+%.3f+%.3f\varepsilon+%.3f\varepsilon^2)u\nonumber\\"
+            % tuple(rcoeff_fit)
+        )
+        print(
+            r"&+(%.3f+%.3f\varepsilon+%.3f\varepsilon^2)u^3\nonumber\\"
+            % tuple(b3coeff_fit)
+        )
+        print(
+            r"&-(%.3f+%.3f\varepsilon+%.3f\varepsilon^2)u^5\nonumber\\"
+            % tuple(b5coeff_fit)
+        )
+
+    return r_func_fit, b3_func_fit, b5_func_fit, uxx_func_fit, uxxxx_func_fit
+
+
+def get_single_normal_form_parameters(model, printcoefs=False):
+    """
+    Calculate the nonlinear transformation to compute the normal form parameters.
+    Parameters:
+        model: A fit SINDy model for the Oregonator model with a ParameterizedLibrary.
+        bs: Values of the b parameter to calculate the normal-form parameters
+    """
+    opt = model.optimizer
+
+    Xs = np.where(np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X")[
+        0
+    ][0]
+    Ys = np.where(np.array(model.feature_library.get_feature_names(["X", "Y"])) == "Y")[
+        0
+    ][0]
+    XXs = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XX"
+    )[0][0]
+    XYs = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XY"
+    )[0][0]
+    YYs = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "YY"
+    )[0][0]
+    XXXs = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XXX"
+    )[0][0]
+    XXYs = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XXY"
+    )[0][0]
+    XYYs = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "XYY"
+    )[0][0]
+    YYYs = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "YYY"
+    )[0][0]
+    X1s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X_1"
+    )[0][0]
+    Y1s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "Y_1"
+    )[0][0]
+    X2s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X_2"
+    )[0][0]
+    Y2s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "Y_2"
+    )[0][0]
+    X11s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X_11"
+    )[0][0]
+    X12s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X_12"
+    )[0][0]
+    X22s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "X_22"
+    )[0][0]
+    Y11s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "Y_11"
+    )[0][0]
+    Y12s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "Y_12"
+    )[0][0]
+    Y22s = np.where(
+        np.array(model.feature_library.get_feature_names(["X", "Y"])) == "Y_22"
+    )[0][0]
+
+    if printcoefs:
+        for i in range(2):
+            print(r"\dot{%s}&=" % (["X", "Y"][i]))
+            print(
+                r"%.3fX+%.3fY\nonumber\\"
+                % tuple([opt.coef_[:, Xs][i].T, opt.coef_[:, Ys][i].T])
+            )
+            print(
+                r"%.3fXX+%.3fXY+%.3fYY\nonumber\\"
+                % tuple(
+                    [
+                        opt.coef_[:, XXs][i].T,
+                        opt.coef_[:, XYs][i].T,
+                        opt.coef_[:, YYs][i].T,
+                    ]
+                )
+            )
+            print(
+                r"%.3fXXX+%.3fXXY+%.3fXYY+%.3fYYY\nonumber\\"
+                % tuple(
+                    [
+                        opt.coef_[:, XXXs][i].T,
+                        opt.coef_[:, XXYs][i].T,
+                        opt.coef_[:, XYYs][i].T,
+                        opt.coef_[:, YYYs][i].T,
+                    ]
+                )
+            )
+            print(
+                r"%.3fX_{x}+%.3fX_{y}+%.3fY_{x}+%.3fY_{y}\nonumber\\"
+                % tuple(
+                    [
+                        opt.coef_[:, X1s][i].T,
+                        opt.coef_[:, X2s][i].T,
+                        opt.coef_[:, Y1s][i].T,
+                        opt.coef_[:, Y2s][i].T,
+                    ]
+                )
+            )
+            print(
+                r"%.3fX_{xx}+%.3fX_{xy}+%.3fX_{yy}+%.3fY_{xx}+%.3fY_{xy}+%.3fY_{yy}\nonumber\\"
+                % tuple(
+                    [
+                        opt.coef_[:, X11s][i].T,
+                        opt.coef_[:, X12s][i].T,
+                        opt.coef_[:, X22s][i].T,
+                        opt.coef_[:, Y11s][i].T,
+                        opt.coef_[:, Y12s][i].T,
+                        opt.coef_[:, Y22s][i].T,
+                    ]
+                )
+            )
+            print()
+
+    D = np.zeros((2, 2))
+    D[:, 0] = opt.coef_[:, X11s]
+    D[:, 1] = opt.coef_[:, Y11s]
+
+    J = np.zeros((2, 2))
+    Fxx = np.zeros((2, 2, 2))
+    Fxxx = np.zeros((2, 2, 2, 2))
+    J[:, 0] = opt.coef_[:, Xs]
+    J[:, 1] = opt.coef_[:, Ys]
+    Fxx[:, 0, 0] = opt.coef_[:, XXs] * 2
+    Fxx[:, 0, 1] = opt.coef_[:, XYs]
+    Fxx[:, 1, 0] = opt.coef_[:, XYs]
+    Fxx[:, 1, 1] = opt.coef_[:, YYs] * 2
+    Fxxx[:, 0, 0, 0] = opt.coef_[:, XXXs] * 6
+    Fxxx[:, 0, 0, 1] = opt.coef_[:, XXYs] * 2
+    Fxxx[:, 0, 1, 0] = opt.coef_[:, XXYs] * 2
+    Fxxx[:, 1, 0, 0] = opt.coef_[:, XXYs] * 2
+    Fxxx[:, 0, 1, 1] = opt.coef_[:, XYYs] * 2
+    Fxxx[:, 1, 0, 1] = opt.coef_[:, XYYs] * 2
+    Fxxx[:, 1, 1, 0] = opt.coef_[:, XYYs] * 2
+    Fxxx[:, 1, 1, 1] = opt.coef_[:, YYYs] * 6
+
+    lambdas, Us = np.linalg.eig(J)
+
+    u = Us[:, 0]
+    ubar = np.conjugate(u)
+    ut = np.linalg.inv(Us)[0, :]
+    a = np.einsum(
+        "i,ijk,j,kl,lmo,m,o",
+        ut,
+        Fxx,
+        u,
+        np.linalg.inv(J),
+        Fxx,
+        u,
+        ubar,
+    )
+    b = (
+        np.einsum(
+            "i,ijk,j,kl,lmo,m,o",
+            ut,
+            Fxx,
+            ubar,
+            np.linalg.inv(J - ((lambdas[0] - lambdas[1]) * np.eye(2))),
+            Fxx,
+            u,
+            u,
+        )
+        / 2
+    )
+    c = np.einsum("i,ijkl,j,k,l", ut, Fxxx, u, u, ubar) / 2
+    alphas = a + b - c
+    betas = np.einsum("i,ik,k", ut, D, u)
+
+    return -np.imag(alphas) / np.real(alphas), np.imag(betas) / np.real(betas)
+
+
+def get_auto_branches(filebase):
+    i = 0
+    unstable = []
+    while os.path.exists(filebase + "/unstable_" + str(i) + ".npy"):
+        unstable.append(np.load(filebase + "/unstable_" + str(i) + ".npy"))
+        i = i + 1
+
+    i = 0
+    stable = []
+    while os.path.exists(filebase + "/stable_" + str(i) + ".npy"):
+        stable.append(np.load(filebase + "/stable_" + str(i) + ".npy"))
+        i = i + 1
+    return unstable, stable

@@ -3,7 +3,17 @@ version: 2
 sphinx:
   configuration: docs/conf.py
 
+build:
+  os: "ubuntu-22.04"
+  tools:
+    python: "3.8"
+
 python:
-  version: 3.7
   install:
-    - requirements: requirements-dev.txt
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
+        - cvxpy
+        - miosr
+        - dev

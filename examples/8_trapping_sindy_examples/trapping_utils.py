@@ -16,16 +16,8 @@ import pymech.neksuite as nek
 
 # Initialize quadratic SINDy library, with custom ordering
 # to be consistent with the constraint
-library_functions = [lambda x: x, lambda x, y: x * y, lambda x: x**2]
-library_function_names = [lambda x: x, lambda x, y: x + y, lambda x: x + x]
-sindy_library = ps.CustomLibrary(
-    library_functions=library_functions,
-    function_names=library_function_names,
-    include_bias=True,
-)
-sindy_library_no_bias = ps.CustomLibrary(
-    library_functions=library_functions, function_names=library_function_names
-)
+sindy_library = ps.PolynomialLibrary(include_bias=True)
+sindy_library_no_bias = ps.PolynomialLibrary(include_bias=False)
 
 # Initialize integrator keywords for solve_ivp to replicate the odeint defaults
 integrator_keywords = {}
@@ -52,59 +44,6 @@ def obj_function(m, L_obj, Q_obj, P_obj):
     return eigvals[-1]
 
 
-# Define some setup and plotting functions
-# Build the skew-symmetric nonlinearity constraints
-def make_constraints(r, include_bias=True):
-    q = 0
-    N = int((r**2 + 3 * r) / 2.0)
-    if include_bias is True:
-        N = N + 1  # + 1 for constant term
-    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
-    constraint_zeros = np.zeros(p)
-    constraint_matrix = np.zeros((p, r * N))
-
-    # Set coefficients adorning terms like a_i^3 to zero
-    # [1, x, y, z, xy, xz, yz, x2, y2, z2, 1, ...]
-    # [1 1 1 x x x y y y ...]
-    for i in range(r):
-        # constraint_matrix[q, r * (N - r) + i * (r + 1)] = 1.0
-        constraint_matrix[q, r * (N - r) + i * (r + 1)] = 3.0
-        q = q + 1
-
-    # Set coefficients adorning terms like a_ia_j^2 to be antisymmetric
-    for i in range(r):
-        for j in range(i + 1, r):
-            constraint_matrix[q, r * (N - r + j) + i] = 1.0
-            constraint_matrix[
-                q, r + r * (r + j - 1) + j + r * int(i * (2 * r - i - 3) / 2.0)
-            ] = 1.0
-            q = q + 1
-    for i in range(r):
-        for j in range(0, i):
-            constraint_matrix[q, r * (N - r + j) + i] = 1.0
-            constraint_matrix[
-                q, r + r * (r + i - 1) + j + r * int(j * (2 * r - j - 3) / 2.0)
-            ] = 1.0
-            q = q + 1
-
-    # Set coefficients adorning terms like a_ia_ja_k to be antisymmetric
-    for i in range(r):
-        for j in range(i + 1, r):
-            for k in range(j + 1, r):
-                constraint_matrix[
-                    q, r + r * (r + k - 1) + i + r * int(j * (2 * r - j - 3) / 2.0)
-                ] = (1 / 2.0)
-                constraint_matrix[
-                    q, r + r * (r + k - 1) + j + r * int(i * (2 * r - i - 3) / 2.0)
-                ] = (1 / 2.0)
-                constraint_matrix[
-                    q, r + r * (r + j - 1) + k + r * int(i * (2 * r - i - 3) / 2.0)
-                ] = (1 / 2.0)
-                q = q + 1
-
-    return constraint_zeros, constraint_matrix
-
-
 # Use optimal m, and calculate eigenvalues(PW) to see if identified model is stable
 def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     if mod_matrix is None:
@@ -123,6 +62,8 @@ def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     print("optimal m: ", opt_m)
     print("As eigvals: ", np.sort(eigvals))
     max_eigval = np.sort(eigvals)[-1]
+    if max_eigval > 0:
+        return False
     C = np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
     L = np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
     Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
@@ -133,6 +74,7 @@ def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     print("Estimate of trapping region size, Rm = ", Rm)
     if not np.isclose(mean_val, 1.0):
         print("Normalized trapping region size, Reff = ", Reff)
+    return True
 
 
 def get_trapping_radius(max_eigval, eps_Q, r, d):
@@ -234,29 +176,37 @@ def make_trap_progress_plots(r, sindy_opt, mod_matrix=None):
                 )
             rhos_plus.append(DA)
             rhos_minus.append(Rm)
-    x = np.arange(len(rhos_minus[1:]))
-    plt.plot(x, rhos_minus[1:], "k--", label=r"$\rho_-$", linewidth=3)
-    plt.plot(x, rhos_plus[1:], label=r"$\rho_+$", linewidth=3, color="k")
-    ax = plt.gca()
-    ax.fill_between(x, rhos_minus[1:], rhos_plus[1:], color="c", label=r"$\dot{K} < 0$")
-    ax.fill_between(
-        x,
-        rhos_plus[1:],
-        np.ones(len(x)) * rhos_plus[-1] * 5,
-        color="r",
-        label="Possibly unstable",
-    )
-    ax.fill_between(
-        x, np.zeros(len(x)), rhos_minus[1:], color="g", label=r"Trapping region"
-    )
-    plt.grid(True)
-    plt.ylabel("Stability radius")
-    plt.xlabel("Algorithm iteration")
-    plt.legend(framealpha=1.0)
-    plt.xlim(1, x[-1])
-    plt.ylim(1, rhos_plus[-1] * 5)
-    plt.xscale("log")
-    plt.yscale("log")
+    try:
+        x = np.arange(len(rhos_minus[1:]))
+        plt.figure()
+        plt.plot(x, rhos_minus[1:], "k--", label=r"$\rho_-$", linewidth=3)
+        plt.plot(x, rhos_plus[1:], label=r"$\rho_+$", linewidth=3, color="k")
+        ax = plt.gca()
+        ax.fill_between(
+            x, rhos_minus[1:], rhos_plus[1:], color="c", label=r"$\dot{K} < 0$"
+        )
+        ax.fill_between(
+            x,
+            rhos_plus[1:],
+            np.ones(len(x)) * rhos_plus[-1] * 5,
+            color="r",
+            label="Possibly unstable",
+        )
+        ax.fill_between(
+            x, np.zeros(len(x)), rhos_minus[1:], color="g", label=r"Trapping region"
+        )
+        plt.grid(True)
+        plt.ylabel("Stability radius")
+        plt.xlabel("Algorithm iteration")
+        plt.legend(framealpha=1.0)
+        plt.xlim(1, x[-1])
+        plt.ylim(1, rhos_plus[-1] * 5)
+        plt.xscale("log")
+        plt.yscale("log")
+    except IndexError:
+        print(
+            "The A^S matrix is not fully Hurwitz so will not plot the stability radii"
+        )
     return rhos_minus, rhos_plus
 
 
@@ -273,7 +223,6 @@ def make_3d_plots(x_test, x_test_pred, filename):
     ax.set_zticklabels([])
     ax.set_axis_off()
     plt.legend(fontsize=14)
-    plt.show()
 
 
 # Plot the SINDy fits of X and Xdot against the ground truth
@@ -299,8 +248,6 @@ def make_fits(r, t, xdot_test, xdot_test_pred, x_test, x_test_pred, filename):
         plt.legend(fontsize=12)
         if i == r - 1:
             plt.xlabel("t", fontsize=18)
-
-    plt.show()
 
 
 # Plot errors between m_{k+1} and m_k and similarly for the model coefficients
@@ -658,7 +605,6 @@ def trapping_region(r, x_test_pred, Xi, sindy_opt, filename):
     ax.set_yticklabels([])
     ax.set_zticklabels([])
     ax.set_axis_off()
-    plt.show()
 
 
 # Make Lissajou figures with ground truth and SINDy model
@@ -688,4 +634,3 @@ def make_lissajou(r, x_train, x_test, x_train_pred, x_test_pred, filename):
                 plt.ylabel(r"$x_" + str(i) + r"$", fontsize=18)
             if i == r - 1:
                 plt.xlabel(r"$x_" + str(j) + r"$", fontsize=18)
-    plt.show()

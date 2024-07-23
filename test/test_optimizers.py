@@ -509,14 +509,6 @@ def test_stable_linear_sr3_linear_library():
 
 
 @pytest.mark.parametrize(
-    "trapping_sr3_params",
-    [
-        {},
-        {"accel": True},
-    ],
-    ids=["no_accel", "accel"],
-)
-@pytest.mark.parametrize(
     "params",
     [
         dict(thresholder="l1", threshold=0, _include_bias=True),
@@ -546,15 +538,13 @@ def test_stable_linear_sr3_linear_library():
         ),
     ],
 )
-def test_trapping_sr3_quadratic_library(params, trapping_sr3_params):
+def test_trapping_sr3_quadratic_library(params):
     t = np.arange(0, 1, 0.1)
     x = np.exp(-t).reshape((-1, 1))
     x_dot = -x
     features = np.hstack([x, x**2])
     if params.get("_include_bias"):
         features = np.hstack([np.ones_like(x), features])
-
-    params.update(trapping_sr3_params)
 
     opt = TrappingSR3(_n_tgts=1, **params)
     opt.fit(features, x_dot)

@@ -1303,6 +1303,66 @@ def test_PQ(lib_terms_coeffs):
     np.testing.assert_array_equal(result, expected)
 
 
+def test_enstrophy_constraints_imply_enstrophy_symmetry():
+    n_tgts = 4
+    root = np.random.normal(size=(n_tgts, n_tgts))
+    mod_matrix = root @ root.T
+    bias = False
+    lib = PolynomialLibrary(2, include_bias=bias).fit(np.ones((1, n_tgts)))
+    terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+    PQ = TrappingSR3._build_PQ(terms)
+
+    _, constraint_lhs = _make_constraints(n_tgts, include_bias=bias)
+    constraint_lhs = np.tensordot(constraint_lhs, mod_matrix, axes=1)
+    n_constraint, n_features, _ = constraint_lhs.shape
+    constraint_mat = constraint_lhs.reshape((n_constraint, -1))
+    coeff_basis = scipy.linalg.null_space(constraint_mat)
+    _, constraint_nullity = coeff_basis.shape
+    coeffs = coeff_basis @ np.random.normal(size=(constraint_nullity, 1))
+    coeffs = coeffs.reshape((n_features, n_tgts))
+
+    Q = np.tensordot(PQ, coeffs, axes=([4, 3], [0, 1]))
+    Q_tilde = np.tensordot(mod_matrix, Q, axes=1)
+    Q_permsum = (
+        Q_tilde + np.transpose(Q_tilde, [1, 2, 0]) + np.transpose(Q_tilde, [2, 0, 1])
+    )
+    np.testing.assert_allclose(np.zeros_like(Q_permsum), Q_permsum, atol=1e-14)
+
+
+def test_enstrophy_symmetry_implies_enstrophy_constraints():
+    n_tgts = 4
+    root = np.random.normal(size=(n_tgts, n_tgts))
+    mod_matrix = root @ root.T
+    mod_inv = np.linalg.inv(mod_matrix)
+    bias = False
+    lib = PolynomialLibrary(2, include_bias=bias).fit(np.ones((1, n_tgts)))
+    terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+    PQ = TrappingSR3._build_PQ(terms)
+    PQinv = np.zeros_like(PQ)
+    PQinv[np.where(PQ != 0)] = 1
+
+    Q_tilde = np.random.normal(size=(n_tgts, n_tgts, n_tgts))
+    Q_tilde[(range(n_tgts),) * 3] = 0
+    Q_tilde = (Q_tilde + np.transpose(Q_tilde, [0, 2, 1])) / 2
+    Q_tilde -= (
+        Q_tilde + np.transpose(Q_tilde, [1, 2, 0]) + np.transpose(Q_tilde, [2, 0, 1])
+    ) / 3
+    # Assert symmetry
+    Qperm = (
+        Q_tilde + np.transpose(Q_tilde, [1, 2, 0]) + np.transpose(Q_tilde, [2, 0, 1])
+    )
+    np.testing.assert_allclose(Qperm, np.zeros_like(Qperm), atol=1e-15)
+    Q = np.tensordot(mod_inv, Q_tilde, axes=1)
+
+    # transpose:  make_constraints is (features, targets), but PQ is (targets, features)
+    coeffs = np.tensordot(PQinv, Q, axes=([0, 1, 2], [0, 1, 2])).T
+    expected, constraint_lhs = _make_constraints(n_tgts, include_bias=bias)
+    constraint_lhs = np.tensordot(constraint_lhs, mod_matrix, axes=1)
+    n_constraints, _, _ = constraint_lhs.shape
+    result = constraint_lhs.reshape((n_constraints, -1)) @ coeffs.flatten()
+    np.testing.assert_allclose(result, expected, atol=1e-9)
+
+
 def test_constraints_imply_symmetry():
     n_tgts = 4
     bias = False

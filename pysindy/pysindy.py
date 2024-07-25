@@ -363,15 +363,7 @@ class SINDy(BaseEstimator):
         precision: int, optional (default 3)
             Precision to be used when printing out model coefficients.
 
-        **kwargs: Additional keyword arguments passed to the print function:
-            - sep: str, optional (default=' ')
-                string inserted between values, default a space.
-            - end: str, optional (default='\\n')
-                string appended after the last value, default a newline.
-            - file: str, optional (default = None)
-                a file-like object (stream); defaults to the current sys.stdout.
-            - flush: bool, optional (default = False)
-                whether to forcibly flush the stream.
+        **kwargs: Additional keyword arguments passed to the builtin print function
         """
         eqns = self.equations(precision)
         if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):

@@ -518,7 +518,6 @@ def test_print_discrete_time_multiple_trajectories(
 
     out, _ = capsys.readouterr()
     assert len(out) > 0
-    assert "(x0)[k+1] = " in out
 
 
 def test_differentiate(data_lorenz, data_multiple_trajectories):

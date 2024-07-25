@@ -33,13 +33,6 @@ class PDELibrary(BaseFeatureLibrary):
     temporal_grid : np.ndarray, optional (default None)
         The temporal grid if using SINDy-PI with PDEs.
 
-    interaction_only : boolean, optional (default True)
-        Whether to omit self-interaction terms.
-        If True, function evaulations of the form :math:`f(x,x)` and
-        :math:`f(x,y,x)` will be omitted, but those of the form :math:`f(x,y)`
-        and :math:`f(x,y,z)` will be included.
-        If False, all combinations will be included.
-
     include_bias : boolean, optional (default False)
         If True (default), then include a bias column, the feature in which
         all polynomial powers are zero (i.e. a column of ones - acts as an
@@ -90,7 +83,6 @@ class PDELibrary(BaseFeatureLibrary):
         derivative_order=0,
         spatial_grid=None,
         temporal_grid=None,
-        interaction_only=True,
         include_bias=False,
         include_interaction=True,
         implicit_terms=False,
@@ -102,7 +94,6 @@ class PDELibrary(BaseFeatureLibrary):
     ):
         self.function_library = function_library
         self.derivative_order = derivative_order
-        self.interaction_only = interaction_only
         self.implicit_terms = implicit_terms
         self.include_bias = include_bias
         self.include_interaction = include_interaction

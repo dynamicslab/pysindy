@@ -53,13 +53,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         at least one dimension corresponding to a temporal grid, so that
         integration by parts can be done in the weak formulation.
 
-    interaction_only : boolean, optional (default True)
-        Whether to omit self-interaction terms.
-        If True, function evaulations of the form :math:`f(x,x)`
-        and :math:`f(x,y,x)` will be omitted, but those of the form
-        :math:`f(x,y)` and :math:`f(x,y,z)` will be included.
-        If False, all combinations will be included.
-
     include_bias : boolean, optional (default False)
         If True (default), then include a bias column, the feature in which
         all polynomial powers are zero (i.e. a column of ones - acts as an
@@ -140,7 +133,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
         function_library: Optional[BaseFeatureLibrary] = None,
         derivative_order=0,
         spatiotemporal_grid=None,
-        interaction_only=True,
         include_bias=False,
         include_interaction=True,
         K=100,
@@ -156,7 +148,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
     ):
         self.function_library = function_library
         self.derivative_order = derivative_order
-        self.interaction_only = interaction_only
         self.implicit_terms = implicit_terms
         self.include_bias = include_bias
         self.include_interaction = include_interaction

@@ -282,3 +282,33 @@ def n_poly_features(
         else:
             n_feat += comb(n_in_feat + deg - 1, deg)
     return n_feat
+
+
+def IdentityLibrary():
+    """
+    Generate an identity library which maps all input features to
+    themselves.
+
+    Attributes
+    ----------
+    n_features_in_ : int
+        The total number of input features.
+
+    n_output_features_ : int
+        The total number of output features. The number of output features
+        is equal to the number of input features.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pysindy.feature_library import IdentityLibrary
+    >>> x = np.array([[0,-1],[0.5,-1.5],[1.,-2.]])
+    >>> lib = IdentityLibrary().fit(x)
+    >>> lib.transform(x)
+    array([[ 0. , -1. ],
+           [ 0.5, -1.5],
+           [ 1. , -2. ]])
+    >>> lib.get_feature_names()
+    ['x0', 'x1']
+    """
+    return PolynomialLibrary(degree=1, include_bias=False)

@@ -1333,6 +1333,8 @@ def test_enstrophy_symmetry_implies_enstrophy_constraints():
     n_tgts = 4
     root = np.random.normal(size=(n_tgts, n_tgts))
     mod_matrix = root @ root.T
+    u, _, vt = np.linalg.svd(mod_matrix)
+    mod_matrix = u @ vt
     mod_inv = np.linalg.inv(mod_matrix)
     bias = False
     lib = PolynomialLibrary(2, include_bias=bias).fit(np.ones((1, n_tgts)))
@@ -1360,7 +1362,7 @@ def test_enstrophy_symmetry_implies_enstrophy_constraints():
     constraint_lhs = np.tensordot(constraint_lhs, mod_matrix, axes=1)
     n_constraints, _, _ = constraint_lhs.shape
     result = constraint_lhs.reshape((n_constraints, -1)) @ coeffs.flatten()
-    np.testing.assert_allclose(result, expected, atol=1e-9)
+    np.testing.assert_allclose(result, expected, atol=1e-15)
 
 
 def test_constraints_imply_symmetry():

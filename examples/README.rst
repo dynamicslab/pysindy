@@ -86,15 +86,16 @@ Use the ``ConstrainedSR3`` optimizer to build a constrained model for the tempor
 
     ./7_plasma_examples/example
 
-`Trapping SINDy <./8_trapping_sindy_paper_examples/example.ipynb>`_
+`Trapping SINDy <./8_trapping_sindy_examples/example.ipynb>`_
 -----------------------------------------------------------------------------------------------------------
 This notebook applies the ``TrappingSR3`` optimizer to various canonical fluid systems., proposed in this paper: Kaptanoglu, Alan A., et al. "Promoting global stability in data-driven models of quadratic nonlinear dynamics." Physical Review Fluids 6.9 (2021): 094401. A preprint is found here `<https://arxiv.org/abs/2105.01843>`_.
+See as well the other examples in this folder, which explore the extension to local trapping and enstrophy in Peng, Mai et al. "Local stability guarantees for data-driven quadratically nonlinear models."
 
 .. toctree::
     :hidden:
     :maxdepth: 1
 
-    ./8_trapping_sindy_paper_examples/example
+    ./8_trapping_sindy_examples/example
 
 `SINDyPI <./9_sindypi_with_sympy/example.ipynb>`_
 ----------------------------------------------------------------------------------------------

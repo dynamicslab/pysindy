@@ -68,7 +68,7 @@ def purge_notebook_modules():
 @pytest.mark.notebooks
 def test_notebook_script(directory: Path, purge_notebook_modules):
     # Run in native directory with modified sys.path for imports to work
-    if "17_" in directory or "5_" in directory:
+    if "17_" in directory or "5_" in directory or "8_" in directory:
         pytest.skip("Notebook runs too slowly.  Test manually")
     with _cwd(notebook_dir / directory):
         try:

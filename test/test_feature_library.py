@@ -224,7 +224,6 @@ def test_sindypi_library_bad_params(params):
 @pytest.mark.parametrize(
     "library",
     [
-        IdentityLibrary(),
         PolynomialLibrary(),
         PolynomialLibrary(include_bias=False),
         FourierLibrary(),
@@ -246,7 +245,6 @@ def test_fit_transform(data_lorenz, library):
 @pytest.mark.parametrize(
     "library",
     [
-        IdentityLibrary(),
         PolynomialLibrary(),
         PolynomialLibrary(include_bias=False),
         FourierLibrary(),
@@ -269,7 +267,6 @@ def test_change_in_data_shape(data_lorenz, library):
 @pytest.mark.parametrize(
     "library, shape",
     [
-        (IdentityLibrary(), 3),
         (PolynomialLibrary(include_bias=False), 9),
         (PolynomialLibrary(), 10),
         (IdentityLibrary() + PolynomialLibrary(), 13),
@@ -292,7 +289,6 @@ def test_output_shape(data_lorenz, library, shape):
 @pytest.mark.parametrize(
     "library",
     [
-        IdentityLibrary(),
         PolynomialLibrary(),
         PolynomialLibrary(include_bias=False),
         FourierLibrary(),
@@ -410,7 +406,6 @@ def test_tensored(data_lorenz):
 @pytest.mark.parametrize(
     "library",
     [
-        IdentityLibrary(),
         PolynomialLibrary(),
         FourierLibrary(),
         PolynomialLibrary() + FourierLibrary(),

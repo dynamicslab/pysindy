@@ -282,3 +282,12 @@ def n_poly_features(
         else:
             n_feat += comb(n_in_feat + deg - 1, deg)
     return n_feat
+
+
+def IdentityLibrary():
+    """
+    Generate an identity library which maps all input features to
+    themselves. An alias for creating a degree-1 polynomial library
+    with no constant term.
+    """
+    return PolynomialLibrary(degree=1, include_bias=False)

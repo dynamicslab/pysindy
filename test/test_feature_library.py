@@ -227,6 +227,7 @@ def test_sindypi_library_bad_params(params):
         PolynomialLibrary(),
         PolynomialLibrary(include_bias=False),
         FourierLibrary(),
+        IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("custom_library"),
         pytest.lazy_fixture("custom_library_bias"),
         pytest.lazy_fixture("generalized_library"),
@@ -247,6 +248,7 @@ def test_fit_transform(data_lorenz, library):
         PolynomialLibrary(),
         PolynomialLibrary(include_bias=False),
         FourierLibrary(),
+        IdentityLibrary() + PolynomialLibrary(),
         pytest.lazy_fixture("custom_library"),
         pytest.lazy_fixture("custom_library_bias"),
         pytest.lazy_fixture("generalized_library"),
@@ -267,6 +269,7 @@ def test_change_in_data_shape(data_lorenz, library):
     [
         (PolynomialLibrary(include_bias=False), 9),
         (PolynomialLibrary(), 10),
+        (IdentityLibrary() + PolynomialLibrary(), 13),
         (FourierLibrary(), 6),
         (pytest.lazy_fixture("custom_library_bias"), 13),
         (pytest.lazy_fixture("custom_library"), 12),

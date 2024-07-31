@@ -33,13 +33,11 @@ nGLL = 7  # Order of the spectral mesh
 # define the objective function to be minimized by simulated annealing
 def obj_function(m, L_obj, Q_obj, P_obj):
     mQ_full = np.tensordot(Q_obj, m, axes=([2], [0])) + np.tensordot(
-        np.transpose(Q_obj, axes=[1, 2, 0]), m, axes=([1], [0])
+        Q_obj, m, axes=([1], [0])
     )
-    # Below line unnecessary if Q already symmetrized in last two indices
     mQ_full = (mQ_full + mQ_full.T) / 2.0
-    # Below line unnecessary if L already symmetrized
     L_obj = 0.5 * (L_obj + L_obj.T)
-    As = L_obj + P_obj @ mQ_full
+    As = (P_obj @ (L_obj + mQ_full) + (L_obj + mQ_full).T @ P_obj) / 2
     eigvals, eigvecs = np.linalg.eigh(As)
     return eigvals[-1]
 

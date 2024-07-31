@@ -144,19 +144,19 @@ class TrappingSR3(ConstrainedSR3):
         definite matrices.
 
     PL_unsym_ : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
-        Unsymmetrized linear coefficient part of the P matrix in ||Pw - A||^2
+        Unsymmetrized linear coefficient part of the P matrix in :math:``||Pw - A||^2``
 
     PL_ : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
-        Linear coefficient part of the P matrix in ||Pw - A||^2
+        Linear coefficient part of the P matrix in :math:``||Pw - A||^2``
 
     PQ_ : np.ndarray, shape (n_targets, n_targets,
                             n_targets, n_targets, n_features)
-        Quadratic coefficient part of the P matrix in ||Pw - A||^2
+        Quadratic coefficient part of the P matrix in :math:``||Pw - A||^2``
 
     PT_ : np.ndarray, shape (n_targets, n_targets,
                             n_targets, n_targets, n_features)
         Transpose of 1st dimension and 2nd dimension of quadratic coefficient
-        part of the P matrix in ||Pw - A||^2
+        part of the P matrix in :math:``||Pw - A||^2``
 
     objective_history_ : list
         History of the value of the objective at each step. Note that

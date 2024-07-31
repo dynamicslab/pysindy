@@ -33,30 +33,30 @@ NTarget = NewType("NTarget", int)
 
 class TrappingSR3(ConstrainedSR3):
     """
-    Trapping variant of sparse relaxed regularized regression.
-    This optimizer can be used to identify systems with globally
-    stable (bounded) solutions.
+    Generalized trapping variant of sparse relaxed regularized regression.
+    This optimizer can be used to identify quadratically nonlinear systems with
+    either a-priori globally or locally stable (bounded) solutions.
 
-    Attempts to minimize one of two related objective functions
+    This optimizer can be used to minimize five different objective functions:
 
     .. math::
 
-        0.5\\|y-Xw\\|^2_2 + \\lambda R(w)
+        0.5\\|y-Xw\\|^2_2 + \\lambda \\times R(w)
         + 0.5\\|Pw-A\\|^2_2/\\eta + \\delta_0(Cw-d)
-        + \\delta_{\\Lambda}(A)
+        + \\delta_{\\Lambda}(A) + \\alpha \\|Qijk\\|
+        + \\beta \\|Q_{ijk} + Q_{jik} + Q_{kij}\\|
 
-    or
+    where :math:`R(w)` is a regularization function, C is a constraint matrix
+    detailing affine constraints on the model coefficients, A is a proxy for
+    the quadratic contributions to the energy evolution, and
+    :math:`Q_{ijk}` are the quadratic coefficients in the model. For
+    provably globally bounded solutions, use :math:`\\alpha >> 1`,
+    :math:`\\beta >> 1`, and equality constraints. For maximizing the local
+    stability radius of the model one has the choice to do this by
+    (1) minimizing the values in :math:`Q_{ijk}`, (2) promoting models
+    with skew-symmetrix :math:`Q_{ijk}` coefficients, or
+    (3) using inequality constraints for skew-symmetry in :math:`Q_{ijk}`.
 
-    .. math::
-
-        0.5\\|y-Xw\\|^2_2 + \\lambda R(w)
-        + \\delta_0(Cw-d)
-        + 0.5 * maximumeigenvalue(A)/\\eta
-
-    where :math:`R(w)` is a regularization function, which must be convex,
-    :math:`\\delta_0` is an indicator function that provides a hard constraint
-    of CW = d, and :math:\\delta_{\\Lambda} is a term to project the :math:`A`
-    matrix onto the space of negative definite matrices.
     See the following references for more details:
 
         Kaptanoglu, Alan A., et al. "Promoting global stability in
@@ -116,10 +116,6 @@ class TrappingSR3(ConstrainedSR3):
         could be straightforwardly implemented, but L0 requires
         reformulation because of nonconvexity. (default 'L1')
 
-    accel :
-        Whether or not to use accelerated prox-gradient descent for (m, A).
-        (default False)
-
     m0 :
         Initial guess for trap center in the optimization. Default None
         initializes vector elements randomly in [-1, 1]. shape (n_targets)
@@ -148,19 +144,19 @@ class TrappingSR3(ConstrainedSR3):
         definite matrices.
 
     PL_unsym_ : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
-        Unsymmetrized linear coefficient part of the P matrix in ||Pw - A||^2
+        Unsymmetrized linear coefficient part of the P matrix in :math:``||Pw - A||^2``
 
     PL_ : np.ndarray, shape (n_targets, n_targets, n_targets, n_features)
-        Linear coefficient part of the P matrix in ||Pw - A||^2
+        Linear coefficient part of the P matrix in :math:``||Pw - A||^2``
 
     PQ_ : np.ndarray, shape (n_targets, n_targets,
                             n_targets, n_targets, n_features)
-        Quadratic coefficient part of the P matrix in ||Pw - A||^2
+        Quadratic coefficient part of the P matrix in :math:``||Pw - A||^2``
 
     PT_ : np.ndarray, shape (n_targets, n_targets,
                             n_targets, n_targets, n_features)
         Transpose of 1st dimension and 2nd dimension of quadratic coefficient
-        part of the P matrix in ||Pw - A||^2
+        part of the P matrix in :math:``||Pw - A||^2``
 
     objective_history_ : list
         History of the value of the objective at each step. Note that
@@ -204,26 +200,25 @@ class TrappingSR3(ConstrainedSR3):
         gamma: float = -0.1,
         tol_m: float = 1e-5,
         thresholder: str = "l1",
-        accel: bool = False,
         m0: Union[NDArray, None] = None,
         A0: Union[NDArray, None] = None,
         **kwargs,
     ):
-        self.alpha = alpha
-        self.beta = beta
-        self.mod_matrix = mod_matrix
         # n_tgts, constraints, etc are data-dependent parameters and belong in
         # _reduce/fit ().  The following is a hack until we refactor how
         # constraints are applied in ConstrainedSR3 and MIOSR
         self._include_bias = _include_bias
         self._interaction_only = _interaction_only
         self._n_tgts = _n_tgts
+        self.mod_matrix = mod_matrix
         if _n_tgts is None:
             warnings.warn(
                 "Trapping Optimizer initialized without _n_tgts.  It will likely"
                 " be unable to fit data"
             )
             self._n_tgts = 1
+        if self.mod_matrix is None:
+            self.mod_matrix = np.eye(self._n_tgts)
         if method == "global":
             if hasattr(kwargs, "constraint_separation_index"):
                 constraint_separation_index = kwargs["constraint_separation_index"]
@@ -234,6 +229,7 @@ class TrappingSR3(ConstrainedSR3):
             constraint_rhs, constraint_lhs = _make_constraints(
                 self._n_tgts, include_bias=_include_bias
             )
+            constraint_lhs = np.tensordot(constraint_lhs, self.mod_matrix, axes=1)
             constraint_order = kwargs.pop("constraint_order", "feature")
             if constraint_order == "target":
                 constraint_lhs = np.transpose(constraint_lhs, [0, 2, 1])
@@ -264,7 +260,6 @@ class TrappingSR3(ConstrainedSR3):
         else:
             raise ValueError(f"Can either use 'global' or 'local' method, not {method}")
 
-        self.mod_matrix = mod_matrix
         self.eps_solver = eps_solver
         self.m0 = m0
         self.A0 = A0
@@ -275,7 +270,6 @@ class TrappingSR3(ConstrainedSR3):
         self.beta = beta
         self.gamma = gamma
         self.tol_m = tol_m
-        self.accel = accel
         self.__post_init_guard()
 
     def __post_init_guard(self):
@@ -326,8 +320,6 @@ class TrappingSR3(ConstrainedSR3):
             raise ValueError("tol and tol_m must be positive")
         if self.inequality_constraints and self.threshold == 0.0:
             raise ValueError("Inequality constraints requires threshold!=0")
-        if self.mod_matrix is None:
-            self.mod_matrix = np.eye(self._n_tgts)
         if self.A0 is None:
             self.A0 = np.diag(self.gamma * np.ones(self._n_tgts))
         if self.m0 is None:
@@ -336,7 +328,7 @@ class TrappingSR3(ConstrainedSR3):
 
     def set_params(self, **kwargs):
         super().set_params(**kwargs)
-        self.__post_init_guard
+        self.__post_init_guard()
 
     @staticmethod
     def _build_PC(polyterms: list[tuple[int, Int1D]]) -> Float3D:
@@ -456,9 +448,9 @@ class TrappingSR3(ConstrainedSR3):
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
         """Solves the coefficient update analytically if threshold = 0"""
         g = x_transpose_y + P_transpose_A / self.eta
-        inv1 = np.linalg.pinv(H, rcond=1e-15)
+        inv1 = np.linalg.pinv(H, rcond=1e-10)
         inv2 = np.linalg.pinv(
-            self.constraint_lhs.dot(inv1).dot(self.constraint_lhs.T), rcond=1e-15
+            self.constraint_lhs.dot(inv1).dot(self.constraint_lhs.T), rcond=1e-10
         )
 
         rhs = g.flatten() + self.constraint_lhs.T.dot(inv2).dot(
@@ -587,63 +579,34 @@ class TrappingSR3(ConstrainedSR3):
 
     def _solve_m_relax_and_split(
         self,
-        trap_ctr_prev: Float1D,
         trap_ctr: Float1D,
         A: Float2D,
         coef_sparse: np.ndarray[tuple[NFeat, NTarget], AnyFloat],
-        tk_previous: float,
-    ) -> tuple[Float1D, Float2D, float]:
+    ) -> tuple[Float1D, Float2D]:
         """Solves the (m, A) algorithm update.
 
         TODO: explain the optimization this solves, add good names to variables,
         and refactor/indirect the if global/local trapping conditionals
 
-        Returns the new trap center (m), the new A, and the new acceleration weight
+        Returns the new trap center (m) and the new A
         """
-        # prox-grad for (A, m)
-        # Accelerated prox gradient descent
+        # prox-gradient descent for (A, m)
         # Calculate projection matrix from Quad terms to As
-        if self.accel:
-            tk = (1 + np.sqrt(1 + 4 * tk_previous**2)) / 2.0
-            m_partial = trap_ctr + (tk_previous - 1.0) / tk * (trap_ctr - trap_ctr_prev)
-            tk_previous = tk
-            if self.method == "global":
-                mPQ = np.tensordot(m_partial, self.PQ_, axes=([0], [0]))
-            else:
-                mPM = np.tensordot(self.PM_, m_partial, axes=([2], [0]))
-        else:
-            if self.method == "global":
-                mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
-            else:
-                mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
+        mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
+        p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
+        PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
         # Calculate As and its quad term components
-        if self.method == "global":
-            p = self.PL_ - mPQ
-            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
-            PQW = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
-        else:
-            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
-            PMW = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
-            PMW = np.tensordot(self.mod_matrix, PMW, axes=([1], [0]))
+        PMW = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
+        PMW = np.tensordot(self.mod_matrix, PMW, axes=([1], [0]))
         # Calculate error in quadratic balance, and adjust trap center
         A_b = (A - PW) / self.eta
-        if self.method == "global":
-            PQWT_PW = np.tensordot(PQW, A_b, axes=([2, 1], [0, 1]))
-            if self.accel:
-                trap_new = m_partial - self.alpha_m * PQWT_PW
-            else:
-                trap_new = trap_ctr_prev - self.alpha_m * PQWT_PW
-        else:
-            PMT_PW = np.tensordot(PMW, A_b, axes=([2, 1], [0, 1]))
-            if self.accel:
-                trap_new = m_partial - self.alpha_m * PMT_PW
-            else:
-                trap_new = trap_ctr_prev - self.alpha_m * PMT_PW
+        # PQWT_PW is gradient of some loss in m
+        PMT_PW = np.tensordot(PMW, A_b, axes=([2, 1], [0, 1]))
+        trap_new = trap_ctr - self.alpha_m * PMT_PW
 
         # Update A
         A_new = self._update_A(A - self.alpha_A * A_b, PW)
-        return trap_new, A_new, tk_previous
+        return trap_new, A_new
 
     def _solve_nonsparse_relax_and_split(self, H, xTy, P_transpose_A, coef_prev):
         """Update for the coefficients if threshold = 0."""
@@ -731,22 +694,16 @@ class TrappingSR3(ConstrainedSR3):
         xTx = np.dot(x_expanded.T, x_expanded)
         xTy = np.dot(x_expanded.T, y.flatten())
 
-        # if using acceleration
-        tk_prev = 1
+        # keep track of last solution in case method fails
         trap_prev_ctr = trap_ctr
 
         # Begin optimization loop
         objective_history = []
         for k in range(self.max_iter):
             # update P tensor from the newest trap center
-            if self.method == "global":
-                mPQ = np.tensordot(trap_ctr, self.PQ_, axes=([0], [0]))
-                p = self.PL_ - mPQ
-                Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
-            else:
-                mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
-                p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-                Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
+            mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
+            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
+            Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
             self.p_history_.append(p)
 
             coef_prev = coef_sparse
@@ -764,9 +721,7 @@ class TrappingSR3(ConstrainedSR3):
                 coef_sparse = coef_prev
                 break
 
-            trap_ctr, A, tk_prev = self._solve_m_relax_and_split(
-                trap_prev_ctr, trap_ctr, A, coef_sparse, tk_prev
-            )
+            trap_ctr, A = self._solve_m_relax_and_split(trap_ctr, A, coef_sparse)
 
             # If problem over m becomes infeasible, break out of the loop
             if trap_ctr is None:
@@ -857,11 +812,9 @@ def _antisymm_double_constraint(
     mixed_terms: dict[frozenset[int], int],
 ) -> Float2D:
     """Set constraints for coefficients adorning terms like a_i^2 * a_j=0"""
-    constraint_mat_1 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i^2 * a_j
-    constraint_mat_2 = np.zeros((comb(n_tgts, 2), n_terms, n_tgts))  # a_i * a_j^2
-    for constr_ind, ((tgt_i, tgt_j), mix_term) in zip(
-        range(n_tgts), mixed_terms.items()
-    ):
+    constraint_mat_1 = np.zeros((len(mixed_terms), n_terms, n_tgts))  # a_i^2 * a_j
+    constraint_mat_2 = np.zeros((len(mixed_terms), n_terms, n_tgts))  # a_i * a_j^2
+    for constr_ind, ((tgt_i, tgt_j), mix_term) in enumerate(mixed_terms.items()):
         constraint_mat_1[constr_ind, mix_term, tgt_i] = 1.0
         constraint_mat_1[constr_ind, pure_terms[tgt_i], tgt_j] = 1.0
         constraint_mat_2[constr_ind, mix_term, tgt_j] = 1.0

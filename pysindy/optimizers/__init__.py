@@ -28,6 +28,7 @@ from .sr3 import SR3
 from .ssr import SSR
 from .stlsq import STLSQ
 
+
 __all__ = [
     "BaseOptimizer",
     "EnsembleOptimizer",

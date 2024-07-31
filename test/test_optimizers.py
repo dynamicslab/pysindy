@@ -5,6 +5,7 @@ import pickle
 
 import numpy as np
 import pytest
+import scipy.linalg
 from numpy.linalg import norm
 from numpy.typing import NDArray
 from scipy.integrate import solve_ivp
@@ -35,6 +36,7 @@ from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.optimizers import WrappedOptimizer
 from pysindy.optimizers.stlsq import _remove_and_decrement
+from pysindy.optimizers.trapping_sr3 import _antisymm_double_constraint
 from pysindy.optimizers.trapping_sr3 import _antisymm_triple_constraints
 from pysindy.optimizers.trapping_sr3 import _make_constraints
 from pysindy.utils import supports_multiple_targets
@@ -507,56 +509,55 @@ def test_stable_linear_sr3_linear_library():
 
 
 @pytest.mark.parametrize(
-    "trapping_sr3_params",
-    [
-        dict(),
-        dict(accel=True),
-    ],
-)
-@pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0),
-        dict(thresholder="l1", threshold=1e-5),
+        dict(thresholder="l1", threshold=0, _include_bias=True),
+        dict(thresholder="l1", threshold=1e-5, _include_bias=True),
         dict(
             thresholder="weighted_l1",
             thresholds=np.zeros((1, 2)),
             eta=1e5,
             alpha_m=1e4,
             alpha_A=1e5,
+            _include_bias=False,
         ),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((1, 2))),
-        dict(thresholder="l2", threshold=0),
-        dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((1, 2))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((1, 2))),
+        dict(
+            thresholder="weighted_l1",
+            thresholds=1e-5 * np.ones((1, 2)),
+            _include_bias=False,
+        ),
+        dict(thresholder="l2", threshold=0, _include_bias=True),
+        dict(thresholder="l2", threshold=1e-5, _include_bias=True),
+        dict(
+            thresholder="weighted_l2", thresholds=np.zeros((1, 2)), _include_bias=False
+        ),
+        dict(
+            thresholder="weighted_l2",
+            thresholds=1e-5 * np.ones((1, 2)),
+            _include_bias=False,
+        ),
     ],
 )
-def test_trapping_sr3_quadratic_library(params, trapping_sr3_params):
+def test_trapping_sr3_quadratic_library(params):
     t = np.arange(0, 1, 0.1)
     x = np.exp(-t).reshape((-1, 1))
     x_dot = -x
     features = np.hstack([x, x**2])
+    if params.get("_include_bias"):
+        features = np.hstack([np.ones_like(x), features])
 
-    params.update(trapping_sr3_params)
-
-    opt = TrappingSR3(_n_tgts=1, _include_bias=False, **params)
+    opt = TrappingSR3(_n_tgts=1, **params)
     opt.fit(features, x_dot)
-    assert opt.PL_.shape == (1, 1, 1, 2)
-    assert opt.PQ_.shape == (1, 1, 1, 1, 2)
     check_is_fitted(opt)
 
     # Rerun with identity constraints
     r = x.shape[1]
-    N = 2
-    p = r + r * (r - 1) + int(r * (r - 1) * (r - 2) / 6.0)
-    params["constraint_rhs"] = np.zeros(p)
-    params["constraint_lhs"] = np.eye(p, r * N)
+    N = 2 + params.get("_include_bias", 0)
+    params["constraint_rhs"] = np.zeros(r * N)
+    params["constraint_lhs"] = np.eye(r * N, r * N)
 
-    opt = TrappingSR3(_n_tgts=1, _include_bias=False, **params)
+    opt = TrappingSR3(_n_tgts=1, **params)
     opt.fit(features, x_dot)
-    assert opt.PL_.shape == (1, 1, 1, 2)
-    assert opt.PQ_.shape == (1, 1, 1, 1, 2)
     check_is_fitted(opt)
     # check is solve was infeasible first
     if not np.allclose(opt.m_history_[-1], opt.m_history_[0]):
@@ -933,10 +934,15 @@ def test_constrained_inequality_constraints(data_lorenz, params):
         dict(
             thresholder="weighted_l2", thresholds=0.5 * np.ones((1, 2)), expected=0.75
         ),
+        dict(thresholder="l1", threshold=0, expected=0.5),
+        dict(thresholder="weighted_l1", thresholds=0.0 * np.ones((1, 2)), expected=0.5),
+        dict(thresholder="l2", threshold=0.0, expected=0.5),
+        dict(thresholder="weighted_l2", thresholds=0.0 * np.ones((1, 2)), expected=0.5),
     ],
     ids=lambda d: d["thresholder"],
 )
 def test_trapping_cost_function(params):
+    # TODO: are all these parameters necessary?  What are we testing?
     expected = params.pop("expected")
     opt = TrappingSR3(**params)
     x = np.eye(2)
@@ -954,7 +960,7 @@ def test_trapping_inequality_constraints():
     constraint_matrix = np.zeros((1, 2))
     constraint_matrix[0, 1] = 0.1
 
-    # Run Trapping SR3 without CVXPY for the m solve
+    # Run Trapping SR3
     opt = TrappingSR3(
         constraint_lhs=constraint_matrix,
         constraint_rhs=constraint_rhs,
@@ -1184,15 +1190,48 @@ def test_trapping_constraints(include_bias):
         stable_coefs = np.concatenate(([[0], [0]], stable_coefs), axis=1)
     result = np.tensordot(constraint_lhs, stable_coefs, ((1, 2), (1, 0)))
     np.testing.assert_array_equal(constraint_rhs, result)
+    _, lg_constraint = _make_constraints(4, include_bias=include_bias)
+    # constraint should be full-rank
+    expected = len(lg_constraint)
+    result = np.linalg.matrix_rank(lg_constraint.reshape((expected, -1)))
+    assert result == expected
 
 
-def test_trapping_mixed_only():
+def test_trapping_triple_mixed_constraint():
     # xy, xz, yz
     stable_coefs = np.array([[0, 0, -1], [0, 0.5, 0], [0.5, 0, 0]])
     mixed_terms = {frozenset((0, 1)): 0, frozenset((0, 2)): 1, frozenset((1, 2)): 2}
     constraint_lhs = _antisymm_triple_constraints(3, 3, mixed_terms)
     result = np.tensordot(constraint_lhs, stable_coefs, ((1, 2), (1, 0)))
-    assert result[0] == 0
+    np.testing.assert_array_equal(result, np.zeros_like(result))
+
+
+def test_trapping_double_constraint():
+    stable_coefs = np.array(
+        [
+            # w^2, wx, wy, wz, x^2, xy, xz, y^2, yz, z^2
+            [0, 1, 2, 3, -4, 0, 0, -8, 0, -9],  # w
+            [-1, 4, 0, 0, 0, 5, 6, -10, 0, -11],  # x
+            [-2, 0, 8, 0, -5, 10, 0, 0, 7, -12],  # y
+            [-3, 0, 0, 9, -6, 0, 11, -7, 12, 0],  # z
+        ]
+    )
+    pure_terms = {0: 0, 1: 4, 2: 7, 3: 9}
+    mixed_terms = {
+        frozenset((0, 1)): 1,
+        frozenset((0, 2)): 2,
+        frozenset((0, 3)): 3,
+        frozenset((1, 2)): 5,
+        frozenset((1, 3)): 6,
+        frozenset((2, 3)): 8,
+    }
+    constraint_lhs = _antisymm_double_constraint(4, 10, pure_terms, mixed_terms)
+    result = np.tensordot(constraint_lhs, stable_coefs, ((1, 2), (1, 0)))
+    np.testing.assert_array_equal(result, np.zeros_like(result))
+    # constraint should be full-rank
+    expected = len(constraint_lhs)
+    result = np.linalg.matrix_rank(constraint_lhs.reshape((expected, -1)))
+    assert result == expected
 
 
 @pytest.mark.parametrize(
@@ -1262,3 +1301,110 @@ def test_PQ(lib_terms_coeffs):
     expected = np.array([[[4.0, 2.5], [2.5, 6]], [[10.0, 5.5], [5.5, 12.0]]])
     result = np.einsum("ijklm,lm", PQ, coeffs)
     np.testing.assert_array_equal(result, expected)
+
+
+def test_enstrophy_constraints_imply_enstrophy_symmetry():
+    n_tgts = 4
+    root = np.random.normal(size=(n_tgts, n_tgts))
+    mod_matrix = root @ root.T
+    bias = False
+    lib = PolynomialLibrary(2, include_bias=bias).fit(np.ones((1, n_tgts)))
+    terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+    PQ = TrappingSR3._build_PQ(terms)
+
+    _, constraint_lhs = _make_constraints(n_tgts, include_bias=bias)
+    constraint_lhs = np.tensordot(constraint_lhs, mod_matrix, axes=1)
+    n_constraint, n_features, _ = constraint_lhs.shape
+    constraint_mat = constraint_lhs.reshape((n_constraint, -1))
+    coeff_basis = scipy.linalg.null_space(constraint_mat)
+    _, constraint_nullity = coeff_basis.shape
+    coeffs = coeff_basis @ np.random.normal(size=(constraint_nullity, 1))
+    coeffs = coeffs.reshape((n_features, n_tgts))
+
+    Q = np.tensordot(PQ, coeffs, axes=([4, 3], [0, 1]))
+    Q_tilde = np.tensordot(mod_matrix, Q, axes=1)
+    Q_permsum = (
+        Q_tilde + np.transpose(Q_tilde, [1, 2, 0]) + np.transpose(Q_tilde, [2, 0, 1])
+    )
+    np.testing.assert_allclose(np.zeros_like(Q_permsum), Q_permsum, atol=1e-14)
+
+
+def test_enstrophy_symmetry_implies_enstrophy_constraints():
+    n_tgts = 4
+    root = np.random.normal(size=(n_tgts, n_tgts))
+    mod_matrix = root @ root.T
+    u, _, vt = np.linalg.svd(mod_matrix)
+    mod_matrix = u @ vt
+    mod_inv = np.linalg.inv(mod_matrix)
+    bias = False
+    lib = PolynomialLibrary(2, include_bias=bias).fit(np.ones((1, n_tgts)))
+    terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+    PQ = TrappingSR3._build_PQ(terms)
+    PQinv = np.zeros_like(PQ)
+    PQinv[np.where(PQ != 0)] = 1
+
+    Q_tilde = np.random.normal(size=(n_tgts, n_tgts, n_tgts))
+    Q_tilde[(range(n_tgts),) * 3] = 0
+    Q_tilde = (Q_tilde + np.transpose(Q_tilde, [0, 2, 1])) / 2
+    Q_tilde -= (
+        Q_tilde + np.transpose(Q_tilde, [1, 2, 0]) + np.transpose(Q_tilde, [2, 0, 1])
+    ) / 3
+    # Assert symmetry
+    Qperm = (
+        Q_tilde + np.transpose(Q_tilde, [1, 2, 0]) + np.transpose(Q_tilde, [2, 0, 1])
+    )
+    np.testing.assert_allclose(Qperm, np.zeros_like(Qperm), atol=1e-15)
+    Q = np.tensordot(mod_inv, Q_tilde, axes=1)
+
+    # transpose:  make_constraints is (features, targets), but PQ is (targets, features)
+    coeffs = np.tensordot(PQinv, Q, axes=([0, 1, 2], [0, 1, 2])).T
+    expected, constraint_lhs = _make_constraints(n_tgts, include_bias=bias)
+    constraint_lhs = np.tensordot(constraint_lhs, mod_matrix, axes=1)
+    n_constraints, _, _ = constraint_lhs.shape
+    result = constraint_lhs.reshape((n_constraints, -1)) @ coeffs.flatten()
+    np.testing.assert_allclose(result, expected, atol=1e-15)
+
+
+def test_constraints_imply_symmetry():
+    n_tgts = 4
+    bias = False
+    lib = PolynomialLibrary(2, include_bias=bias).fit(np.ones((1, n_tgts)))
+    terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+    PQ = TrappingSR3._build_PQ(terms)
+
+    _, constraint_lhs = _make_constraints(n_tgts, include_bias=bias)
+    n_constraint, n_features, _ = constraint_lhs.shape
+    constraint_mat = constraint_lhs.reshape((n_constraint, -1))
+    coeff_basis = scipy.linalg.null_space(constraint_mat)
+    _, constraint_nullity = coeff_basis.shape
+    coeffs = coeff_basis @ np.random.normal(size=(constraint_nullity, 1))
+    coeffs = coeffs.reshape((n_features, n_tgts))
+
+    Q = np.tensordot(PQ, coeffs, axes=([4, 3], [0, 1]))
+    Q_permsum = Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])
+    np.testing.assert_allclose(np.zeros_like(Q_permsum), Q_permsum, atol=1e-15)
+
+
+def test_symmetry_implies_constraints():
+    n_tgts = 4
+    bias = False
+    lib = PolynomialLibrary(2, include_bias=bias).fit(np.ones((1, n_tgts)))
+    terms = [(t_ind, exps) for t_ind, exps in enumerate(lib.powers_)]
+    PQ = TrappingSR3._build_PQ(terms)
+    PQinv = np.zeros_like(PQ)
+    PQinv[np.where(PQ != 0)] = 1
+
+    Q = np.random.normal(size=(n_tgts, n_tgts, n_tgts))
+    Q[(range(n_tgts),) * 3] = 0
+    Q = (Q + np.transpose(Q, [0, 2, 1])) / 2
+    Q -= (Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])) / 3
+    # Assert symmetry
+    Qperm = Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])
+    np.testing.assert_allclose(Qperm, np.zeros_like(Qperm), atol=1e-15)
+
+    # transpose:  make_constraints is (features, targets), but PQ is (targets, features)
+    coeffs = np.tensordot(PQinv, Q, axes=([0, 1, 2], [0, 1, 2])).T
+    expected, constraint_lhs = _make_constraints(n_tgts, include_bias=bias)
+    n_constraints, _, _ = constraint_lhs.shape
+    result = constraint_lhs.reshape((n_constraints, -1)) @ coeffs.flatten()
+    np.testing.assert_allclose(result, expected, atol=1e-15)

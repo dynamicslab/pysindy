@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from pysindy.utils import AxesArray
+from pysindy.utils import get_regularization
 from pysindy.utils import reorder_constraints
 from pysindy.utils import validate_control_variables
 
@@ -59,3 +60,43 @@ def test_validate_controls():
         validate_control_variables([arr], [arr[:1]])
     u_mod = validate_control_variables([arr], [arr], trim_last_point=True)
     assert u_mod[0].n_time == 1
+
+
+@pytest.mark.parametrize(["thresholder", "expected"], [("l0", 4), ("l1", 6), ("l2", 10)])
+def test_get_regularization_1d(thresholder, expected):
+    data = np.array([[0, 1, 2]]).T
+    lam = 2
+
+    reg = get_regularization(thresholder)
+    result = reg(data, lam)
+    assert result == expected
+
+
+@pytest.mark.parametrize(["thresholder", "expected"], [("l0", 8), ("l1", 10), ("l2", 14)])
+def test_get_regularization_2d(thresholder, expected):
+    data = np.array([[0, 1, 2], [1, 1, 0]]).T
+    lam = 2
+
+    reg = get_regularization(thresholder)
+    result = reg(data, lam)
+    assert result == expected
+
+
+@pytest.mark.parametrize(["thresholder", "expected"], [("weighted_l0", 1.5), ("weighted_l1", 2), ("weighted_l2", 3)])
+def test_get_weighted_regularization_1d(thresholder, expected):
+    data = np.array([[0, 1, 2]]).T
+    lam = np.array([[1, 1, 0.5]]).T
+
+    reg = get_regularization(thresholder)
+    result = reg(data, lam)
+    assert result == expected
+
+
+@pytest.mark.parametrize(["thresholder", "expected"], [("weighted_l0", 2.5), ("weighted_l1", 3.5), ("weighted_l2", 5.5)])
+def test_get_weighted_regularization_2d(thresholder, expected):
+    data = np.array([[0, 1, 2], [2, 1, 0]]).T
+    lam = np.array([[1, 1, 0.5], [0.5, 0.5, 1]]).T
+
+    reg = get_regularization(thresholder)
+    result = reg(data, lam)
+    assert result == expected

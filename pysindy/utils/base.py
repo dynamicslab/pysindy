@@ -1,6 +1,8 @@
 import warnings
 from itertools import repeat
+from typing import Callable
 from typing import Sequence
+from typing import Union
 
 import numpy as np
 from scipy.optimize import bisect
@@ -225,7 +227,9 @@ def get_prox(regularization):
         raise NotImplementedError("{} has not been implemented".format(regularization))
 
 
-def get_regularization(regularization):
+def get_regularization(
+    regularization: str,
+) -> Callable[[np.ndarray, Union[float, np.ndarray]], float]:
     if regularization.lower() == "l0":
         return lambda x, lam: lam * np.count_nonzero(x)
     elif regularization.lower() == "weighted_l0":
@@ -233,11 +237,11 @@ def get_regularization(regularization):
     elif regularization.lower() == "l1":
         return lambda x, lam: lam * np.sum(np.abs(x))
     elif regularization.lower() == "weighted_l1":
-        return lambda x, lam: np.sum(np.abs(lam @ x))
+        return lambda x, lam: np.sum(np.abs(lam * x))
     elif regularization.lower() == "l2":
         return lambda x, lam: lam * np.sum(x**2)
     elif regularization.lower() == "weighted_l2":
-        return lambda x, lam: np.sum(lam @ x**2)
+        return lambda x, lam: np.sum(lam * x**2)
     elif regularization.lower() == "cad":  # dummy function
         return lambda x, lam: 0
     else:

@@ -92,7 +92,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         self,
         max_iter=20,
         normalize_columns=False,
-        initial_guess=None,
+        initial_guess: np.ndarray = None,
         copy_X=True,
         unbias: bool = True,
     ):

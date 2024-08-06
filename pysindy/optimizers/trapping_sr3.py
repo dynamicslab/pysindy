@@ -542,7 +542,7 @@ class TrappingSR3(ConstrainedSR3):
         self, n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
     ):
         """Solve coefficient update with CVXPY if threshold != 0"""
-        xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
+        xi, cost = super()._create_var_and_part_cost(var_len, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
 
         # new terms minimizing quadratic piece ||P^Q @ xi||_2^2

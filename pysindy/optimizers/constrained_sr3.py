@@ -192,7 +192,6 @@ class ConstrainedSR3(SR3):
         )
 
         self.verbose_cvxpy = verbose_cvxpy
-        self.reg = get_regularization(thresholder)
         self.constraint_lhs = constraint_lhs
         self.constraint_rhs = constraint_rhs
         self.constraint_order = constraint_order
@@ -271,20 +270,24 @@ class ConstrainedSR3(SR3):
         rhs = rhs.reshape(g.shape)
         return inv1.dot(rhs)
 
+    def _calculate_penalty(self, xi: cp.Variable) -> cp.Expression:
+        thresholder = self.thresholder.lower()
+        if thresholder == "l1":
+            return self.threshold * cp.norm1(xi)
+        elif thresholder == "weighted_l1":
+            return cp.norm1(cp.multiply(np.ravel(self.thresholds), xi))
+        elif thresholder == "l2":
+            return self.threshold * cp.norm2(xi) ** 2
+        elif thresholder == "weighted_l2":
+            return cp.norm2(cp.multiply(np.ravel(self.thresholds), xi)) ** 2
+
     def _create_var_and_part_cost(
         self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
     ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi) ** 2
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
-        return xi, cost
+        penalty = self._calculate_penalty(xi)
+        return xi, cost + penalty
 
     def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
         if self.use_constraints:
@@ -362,7 +365,7 @@ class ConstrainedSR3(SR3):
             R2 *= trimming_array.reshape(x.shape[0], 1)
 
         if self.thresholds is None:
-            regularization = self.reg(coef_full, self.threshold**2 / self.nu)
+            regularization = super().reg(coef_full, self.threshold**2 / self.nu)
             if print_ind == 0 and self.verbose:
                 row = [
                     q,
@@ -377,7 +380,7 @@ class ConstrainedSR3(SR3):
                 )
             return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
         else:
-            regularization = self.reg(coef_full, self.thresholds**2 / self.nu)
+            regularization = super().reg(coef_full, self.thresholds**2 / self.nu)
             if print_ind == 0 and self.verbose:
                 row = [
                     q,

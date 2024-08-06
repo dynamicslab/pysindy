@@ -138,7 +138,7 @@ class SR3(BaseOptimizer):
     def __init__(
         self,
         threshold=0.1,
-        thresholds=None,
+        thresholds: np.ndarray = None,
         nu=1.0,
         tol=1e-5,
         thresholder="L0",
@@ -146,7 +146,7 @@ class SR3(BaseOptimizer):
         trimming_step_size=1.0,
         max_iter=30,
         copy_X=True,
-        initial_guess=None,
+        initial_guess: np.ndarray = None,
         normalize_columns=False,
         verbose=False,
         unbias=False,

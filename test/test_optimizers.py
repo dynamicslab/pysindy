@@ -3,6 +3,7 @@ Unit tests for optimizers.
 """
 import pickle
 
+import cvxpy as cp
 import numpy as np
 import pytest
 from numpy.linalg import norm
@@ -468,6 +469,25 @@ def test_constrained_sr3_quadratic_library(params):
     model.fit(x)
     check_is_fitted(model)
     assert np.allclose((model.coefficients().flatten())[:p], 0.0)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(thresholder="l1", threshold=1, expected=2),
+        dict(thresholder="weighted_l1", thresholds=np.ones((4, 1)), expected=2),
+        dict(thresholder="l2", threshold=1, expected=1),
+        dict(thresholder="weighted_l2", thresholds=np.ones((4, 1)), expected=1),
+    ],
+    ids=lambda d: d["thresholder"],
+)
+def test_constrained_sr3_penalty_term(params):
+    expected = params.pop("expected")
+    opt = ConstrainedSR3(**params)
+    xi = cp.Variable(4)
+    cost = opt._calculate_penalty(xi)
+    xi.value = 0.5 * np.ones(4)
+    np.testing.assert_allclose(cost.value, expected)
 
 
 @pytest.mark.parametrize(

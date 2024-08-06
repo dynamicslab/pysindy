@@ -14,7 +14,6 @@ import numpy as np
 from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
 
-from ..utils import get_regularization
 from ..utils import reorder_constraints
 from .sr3 import SR3
 

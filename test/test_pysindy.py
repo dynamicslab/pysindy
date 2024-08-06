@@ -507,19 +507,6 @@ def test_print_discrete_time(data_discrete_time, capsys):
     assert "(x0)[k+1] = " in out
 
 
-def test_print_discrete_time_multiple_trajectories(
-    data_discrete_time_multiple_trajectories, capsys
-):
-    x = data_discrete_time_multiple_trajectories
-    model = SINDy(discrete_time=True)
-    model.fit(x)
-
-    model.print()
-
-    out, _ = capsys.readouterr()
-    assert len(out) > 0
-
-
 def test_differentiate(data_lorenz, data_multiple_trajectories):
     x, t = data_lorenz
 

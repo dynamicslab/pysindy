@@ -8,7 +8,6 @@ from .base import drop_nan_samples
 from .base import equations
 from .base import flatten_2d_tall
 from .base import get_prox
-from .base import get_regularization
 from .base import print_model
 from .base import prox_cad
 from .base import prox_l0

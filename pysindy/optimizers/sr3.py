@@ -1,4 +1,6 @@
 import warnings
+from typing import Callable
+from typing import Union
 
 import numpy as np
 from scipy.linalg import cho_factor
@@ -7,7 +9,6 @@ from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import capped_simplex_projection
 from ..utils import get_prox
-from ..utils import get_regularization
 from .base import BaseOptimizer
 
 
@@ -214,7 +215,7 @@ class SR3(BaseOptimizer):
         self.nu = nu
         self.tol = tol
         self.thresholder = thresholder
-        self.reg = get_regularization(thresholder)
+        self.reg = self.get_regularization(thresholder)
         self.prox = get_prox(thresholder)
         if trimming_fraction == 0.0:
             self.use_trimming = False
@@ -241,6 +242,28 @@ class SR3(BaseOptimizer):
         """Disable trimming of potential outliers."""
         self.use_trimming = False
         self.trimming_fraction = None
+
+    @staticmethod
+    def get_regularization(
+        regularization: str,
+    ) -> Callable[[np.ndarray, Union[float, np.ndarray]], float]:
+        regularization = regularization.lower()
+        if regularization == "l0":
+            return lambda x, lam: lam * np.count_nonzero(x)
+        elif regularization == "weighted_l0":
+            return lambda x, lam: np.sum(lam[np.nonzero(x)])
+        elif regularization == "l1":
+            return lambda x, lam: lam * np.sum(np.abs(x))
+        elif regularization == "weighted_l1":
+            return lambda x, lam: np.sum(np.abs(lam * x))
+        elif regularization == "l2":
+            return lambda x, lam: lam * np.sum(x**2)
+        elif regularization == "weighted_l2":
+            return lambda x, lam: np.sum(lam * x**2)
+        else:
+            raise NotImplementedError(
+                "{} has not been implemented".format(regularization)
+            )
 
     def _objective(self, x, y, q, coef_full, coef_sparse, trimming_array=None):
         """Objective function"""
@@ -296,6 +319,8 @@ class SR3(BaseOptimizer):
         if self.thresholds is None:
             coef_sparse = self.prox(coef_full, self.threshold)
         else:
+            if self.thresholds.shape != coef_full.shape:
+                raise ValueError
             coef_sparse = self.prox(coef_full, self.thresholds.T)
         return coef_sparse
 

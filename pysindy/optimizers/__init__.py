@@ -1,32 +1,35 @@
 from .base import BaseOptimizer
 from .base import EnsembleOptimizer
-from .constrained_sr3 import ConstrainedSR3
 from .frols import FROLS
-
-try:  # Waiting on PEP 690 to lazy import gurobipy
-    from .miosr import MIOSR
-except ImportError:
-    pass
-try:  # Waiting on PEP 690 to lazy import cvxpy
-    from .trapping_sr3 import TrappingSR3
-except ImportError:
-    pass
-try:  # Waiting on PEP 690 to lazy import cvxpy
-    from .sindy_pi import SINDyPI
-except ImportError:
-    pass
-try:  # Waiting on PEP 690 to lazy import cvxpy
-    from .stable_linear_sr3 import StableLinearSR3
-except ImportError:
-    pass
-try:
-    from .sbr import SBR
-except ImportError:
-    pass
-from .wrapped_optimizer import WrappedOptimizer
 from .sr3 import SR3
 from .ssr import SSR
 from .stlsq import STLSQ
+from .wrapped_optimizer import WrappedOptimizer
+
+try:
+    from .constrained_sr3 import ConstrainedSR3
+except (ImportError, NameError):
+    pass
+try:
+    from .miosr import MIOSR
+except (ImportError, NameError):
+    pass
+try:
+    from .trapping_sr3 import TrappingSR3
+except (ImportError, NameError):
+    pass
+try:
+    from .sindy_pi import SINDyPI
+except (ImportError, NameError):
+    pass
+try:
+    from .stable_linear_sr3 import StableLinearSR3
+except (ImportError, NameError):
+    pass
+try:
+    from .sbr import SBR
+except (ImportError, NameError):
+    pass
 
 
 __all__ = [

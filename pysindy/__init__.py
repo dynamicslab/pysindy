@@ -30,34 +30,37 @@ from .feature_library import WeakPDELibrary
 from .feature_library import SINDyPILibrary
 from .feature_library import ParameterizedLibrary
 from .optimizers import BaseOptimizer
-from .optimizers import ConstrainedSR3
 from .optimizers import FROLS
-
-try:  # Waiting on PEP 690 to lazy import gurobipy
-    from .optimizers import MIOSR
-except ImportError:
-    pass
-try:  # Waiting on PEP 690 to lazy import CVXPY
-    from .optimizers import SINDyPI
-except ImportError:
-    pass
-try:  # Waiting on PEP 690 to lazy import CVXPY
-    from .optimizers import TrappingSR3
-except ImportError:
-    pass
-try:  # Waiting on PEP 690 to lazy import CVXPY
-    from .optimizers import StableLinearSR3
-except ImportError:
-    pass
-try:
-    from .optimizers import SBR
-except ImportError:
-    pass
 from .optimizers import WrappedOptimizer
 from .optimizers import SR3
 from .optimizers import SSR
 from .optimizers import STLSQ
 from .optimizers import EnsembleOptimizer
+
+try:
+    from .optimizers import ConstrainedSR3
+except (ImportError, NameError):
+    pass
+try:
+    from .optimizers import MIOSR
+except (ImportError, NameError):
+    pass
+try:
+    from .optimizers import SINDyPI
+except (ImportError, NameError):
+    pass
+try:
+    from .optimizers import TrappingSR3
+except (ImportError, NameError):
+    pass
+try:
+    from .optimizers import StableLinearSR3
+except (ImportError, NameError):
+    pass
+try:
+    from .optimizers import SBR
+except (ImportError, NameError):
+    pass
 
 
 __all__ = ["SINDy", "AxesArray"]

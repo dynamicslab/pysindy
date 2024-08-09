@@ -8,14 +8,16 @@ on:
     branches:
       - master
 
+
 jobs:
-  Linting:
+  linting:
+    name: Linting
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: "3.9"
       - name: Linting
@@ -23,12 +25,31 @@ jobs:
           pip install pre-commit
           pre-commit run --all-files
 
-  Docs:
+  build:
+    name: Build
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.9"
+    - name: build
+      run: pip install .
+    - name: test import
+      run: python -c "import pysindy"
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
     - name: "Set up Python"
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
           python-version: "3.10"
     - name: Install doc dependencies
@@ -42,18 +63,20 @@ jobs:
         cd docs
         python -m sphinx -T -E -W -b html -d _build/doctrees . _build/html
 
-  Tests:
-    needs: Linting
+  tests:
+    name: Tests
+    needs: linting
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
         python-version: ["3.9", "3.11"]
+
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies

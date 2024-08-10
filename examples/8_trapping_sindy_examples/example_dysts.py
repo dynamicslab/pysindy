@@ -1,5 +1,5 @@
 # %% [markdown]
-# ### More locally stable models on examples pulled from the dysts database of chaotic systems + bonus: best reduced-order models to-date for the lid-cavity flow
+# # More locally stable models on examples pulled from the dysts database of chaotic systems + bonus: best reduced-order models to-date for the lid-cavity flow
 # Here we test the locally stable trapping theorem on additional systems from the dysts database, https://github.com/williamgilpin/dysts, that (in principle) satisfy the totally-symmetric quadratic coefficient constraint. The locally stable trapping method allows the quadratic models to deviate from being totally symmetric by a small amount. These deviations are caused by finite data, noise, or imperfect optimization.
 # %%
 import warnings

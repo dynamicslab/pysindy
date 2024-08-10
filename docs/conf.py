@@ -125,7 +125,7 @@ def setup(app):
             new_dir = doc_examples / notebook.parent.stem
         new_dir.mkdir(exist_ok=True)
         new_file = new_dir / "example.ipynb"
-        print(f"Creating file {new_file}")
+        print(f"Copying {notebook} to {new_file}")
         shutil.copy(notebook, new_file)
     # Notebook 15 uses an image file
     (doc_examples / "15_pysindy_lectures/data").mkdir(exist_ok=True)

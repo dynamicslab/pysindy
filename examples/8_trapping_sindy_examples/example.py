@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore")
 rng = np.random.default_rng(1)
 
 # %% [markdown]
-# ### The trapping algorithm only applies to fluid and plasma flows with energy-preserving, quadratic nonlinear structure, so we need to explicitly constrain the coefficients to conform to this structure.
+# ## The trapping algorithm only applies to fluid and plasma flows with energy-preserving, quadratic nonlinear structure, so we need to explicitly constrain the coefficients to conform to this structure.
 # Below we import some utility functions that pre-calculate the things we need.
 
 # %%
@@ -301,7 +301,7 @@ trapping_region(r, x_test_pred, Xi, sindy_opt, "Atmospheric Oscillator")
 
 # %% [markdown]
 #
-# ### We identified a very accurate and provably stable model but the trapping region looks way too big... what's going on here?
+# ## We identified a very accurate and provably stable model but the trapping region looks way too big... what's going on here?
 # The estimate for the size of the trapping region is based on the smallest eigenvalue of $\mathbf{A}^S$.
 # But this system has a big scale-separation, leading to $\lambda_1 = -0.01$ (while $\lambda_3 = -5.4$) and an estimate of the trapping region of $R_m = d/\lambda_1 \approx 300$. This is because our estimate of the trapping region comes from the worst case scenario.
 
@@ -451,7 +451,7 @@ print("Time-averaged derivative error = ", np.nanmean(deriv_error))
 trapping_region(r, x_test_pred, Xi, sindy_opt, "Lorenz Attractor")
 
 # %% [markdown]
-# ### Some of these plots are different looking than in the Trapping SINDy paper
+# ## Some of these plots are different looking than in the Trapping SINDy paper
 # This is because (1) there were a few small errors in the original code and (2) we are now plotting the trapping regions not in the $\mathbf{a}(t)$ or $\mathbf{y}(t) = \mathbf{a}(t) - \mathbf{m}$ spaces, but instead in the $\mathbf{z}(t)$ eigenvector coordinates of $\mathbf{A}^S$, where the definition of the ellipsoid makes the most sense, and (3) the paper examples are typically generated from fully converged solutions run for many additional iterations. See the paper for a review of this notation.
 
 # %% [markdown]
@@ -627,7 +627,7 @@ r = 10
 x_train = x_train[:r, tstart:tend:skip].T
 
 # %% [markdown]
-# ### Forced Burgers' system is not effectively nonlinear
+# ## Forced Burgers' system is not effectively nonlinear
 # The last bit of information we will get from this system is checking if the analytic model exhibits effective nonlinearity, a requirement for the Schlegel and Noack trapping theorem to hold.
 #
 # Using a simulated annealing algorithm, we can show that even the analytic 10D Galerkin Noack and Schlegel et al. (2008) model does not exhibit a $\mathbf{m}$ such that $\mathbf{A}$^S is negative definite. This is because the nonlinearity is not 'effective'.
@@ -876,4 +876,4 @@ plt.xlabel("t", fontsize=20)
 plt.show()
 
 # %% [markdown]
-# ### Key result: the 5D SINDy model is globally stable and improves the prediction of the transient timing compared with the POD-Galerkin model.
+# ## Key result: the 5D SINDy model is globally stable and improves the prediction of the transient timing compared with the POD-Galerkin model.

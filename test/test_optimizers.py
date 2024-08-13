@@ -225,7 +225,7 @@ def test_sr3_bad_parameters(optimizer, params):
 )
 def test_get_regularization_1d(thresholder, expected):
     data = np.array([[0, 3, 5]]).T
-    lam = 2
+    lam = np.array([[2]])
 
     reg = SR3.get_regularization(thresholder)
     result = reg(data, lam)
@@ -237,7 +237,7 @@ def test_get_regularization_1d(thresholder, expected):
 )
 def test_get_regularization_2d(thresholder, expected):
     data = np.array([[0, 3, 5], [7, 11, 0]]).T
-    lam = 2
+    lam = np.array([[2]])
 
     reg = SR3.get_regularization(thresholder)
     result = reg(data, lam)
@@ -544,9 +544,9 @@ def test_constrained_sr3_penalty_term(params):
     "params",
     [
         dict(thresholder="l1", threshold=1, expected=2.5),
-        dict(thresholder="weighted_l1", thresholds=np.ones((4, 1)), expected=2.5),
+        dict(thresholder="weighted_l1", threshold=np.ones((4, 1)), expected=2.5),
         dict(thresholder="l2", threshold=1, expected=1.5),
-        dict(thresholder="weighted_l2", thresholds=np.ones((4, 1)), expected=2.5),
+        dict(thresholder="weighted_l2", threshold=np.ones((4, 1)), expected=2.5),
     ],
     ids=lambda d: d["thresholder"],
 )
@@ -998,10 +998,10 @@ def test_constrained_inequality_constraints(data_lorenz, params):
     "params",
     [
         dict(thresholder="l1", threshold=2, expected=2.5),
-        dict(thresholder="weighted_l1", thresholds=0.5 * np.ones((1, 2)), expected=1.0),
+        dict(thresholder="weighted_l1", threshold=0.5 * np.ones((1, 2)), expected=1.0),
         dict(thresholder="l2", threshold=2, expected=1.5),
         dict(
-            thresholder="weighted_l2", thresholds=0.5 * np.ones((1, 2)), expected=0.75
+            thresholder="weighted_l2", threshold=0.5 * np.ones((1, 2)), expected=0.75
         ),
     ],
     ids=lambda d: d["thresholder"],

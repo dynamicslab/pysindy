@@ -1,6 +1,5 @@
 import warnings
 from typing import Callable
-from typing import Union
 
 import numpy as np
 from scipy.linalg import cho_factor
@@ -35,12 +34,22 @@ class SR3(BaseOptimizer):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
+    threshold : float or np.ndarray[float], shape (n_targets, n_features), optional (default 0.1)
         Determines the strength of the regularization. When the
         regularization function R is the L0 norm, the regularization
         is equivalent to performing hard thresholding, and lambda
         is chosen to threshold at the value given by this parameter.
         This is equivalent to choosing lambda = threshold^2 / (2 * nu).
+        If the regularization function R is weighted, then this is the
+        array of thresholds for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``thresholds[i, j]`` should specify the threshold to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        threshold to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
 
     nu : float, optional (default 1)
         Determines the level of relaxation. Decreasing nu encourages
@@ -83,15 +92,7 @@ class SR3(BaseOptimizer):
 
     thresholds : np.ndarray, shape (n_targets, n_features), optional \
             (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
+        **Deprecated**. Use `threshold` instead.
 
     verbose : bool, optional (default False)
         If True, prints out the different error terms every
@@ -139,7 +140,7 @@ class SR3(BaseOptimizer):
     def __init__(
         self,
         threshold=0.1,
-        thresholds: np.ndarray = None,
+        thresholds: np.ndarray[float] = None,
         nu=1.0,
         tol=1e-5,
         thresholder="L0",
@@ -147,7 +148,7 @@ class SR3(BaseOptimizer):
         trimming_step_size=1.0,
         max_iter=30,
         copy_X=True,
-        initial_guess: np.ndarray = None,
+        initial_guess: np.ndarray[float] = None,
         normalize_columns=False,
         verbose=False,
         unbias=False,
@@ -160,8 +161,7 @@ class SR3(BaseOptimizer):
             unbias=unbias,
         )
 
-        if threshold < 0:
-            raise ValueError("threshold cannot be negative")
+        # TODO: move params validation to fit method
         if nu <= 0:
             raise ValueError("nu must be positive")
         if tol <= 0:
@@ -180,35 +180,27 @@ class SR3(BaseOptimizer):
             "weighted_l0",
             "weighted_l1",
             "weighted_l2",
-            "cad",
         ):
             raise NotImplementedError(
-                "Please use a valid thresholder, l0, l1, l2, cad, "
+                "Please use a valid thresholder, l0, l1, l2, "
                 "weighted_l0, weighted_l1, weighted_l2."
             )
-        if thresholder[:8].lower() == "weighted" and thresholds is None:
-            raise ValueError(
-                "weighted thresholder requires the thresholds parameter to be used"
+        if thresholds is not None:
+            warnings.warn(
+                "The 'thresholds' parameter is deprecated and will be removed in a future version. "
+                "Please use 'threshold' instead.",
+                DeprecationWarning,
+                stacklevel=2
             )
-        if thresholder[:8].lower() != "weighted" and thresholds is not None:
+            threshold = thresholds
+        if thresholder[:8].lower() == "weighted" and not isinstance(threshold, np.ndarray):
             raise ValueError(
-                "The thresholds argument cannot be used without a weighted thresholder,"
-                " e.g. thresholder='weighted_l0'"
+                "weighted thresholder requires the threshold parameter to be a 2d array"
             )
-        if thresholds is not None and np.any(thresholds < 0):
-            raise ValueError("thresholds cannot contain negative entries")
-
-        if thresholder[:8].lower() == "weighted" and thresholds is None:
-            raise ValueError(
-                "weighted thresholder requires the thresholds parameter to be used"
-            )
-        if thresholder[:8].lower() != "weighted" and thresholds is not None:
-            raise ValueError(
-                "The thresholds argument cannot be used without a weighted thresholder,"
-                " e.g. thresholder='weighted_l0'"
-            )
-        if thresholds is not None and np.any(thresholds < 0):
-            raise ValueError("thresholds cannot contain negative entries")
+        if not isinstance(threshold, np.ndarray):
+            threshold = np.array([[threshold]])
+        if np.any(threshold < 0):
+            raise ValueError("threshold cannot contain negative entries")
 
         self.threshold = threshold
         self.thresholds = thresholds
@@ -246,19 +238,15 @@ class SR3(BaseOptimizer):
     @staticmethod
     def get_regularization(
         regularization: str,
-    ) -> Callable[[np.ndarray, Union[float, np.ndarray]], float]:
+    ) -> Callable[[np.ndarray[float], np.ndarray[float]], float]:
         regularization = regularization.lower()
         if regularization == "l0":
-            return lambda x, lam: lam * np.count_nonzero(x)
+            return lambda x, lam: lam[0, 0] * np.count_nonzero(x)
         elif regularization == "weighted_l0":
             return lambda x, lam: np.sum(lam[np.nonzero(x)])
-        elif regularization == "l1":
-            return lambda x, lam: lam * np.sum(np.abs(x))
-        elif regularization == "weighted_l1":
+        elif regularization in ["l1", "weighted_l1"]:
             return lambda x, lam: np.sum(np.abs(lam * x))
-        elif regularization == "l2":
-            return lambda x, lam: lam * np.sum(x**2)
-        elif regularization == "weighted_l2":
+        elif regularization in ["l2", "weighted_l2"]:
             return lambda x, lam: np.sum(lam * x**2)
         else:
             raise NotImplementedError(

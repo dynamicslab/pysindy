@@ -44,12 +44,22 @@ class StableLinearSR3(ConstrainedSR3):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
+    threshold : float or np.ndarray[float], shape (n_targets, n_features), optional (default 0.1)
         Determines the strength of the regularization. When the
-        regularization function R is the l0 norm, the regularization
+        regularization function R is the L0 norm, the regularization
         is equivalent to performing hard thresholding, and lambda
         is chosen to threshold at the value given by this parameter.
         This is equivalent to choosing lambda = threshold^2 / (2 * nu).
+        If the regularization function R is weighted, then this is the
+        array of thresholds for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``thresholds[i, j]`` should specify the threshold to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        threshold to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
 
     nu : float, optional (default 1)
         Determines the level of relaxation. Decreasing nu encourages
@@ -194,7 +204,7 @@ class StableLinearSR3(ConstrainedSR3):
             "This optimizer is set up to only be used with a purely linear"
             " library in the variables. No constant or nonlinear terms!"
         )
-        if not np.isclose(threshold, 0.0):
+        if not np.any(np.isclose(self.threshold, 0.0)):
             warnings.warn(
                 "This optimizer uses CVXPY if the threshold is nonzero, "
                 " meaning the optimization will be much slower for large "
@@ -237,8 +247,8 @@ class StableLinearSR3(ConstrainedSR3):
                     [
                         self.constraint_lhs[: self.constraint_separation_index, :] @ xi
                         <= self.constraint_rhs[: self.constraint_separation_index],
-                        self.constraint_lhs[self.constraint_separation_index :, :] @ xi
-                        == self.constraint_rhs[self.constraint_separation_index :],
+                        self.constraint_lhs[self.constraint_separation_index:, :] @ xi
+                        == self.constraint_rhs[self.constraint_separation_index:],
                     ],
                 )
             elif self.inequality_constraints:

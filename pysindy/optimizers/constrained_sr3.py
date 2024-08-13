@@ -46,12 +46,22 @@ class ConstrainedSR3(SR3):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
+    threshold : float or np.ndarray[float], shape (n_targets, n_features), optional (default 0.1)
         Determines the strength of the regularization. When the
-        regularization function R is the l0 norm, the regularization
+        regularization function R is the L0 norm, the regularization
         is equivalent to performing hard thresholding, and lambda
         is chosen to threshold at the value given by this parameter.
         This is equivalent to choosing lambda = threshold^2 / (2 * nu).
+        If the regularization function R is weighted, then this is the
+        array of thresholds for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``thresholds[i, j]`` should specify the threshold to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        threshold to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
 
     nu : float, optional (default 1)
         Determines the level of relaxation. Decreasing nu encourages
@@ -103,16 +113,9 @@ class ConstrainedSR3(SR3):
         Initial guess for coefficients ``coef_``, (v in the mathematical equations)
         If None, least-squares is used to obtain an initial guess.
 
-    thresholds : np.ndarray, shape (n_targets, n_features), optional (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
+    thresholds : np.ndarray, shape (n_targets, n_features), optional \
+            (default None)
+        **Deprecated**. Use `threshold` instead.
 
     inequality_constraints : bool, optional (default False)
         If True, CVXPY methods are used to solve the problem.

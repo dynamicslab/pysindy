@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 from pysindy.utils import AxesArray
-from pysindy.utils import get_regularization
 from pysindy.utils import reorder_constraints
 from pysindy.utils import validate_control_variables
 

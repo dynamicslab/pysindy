@@ -63,7 +63,6 @@ __all__ = [
     "drop_nan_samples",
     "equations",
     "get_prox",
-    "get_regularization",
     "print_model",
     "prox_cad",
     "prox_l0",

@@ -248,6 +248,8 @@ class SR3(BaseOptimizer):
             return lambda x, lam: np.sum(np.abs(lam * x))
         elif regularization in ["l2", "weighted_l2"]:
             return lambda x, lam: np.sum(lam * x**2)
+        elif regularization.lower() == "cad":  # dummy function
+            return lambda x, lam: 0
         else:
             raise NotImplementedError(
                 "{} has not been implemented".format(regularization)

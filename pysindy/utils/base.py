@@ -150,43 +150,44 @@ def reorder_constraints(arr, n_features, output_order="feature"):
     return arr.reshape(starting_shape).transpose([0, 2, 1]).reshape((n_constraints, -1))
 
 
-def prox_l0(x, threshold):
+def prox_l0(x, lam):
     """Proximal operator for L0 regularization."""
+    threshold = np.sqrt(2 * lam)
     return x * (np.abs(x) > threshold)
 
 
-def prox_weighted_l0(x, thresholds):
+def prox_weighted_l0(x, lam):
     """Proximal operator for weighted l0 regularization."""
     y = np.zeros(np.shape(x))
-    transp_thresholds = thresholds.T
-    for i in range(transp_thresholds.shape[0]):
-        for j in range(transp_thresholds.shape[1]):
-            y[i, j] = x[i, j] * (np.abs(x[i, j]) > transp_thresholds[i, j])
+    threshold = np.sqrt(2 * lam)
+    for i in range(lam.shape[0]):
+        for j in range(lam.shape[1]):
+            y[i, j] = x[i, j] * (np.abs(x[i, j]) > threshold[i, j])
     return y
 
 
-def prox_l1(x, threshold):
+def prox_l1(x, lam):
     """Proximal operator for L1 regularization."""
-    return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
+    return np.sign(x) * np.maximum(np.abs(x) - lam, 0)
 
 
-def prox_weighted_l1(x, thresholds):
+def prox_weighted_l1(x, lam):
     """Proximal operator for weighted l1 regularization."""
-    return np.sign(x) * np.maximum(np.abs(x) - thresholds, np.zeros(x.shape))
+    return np.sign(x) * np.maximum(np.abs(x) - lam, np.zeros(x.shape))
 
 
-def prox_l2(x, threshold):
+def prox_l2(x, lam):
     """Proximal operator for ridge regularization."""
-    return 2 * threshold * x
+    return x / (1 + 2 * lam)
 
 
-def prox_weighted_l2(x, thresholds):
+def prox_weighted_l2(x, lam):
     """Proximal operator for ridge regularization."""
-    return 2 * thresholds * x
+    return x / (1 + 2 * lam)
 
 
 # TODO: replace code block with proper math block
-def prox_cad(x, lower_threshold):
+def prox_cad(x, lam):
     """
     Proximal operator for CAD regularization
 
@@ -203,7 +204,8 @@ def prox_cad(x, lower_threshold):
 
     For simplicity we set :math:`b = 5*a` in this implementation.
     """
-    upper_threshold = 5 * lower_threshold
+    lower_threshold = lam
+    upper_threshold = 5 * lam
     return prox_l0(x, upper_threshold) + prox_l1(x, lower_threshold) * (
         np.abs(x) < upper_threshold
     )
@@ -219,27 +221,53 @@ def get_prox(regularization):
         "weighted_l2": prox_weighted_l2,
         "cad": prox_cad,
     }
-    if regularization.lower() in prox.keys():
+    if regularization.lower() in prox:
         return prox[regularization.lower()]
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
 
 
+def regularization_l0(x, lam):
+    return lam * np.count_nonzero(x)
+
+
+def regualization_weighted_l0(x, lam):
+    return np.sum(lam[np.nonzero(x)])
+
+
+def regularization_l1(x, lam):
+    return np.sum(lam * np.abs(x))
+
+
+def regualization_weighted_l1(x, lam):
+    return np.sum(np.abs(lam * x))
+
+
+def regularization_l2(x, lam):
+    return np.sum(lam * x**2)
+
+
+def regualization_weighted_l2(x, lam):
+    return np.sum(lam * x**2)
+
+
+def regularization_cad(x, lam):
+    # dummy function
+    return 0
+
+
 def get_regularization(regularization):
-    if regularization.lower() == "l0":
-        return lambda x, lam: lam * np.count_nonzero(x)
-    elif regularization.lower() == "weighted_l0":
-        return lambda x, lam: np.sum(lam[np.nonzero(x)])
-    elif regularization.lower() == "l1":
-        return lambda x, lam: lam * np.sum(np.abs(x))
-    elif regularization.lower() == "weighted_l1":
-        return lambda x, lam: np.sum(np.abs(lam @ x))
-    elif regularization.lower() == "l2":
-        return lambda x, lam: lam * np.sum(x**2)
-    elif regularization.lower() == "weighted_l2":
-        return lambda x, lam: np.sum(lam @ x**2)
-    elif regularization.lower() == "cad":  # dummy function
-        return lambda x, lam: 0
+    regularization_fn = {
+        "l0": regularization_l0,
+        "weighted_l0": regualization_weighted_l0,
+        "l1": regularization_l1,
+        "weighted_l1": regualization_weighted_l1,
+        "l2": regularization_l2,
+        "weighted_l2": regualization_weighted_l2,
+        "cad": regularization_cad,
+    }
+    if regularization.lower() in regularization_fn:
+        return regularization_fn[regularization.lower()]
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
 

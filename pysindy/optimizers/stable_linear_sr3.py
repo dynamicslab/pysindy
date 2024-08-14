@@ -237,8 +237,8 @@ class StableLinearSR3(ConstrainedSR3):
                     [
                         self.constraint_lhs[: self.constraint_separation_index, :] @ xi
                         <= self.constraint_rhs[: self.constraint_separation_index],
-                        self.constraint_lhs[self.constraint_separation_index:, :] @ xi
-                        == self.constraint_rhs[self.constraint_separation_index:],
+                        self.constraint_lhs[self.constraint_separation_index :, :] @ xi
+                        == self.constraint_rhs[self.constraint_separation_index :],
                     ],
                 )
             elif self.inequality_constraints:

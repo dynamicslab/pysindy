@@ -14,7 +14,6 @@ import numpy as np
 from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
 
-from ..utils import get_regularization
 from ..utils import reorder_constraints
 from .sr3 import SR3
 
@@ -192,7 +191,6 @@ class ConstrainedSR3(SR3):
         )
 
         self.verbose_cvxpy = verbose_cvxpy
-        self.reg = get_regularization(thresholder)
         self.constraint_lhs = constraint_lhs
         self.constraint_rhs = constraint_rhs
         self.constraint_order = constraint_order
@@ -291,8 +289,8 @@ class ConstrainedSR3(SR3):
             constraints = []
             if self.equality_constraints:
                 constraints.append(
-                    self.constraint_lhs[self.constraint_separation_index :, :] @ xi
-                    == self.constraint_rhs[self.constraint_separation_index :],
+                    self.constraint_lhs[self.constraint_separation_index:, :] @ xi
+                    == self.constraint_rhs[self.constraint_separation_index:],
                 )
             if self.inequality_constraints:
                 constraints.append(
@@ -341,58 +339,6 @@ class ConstrainedSR3(SR3):
             return None
         coef_new = (xi.value).reshape(coef_prev.shape)
         return coef_new
-
-    def _update_sparse_coef(self, coef_full):
-        """Update the regularized weight vector"""
-        if self.thresholds is None:
-            return super(ConstrainedSR3, self)._update_sparse_coef(coef_full)
-        else:
-            coef_sparse = self.prox(coef_full, self.thresholds.T)
-        self.history_.append(coef_sparse.T)
-        return coef_sparse
-
-    def _objective(self, x, y, q, coef_full, coef_sparse, trimming_array=None):
-        """Objective function"""
-        if q != 0:
-            print_ind = q % (self.max_iter // 10.0)
-        else:
-            print_ind = q
-        R2 = (y - np.dot(x, coef_full)) ** 2
-        D2 = (coef_full - coef_sparse) ** 2
-        if self.use_trimming:
-            assert trimming_array is not None
-            R2 *= trimming_array.reshape(x.shape[0], 1)
-
-        if self.thresholds is None:
-            regularization = self.reg(coef_full, self.threshold**2 / self.nu)
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
-        else:
-            regularization = self.reg(coef_full, self.thresholds**2 / self.nu)
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
 
     def _reduce(self, x, y):
         """

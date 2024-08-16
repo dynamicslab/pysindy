@@ -1,10 +1,12 @@
 import numpy as np
 import pytest
+from numpy.testing import assert_array_equal
 
 from pysindy.utils import AxesArray
+from pysindy.utils import get_prox
+from pysindy.utils import get_regularization
 from pysindy.utils import reorder_constraints
 from pysindy.utils import validate_control_variables
-from pysindy.utils import get_regularization
 
 
 def test_reorder_constraints_1D():
@@ -110,3 +112,71 @@ def test_get_weighted_regularization_2d(regularization, expected):
     reg = get_regularization(regularization)
     result = reg(data, lam)
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ["regularization", "expected"],
+    [
+        ("l0", np.array([[0, 3, 5]]).T),
+        ("l1", np.array([[0, 0, 2]]).T),
+        ("l2", np.array([[-2 / 7, 3 / 7, 5 / 7]]).T),
+    ],
+)
+def test_get_prox_1d(regularization, expected):
+    data = np.array([[-2, 3, 5]]).T
+    lam = np.array([[3]])
+
+    prox = get_prox(regularization)
+    result = prox(data, lam)
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ["regularization", "expected"],
+    [
+        ("l0", np.array([[0, 3, 5], [-7, 11, 0]]).T),
+        ("l1", np.array([[0, 0, 2], [-4, 8, 0]]).T),
+        ("l2", np.array([[-2 / 7, 3 / 7, 5 / 7], [-7 / 7, 11 / 7, 0 / 7]]).T),
+    ],
+)
+def test_get_regularization_2d(regularization, expected):
+    data = np.array([[-2, 3, 5], [-7, 11, 0]]).T
+    lam = np.array([[3]])
+
+    prox = get_prox(regularization)
+    result = prox(data, lam)
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ["regularization", "expected"],
+    [
+        ("l0", np.array([[0, 3, 5]]).T),
+        ("l1", np.array([[0, 1, 4.5]]).T),
+        ("l2", np.array([[-2 / 7, 3 / 5, 5 / 2]]).T),
+    ],
+)
+def test_get_weighted_prox_1d(regularization, expected):
+    data = np.array([[-2, 3, 5]]).T
+    lam = np.array([[3, 2, 0.5]]).T
+
+    prox = get_prox(regularization)
+    result = prox(data, lam)
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ["regularization", "expected"],
+    [
+        ("l0", np.array([[0, 3, 5], [-7, 11, 0]]).T),
+        ("l1", np.array([[0, 1, 4.5], [-6, 0, 0]]).T),
+        ("l2", np.array([[-2 / 7, 3 / 5, 5 / 2], [-7 / 3, 11 / 27, 0 / 35]]).T),
+    ],
+)
+def test_get_weighted_prox_2d(regularization, expected):
+    data = np.array([[-2, 3, 5], [-7, 11, 0]]).T
+    lam = np.array([[3, 2, 0.5], [1, 13, 17]]).T
+
+    prox = get_prox(regularization)
+    result = prox(data, lam)
+    assert_array_equal(result, expected)

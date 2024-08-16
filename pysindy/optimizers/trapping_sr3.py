@@ -445,20 +445,6 @@ class TrappingSR3(ConstrainedSR3):
 
         return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
 
-    def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
-        """Solves the coefficient update analytically if threshold = 0"""
-        g = x_transpose_y + P_transpose_A / self.eta
-        inv1 = np.linalg.pinv(H, rcond=1e-10)
-        inv2 = np.linalg.pinv(
-            self.constraint_lhs.dot(inv1).dot(self.constraint_lhs.T), rcond=1e-10
-        )
-
-        rhs = g.flatten() + self.constraint_lhs.T.dot(inv2).dot(
-            self.constraint_rhs - self.constraint_lhs.dot(inv1).dot(g.flatten())
-        )
-        rhs = rhs.reshape(g.shape)
-        return inv1.dot(rhs)
-
     def _update_A(self, A_old, PW):
         """Update the symmetrized A matrix"""
         eigvals, eigvecs = np.linalg.eigh(A_old)
@@ -556,7 +542,7 @@ class TrappingSR3(ConstrainedSR3):
         self, n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
     ):
         pTp = np.dot(Pmatrix.T, Pmatrix)
-        H = xTx + pTp / self.eta
+        hess = xTx + pTp / self.eta
         P_transpose_A = np.dot(Pmatrix.T, A.flatten())
 
         if self.method == "local":
@@ -573,9 +559,11 @@ class TrappingSR3(ConstrainedSR3):
                 PQ_ep, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F"
             )
             PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
-            H += PQTPQ / self.alpha + PQTPQ_ep / self.beta
+            hess += PQTPQ / self.alpha + PQTPQ_ep / self.beta
 
-        return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
+        return self._solve_nonsparse_relax_and_split(
+            hess, xTy, P_transpose_A, coef_prev
+        )
 
     def _solve_m_relax_and_split(
         self,
@@ -608,25 +596,17 @@ class TrappingSR3(ConstrainedSR3):
         A_new = self._update_A(A - self.alpha_A * A_b, PW)
         return trap_new, A_new
 
-    def _solve_nonsparse_relax_and_split(self, H, xTy, P_transpose_A, coef_prev):
+    def _solve_nonsparse_relax_and_split(self, hess, xTy, P_transpose_A, coef_prev):
         """Update for the coefficients if threshold = 0."""
+        gradient_constant = xTy + P_transpose_A / self.eta
         if self.use_constraints:
-            coef_sparse = self._update_coef_constraints(
-                H, xTy, P_transpose_A, coef_prev
-            ).reshape(coef_prev.shape)
+            coef_nonsparse = _equality_constrained_linlsq(
+                hess, gradient_constant, self.constraint_lhs, self.constraint_rhs
+            )
         else:
-            # Alan Kaptanoglu: removed cho factor calculation here
-            # which has numerical issues in certain cases. Easier to chop
-            # things using pinv, but gives dumb results sometimes.
-            warnings.warn(
-                "TrappingSR3._solve_nonsparse_relax_and_split using "
-                "naive pinv() call here, be careful with rcond parameter."
-            )
-            Hinv = np.linalg.pinv(H, rcond=1e-15)
-            coef_sparse = Hinv.dot(xTy + P_transpose_A / self.eta).reshape(
-                coef_prev.shape
-            )
-        return coef_sparse
+            hess_inv = np.linalg.pinv(hess, rcond=1e-10)
+            coef_nonsparse = hess_inv.dot(gradient_constant)
+        return coef_nonsparse.reshape(coef_prev.shape)
 
     def _reduce(self, x, y):
         """
@@ -871,3 +851,31 @@ def _build_lib_info(
         np.argmax(exps): t_ind for t_ind, exps in polyterms if sum(exps) == 1
     }
     return n_targets, n_features, linear_terms, pure_terms, mixed_terms
+
+
+def _equality_constrained_linlsq(
+    hess: Float2D, grad_const: Float2D, constraint_lhs: Float2D, constraint_rhs: Float2D
+):
+    """Solve the constrained least squares problem via lagrange multipliers
+
+    For the inversion of the lagrange gradient matrix, see
+    `wikipedia <https://en.wikipedia.org/wiki/Block_matrix#Inversion>`_
+
+    Arguments:
+        hess: the hessian of the loss term.  For regression Ax = b, this is A^TA.
+            Must be a square (positive definite) matrix
+        grad_const: the constant part of the gradient of the loss term.  For
+            regression Ax = b, this is A^Tb.  Must be a column vector.
+        constraint_lhs: matrix on left hand side of constraint equation Cx=d.
+            Must have same second dimension as hess
+        constraint_rhs: vector on right hand side of constraint equation Cx=d.
+            Must be a column vector.
+
+    Returns:
+        Column vector
+    """
+    C = constraint_lhs
+    d = constraint_rhs
+    inv1 = np.linalg.pinv(hess, rcond=1e-10)
+    inv2 = np.linalg.pinv(C @ inv1 @ C.T, rcond=1e-10)
+    return inv1 @ (grad_const + C.T @ inv2 @ (d - C @ inv1 @ grad_const))

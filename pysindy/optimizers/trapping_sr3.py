@@ -219,6 +219,11 @@ class TrappingSR3(ConstrainedSR3):
             self._n_tgts = 1
         if self.mod_matrix is None:
             self.mod_matrix = np.eye(self._n_tgts)
+        lsv, sing_vals, rsv = np.linalg.svd(self.mod_matrix)
+        # scipy.linalg.sqrtm
+        self.rt_mod_mat = lsv @ np.diag(np.sqrt(sing_vals)) @ rsv
+        self.rt_inv_mod_mat = lsv @ np.diag(np.sqrt(1 / sing_vals)) @ rsv
+
         if method == "global":
             if hasattr(kwargs, "constraint_separation_index"):
                 constraint_separation_index = kwargs["constraint_separation_index"]
@@ -473,47 +478,27 @@ class TrappingSR3(ConstrainedSR3):
     def _objective(self, x, y, coef_sparse, A, PW, k):
         """Objective function"""
         # Compute the errors
-        R2 = (y - np.dot(x, coef_sparse)) ** 2
-        A2 = (A - PW) ** 2
-        Qijk = np.tensordot(
-            self.mod_matrix,
-            np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])),
-            axes=([1], [0]),
-        )
-        beta2 = (
+        sindy_loss = (y - np.dot(x, coef_sparse)) ** 2
+        relax_loss = (A - PW) ** 2
+        Qijk = np.einsum("ya,abcde,ed", self.mod_matrix, self.PQ_, coef_sparse)
+        Qijk_permsum = (
             Qijk + np.transpose(Qijk, [1, 2, 0]) + np.transpose(Qijk, [2, 0, 1])
         ) ** 2
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
-        R2 = 0.5 * np.sum(R2)
-        stability_term = 0.5 * np.sum(A2) / self.eta
-        alpha_term = 0.5 * np.sum(Qijk**2) / self.alpha
-        beta_term = 0.5 * np.sum(beta2) / self.beta
+        sindy_loss = 0.5 * np.sum(sindy_loss)
+        relax_loss = 0.5 * np.sum(relax_loss) / self.eta
+        nonlin_ens_loss = 0.5 * np.sum(Qijk**2) / self.alpha
+        cubic_ens_loss = 0.5 * np.sum(Qijk_permsum) / self.beta
 
-        # convoluted way to print every max_iter / 10 iterations
-        if self.verbose and k % max(1, self.max_iter // 10) == 0:
-            row = [
-                k,
-                R2,
-                stability_term,
-                L1,
-                alpha_term,
-                beta_term,
-                R2 + stability_term + L1 + alpha_term + beta_term,
-            ]
-            if self.threshold == 0:
-                if k % max(int(self.max_iter / 10.0), 1) == 0:
-                    print(
-                        "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
-                        " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
-                    )
-            else:
-                print(
-                    "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
-                    " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
-                )
-        obj = R2 + stability_term + L1
+        obj = sindy_loss + relax_loss + L1
         if self.method == "local":
-            obj += alpha_term + beta_term
+            obj += nonlin_ens_loss + nonlin_ens_loss
+
+        if self.verbose and k % max(1, self.max_iter // 10) == 0:
+            print(
+                f"{k:5d} ... {sindy_loss:8.3e} ... {relax_loss:8.3e} ... {L1:8.2e}"
+                f" ... {nonlin_ens_loss:8.2e} ... {cubic_ens_loss:8.2e} ... {obj:8.2e}"
+            )
         return obj
 
     def _update_coef_sparse_rs(
@@ -539,31 +524,63 @@ class TrappingSR3(ConstrainedSR3):
         return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
 
     def _update_coef_nonsparse_rs(
-        self, n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
+        self,
+        x: Float2D,
+        y: Float2D,
+        P_A: Float4D,
+        quad_energy_coeff_A: Float2D,
     ):
-        pTp = np.dot(Pmatrix.T, Pmatrix)
-        hess = xTx + pTp / self.eta
-        P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+        """Solve a partial minimization for w, the SINDy coefficients
 
+        Letting :math:`Q_{ijk} =P_Q w` and :math:`A=P_A w`, Partially minimizes the sum
+        of:
+        * Error in predicting SINDy dynamics, :math:`||Xw-y||`
+        * Deviation from previous iterate of quadratic energy coefficients,
+            :math:`||A-A^{-}||^2`
+        * (Optionally) the size of the quadratic ODE terms, :math:`||Q_{ijk}||^2`
+        * (Optionally) the symmetry-breaking of the quadratic ODE terms,
+            :math:`||Q_{ijk} + Q_{jki} + Q_{kij}||^2`
+
+        Args:
+            x: The samples of SINDy features
+            y: The SINDy derivatives
+            P_A: Projects coefficients w onto energy quadratic form.
+            quad_energy_coeff_A: The energy quadratic form from the previous
+                iteration of trapping SINDy
+            coef_prev
+
+        """
+        _, _, n_tgts, n_features = P_A.shape
+        var_len = n_tgts * n_features
+
+        # Input variable still has 2 dimensions, so hessians have 4
+        hess = np.zeros((n_tgts, n_features, n_tgts, n_features))
+        xTx = x.T @ x
+        for tgt in range(n_tgts):
+            hess[tgt, :, tgt, :] = xTx
+        pTp = np.einsum("abcd,baef->cdef", P_A, P_A)
+        hess += pTp / self.eta
         if self.method == "local":
-            # notice reshaping PQ here requires fortran-ordering
-            PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
-            PQ = np.reshape(PQ, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F")
-            PQTPQ = np.dot(PQ.T, PQ)
-            PQ = np.reshape(
-                self.PQ_, (n_tgts, n_tgts, n_tgts, n_tgts * n_features), "F"
+            PQ = np.einsum("ya,abcde->ybcde", self.mod_matrix, self.PQ_)
+            PQTPQ = np.tensordot(PQ, PQ, axes=([0, 1, 2], [0, 1, 2]))
+            PQ_ep = (
+                PQ
+                + np.transpose(PQ, [1, 2, 0, 3, 4])
+                + np.transpose(PQ, [2, 0, 1, 3, 4])
             )
-            PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
-            PQ_ep = PQ + np.transpose(PQ, [1, 2, 0, 3]) + np.transpose(PQ, [2, 0, 1, 3])
-            PQ_ep = np.reshape(
-                PQ_ep, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F"
-            )
-            PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
+            PQTPQ_ep = np.tensordot(PQ_ep, PQ_ep, axes=([0, 1, 2], [0, 1, 2]))
             hess += PQTPQ / self.alpha + PQTPQ_ep / self.beta
 
-        return self._solve_nonsparse_relax_and_split(
-            hess, xTy, P_transpose_A, coef_prev
-        )
+        PaTA = np.einsum("bacd,ab->cd", P_A, quad_energy_coeff_A)
+        # We are still, across most of SR3, handling (NFeat,NTarget) shaped arrays
+        xTy = x.T @ y
+        PaTA = np.transpose(PaTA)
+        grad_const = xTy + PaTA / self.eta
+        hess = np.transpose(hess, [1, 0, 3, 2])
+        hess = np.reshape(hess, (var_len, var_len))
+        grad_const = np.reshape(grad_const, (var_len))
+        coef_flat = self._solve_nonsparse_relax_and_split(hess, grad_const)
+        return coef_flat.reshape(n_features, n_tgts)
 
     def _solve_m_relax_and_split(
         self,
@@ -581,11 +598,15 @@ class TrappingSR3(ConstrainedSR3):
         # prox-gradient descent for (A, m)
         # Calculate projection matrix from Quad terms to As
         mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
-        p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
+        p = self.PL_ + mPM
+        p = np.einsum("ya,abcd,bz->yzcd", self.rt_mod_mat, p, self.rt_inv_mod_mat)
+        p = (p + np.transpose(p, [1, 0, 2, 3])) / 2
         PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+
         # Calculate As and its quad term components
         PMW = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
-        PMW = np.tensordot(self.mod_matrix, PMW, axes=([1], [0]))
+        PMW = np.einsum("ya,abc,bz->yzc", self.rt_mod_mat, PMW, self.rt_inv_mod_mat)
+        PMW = (PMW + np.transpose(PMW, [1, 0, 2])) / 2
         # Calculate error in quadratic balance, and adjust trap center
         A_b = (A - PW) / self.eta
         # PQWT_PW is gradient of some loss in m
@@ -596,9 +617,8 @@ class TrappingSR3(ConstrainedSR3):
         A_new = self._update_A(A - self.alpha_A * A_b, PW)
         return trap_new, A_new
 
-    def _solve_nonsparse_relax_and_split(self, hess, xTy, P_transpose_A, coef_prev):
+    def _solve_nonsparse_relax_and_split(self, hess, gradient_constant):
         """Update for the coefficients if threshold = 0."""
-        gradient_constant = xTy + P_transpose_A / self.eta
         if self.use_constraints:
             coef_nonsparse = _equality_constrained_linlsq(
                 hess, gradient_constant, self.constraint_lhs, self.constraint_rhs
@@ -606,7 +626,7 @@ class TrappingSR3(ConstrainedSR3):
         else:
             hess_inv = np.linalg.pinv(hess, rcond=1e-10)
             coef_nonsparse = hess_inv.dot(gradient_constant)
-        return coef_nonsparse.reshape(coef_prev.shape)
+        return coef_nonsparse
 
     def _reduce(self, x, y):
         """
@@ -671,8 +691,6 @@ class TrappingSR3(ConstrainedSR3):
         for i in range(n_tgts):
             x_expanded[:, i, :, i] = x
         x_expanded = np.reshape(x_expanded, (n_samples * n_tgts, n_tgts * n_features))
-        xTx = np.dot(x_expanded.T, x_expanded)
-        xTy = np.dot(x_expanded.T, y.flatten())
 
         # keep track of last solution in case method fails
         trap_prev_ctr = trap_ctr
@@ -682,9 +700,12 @@ class TrappingSR3(ConstrainedSR3):
         for k in range(self.max_iter):
             # update P tensor from the newest trap center
             mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
-            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-            Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
-            self.p_history_.append(p)
+            P_A = np.einsum(
+                "ya,abcd,bz->yzcd", self.rt_mod_mat, self.PL_ + mPM, self.rt_inv_mod_mat
+            )
+            P_A = (P_A + np.transpose(P_A, [1, 0, 2, 3])) / 2
+            Pmatrix = P_A.reshape(n_tgts * n_tgts, n_tgts * n_features)
+            self.p_history_.append(P_A)
 
             coef_prev = coef_sparse
             if (self.threshold > 0.0) or self.inequality_constraints:
@@ -692,9 +713,7 @@ class TrappingSR3(ConstrainedSR3):
                     n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
                 )
             else:
-                coef_sparse = self._update_coef_nonsparse_rs(
-                    n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
-                )
+                coef_sparse = self._update_coef_nonsparse_rs(x, y, P_A, A)
 
             # If problem over xi becomes infeasible, break out of the loop
             if coef_sparse is None:
@@ -708,7 +727,7 @@ class TrappingSR3(ConstrainedSR3):
                 trap_ctr = trap_prev_ctr
                 break
             self.history_.append(coef_sparse.T)
-            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+            PW = np.tensordot(P_A, coef_sparse, axes=([3, 2], [0, 1]))
 
             # (m,A) update finished, append the result
             self.m_history_.append(trap_ctr)

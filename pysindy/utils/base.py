@@ -170,7 +170,6 @@ def prox_weighted_l0(x: NDArray[np.float64], lam: NDArray[np.float64]):
 
 def prox_l1(x: NDArray[np.float64], lam: NDArray[np.float64]):
     """Proximal operator for L1 regularization."""
-    a = np.sign(x)
     return np.sign(x) * np.maximum(np.abs(x) - lam, 0)
 
 

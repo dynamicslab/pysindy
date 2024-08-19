@@ -139,7 +139,7 @@ def test_get_prox_1d(regularization, expected):
         ("l2", np.array([[-2 / 7, 3 / 7, 5 / 7], [-7 / 7, 11 / 7, 0 / 7]]).T),
     ],
 )
-def test_get_regularization_2d(regularization, expected):
+def test_get_prox_2d(regularization, expected):
     data = np.array([[-2, 3, 5], [-7, 11, 0]]).T
     lam = np.array([[3]])
 

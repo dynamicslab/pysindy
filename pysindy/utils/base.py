@@ -1,8 +1,10 @@
 import warnings
 from itertools import repeat
+from typing import Callable
 from typing import Sequence
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
@@ -150,13 +152,13 @@ def reorder_constraints(arr, n_features, output_order="feature"):
     return arr.reshape(starting_shape).transpose([0, 2, 1]).reshape((n_constraints, -1))
 
 
-def prox_l0(x, lam):
+def prox_l0(x: NDArray[np.float64], lam: NDArray[np.float64]):
     """Proximal operator for L0 regularization."""
     threshold = np.sqrt(2 * lam)
     return x * (np.abs(x) > threshold)
 
 
-def prox_weighted_l0(x, lam):
+def prox_weighted_l0(x: NDArray[np.float64], lam: NDArray[np.float64]):
     """Proximal operator for weighted l0 regularization."""
     y = np.zeros(np.shape(x))
     threshold = np.sqrt(2 * lam)
@@ -166,28 +168,29 @@ def prox_weighted_l0(x, lam):
     return y
 
 
-def prox_l1(x, lam):
+def prox_l1(x: NDArray[np.float64], lam: NDArray[np.float64]):
     """Proximal operator for L1 regularization."""
+    a = np.sign(x)
     return np.sign(x) * np.maximum(np.abs(x) - lam, 0)
 
 
-def prox_weighted_l1(x, lam):
+def prox_weighted_l1(x: NDArray[np.float64], lam: NDArray[np.float64]):
     """Proximal operator for weighted l1 regularization."""
     return np.sign(x) * np.maximum(np.abs(x) - lam, np.zeros(x.shape))
 
 
-def prox_l2(x, lam):
+def prox_l2(x: NDArray[np.float64], lam: NDArray[np.float64]):
     """Proximal operator for ridge regularization."""
     return x / (1 + 2 * lam)
 
 
-def prox_weighted_l2(x, lam):
+def prox_weighted_l2(x: NDArray[np.float64], lam: NDArray[np.float64]):
     """Proximal operator for ridge regularization."""
     return x / (1 + 2 * lam)
 
 
 # TODO: replace code block with proper math block
-def prox_cad(x, lam):
+def prox_cad(x: NDArray[np.float64], lam: NDArray[np.float64]):
     """
     Proximal operator for CAD regularization
 
@@ -211,7 +214,9 @@ def prox_cad(x, lam):
     )
 
 
-def get_prox(regularization):
+def get_prox(
+    regularization: str,
+) -> Callable[[NDArray[np.float64], NDArray[np.float64]], NDArray[np.float64]]:
     prox = {
         "l0": prox_l0,
         "weighted_l0": prox_weighted_l0,
@@ -227,36 +232,38 @@ def get_prox(regularization):
         raise NotImplementedError("{} has not been implemented".format(regularization))
 
 
-def regularization_l0(x, lam):
-    return lam * np.count_nonzero(x)
+def regularization_l0(x: NDArray[np.float64], lam: NDArray[np.float64]):
+    return lam.item() * np.count_nonzero(x)
 
 
-def regualization_weighted_l0(x, lam):
+def regualization_weighted_l0(x: NDArray[np.float64], lam: NDArray[np.float64]):
     return np.sum(lam[np.nonzero(x)])
 
 
-def regularization_l1(x, lam):
+def regularization_l1(x: NDArray[np.float64], lam: NDArray[np.float64]):
     return np.sum(lam * np.abs(x))
 
 
-def regualization_weighted_l1(x, lam):
-    return np.sum(np.abs(lam * x))
+def regualization_weighted_l1(x: NDArray[np.float64], lam: NDArray[np.float64]):
+    return np.sum(lam * np.abs(x))
 
 
-def regularization_l2(x, lam):
+def regularization_l2(x: NDArray[np.float64], lam: NDArray[np.float64]):
     return np.sum(lam * x**2)
 
 
-def regualization_weighted_l2(x, lam):
+def regualization_weighted_l2(x: NDArray[np.float64], lam: NDArray[np.float64]):
     return np.sum(lam * x**2)
 
 
-def regularization_cad(x, lam):
+def regularization_cad(x: NDArray[np.float64], lam: NDArray[np.float64]):
     # dummy function
     return 0
 
 
-def get_regularization(regularization):
+def get_regularization(
+    regularization: str,
+) -> Callable[[NDArray[np.float64], NDArray[np.float64]], float]:
     regularization_fn = {
         "l0": regularization_l0,
         "weighted_l0": regualization_weighted_l0,

@@ -65,10 +65,10 @@ def test_validate_controls():
 
 
 @pytest.mark.parametrize(
-    ["regularization", "expected"], [("l0", 4), ("l1", 16), ("l2", 68)]
+    ["regularization", "expected"], [("l0", 6), ("l1", 20), ("l2", 76)]
 )
 def test_get_regularization_1d(regularization, expected):
-    data = np.array([[0, 3, 5]]).T
+    data = np.array([[-2, 3, 5]]).T
     lam = np.array([[2]])
 
     reg = get_regularization(regularization)
@@ -77,10 +77,10 @@ def test_get_regularization_1d(regularization, expected):
 
 
 @pytest.mark.parametrize(
-    ["regularization", "expected"], [("l0", 8), ("l1", 52), ("l2", 408)]
+    ["regularization", "expected"], [("l0", 10), ("l1", 56), ("l2", 416)]
 )
 def test_get_regularization_2d(regularization, expected):
-    data = np.array([[0, 3, 5], [7, 11, 0]]).T
+    data = np.array([[-2, 3, 5], [7, 11, 0]]).T
     lam = np.array([[2]])
 
     reg = get_regularization(regularization)
@@ -90,10 +90,10 @@ def test_get_regularization_2d(regularization, expected):
 
 @pytest.mark.parametrize(
     ["regularization", "expected"],
-    [("weighted_l0", 2.5), ("weighted_l1", 8.5), ("weighted_l2", 30.5)],
+    [("weighted_l0", 5.5), ("weighted_l1", 14.5), ("weighted_l2", 42.5)],
 )
 def test_get_weighted_regularization_1d(regularization, expected):
-    data = np.array([[0, 3, 5]]).T
+    data = np.array([[-2, 3, 5]]).T
     lam = np.array([[3, 2, 0.5]]).T
 
     reg = get_regularization(regularization)
@@ -103,10 +103,10 @@ def test_get_weighted_regularization_1d(regularization, expected):
 
 @pytest.mark.parametrize(
     ["regularization", "expected"],
-    [("weighted_l0", 16.5), ("weighted_l1", 158.5), ("weighted_l2", 1652.5)],
+    [("weighted_l0", 19.5), ("weighted_l1", 164.5), ("weighted_l2", 1664.5)],
 )
 def test_get_weighted_regularization_2d(regularization, expected):
-    data = np.array([[0, 3, 5], [7, 11, 0]]).T
+    data = np.array([[-2, 3, 5], [7, 11, 0]]).T
     lam = np.array([[3, 2, 0.5], [1, 13, 17]]).T
 
     reg = get_regularization(regularization)

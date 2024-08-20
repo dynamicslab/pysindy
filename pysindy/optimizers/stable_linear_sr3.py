@@ -44,12 +44,30 @@ class StableLinearSR3(ConstrainedSR3):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
+    reg_weight : float or np.ndarray[float], shape (n_targets, n_features) \
+        optional (default 0.1)
         Determines the strength of the regularization. When the
         regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding, and lambda
-        is chosen to threshold at the value given by this parameter.
-        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
+        is equivalent to performing hard thresholding. Use the method calculate_l0_weight
+        to calculate the weight from the threshold.
+
+        When using weighted regularization, this is the array of weights 
+        for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``reg_weight[i, j]`` should specify the weight to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        weight to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
+
+    regularizer : string, optional (default 'l1')
+        Regularization function to use. Currently implemented options
+        are 'l1' (l1 norm), 'l2' (l2 norm), 'cad' (clipped
+        absolute deviation),
+        'weighted_l1' (weighted l1 norm), and 'weighted_l2' (weighted l2 norm).
+        Note that the regularizer must be convex here.
 
     nu : float, optional (default 1)
         Determines the level of relaxation. Decreasing nu encourages
@@ -59,12 +77,6 @@ class StableLinearSR3(ConstrainedSR3):
     tol : float, optional (default 1e-5)
         Tolerance used for determining convergence of the optimization
         algorithm.
-
-    thresholder : string, optional (default 'l1')
-        Regularization function to use. Currently implemented options
-        are 'l1' (l1 norm), 'l2' (l2 norm),
-        'weighted_l1' (weighted l1 norm), and 'weighted_l2' (weighted l2 norm).
-        Note that the thresholder must be convex here.
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -104,17 +116,6 @@ class StableLinearSR3(ConstrainedSR3):
         Initial guess for coefficients ``coef_``, (v in the mathematical equations)
         If None, least-squares is used to obtain an initial guess.
 
-    thresholds : np.ndarray, shape (n_targets, n_features), optional (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
-
     inequality_constraints : bool, optional (default False)
         If True, CVXPY methods are used to solve the problem.
 
@@ -142,10 +143,10 @@ class StableLinearSR3(ConstrainedSR3):
 
     def __init__(
         self,
-        threshold=0.1,
+        reg_weight=0.1,
+        regularizer="l1",
         nu=1.0,
         tol=1e-5,
-        thresholder="l1",
         max_iter=30,
         trimming_fraction=0.0,
         trimming_step_size=1.0,
@@ -155,7 +156,6 @@ class StableLinearSR3(ConstrainedSR3):
         normalize_columns=False,
         copy_X=True,
         initial_guess=None,
-        thresholds=None,
         equality_constraints=False,
         inequality_constraints=False,
         constraint_separation_index=0,
@@ -165,11 +165,10 @@ class StableLinearSR3(ConstrainedSR3):
         unbias=False,
     ):
         super().__init__(
-            threshold=threshold,
+            reg_weight=reg_weight,
+            regularizer=regularizer,
             nu=nu,
             tol=tol,
-            thresholder=thresholder,
-            thresholds=thresholds,
             trimming_fraction=trimming_fraction,
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
@@ -193,9 +192,9 @@ class StableLinearSR3(ConstrainedSR3):
             "This optimizer is set up to only be used with a purely linear"
             " library in the variables. No constant or nonlinear terms!"
         )
-        if not np.isclose(threshold, 0.0):
+        if not np.isclose(reg_weight, 0.0):
             warnings.warn(
-                "This optimizer uses CVXPY if the threshold is nonzero, "
+                "This optimizer uses CVXPY if the reg_weight is nonzero, "
                 " meaning the optimization will be much slower for large "
                 "datasets."
             )
@@ -210,14 +209,13 @@ class StableLinearSR3(ConstrainedSR3):
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
         cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (2 * self.nu)
-        threshold = self.thresholds if self.thresholds is not None else self.threshold
-        penalty = self._calculate_penalty(self.thresholder, np.ravel(threshold), xi)
+        penalty = self._calculate_penalty(self.thresholder, np.ravel(self.reg_weight), xi)
         return xi, cost + penalty
 
     def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
         """
         Update the coefficients using CVXPY. This function is called if
-        the sparsity threshold is nonzero or constraints are used.
+        the sparsity weight is nonzero or constraints are used.
         """
         xi, cost = self._create_var_and_part_cost(
             x, y, coef_sparse, coef_negative_definite
@@ -230,8 +228,8 @@ class StableLinearSR3(ConstrainedSR3):
                     [
                         self.constraint_lhs[: self.constraint_separation_index, :] @ xi
                         <= self.constraint_rhs[: self.constraint_separation_index],
-                        self.constraint_lhs[self.constraint_separation_index :, :] @ xi
-                        == self.constraint_rhs[self.constraint_separation_index :],
+                        self.constraint_lhs[self.constraint_separation_index:, :] @ xi
+                        == self.constraint_rhs[self.constraint_separation_index:],
                     ],
                 )
             elif self.inequality_constraints:
@@ -354,7 +352,7 @@ class StableLinearSR3(ConstrainedSR3):
         eigs_history = []
         coef_history = []
         for k in range(self.max_iter):
-            if not np.isclose(self.threshold, 0.0) or self.use_constraints:
+            if not np.isclose(self.reg_weight, 0.0) or self.use_constraints:
                 coef_sparse = self._update_coef_cvxpy(
                     x_expanded, y, coef_sparse, coef_negative_definite
                 )

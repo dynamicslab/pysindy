@@ -34,12 +34,29 @@ class SR3(BaseOptimizer):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
+    reg_weight : float or np.ndarray[float], shape (n_targets, n_features) \
+        optional (default 0.005)
         Determines the strength of the regularization. When the
-        regularization function R is the L0 norm, the regularization
-        is equivalent to performing hard thresholding, and lambda
-        is chosen to threshold at the value given by this parameter.
-        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
+        regularization function R is the l0 norm, the regularization
+        is equivalent to performing hard thresholding. Use the method calculate_l0_weight
+        to calculate the weight from the threshold.
+
+        When using weighted regularization, this is the array of weights 
+        for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``reg_weight[i, j]`` should specify the weight to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        weight to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
+
+    regularizer : string, optional (default 'L0')
+        Regularization function to use. Currently implemented options
+        are 'L0' (L0 norm), 'L1' (L1 norm), 'L2' (L2 norm) and 'CAD' (clipped
+        absolute deviation). Note by 'L2 norm' we really mean
+        the squared L2 norm, i.e. ridge regression
 
     nu : float, optional (default 1)
         Determines the level of relaxation. Decreasing nu encourages
@@ -49,12 +66,6 @@ class SR3(BaseOptimizer):
     tol : float, optional (default 1e-5)
         Tolerance used for determining convergence of the optimization
         algorithm.
-
-    thresholder : string, optional (default 'L0')
-        Regularization function to use. Currently implemented options
-        are 'L0' (L0 norm), 'L1' (L1 norm) and 'L2' (L2 norm).
-        Note by 'L2 norm' we really mean
-        the squared L2 norm, i.e. ridge regression
 
     trimming_fraction : float, optional (default 0.0)
         Fraction of the data samples to trim during fitting. Should
@@ -79,18 +90,6 @@ class SR3(BaseOptimizer):
 
     copy_X : boolean, optional (default True)
         If True, X will be copied; else, it may be overwritten.
-
-    thresholds : np.ndarray, shape (n_targets, n_features), optional \
-            (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
 
     verbose : bool, optional (default False)
         If True, prints out the different error terms every
@@ -126,7 +125,7 @@ class SR3(BaseOptimizer):
     >>>                        z[0] * z[1] - 8 / 3 * z[2]]
     >>> t = np.arange(0, 2, .002)
     >>> x = odeint(lorenz, [-8, 8, 27], t)
-    >>> opt = SR3(threshold=0.1, nu=1)
+    >>> opt = SR3(reg_weight=0.1, nu=1)
     >>> model = SINDy(optimizer=opt)
     >>> model.fit(x, t=t[1] - t[0])
     >>> model.print()
@@ -137,11 +136,10 @@ class SR3(BaseOptimizer):
 
     def __init__(
         self,
-        threshold=0.1,
-        thresholds=None,
+        reg_weight=0.005,
+        regularizer="L0",
         nu=1.0,
         tol=1e-5,
-        thresholder="L0",
         trimming_fraction=0.0,
         trimming_step_size=1.0,
         max_iter=30,
@@ -158,9 +156,6 @@ class SR3(BaseOptimizer):
             normalize_columns=normalize_columns,
             unbias=unbias,
         )
-
-        if threshold < 0:
-            raise ValueError("threshold cannot be negative")
         if nu <= 0:
             raise ValueError("nu must be positive")
         if tol <= 0:
@@ -172,7 +167,7 @@ class SR3(BaseOptimizer):
                 "Unbiasing counteracts some of the effects of trimming.  Either set"
                 " unbias=False or trimming_fraction=0.0"
             )
-        if thresholder.lower() not in (
+        if regularizer.lower() not in (
             "l0",
             "l1",
             "l2",
@@ -184,41 +179,19 @@ class SR3(BaseOptimizer):
                 "Please use a valid thresholder, l0, l1, l2, "
                 "weighted_l0, weighted_l1, weighted_l2."
             )
-        if thresholder[:8].lower() == "weighted" and thresholds is None:
+        if regularizer[:8].lower() == "weighted" and not isinstance(reg_weight, np.ndarray):
             raise ValueError(
-                "weighted thresholder requires the thresholds parameter to be used"
+                "weighted regularization requires the reg_weight parameter to be a 2d array"
             )
-        if thresholder[:8].lower() != "weighted" and thresholds is not None:
-            raise ValueError(
-                "The thresholds argument cannot be used without a weighted thresholder,"
-                " e.g. thresholder='weighted_l0'"
-            )
-        if thresholds is not None and np.any(thresholds < 0):
-            raise ValueError("thresholds cannot contain negative entries")
+        if np.any(reg_weight < 0):
+            raise ValueError("reg_weight cannot contain negative entries")
 
-        if thresholder[:8].lower() == "weighted" and thresholds is None:
-            raise ValueError(
-                "weighted thresholder requires the thresholds parameter to be used"
-            )
-        if thresholder[:8].lower() != "weighted" and thresholds is not None:
-            raise ValueError(
-                "The thresholds argument cannot be used without a weighted thresholder,"
-                " e.g. thresholder='weighted_l0'"
-            )
-        if thresholds is not None and np.any(thresholds < 0):
-            raise ValueError("thresholds cannot contain negative entries")
-
-        self.threshold = threshold
-        self.thresholds = thresholds
+        self.reg_weight = reg_weight
         self.nu = nu
-        if thresholds is not None:
-            self.lam = thresholds.T**2 / (2 * nu)
-        else:
-            self.lam = threshold**2 / (2 * nu)
         self.tol = tol
-        self.thresholder = thresholder
-        self.reg = get_regularization(thresholder)
-        self.prox = get_prox(thresholder)
+        self.regularizer = regularizer
+        self.reg = get_regularization(regularizer)
+        self.prox = get_prox(regularizer)
         if trimming_fraction == 0.0:
             self.use_trimming = False
         else:
@@ -226,6 +199,10 @@ class SR3(BaseOptimizer):
         self.trimming_fraction = trimming_fraction
         self.trimming_step_size = trimming_step_size
         self.verbose = verbose
+
+    @staticmethod
+    def calculate_l0_weight(threshold: float, nu: float):
+        return (threshold ** 2) / (2 * nu)
 
     def enable_trimming(self, trimming_fraction):
         """
@@ -256,7 +233,7 @@ class SR3(BaseOptimizer):
         if self.use_trimming:
             assert trimming_array is not None
             R2 *= trimming_array.reshape(x.shape[0], 1)
-        regularization = self.reg(coef_full, self.lam)
+        regularization = self.reg(coef_full, self.reg_weight)
         if print_ind == 0 and self.verbose:
             row = [
                 q,
@@ -280,7 +257,7 @@ class SR3(BaseOptimizer):
 
     def _update_sparse_coef(self, coef_full):
         """Update the regularized weight vector"""
-        coef_sparse = self.prox(coef_full, self.lam * self.nu)
+        coef_sparse = self.prox(coef_full, self.reg_weight * self.nu)
         return coef_sparse
 
     def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):

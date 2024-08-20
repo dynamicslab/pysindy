@@ -46,12 +46,29 @@ class ConstrainedSR3(SR3):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
+    reg_weight : float or np.ndarray[float], shape (n_targets, n_features) \
+        optional (default 0.005)
         Determines the strength of the regularization. When the
         regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding, and lambda
-        is chosen to threshold at the value given by this parameter.
-        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
+        is equivalent to performing hard thresholding. Use the method calculate_l0_weight
+        to calculate the weight from the threshold.
+
+        When using weighted regularization, this is the array of weights 
+        for each library function coefficient.
+        Each row corresponds to a measurement variable and each column
+        to a function from the feature library.
+        Recall that SINDy seeks a matrix :math:`\\Xi` such that
+        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
+        ``reg_weight[i, j]`` should specify the weight to be used for the
+        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
+        weight to be used for the (j + 1)st library function in the equation
+        for the (i + 1)st measurement variable.
+
+    regularizer : string, optional (default 'L0')
+        Regularization function to use. Currently implemented options
+        are 'L0' (L0 norm), 'L1' (L1 norm), 'L2' (L2 norm) and 'CAD' (clipped
+        absolute deviation). Note by 'L2 norm' we really mean
+        the squared L2 norm, i.e. ridge regression
 
     nu : float, optional (default 1)
         Determines the level of relaxation. Decreasing nu encourages
@@ -61,12 +78,6 @@ class ConstrainedSR3(SR3):
     tol : float, optional (default 1e-5)
         Tolerance used for determining convergence of the optimization
         algorithm.
-
-    thresholder : string, optional (default 'l0')
-        Regularization function to use. Currently implemented options
-        are 'l0' (l0 norm), 'l1' (l1 norm), 'l2' (l2 norm),
-        'weighted_l0' (weighted l0 norm), 'weighted_l1' (weighted l1 norm),
-        and 'weighted_l2' (weighted l2 norm).
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -102,17 +113,6 @@ class ConstrainedSR3(SR3):
         Shape should be (n_features) or (n_targets, n_features).
         Initial guess for coefficients ``coef_``, (v in the mathematical equations)
         If None, least-squares is used to obtain an initial guess.
-
-    thresholds : np.ndarray, shape (n_targets, n_features), optional (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
 
     inequality_constraints : bool, optional (default False)
         If True, CVXPY methods are used to solve the problem.
@@ -153,10 +153,10 @@ class ConstrainedSR3(SR3):
 
     def __init__(
         self,
-        threshold=0.1,
+        reg_weight=0.005,
+        regularizer="l0",
         nu=1.0,
         tol=1e-5,
-        thresholder="l0",
         max_iter=30,
         trimming_fraction=0.0,
         trimming_step_size=1.0,
@@ -166,7 +166,6 @@ class ConstrainedSR3(SR3):
         normalize_columns=False,
         copy_X=True,
         initial_guess=None,
-        thresholds=None,
         equality_constraints=False,
         inequality_constraints=False,
         constraint_separation_index: Optional[bool] = None,
@@ -175,11 +174,10 @@ class ConstrainedSR3(SR3):
         unbias=False,
     ):
         super().__init__(
-            threshold=threshold,
+            reg_weight=reg_weight,
+            regularizer=regularizer,
             nu=nu,
             tol=tol,
-            thresholder=thresholder,
-            thresholds=thresholds,
             trimming_fraction=trimming_fraction,
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
@@ -232,7 +230,7 @@ class ConstrainedSR3(SR3):
                 "constraint_rhs."
             )
 
-        if inequality_constraints and thresholder.lower() not in (
+        if inequality_constraints and regularizer.lower() not in (
             "l1",
             "l2",
             "weighted_l1",
@@ -301,8 +299,7 @@ class ConstrainedSR3(SR3):
     ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        threshold = self.thresholds if self.thresholds is not None else self.threshold
-        penalty = self._calculate_penalty(self.thresholder, np.ravel(threshold), xi)
+        penalty = self._calculate_penalty(self.regularizer, np.ravel(self.reg_weight), xi)
         return xi, cost + penalty
 
     def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
@@ -310,8 +307,8 @@ class ConstrainedSR3(SR3):
             constraints = []
             if self.equality_constraints:
                 constraints.append(
-                    self.constraint_lhs[self.constraint_separation_index :, :] @ xi
-                    == self.constraint_rhs[self.constraint_separation_index :],
+                    self.constraint_lhs[self.constraint_separation_index:, :] @ xi
+                    == self.constraint_rhs[self.constraint_separation_index:],
                 )
             if self.inequality_constraints:
                 constraints.append(

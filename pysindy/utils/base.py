@@ -232,7 +232,7 @@ def get_prox(
 
 
 def regularization_l0(x: NDArray[np.float64], lam: NDArray[np.float64]):
-    return lam.item() * np.count_nonzero(x)
+    return lam * np.count_nonzero(x)
 
 
 def regualization_weighted_l0(x: NDArray[np.float64], lam: NDArray[np.float64]):

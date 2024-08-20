@@ -269,20 +269,26 @@ class ConstrainedSR3(SR3):
         rhs = rhs.reshape(g.shape)
         return inv1.dot(rhs)
 
+    @staticmethod
+    def _calculate_penalty(regularizer, lam, xi: cp.Variable) -> cp.Expression:
+        regularizer = regularizer.lower()
+        if regularizer == "l1":
+            return lam * cp.sum(cp.abs(xi))
+        elif regularizer == "weighted_l1":
+            return cp.sum(cp.multiply(np.ravel(lam), cp.abs(xi)))
+        elif regularizer == "l2":
+            return lam * cp.sum(xi**2)
+        elif regularizer == "weighted_l2":
+            return cp.sum(cp.multiply(np.ravel(lam), xi**2))
+
     def _create_var_and_part_cost(
         self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
     ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi) ** 2
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
-        return xi, cost
+        threshold = self.thresholds if self.thresholds is not None else self.threshold
+        penalty = self._calculate_penalty(self.thresholder, threshold, xi)
+        return xi, cost + penalty
 
     def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
         if self.use_constraints:

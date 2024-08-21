@@ -561,8 +561,8 @@ class TrappingSR3(ConstrainedSR3):
         pTp = np.einsum("abcd,baef->cdef", P_A, P_A)
         hess += pTp / self.eta
         if self.method == "local":
+            PQTPQ = np.tensordot(self.PQ_, self.PQ_, axes=([0, 1, 2], [0, 1, 2]))
             PQ = np.einsum("ya,abcde->ybcde", self.mod_matrix, self.PQ_)
-            PQTPQ = np.tensordot(PQ, PQ, axes=([0, 1, 2], [0, 1, 2]))
             PQ_ep = (
                 PQ
                 + np.transpose(PQ, [1, 2, 0, 3, 4])

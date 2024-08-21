@@ -32,12 +32,16 @@ nGLL = 7  # Order of the spectral mesh
 
 # define the objective function to be minimized by simulated annealing
 def obj_function(m, L_obj, Q_obj, P_obj):
+    lsv, sing_vals, rsv = np.linalg.svd(P_obj)
+    P_rt = lsv @ np.diag(np.sqrt(sing_vals)) @ rsv
+    P_rt_inv = lsv @ np.diag(np.sqrt(1 / sing_vals)) @ rsv
     mQ_full = np.tensordot(Q_obj, m, axes=([2], [0])) + np.tensordot(
         Q_obj, m, axes=([1], [0])
     )
-    mQ_full = (mQ_full + mQ_full.T) / 2.0
-    L_obj = 0.5 * (L_obj + L_obj.T)
-    As = (P_obj @ (L_obj + mQ_full) + (L_obj + mQ_full).T @ P_obj) / 2
+    # mQ_full = (mQ_full + mQ_full.T) / 2.0
+    # L_obj = 0.5 * (L_obj + L_obj.T)
+    A_obj = L_obj + mQ_full
+    As = (P_rt @ A_obj @ P_rt_inv + P_rt_inv @ A_obj.T @ P_rt) / 2
     eigvals, eigvecs = np.linalg.eigh(As)
     return eigvals[-1]
 
@@ -46,6 +50,9 @@ def obj_function(m, L_obj, Q_obj, P_obj):
 def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     if mod_matrix is None:
         mod_matrix = np.eye(r)
+    lsv, sing_vals, rsv = np.linalg.svd(mod_matrix)
+    rt_mod_mat = lsv @ np.diag(np.sqrt(sing_vals)) @ rsv
+    rt_inv_mod_mat = lsv @ np.diag(np.sqrt(1 / sing_vals)) @ rsv
     opt_m = sindy_opt.m_history_[-1]
     PC_tensor = sindy_opt.PC_
     PL_tensor_unsym = sindy_opt.PL_unsym_
@@ -55,8 +62,8 @@ def check_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     mPM = np.tensordot(PM_tensor, opt_m, axes=([2], [0]))
     P_tensor = PL_tensor + mPM
     As = np.tensordot(P_tensor, Xi, axes=([3, 2], [0, 1]))
-    As = mod_matrix @ As
-    eigvals, eigvecs = np.linalg.eigh(As)
+    As = (rt_mod_mat @ As @ rt_inv_mod_mat + rt_inv_mod_mat @ As @ rt_mod_mat) / 2
+    eigvals, _ = np.linalg.eigh(As)
     print("optimal m: ", opt_m)
     print("As eigvals: ", np.sort(eigvals))
     max_eigval = np.sort(eigvals)[-1]
@@ -93,6 +100,9 @@ def get_trapping_radius(max_eigval, eps_Q, r, d):
 def check_local_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     if mod_matrix is None:
         mod_matrix = np.eye(r)
+    lsv, sing_vals, rsv = np.linalg.svd(mod_matrix)
+    rt_mod_mat = lsv @ np.diag(np.sqrt(sing_vals)) @ rsv
+    rt_inv_mod_mat = lsv @ np.diag(np.sqrt(1 / sing_vals)) @ rsv
     opt_m = sindy_opt.m_history_[-1]
     PC_tensor = sindy_opt.PC_
     PL_tensor_unsym = sindy_opt.PL_unsym_
@@ -102,8 +112,8 @@ def check_local_stability(r, Xi, sindy_opt, mean_val, mod_matrix=None):
     mPM = np.tensordot(PM_tensor, opt_m, axes=([2], [0]))
     P_tensor = PL_tensor + mPM
     As = np.tensordot(P_tensor, Xi, axes=([3, 2], [0, 1]))
-    As = mod_matrix @ As
-    eigvals, eigvecs = np.linalg.eigh(As)
+    As = (rt_mod_mat @ As @ rt_inv_mod_mat + rt_inv_mod_mat @ As @ rt_mod_mat) / 2
+    eigvals, _ = np.linalg.eigh(As)
     print("optimal m: ", opt_m)
     print("As eigvals: ", np.sort(eigvals))
     max_eigval = np.sort(eigvals)[-1]

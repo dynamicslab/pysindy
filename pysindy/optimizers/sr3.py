@@ -179,10 +179,9 @@ class SR3(BaseOptimizer):
             "weighted_l0",
             "weighted_l1",
             "weighted_l2",
-            "cad",
         ):
             raise NotImplementedError(
-                "Please use a valid thresholder, l0, l1, l2, cad, "
+                "Please use a valid thresholder, l0, l1, l2, "
                 "weighted_l0, weighted_l1, weighted_l2."
             )
         if thresholder[:8].lower() == "weighted" and thresholds is None:

@@ -154,18 +154,18 @@ def reorder_constraints(arr, n_features, output_order="feature"):
     return arr.reshape(starting_shape).transpose([0, 2, 1]).reshape((n_constraints, -1))
 
 
-def validate_prox_and_reg_inputs(func):
-    @wraps(func)
+def validate_prox_and_reg_inputs(func, regularization):
     def wrapper(x, regularization_weight):
         # Example validation: check if both a and b are positive integers
-        if isinstance(regularization_weight, np.ndarray) and (
-            regularization_weight.shape != x.shape
-            and regularization_weight.shape != (1, 1)
-        ):
+        if regularization[:8] == 'weighted' and \
+                (not isinstance(regularization_weight, np.ndarray) or (regularization_weight.shape != x.shape)):
             raise ValueError(
-                f"Invalid shape for 'regularization_weight': {regularization_weight.shape}. Must be the same shape as x: {x.shape}."
+                f"Invalid shape for 'regularization_weight': {
+                    regularization_weight.shape if isinstance(regularization, np.ndarray) else '()'}. Must be the same shape as x: {x.shape}."
             )
-
+        elif regularization[:8] != 'weighted' and not isinstance(regularization_weight, (int, float)) \
+                and (isinstance(regularization_weight, np.ndarray) and regularization_weight.shape not in [(1, 1), (1,)]):
+            raise ValueError("'regularization_weight' must be a scalar")
         # If validation passes, call the original function
         return func(x, regularization_weight)
 
@@ -235,8 +235,9 @@ def get_prox(
         "l2": prox_l2,
         "weighted_l2": prox_weighted_l2,
     }
-    if regularization.lower() in prox:
-        return validate_prox_and_reg_inputs(prox[regularization.lower()])
+    regularization = regularization.lower()
+    if regularization in prox:
+        return validate_prox_and_reg_inputs(prox[regularization], regularization)
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
 
@@ -291,8 +292,9 @@ def get_regularization(
         "l2": regularization_l2,
         "weighted_l2": regualization_weighted_l2,
     }
-    if regularization.lower() in regularization_fn:
-        return validate_prox_and_reg_inputs(regularization_fn[regularization.lower()])
+    regularization = regularization.lower()
+    if regularization in regularization_fn:
+        return validate_prox_and_reg_inputs(regularization_fn[regularization], regularization)
     else:
         raise NotImplementedError("{} has not been implemented".format(regularization))
 

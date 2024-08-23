@@ -62,8 +62,7 @@ class StableLinearSR3(ConstrainedSR3):
 
     thresholder : string, optional (default 'l1')
         Regularization function to use. Currently implemented options
-        are 'l1' (l1 norm), 'l2' (l2 norm), 'cad' (clipped
-        absolute deviation),
+        are 'l1' (l1 norm), 'l2' (l2 norm),
         'weighted_l1' (weighted l1 norm), and 'weighted_l2' (weighted l2 norm).
         Note that the thresholder must be convex here.
 

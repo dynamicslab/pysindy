@@ -651,14 +651,6 @@ def test_prox_functions(data_derivative_1d, optimizer, thresholder):
     check_is_fitted(model)
 
 
-def test_cad_prox_function(data_derivative_1d):
-    x, x_dot = data_derivative_1d
-    x = x.reshape(-1, 1)
-    model = SR3(thresholder="cad")
-    model.fit(x, x_dot)
-    check_is_fitted(model)
-
-
 @pytest.mark.parametrize("thresholder", ["weighted_l0", "weighted_l1"])
 def test_weighted_prox_functions(data, thresholder):
     x, x_dot = data

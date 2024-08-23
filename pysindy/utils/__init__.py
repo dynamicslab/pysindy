@@ -10,13 +10,6 @@ from .base import flatten_2d_tall
 from .base import get_prox
 from .base import get_regularization
 from .base import print_model
-from .base import prox_cad
-from .base import prox_l0
-from .base import prox_l1
-from .base import prox_l2
-from .base import prox_weighted_l0
-from .base import prox_weighted_l1
-from .base import prox_weighted_l2
 from .base import reorder_constraints
 from .base import supports_multiple_targets
 from .base import validate_control_variables
@@ -66,13 +59,6 @@ __all__ = [
     "get_prox",
     "get_regularization",
     "print_model",
-    "prox_cad",
-    "prox_l0",
-    "prox_weighted_l0",
-    "prox_l1",
-    "prox_weighted_l1",
-    "prox_l2",
-    "prox_weighted_l2",
     "reorder_constraints",
     "supports_multiple_targets",
     "validate_control_variables",

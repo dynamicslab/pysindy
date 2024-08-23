@@ -52,8 +52,8 @@ class SR3(BaseOptimizer):
 
     thresholder : string, optional (default 'L0')
         Regularization function to use. Currently implemented options
-        are 'L0' (L0 norm), 'L1' (L1 norm), 'L2' (L2 norm) and 'CAD' (clipped
-        absolute deviation). Note by 'L2 norm' we really mean
+        are 'L0' (L0 norm), 'L1' (L1 norm) and 'L2' (L2 norm).
+        Note by 'L2 norm' we really mean
         the squared L2 norm, i.e. ridge regression
 
     trimming_fraction : float, optional (default 0.0)

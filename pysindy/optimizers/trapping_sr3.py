@@ -219,10 +219,12 @@ class TrappingSR3(ConstrainedSR3):
             self._n_tgts = 1
         if self.mod_matrix is None:
             self.mod_matrix = np.eye(self._n_tgts)
+
+        # get U, S, V -- note that mod_matrix is positive definite so U = V
         lsv, sing_vals, rsv = np.linalg.svd(self.mod_matrix)
         # scipy.linalg.sqrtm
-        self.rt_mod_mat = lsv @ np.diag(np.sqrt(sing_vals)) @ rsv
-        self.rt_inv_mod_mat = lsv @ np.diag(np.sqrt(1 / sing_vals)) @ rsv
+        self.rt_mod_mat = lsv @ np.diag(np.sqrt(sing_vals)) @ rsv  # get the square root
+        self.rt_inv_mod_mat = lsv @ np.diag(np.sqrt(1 / sing_vals)) @ rsv  # get the inverse of the square root
 
         if method == "global":
             if hasattr(kwargs, "constraint_separation_index"):
@@ -481,14 +483,30 @@ class TrappingSR3(ConstrainedSR3):
         sindy_loss = (y - np.dot(x, coef_sparse)) ** 2
         relax_loss = (A - PW) ** 2
         Qijk = np.einsum("ya,abcde,ed", self.mod_matrix, self.PQ_, coef_sparse)
+        # This is H0 in the paper
         Qijk_permsum = (
             Qijk + np.transpose(Qijk, [1, 2, 0]) + np.transpose(Qijk, [2, 0, 1])
-        ) ** 2
+        )
+        # This is H0tilde in the paper -- the thing we actually need to minimize
+        Qijk_permsum = np.tensordot(
+            self.rt_inv_mod_mat,
+            np.tensordot(
+                self.rt_inv_mod_mat,
+                np.tensordot(
+                    self.rt_inv_mod_mat,
+                    Qijk_permsum,
+                    axes=([1], [0])
+                ),
+                axes=([0], [1])
+            ),
+            axes=([0], [2])
+        )
+        # Qijk_permsum = np.einsum("ya,abc,bd,cf", self.rt_inv_mod_mat, Qijk_permsum, self.rt_inv_mod_mat, self.rt_inv_mod_mat)
         L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
         sindy_loss = 0.5 * np.sum(sindy_loss)
         relax_loss = 0.5 * np.sum(relax_loss) / self.eta
         nonlin_ens_loss = 0.5 * np.sum(Qijk**2) / self.alpha
-        cubic_ens_loss = 0.5 * np.sum(Qijk_permsum) / self.beta
+        cubic_ens_loss = 0.5 * np.sum(Qijk_permsum ** 2) / self.beta
 
         obj = sindy_loss + relax_loss + L1
         if self.method == "local":
@@ -513,13 +531,29 @@ class TrappingSR3(ConstrainedSR3):
             Q = np.reshape(
                 self.PQ_, (n_tgts * n_tgts * n_tgts, n_features * n_tgts), "F"
             )
-            cost = cost + cp.sum_squares(Q @ xi) / self.alpha
+            cost = cost + 0.5 * cp.sum_squares(Q @ xi) / self.alpha
             Q = np.reshape(self.PQ_, (n_tgts, n_tgts, n_tgts, n_features * n_tgts), "F")
+            Q = np.tensordot(self.mod_matrix, Q, axes=([1], [0]))
             Q_ep = Q + np.transpose(Q, [1, 2, 0, 3]) + np.transpose(Q, [2, 0, 1, 3])
-            Q_ep = np.reshape(
-                Q_ep, (n_tgts * n_tgts * n_tgts, n_features * n_tgts), "F"
+            # This is H0tilde in the paper -- the thing we actually need to minimize
+            Qijk_permsum = np.tensordot(
+                self.rt_inv_mod_mat,
+                np.tensordot(
+                    self.rt_inv_mod_mat,
+                    np.tensordot(
+                        self.rt_inv_mod_mat,
+                        Q_ep,
+                        axes=([1], [0])
+                    ),
+                    axes=([0], [1])
+                ),
+                axes=([0], [2])
             )
-            cost = cost + cp.sum_squares(Q_ep @ xi) / self.beta
+            #Qijk_permsum = np.einsum("ya,abcd,be,cf", self.rt_inv_mod_mat, Q_ep, self.rt_inv_mod_mat, self.rt_inv_mod_mat)
+            Qijk_permsum = np.reshape(
+                Qijk_permsum, (n_tgts * n_tgts * n_tgts, n_features * n_tgts), "F"
+            )
+            cost = cost + 0.5 * cp.sum_squares(Qijk_permsum @ xi) / self.beta
 
         return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
 
@@ -562,12 +596,28 @@ class TrappingSR3(ConstrainedSR3):
         hess += pTp / self.eta
         if self.method == "local":
             PQTPQ = np.tensordot(self.PQ_, self.PQ_, axes=([0, 1, 2], [0, 1, 2]))
+            # This is H0 in the paper
             PQ = np.einsum("ya,abcde->ybcde", self.mod_matrix, self.PQ_)
+            # This is H0tilde in the paper -- the thing we actually need to minimize
             PQ_ep = (
                 PQ
                 + np.transpose(PQ, [1, 2, 0, 3, 4])
                 + np.transpose(PQ, [2, 0, 1, 3, 4])
             )
+            PQ_ep = np.tensordot(
+                self.rt_inv_mod_mat,
+                np.tensordot(
+                    self.rt_inv_mod_mat,
+                    np.tensordot(
+                        self.rt_inv_mod_mat,
+                        PQ_ep,
+                        axes=([1], [0])
+                    ),
+                    axes=([0], [1])
+                ),
+                axes=([0], [2])
+            )
+            # np.einsum("ya,abcde,bg,ch", self.rt_inv_mod_mat, PQ_ep, self.rt_inv_mod_mat, self.rt_inv_mod_mat)
             PQTPQ_ep = np.tensordot(PQ_ep, PQ_ep, axes=([0, 1, 2], [0, 1, 2]))
             hess += PQTPQ / self.alpha + PQTPQ_ep / self.beta
 
@@ -598,7 +648,7 @@ class TrappingSR3(ConstrainedSR3):
         # prox-gradient descent for (A, m)
         # Calculate projection matrix from Quad terms to As
         mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
-        p = self.PL_ + mPM
+        p = self.PL_unsym_ + mPM
         p = np.einsum("ya,abcd,bz->yzcd", self.rt_mod_mat, p, self.rt_inv_mod_mat)
         p = (p + np.transpose(p, [1, 0, 2, 3])) / 2
         PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
@@ -701,7 +751,7 @@ class TrappingSR3(ConstrainedSR3):
             # update P tensor from the newest trap center
             mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
             P_A = np.einsum(
-                "ya,abcd,bz->yzcd", self.rt_mod_mat, self.PL_ + mPM, self.rt_inv_mod_mat
+                "ya,abcd,bz->yzcd", self.rt_mod_mat, self.PL_unsym_ + mPM, self.rt_inv_mod_mat
             )
             P_A = (P_A + np.transpose(P_A, [1, 0, 2, 3])) / 2
             Pmatrix = P_A.reshape(n_tgts * n_tgts, n_tgts * n_features)
@@ -895,6 +945,7 @@ def _equality_constrained_linlsq(
     """
     C = constraint_lhs
     d = constraint_rhs
+    # Careful with ill-conditioned matrices!
     inv1 = np.linalg.pinv(hess, rcond=1e-10)
     inv2 = np.linalg.pinv(C @ inv1 @ C.T, rcond=1e-10)
     return inv1 @ (grad_const + C.T @ inv2 @ (d - C @ inv1 @ grad_const))

@@ -165,6 +165,15 @@ def test_complexity_not_fitted(optimizer, data_derivative_2d):
     assert optimizer.complexity > 0
 
 
+@pytest.mark.parametrize("regularizer", ["weighted_l0", "weighted_l1", "weighted_l2"])
+def test_SR3_fit_bad_data_shape(regularizer, data_derivative_1d):
+    reg_weight = np.array([[1, 2, 3]])
+    optimizer = SR3(regularizer=regularizer, reg_weight=reg_weight)
+    with pytest.raises(ValueError):
+        x, x_dot = data_derivative_1d
+        optimizer.fit(x, x_dot)
+
+
 @pytest.mark.parametrize("kwargs", [{"normalize_columns": True}, {"copy_X": False}])
 def test_alternate_parameters(data_derivative_1d, kwargs):
     x, x_dot = data_derivative_1d
@@ -657,8 +666,8 @@ def test_prox_functions(data_derivative_1d, optimizer, regularizer):
     check_is_fitted(model)
 
 
-@pytest.mark.parametrize("thresholder", ["weighted_l0", "weighted_l1"])
-def test_weighted_prox_functions(data, thresholder):
+@pytest.mark.parametrize("regularizer", ["weighted_l0", "weighted_l1"])
+def test_weighted_prox_functions(data, regularizer):
     x, x_dot = data
     if x.ndim == 1:
         x = x.reshape(-1, 1)

@@ -50,10 +50,10 @@ class ConstrainedSR3(SR3):
         optional (default 0.005)
         Determines the strength of the regularization. When the
         regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding. Use the method calculate_l0_weight
-        to calculate the weight from the threshold.
+        is equivalent to performing hard thresholding.
+        Use the method calculate_l0_weight to calculate the weight from the threshold.
 
-        When using weighted regularization, this is the array of weights 
+        When using weighted regularization, this is the array of weights
         for each library function coefficient.
         Each row corresponds to a measurement variable and each column
         to a function from the feature library.
@@ -307,8 +307,8 @@ class ConstrainedSR3(SR3):
             constraints = []
             if self.equality_constraints:
                 constraints.append(
-                    self.constraint_lhs[self.constraint_separation_index:, :] @ xi
-                    == self.constraint_rhs[self.constraint_separation_index:],
+                    self.constraint_lhs[self.constraint_separation_index :, :] @ xi
+                    == self.constraint_rhs[self.constraint_separation_index :],
                 )
             if self.inequality_constraints:
                 constraints.append(

@@ -31,8 +31,8 @@ class SINDyPI(SR3):
         optional (default 0.1)
         Determines the strength of the regularization. When the
         regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding. Use the method calculate_l0_weight
-        to calculate the weight from the threshold.
+        is equivalent to performing hard thresholding.
+        Use the method calculate_l0_weight to calculate the weight from the threshold.
 
         When using weighted regularization, this is the array of weights
         for each library function coefficient.
@@ -154,17 +154,21 @@ class SINDyPI(SR3):
             regularizer = self.regularizer.lower()
             lam = self.reg_weight
             if regularizer == "l1":
-                cost = cp.sum_squares(x[:, i] - x @ xi) + \
-                    cp.sum(cp.multiply(lam, cp.abs(xi)))
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.sum(
+                    cp.multiply(lam, cp.abs(xi))
+                )
             elif regularizer == "weighted_l1":
-                cost = cp.sum_squares(x[:, i] - x @ xi) + \
-                    cp.sum(cp.multiply(lam[:, i], cp.abs(xi)))
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.sum(
+                    cp.multiply(lam[:, i], cp.abs(xi))
+                )
             elif regularizer == "l2":
-                cost = cp.sum_squares(x[:, i] - x @ xi) + \
-                    cp.sum(cp.multiply(lam, xi ** 2))
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.sum(
+                    cp.multiply(lam, xi**2)
+                )
             elif regularizer == "weighted_l2":
-                cost = cp.sum_squares(x[:, i] - x @ xi) + \
-                    cp.sum(cp.multiply(lam[:, i], xi ** 2))
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.sum(
+                    cp.multiply(lam[:, i], xi**2)
+                )
             prob = cp.Problem(
                 cp.Minimize(cost),
                 [xi[i] == 0.0],

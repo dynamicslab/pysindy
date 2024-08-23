@@ -1,4 +1,5 @@
 import warnings
+from typing import Union
 
 import numpy as np
 from scipy.linalg import cho_factor
@@ -38,10 +39,10 @@ class SR3(BaseOptimizer):
         optional (default 0.005)
         Determines the strength of the regularization. When the
         regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding. Use the method calculate_l0_weight
-        to calculate the weight from the threshold.
+        is equivalent to performing hard thresholding.
+        Use the method calculate_l0_weight to calculate the weight from the threshold.
 
-        When using weighted regularization, this is the array of weights 
+        When using weighted regularization, this is the array of weights
         for each library function coefficient.
         Each row corresponds to a measurement variable and each column
         to a function from the feature library.
@@ -179,13 +180,17 @@ class SR3(BaseOptimizer):
                 "Please use a valid thresholder, l0, l1, l2, "
                 "weighted_l0, weighted_l1, weighted_l2."
             )
-        if regularizer[:8].lower() == "weighted" and not isinstance(reg_weight, np.ndarray):
+        if regularizer[:8].lower() == "weighted" and not isinstance(
+            reg_weight, np.ndarray
+        ):
             raise ValueError(
-                "weighted regularization requires the reg_weight parameter to be a 2d array"
+                "weighted regularization requires the reg_weight parameter "
+                "to be a 2d array"
             )
         if np.any(reg_weight < 0):
             raise ValueError("reg_weight cannot contain negative entries")
-
+        if isinstance(reg_weight, np.ndarray):
+            reg_weight = reg_weight.T
         self.reg_weight = reg_weight
         self.nu = nu
         self.tol = tol
@@ -201,8 +206,8 @@ class SR3(BaseOptimizer):
         self.verbose = verbose
 
     @staticmethod
-    def calculate_l0_weight(threshold: float, nu: float):
-        return (threshold ** 2) / (2 * nu)
+    def calculate_l0_weight(threshold: Union[float, np.ndarray[np.float64]], nu: float):
+        return (threshold**2) / (2 * nu)
 
     def enable_trimming(self, trimming_fraction):
         """

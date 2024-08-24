@@ -106,7 +106,7 @@ def check_local_stability(Xi, sindy_opt, mean_val):
     print("Estimate of trapping region size, Rm = ", Rm)
     if not np.isclose(mean_val, 1.0):
         print("Normalized trapping region size, Reff = ", Reff)
-    print("Local stability size, R_ls= ", R_ls)
+        print("Local stability size, R_ls= ", R_ls)
     return Rm, R_ls
 
 

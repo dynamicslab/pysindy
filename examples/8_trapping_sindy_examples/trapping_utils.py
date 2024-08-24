@@ -43,14 +43,13 @@ def obj_function(m, L_obj, Q_obj, P_obj):
     eigvals, eigvecs = np.linalg.eigh(As)
     return eigvals[-1]
 
-def get_trapping_radius(max_eigval, eps_Q, r, d):
+def get_trapping_radius(max_eigval, eps_Q, d):
     x = Symbol("x")
     delta = max_eigval**2 - 4 * eps_Q * np.linalg.norm(d, 2) / 3
     delta_func = max_eigval**2 - 4 * x * np.linalg.norm(d, 2) / 3
-    if delta < 0:
-        rad_trap = 0
-        rad_stab = 0
-    else:
+    rad_trap = 0
+    rad_stab = 0
+    if max_eigval < 0 and delta >= 0:
         y_trap = -(3 / (2 * x)) * (max_eigval + sp.sqrt(delta_func))
         y_stab = (3 / (2 * x)) * (-max_eigval + sp.sqrt(delta_func))
         rad_trap = limit(y_trap, x, eps_Q, dir="+")
@@ -58,7 +57,7 @@ def get_trapping_radius(max_eigval, eps_Q, r, d):
     return rad_trap, rad_stab
 
 
-def check_local_stability(r, Xi, sindy_opt, mean_val):
+def check_local_stability(Xi, sindy_opt, mean_val):
     mod_matrix = sindy_opt.mod_matrix
     rt_mod_mat = sindy_opt.rt_mod_mat
     rt_inv_mod_mat = sindy_opt.rt_inv_mod_mat
@@ -102,7 +101,7 @@ def check_local_stability(r, Xi, sindy_opt, mean_val):
     Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
     d = C + np.dot(L, opt_m) + np.dot(np.tensordot(Q, opt_m, axes=([2], [0])), opt_m)
     d = rt_mod_mat @ d
-    Rm, R_ls = get_trapping_radius(max_eigval, eps_Q, r, d)
+    Rm, R_ls = get_trapping_radius(max_eigval, eps_Q, d)
     Reff = Rm / mean_val
     print("Estimate of trapping region size, Rm = ", Rm)
     if not np.isclose(mean_val, 1.0):

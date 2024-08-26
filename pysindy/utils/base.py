@@ -189,9 +189,10 @@ def get_prox(
 
     Returns:
     --------
-    proximal_operator: (x: np.array, regularization_weight: float | np.array) -> np.array
+    proximal_operator: (x: np.array, reg_weight: float | np.array) -> np.array
         A function that takes an input x of shape (n_targets, n_features)
-        and regularization weight factor which can be a scalar or an array of shape (n_targets, n_features),
+        and regularization weight factor which can be a scalar or 
+        an array of shape (n_targets, n_features),
         and returns an array of shape (n_targets, n_features)
     """
 
@@ -249,9 +250,10 @@ def get_regularization(
 
     Returns:
     --------
-    regularization_function: (x: np.array, regularization_weight: float | np.array) -> np.array
+    regularization_function: (x: np.array, reg_weight: float | np.array) -> np.array
         A function that takes an input x of shape (n_targets, n_features)
-        and regularization weight factor which can be a scalar or an array of shape (n_targets, n_features),
+        and regularization weight factor which can be a scalar or 
+        an array of shape (n_targets, n_features),
         and returns a float
     """
 

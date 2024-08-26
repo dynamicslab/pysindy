@@ -390,12 +390,12 @@ def test_sbr_accurate():
     [
         dict(thresholder="l1", threshold=0),
         dict(thresholder="l1", threshold=1e-5),
-        dict(thresholder="weighted_l1", thresholds=np.zeros((9, 3))),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((9, 3))),
+        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
         dict(thresholder="l2", threshold=0),
         dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((9, 3))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((9, 3))),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
     ],
 )
 def test_sr3_quadratic_library(params):
@@ -426,12 +426,12 @@ def test_sr3_quadratic_library(params):
     [
         dict(thresholder="l1", threshold=0),
         dict(thresholder="l1", threshold=1e-5),
-        dict(thresholder="weighted_l1", thresholds=np.zeros((9, 3))),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((9, 3))),
+        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
         dict(thresholder="l2", threshold=0),
         dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((9, 3))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((9, 3))),
+        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 9))),
+        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
     ],
 )
 def test_constrained_sr3_quadratic_library(params):
@@ -881,9 +881,9 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
     "params",
     [
         dict(thresholder="l1", threshold=0.0005),
-        dict(thresholder="weighted_l1", thresholds=0.0005 * np.ones((10, 3))),
+        dict(thresholder="weighted_l1", thresholds=0.0005 * np.ones((3, 10))),
         dict(thresholder="l2", threshold=0.0005),
-        dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((10, 3))),
+        dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 10))),
     ],
 )
 def test_constrained_inequality_constraints(data_lorenz, params):

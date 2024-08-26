@@ -212,7 +212,7 @@ class SR3(BaseOptimizer):
         self.thresholds = thresholds
         self.nu = nu
         if thresholds is not None:
-            self.lam = thresholds**2 / (2 * nu)
+            self.lam = thresholds.T**2 / (2 * nu)
         else:
             self.lam = threshold**2 / (2 * nu)
         self.tol = tol

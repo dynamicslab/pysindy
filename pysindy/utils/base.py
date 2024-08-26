@@ -156,17 +156,19 @@ def reorder_constraints(arr, n_features, output_order="feature"):
 
 def validate_prox_and_reg_inputs(func, regularization):
     def wrapper(x, regularization_weight):
-        # Example validation: check if both a and b are positive integers
-        if regularization[:8] == 'weighted' and \
-                (not isinstance(regularization_weight, np.ndarray) or (regularization_weight.shape != x.shape)):
-            raise ValueError(
-                f"Invalid shape for 'regularization_weight': {
-                    regularization_weight.shape if isinstance(regularization, np.ndarray) else '()'}. Must be the same shape as x: {x.shape}."
-            )
-        elif regularization[:8] != 'weighted' and not isinstance(regularization_weight, (int, float)) \
-                and (isinstance(regularization_weight, np.ndarray) and regularization_weight.shape not in [(1, 1), (1,)]):
-            raise ValueError("'regularization_weight' must be a scalar")
-        # If validation passes, call the original function
+        if regularization[:8] == 'weighted':
+            if not isinstance(regularization_weight, np.ndarray):
+                raise ValueError(
+                    f"'regularization_weight' must be an array of shape {x.shape}.")
+            if regularization_weight.shape != x.shape:
+                raise ValueError(
+                    f"Invalid shape for 'regularization_weight': {
+                        regularization_weight.shape}. Must be the same shape as x: {x.shape}."
+                )
+        else:
+            if not isinstance(regularization_weight, (int, float)) \
+                    and (isinstance(regularization_weight, np.ndarray) and regularization_weight.shape not in [(1, 1), (1,)]):
+                raise ValueError("'regularization_weight' must be a scalar")
         return func(x, regularization_weight)
 
     return wrapper
@@ -182,7 +184,7 @@ def get_prox(
     regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' | 'l2' | 'weighted_l2'
 
     Returns:
-    proximal_operator: (x: np.array, regularization_weight: float | np,array) -> np.array
+    proximal_operator: (x: np.array, regularization_weight: float | np.array) -> np.array
         A function that takes an input x of shape (n_targets, n_features)
         and regularization weight factor which can be a scalar or an array of shape (n_targets, n_features),
         and returns an array of shape (n_targets, n_features)
@@ -197,13 +199,8 @@ def get_prox(
         x: NDArray[np.float64], regularization_weight: NDArray[np.float64]
     ):
         """Proximal operator for weighted l0 regularization."""
-        y = np.zeros(np.shape(x))
         threshold = np.sqrt(2 * regularization_weight)
-        m, n = regularization_weight.shape
-        for i in range(m):
-            for j in range(n):
-                y[i, j] = x[i, j] * (np.abs(x[i, j]) > threshold[i, j])
-        return y
+        return x * (np.abs(x) > threshold)
 
     def prox_l1(x: NDArray[np.float64], regularization_weight: np.float64):
         """Proximal operator for L1 regularization."""
@@ -213,9 +210,7 @@ def get_prox(
         x: NDArray[np.float64], regularization_weight: NDArray[np.float64]
     ):
         """Proximal operator for weighted l1 regularization."""
-        return np.sign(x) * np.maximum(
-            np.abs(x) - regularization_weight, np.zeros(x.shape)
-        )
+        return np.sign(x) * np.maximum(np.abs(x) - regularization_weight, 0)
 
     def prox_l2(x: NDArray[np.float64], regularization_weight: np.float64):
         """Proximal operator for ridge regularization."""
@@ -236,10 +231,7 @@ def get_prox(
         "weighted_l2": prox_weighted_l2,
     }
     regularization = regularization.lower()
-    if regularization in prox:
-        return validate_prox_and_reg_inputs(prox[regularization], regularization)
-    else:
-        raise NotImplementedError("{} has not been implemented".format(regularization))
+    return validate_prox_and_reg_inputs(prox[regularization], regularization)
 
 
 def get_regularization(
@@ -250,7 +242,7 @@ def get_regularization(
     regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' | 'l2' | 'weighted_l2'
 
     Returns:
-    regularization_function: (x: np.array, regularization_weight: float) -> np.array
+    regularization_function: (x: np.array, regularization_weight: float | np.array) -> np.array
         A function that takes an input x of shape (n_targets, n_features)
         and regularization weight factor which can be a scalar or an array of shape (n_targets, n_features),
         and returns a float
@@ -260,22 +252,22 @@ def get_regularization(
         return regularization_weight * np.count_nonzero(x)
 
     def regualization_weighted_l0(
-        x: NDArray[np.float64], regularization_weight: np.float64
+        x: NDArray[np.float64], regularization_weight: NDArray[np.float64]
     ):
         return np.sum(regularization_weight[np.nonzero(x)])
 
     def regularization_l1(
-        x: NDArray[np.float64], regularization_weight: NDArray[np.float64]
-    ):
-        return np.sum(regularization_weight * np.abs(x))
-
-    def regualization_weighted_l1(
         x: NDArray[np.float64], regularization_weight: np.float64
     ):
         return np.sum(regularization_weight * np.abs(x))
 
-    def regularization_l2(
+    def regualization_weighted_l1(
         x: NDArray[np.float64], regularization_weight: NDArray[np.float64]
+    ):
+        return np.sum(regularization_weight * np.abs(x))
+
+    def regularization_l2(
+        x: NDArray[np.float64], regularization_weight: np.float64
     ):
         return np.sum(regularization_weight * x**2)
 
@@ -293,10 +285,7 @@ def get_regularization(
         "weighted_l2": regualization_weighted_l2,
     }
     regularization = regularization.lower()
-    if regularization in regularization_fn:
-        return validate_prox_and_reg_inputs(regularization_fn[regularization], regularization)
-    else:
-        raise NotImplementedError("{} has not been implemented".format(regularization))
+    return validate_prox_and_reg_inputs(regularization_fn[regularization], regularization)
 
 
 def capped_simplex_projection(trimming_array, trimming_fraction):

@@ -1,5 +1,4 @@
 import warnings
-from functools import wraps
 from itertools import repeat
 from typing import Callable
 from typing import Sequence
@@ -156,18 +155,22 @@ def reorder_constraints(arr, n_features, output_order="feature"):
 
 def validate_prox_and_reg_inputs(func, regularization):
     def wrapper(x, regularization_weight):
-        if regularization[:8] == 'weighted':
+        if regularization[:8] == "weighted":
             if not isinstance(regularization_weight, np.ndarray):
                 raise ValueError(
-                    f"'regularization_weight' must be an array of shape {x.shape}.")
-            if regularization_weight.shape != x.shape:
+                    f"'regularization_weight' must be an array of shape {x.shape}."
+                )
+            weight_shape = regularization_weight.shape
+            if weight_shape != x.shape:
                 raise ValueError(
-                    f"Invalid shape for 'regularization_weight': {
-                        regularization_weight.shape}. Must be the same shape as x: {x.shape}."
+                    f"Invalid shape for 'regularization_weight': \
+                        {weight_shape}. Must be the same shape as x: {x.shape}."
                 )
         else:
-            if not isinstance(regularization_weight, (int, float)) \
-                    and (isinstance(regularization_weight, np.ndarray) and regularization_weight.shape not in [(1, 1), (1,)]):
+            if not isinstance(regularization_weight, (int, float)) and (
+                isinstance(regularization_weight, np.ndarray)
+                and regularization_weight.shape not in [(1, 1), (1,)]
+            ):
                 raise ValueError("'regularization_weight' must be a scalar")
         return func(x, regularization_weight)
 
@@ -260,9 +263,7 @@ def get_regularization(
     ):
         return np.sum(regularization_weight[np.nonzero(x)])
 
-    def regularization_l1(
-        x: NDArray[np.float64], regularization_weight: np.float64
-    ):
+    def regularization_l1(x: NDArray[np.float64], regularization_weight: np.float64):
         return np.sum(regularization_weight * np.abs(x))
 
     def regualization_weighted_l1(
@@ -270,9 +271,7 @@ def get_regularization(
     ):
         return np.sum(regularization_weight * np.abs(x))
 
-    def regularization_l2(
-        x: NDArray[np.float64], regularization_weight: np.float64
-    ):
+    def regularization_l2(x: NDArray[np.float64], regularization_weight: np.float64):
         return np.sum(regularization_weight * x**2)
 
     def regualization_weighted_l2(
@@ -289,7 +288,9 @@ def get_regularization(
         "weighted_l2": regualization_weighted_l2,
     }
     regularization = regularization.lower()
-    return validate_prox_and_reg_inputs(regularization_fn[regularization], regularization)
+    return validate_prox_and_reg_inputs(
+        regularization_fn[regularization], regularization
+    )
 
 
 def capped_simplex_projection(trimming_array, trimming_fraction):

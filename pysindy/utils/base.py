@@ -181,9 +181,11 @@ def get_prox(
 ]:
     """
     Args:
+    -----
     regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' | 'l2' | 'weighted_l2'
 
     Returns:
+    --------
     proximal_operator: (x: np.array, regularization_weight: float | np.array) -> np.array
         A function that takes an input x of shape (n_targets, n_features)
         and regularization weight factor which can be a scalar or an array of shape (n_targets, n_features),
@@ -239,9 +241,11 @@ def get_regularization(
 ) -> Callable[[NDArray[np.float64], Union[np.float64, NDArray[np.float64]]], float]:
     """
     Args:
+    -----
     regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' | 'l2' | 'weighted_l2'
 
     Returns:
+    --------
     regularization_function: (x: np.array, regularization_weight: float | np.array) -> np.array
         A function that takes an input x of shape (n_targets, n_features)
         and regularization weight factor which can be a scalar or an array of shape (n_targets, n_features),

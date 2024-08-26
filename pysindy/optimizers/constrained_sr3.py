@@ -269,16 +269,29 @@ class ConstrainedSR3(SR3):
         return inv1.dot(rhs)
 
     @staticmethod
-    def _calculate_penalty(regularizer, lam, xi: cp.Variable) -> cp.Expression:
-        regularizer = regularizer.lower()
-        if regularizer == "l1":
-            return lam * cp.sum(cp.abs(xi))
-        elif regularizer == "weighted_l1":
-            return cp.sum(cp.multiply(np.ravel(lam), cp.abs(xi)))
-        elif regularizer == "l2":
-            return lam * cp.sum(xi**2)
-        elif regularizer == "weighted_l2":
-            return cp.sum(cp.multiply(np.ravel(lam), xi**2))
+    def _calculate_penalty(
+        regularization: str, regularization_weight, xi: cp.Variable
+    ) -> cp.Expression:
+        """
+        Args:
+        -----
+        regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' | 'l2' | 'weighted_l2'
+        regularization_weight: float | np.array, can be a scalar or an array of shape (n_targets, n_features)
+        xi: cp.Variable
+
+        Returns:
+        --------
+        cp.Expression
+        """
+        regularization = regularization.lower()
+        if regularization == "l1":
+            return regularization_weight * cp.sum(cp.abs(xi))
+        elif regularization == "weighted_l1":
+            return cp.sum(cp.multiply(np.ravel(regularization_weight), cp.abs(xi)))
+        elif regularization == "l2":
+            return regularization_weight * cp.sum(xi**2)
+        elif regularization == "weighted_l2":
+            return cp.sum(cp.multiply(np.ravel(regularization_weight), xi**2))
 
     def _create_var_and_part_cost(
         self, var_len: int, x_expanded: np.ndarray, y: np.ndarray

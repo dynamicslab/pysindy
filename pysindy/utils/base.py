@@ -163,15 +163,11 @@ def validate_prox_and_reg_inputs(func, regularization):
             weight_shape = regularization_weight.shape
             if weight_shape != x.shape:
                 raise ValueError(
-                    f"Invalid shape for 'regularization_weight': \
-                        {weight_shape}. Must be the same shape as x: {x.shape}."
+                    f"Invalid shape for 'regularization_weight':"
+                    f"{weight_shape}. Must be the same shape as x: {x.shape}."
                 )
-        else:
-            if not isinstance(regularization_weight, (int, float)) and (
-                isinstance(regularization_weight, np.ndarray)
-                and regularization_weight.shape not in [(1, 1), (1,)]
-            ):
-                raise ValueError("'regularization_weight' must be a scalar")
+        elif not isinstance(regularization_weight, (int, float)):
+            raise ValueError("'regularization_weight' must be a scalar")
         return func(x, regularization_weight)
 
     return wrapper

@@ -279,8 +279,8 @@ class ConstrainedSR3(SR3):
         regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' |
                         'l2' | 'weighted_l2'
         regularization_weight: float | np.array, can be a scalar
-                               or an array of shape (n_targets, n_features)
-        xi: cp.Variable
+                               or an array of shape (m, n)
+        xi: cp.Variable of length m*n
 
         Returns:
         --------

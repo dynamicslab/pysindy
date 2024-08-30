@@ -14,6 +14,12 @@ import dysts.flows as flows
 from dysts.analysis import sample_initial_conditions
 import pymech.neksuite as nek
 
+from pysindy.optimizers.trapping_sr3 import EnstrophyMat
+from pysindy.optimizers.trapping_sr3 import _convert_quad_terms_to_ens_basis
+from pysindy.optimizers.trapping_sr3 import _create_A_symm
+from pysindy.optimizers.trapping_sr3 import _permutation_asymmetry
+
+
 # Initialize quadratic SINDy library, with custom ordering
 # to be consistent with the constraint
 sindy_library = ps.PolynomialLibrary(include_bias=True)
@@ -32,16 +38,11 @@ nGLL = 7  # Order of the spectral mesh
 
 # define the objective function to be minimized by simulated annealing
 def obj_function(m, L_obj, Q_obj, P_obj):
-    lsv, sing_vals, rsv = np.linalg.svd(P_obj)
-    P_rt = lsv @ np.diag(np.sqrt(sing_vals)) @ rsv
-    P_rt_inv = lsv @ np.diag(np.sqrt(1 / sing_vals)) @ rsv
-    mQ_full = np.tensordot(Q_obj, m, axes=([2], [0])) + np.tensordot(
-        Q_obj, m, axes=([1], [0])
-    )
-    A_obj = L_obj + mQ_full
-    As = (P_rt @ A_obj @ P_rt_inv + P_rt_inv @ A_obj.T @ P_rt) / 2
+    ens = EnstrophyMat(P_obj)
+    As = _create_A_symm(L_obj, 2 * Q_obj, m, ens)
     eigvals, eigvecs = np.linalg.eigh(As)
     return eigvals[-1]
+
 
 def get_trapping_radius(max_eigval, eps_Q, d):
     x = Symbol("x")
@@ -57,48 +58,29 @@ def get_trapping_radius(max_eigval, eps_Q, d):
     return rad_trap, rad_stab
 
 
-def check_local_stability(Xi, sindy_opt, mean_val):
-    mod_matrix = sindy_opt.mod_matrix
-    rt_mod_mat = sindy_opt.rt_mod_mat
-    rt_inv_mod_mat = sindy_opt.rt_inv_mod_mat
+def check_local_stability(Xi, sindy_opt: ps.TrappingSR3, mean_val):
+    mod_matrix = sindy_opt.enstrophy.P
+    rt_mod_mat = sindy_opt.enstrophy.P_root
     opt_m = sindy_opt.m_history_[-1]
     PC_tensor = sindy_opt.PC_
     PL_tensor_unsym = sindy_opt.PL_unsym_
-    PL_tensor = sindy_opt.PL_
     PM_tensor = sindy_opt.PM_
     PQ_tensor = sindy_opt.PQ_
-    mPM = np.tensordot(PM_tensor, opt_m, axes=([2], [0]))
-    P_tensor = PL_tensor_unsym + mPM
-    As = np.tensordot(P_tensor, Xi, axes=([3, 2], [0, 1]))
-    As = (rt_mod_mat @ As @ rt_inv_mod_mat + rt_inv_mod_mat @ As.T @ rt_mod_mat) / 2
+    p_As = _create_A_symm(PL_tensor_unsym, PM_tensor, opt_m, sindy_opt.enstrophy)
+    As = np.tensordot(p_As, Xi, axes=([3, 2], [0, 1]))
     eigvals, _ = np.linalg.eigh(As)
     print("optimal m: ", opt_m)
     print("As eigvals: ", np.sort(eigvals))
     max_eigval = np.sort(eigvals)[-1]
     C = np.tensordot(PC_tensor, Xi, axes=([2, 1], [0, 1]))
     L = np.tensordot(PL_tensor_unsym, Xi, axes=([3, 2], [0, 1]))
-    Q = np.tensordot(
-        mod_matrix, np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1])), axes=([1], [0])
-    )
-    Q = (Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1]))
-    Q = np.tensordot(
-        rt_inv_mod_mat,
-        np.tensordot(
-            rt_inv_mod_mat,
-            np.tensordot(
-                rt_inv_mod_mat,
-                Q,
-                axes=([1], [0])
-            ),
-            axes=([0], [1])
-        ),
-        axes=([0], [2])
-    )
-    # Q = np.einsum("ya,abc,bd,cf", rt_inv_mod_mat, Q, rt_inv_mod_mat, rt_inv_mod_mat)
-    eps_Q = np.sqrt(np.sum(Q ** 2))
-    print(r'0.5 * |tilde{H}_0|_F = ', 0.5 * eps_Q)
-    print(r'0.5 * |tilde{H}_0|_F^2 / beta = ', 0.5 * eps_Q ** 2 / sindy_opt.beta)
     Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
+    PQ = np.tensordot(mod_matrix, Q, axes=([1], [0]))
+    H0 = _permutation_asymmetry(PQ) * 3
+    H0tilde = _convert_quad_terms_to_ens_basis(H0, sindy_opt.enstrophy)
+    eps_Q = np.sqrt(np.sum(H0tilde**2))
+    print(r"0.5 * |tilde{H}_0|_F = ", 0.5 * eps_Q)
+    print(r"0.5 * |tilde{H}_0|_F^2 / beta = ", 0.5 * eps_Q**2 / sindy_opt.beta)
     d = C + np.dot(L, opt_m) + np.dot(np.tensordot(Q, opt_m, axes=([2], [0])), opt_m)
     d = rt_mod_mat @ d
     Rm, R_ls = get_trapping_radius(max_eigval, eps_Q, d)
@@ -112,8 +94,8 @@ def check_local_stability(Xi, sindy_opt, mean_val):
 
 # use optimal m, calculate and plot the stability radius when the third-order
 # energy-preserving scheme slightly breaks
-def make_trap_progress_plots(r, sindy_opt):
-    mod_matrix = sindy_opt.mod_matrix
+def make_trap_progress_plots(r, sindy_opt: ps.TrappingSR3):
+    mod_matrix = sindy_opt.enstrophy.P
     PC_tensor = sindy_opt.PC_
     PL_tensor_unsym = sindy_opt.PL_unsym_
     PQ_tensor = sindy_opt.PQ_
@@ -132,42 +114,23 @@ def make_trap_progress_plots(r, sindy_opt):
                 np.tensordot(PQ_tensor, Xi, axes=([4, 3], [1, 0])),
                 axes=([1], [0]),
             )
-            Q_ep = (Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1]))
-            Qijk_permsum = np.tensordot(
-                sindy_opt.rt_inv_mod_mat,
-                np.tensordot(
-                    sindy_opt.rt_inv_mod_mat,
-                    np.tensordot(
-                        sindy_opt.rt_inv_mod_mat,
-                        Q_ep,
-                        axes=([1], [0])
-                    ),
-                    axes=([0], [1])
-                ),
-                axes=([0], [2])
-            )
-            eps_Q = np.sqrt(np.sum(Qijk_permsum ** 2))
+            Q_ep = _permutation_asymmetry(Q) * 3
+            Qijk_permsum = _convert_quad_terms_to_ens_basis(Q_ep, sindy_opt.enstrophy)
+            eps_Q = np.sqrt(np.sum(Qijk_permsum**2))
             Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [1, 0]))
             d = (
                 C
                 + np.dot(L, ms[i])
                 + np.dot(np.tensordot(Q, ms[i], axes=([2], [0])), ms[i])
             )
-            d = sindy_opt.rt_mod_mat @ d
-            delta = (
-                eigs[i][-1] ** 2
-                - 4 * eps_Q * np.linalg.norm(d, 2) / 3
-            )
+            d = sindy_opt.enstrophy.P_root @ d
+            delta = eigs[i][-1] ** 2 - 4 * eps_Q * np.linalg.norm(d, 2) / 3
             if delta < 0:
                 Rm = 0
                 DA = 0
             else:
-                Rm = -(3 / (2 * eps_Q)) * (
-                    eigs[i][-1] + np.sqrt(delta)
-                )
-                DA = (3 / (2 * eps_Q)) * (
-                    -eigs[i][-1] + np.sqrt(delta)
-                )
+                Rm = -(3 / (2 * eps_Q)) * (eigs[i][-1] + np.sqrt(delta))
+                DA = (3 / (2 * eps_Q)) * (-eigs[i][-1] + np.sqrt(delta))
             rhos_plus.append(DA)
             rhos_minus.append(Rm)
     try:

@@ -159,7 +159,7 @@ mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
 E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
 print("Frobenius error = ", E_pred)
-check_local_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
 sigma = 10
@@ -327,7 +327,7 @@ Lenergy = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Qenergy = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
-check_local_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 Q = np.tensordot(sindy_opt.PQ_, Xi, axes=([4, 3], [0, 1]))
 
 # %% [markdown]
@@ -358,7 +358,7 @@ mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
 E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
 print("Frobenius error = ", E_pred)
-check_local_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
 coef_pred = np.linalg.norm(Xi_lorenz - Xi) / np.linalg.norm(Xi_lorenz)
@@ -412,7 +412,7 @@ Lenergy = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Qenergy = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
-check_local_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 Q = np.tensordot(sindy_opt.PQ_, Xi, axes=([4, 3], [0, 1]))
 print(
     "Maximum deviation from having zero totally symmetric part: ",
@@ -473,7 +473,7 @@ Lenergy = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Qenergy = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
-check_local_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 Q = np.tensordot(sindy_opt.PQ_, Xi, axes=([4, 3], [0, 1]))
 print(
     "Maximum deviation from having zero totally symmetric part: ",
@@ -512,7 +512,7 @@ mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
 E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
 print("Frobenius error = ", E_pred)
-check_local_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
 coef_pred = np.linalg.norm(Xi_lorenz - Xi) / np.linalg.norm(Xi_lorenz)

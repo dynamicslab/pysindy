@@ -255,7 +255,7 @@ for i in range(len(systems_list)):
     plt.grid(True)
     plt.legend()
 
-    check_local_stability(r, Xi, sindy_opt, 1.0)
+    check_local_stability(Xi, sindy_opt, 1.0)
     Xi_true = (true_coefficients[i].T)[: Xi.shape[0], :]
 
     # run simulated annealing on the true system to make sure the system is amenable to trapping theorem
@@ -356,7 +356,7 @@ for i in range(len(stable_systems_list)):
     x_test_pred = model.simulate(x_test[0, :], t, integrator_kws=integrator_keywords)
 
     # Check stability and try simulated annealing with the IDENTIFIED model
-    check_local_stability(r, Xi, sindy_opt, 1.0)
+    check_local_stability(Xi, sindy_opt, 1.0)
     PL_tensor = sindy_opt.PL_
     PM_tensor = sindy_opt.PM_
     L = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
@@ -483,7 +483,7 @@ model = ps.SINDy(
 
 model.fit(x_train, t=t_train)
 Xi = model.coefficients().T
-check_local_stability(r, Xi, sindy_opt, 1.0)
+check_local_stability(Xi, sindy_opt, 1.0)
 
 # Fit a baseline model -- this is almost always an unstable model!
 model_baseline = ps.SINDy(

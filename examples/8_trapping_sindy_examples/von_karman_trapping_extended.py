@@ -604,7 +604,7 @@ mean_val = np.mean(a, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
 check_stability(r, Xi, sindy_opt, mean_val, mod_matrix)
 
-check_local_stability(r, Xi, sindy_opt, mean_val, mod_matrix)
+check_local_stability(Xi, sindy_opt, mean_val, mod_matrix)
 enstrophy_model = model
 Q = np.tensordot(sindy_opt.PQ_, Xi, axes=([4, 3], [0, 1]))
 Q = np.tensordot(mod_matrix, Q, axes=([1], [0]))

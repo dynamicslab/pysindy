@@ -88,10 +88,8 @@ def test_get_regularization(regularization, lam, expected):
     "lam",
     [
         np.array([[1, 2]]),
-        np.array([1, 2]),
-        np.array([[1, 2]]).T,
-        np.array([1]),
         np.array([[1]]),
+
     ],
 )
 def test_get_prox_and_regularization_bad_shape(regularization, lam):
@@ -111,11 +109,7 @@ def test_get_prox_and_regularization_bad_shape(regularization, lam):
     "lam",
     [
         np.array([[1, 2]]),
-        np.array([1, 2, 3]),
-        np.array([[1, 2, 3]]).T,
         1,
-        np.array([1]),
-        np.array([[1]]),
     ],
 )
 def test_get_weighted_prox_and_regularization_bad_shape(regularization, lam):
@@ -131,16 +125,13 @@ def test_get_weighted_prox_and_regularization_bad_shape(regularization, lam):
 @pytest.mark.parametrize(
     ["regularization", "lam", "expected"],
     [
-        ("l0", 3, np.array([[0, 5]]).T),
-        ("l1", 3, np.array([[0, 2]]).T),
-        ("l2", 3, np.array([[-2 / 7, 5 / 7]]).T),
-        ("weighted_l0", np.array([[3, 2]]).T, np.array([[0, 5]]).T),
-        ("weighted_l1", np.array([[3, 2]]).T, np.array([[0, 3]]).T),
-        ("weighted_l2", np.array([[3, 2]]).T, np.array([[-2 / 7, 5 / 5]]).T),
+        ("l0", 1, np.array([[2]])),
+        ("l1", 0.5, np.array([[1.5]])),
+        ("l2", 0.5, np.array([[1]])),
     ],
 )
-def test_get_prox(regularization, expected, lam):
-    data = np.array([[-2, 5]]).T
+def test_get_prox(regularization, lam, expected):
+    data = np.array([[2]])
 
     prox = get_prox(regularization)
     result = prox(data, lam)

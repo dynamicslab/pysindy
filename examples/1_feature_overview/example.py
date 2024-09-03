@@ -7,6 +7,8 @@
 # An interactive version of this notebook is available on binder.
 # [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dynamicslab/pysindy/v1.7.3?filepath=examples/1_feature_overview.ipynb)
 # In[1]:
+from scipy.io import loadmat
+import pandas as pd
 import warnings
 from contextlib import contextmanager
 from copy import copy
@@ -288,8 +290,6 @@ model.print()
 # In[15]:
 
 
-import pandas as pd
-
 # Create a dataframe with entries corresponding to measurements and
 # indexed by the time at which the measurements were taken
 df = pd.DataFrame(data=x_train, columns=["x", "y", "z"], index=t_train)
@@ -336,7 +336,7 @@ model.print()
 # In[18]:
 
 
-sr3_optimizer = ps.SR3(threshold=0.1, thresholder="l1")
+sr3_optimizer = ps.SR3(reg_weight=0.1, regularizer="l1")
 
 model = ps.SINDy(optimizer=sr3_optimizer)
 model.fit(x_train, t=dt)
@@ -374,19 +374,20 @@ model.print()
 # In[20]:
 
 
-sr3_optimizer = ps.SR3(threshold=0.1, thresholder="l0")
+weight = ps.SR3.calculate_l0_weight(0.1, 1)
+sr3_optimizer = ps.SR3(reg_weight=weight, regularizer="l0")
 with ignore_specific_warnings():
     model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)
 print("L0 regularizer: ")
 model.print()
 
-sr3_optimizer = ps.SR3(threshold=0.1, thresholder="l1")
+sr3_optimizer = ps.SR3(reg_weight=0.1, regularizer="l1")
 with ignore_specific_warnings():
     model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)
 print("L1 regularizer: ")
 model.print()
 
-sr3_optimizer = ps.SR3(threshold=0.1, thresholder="l2")
+sr3_optimizer = ps.SR3(reg_weight=0.1, regularizer="l2")
 with ignore_specific_warnings():
     model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)
 print("L2 regularizer: ")
@@ -400,15 +401,15 @@ model.print()
 
 
 # Without thresholds matrix
-sr3_optimizer = ps.SR3(threshold=0.1, thresholder="l0")
-model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)
+weight = ps.SR3.calculate_l0_weight(0.1, 1)
+sr3_optimizer = ps.SR3(reg_weight=0.1, regularizer="l0")
 print("Threshold = 0.1 for all terms")
 model.print()
 
 # With thresholds matrix
-thresholds = 2 * np.ones((3, 10))
-thresholds[4:, :] = 0.1
-sr3_optimizer = ps.SR3(thresholder="weighted_l0", thresholds=thresholds)
+weights = 2 * np.ones((3, 10))
+weights[4:, :] = ps.SR3.calculate_l0_weight(0.1, 1)
+sr3_optimizer = ps.SR3(regularizer="weighted_l0", reg_weight=weights)
 model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)
 print("Threshold = 0.1 for quadratic terms, else threshold = 1")
 model.print()
@@ -455,13 +456,13 @@ model.print()
 
 # In[24]:
 
-
+weight = ps.ConstrainedSR3.calculate_l0_weight(10, 1)
 # Try with normalize columns (doesn't work with constraints!!!)
 optimizer = ps.ConstrainedSR3(
     constraint_rhs=constraint_rhs,
     constraint_lhs=constraint_lhs,
     normalize_columns=True,
-    threshold=10,
+    reg_weight=weight,
 )
 with ignore_specific_warnings():
     model = ps.SINDy(optimizer=optimizer, feature_library=library).fit(x_train, t=dt)
@@ -508,9 +509,9 @@ if run_cvxpy:
         constraint_rhs=constraint_rhs,
         constraint_lhs=constraint_lhs,
         inequality_constraints=True,
-        thresholder="l1",
+        regularizer="l1",
         tol=1e-7,
-        threshold=10,
+        reg_weight=10,
         max_iter=10000,
     )
     model = ps.SINDy(optimizer=optimizer, feature_library=library).fit(x_train, t=dt)
@@ -785,8 +786,6 @@ model.print()
 
 # In[44]:
 
-
-from scipy.io import loadmat
 
 # Load the data stored in a matlab .mat file
 kdV = loadmat(data / "kdv.mat")
@@ -1264,9 +1263,9 @@ if run_cvxpy:
     # Note that if LHS of the equation fits the data poorly,
     # CVXPY often returns failure.
     sindy_opt = ps.SINDyPI(
-        threshold=1e-6,
+        reg_weight=1e-6,
         tol=1e-8,
-        thresholder="l1",
+        regularizer="l1",
         max_iter=20000,
     )
     model = ps.SINDy(
@@ -1348,8 +1347,6 @@ model.print()
 
 # In[68]:
 
-
-from scipy.io import loadmat
 
 # Load data
 data = loadmat(data / "burgers.mat")

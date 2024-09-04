@@ -468,22 +468,11 @@ class TrappingSR3(ConstrainedSR3):
 
         return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
 
-    def _update_A(self, A_old, PW):
-        """Update the proxy enstrophy quadratic form, :math:`A`?
-
-        Currently, this function projects a proxy of the quadratic form onto the
-        negative definite cone (w/tol gamma) and then "projects" the exitisting
-        quadratic form onto those same eigenvalues
-
-        """
-        eigvals, eigvecs = np.linalg.eigh(A_old)
-        eigPW, eigvecsPW = np.linalg.eigh(PW)
-        r = A_old.shape[0]
-        A = np.diag(eigvals)
-        for i in range(r):
-            if eigvals[i] > self.gamma:
-                A[i, i] = self.gamma
-        return eigvecsPW @ A @ np.linalg.inv(eigvecsPW)
+    def _proj_neg_definite(self, mat):
+        """Project a matrix onto the negative definite cone (w/tol gamma)"""
+        eigvals, eigvecs = np.linalg.eigh(mat)
+        eigval_mat = np.minimum(self.gamma, np.diag(eigvals))
+        return eigvecs @ eigval_mat @ np.linalg.inv(eigvecs)
 
     def _convergence_criterion(self):
         """Calculate the convergence criterion for the optimization over w"""
@@ -644,7 +633,7 @@ class TrappingSR3(ConstrainedSR3):
         trap_new = trap_ctr - self.alpha_m * PMT_PW
 
         # Update A
-        A_new = self._update_A(prev_A - self.alpha_A * relax_err_wrt_proxy, AS_coeff)
+        A_new = self._proj_neg_definite(prev_A - self.alpha_A * relax_err_wrt_proxy)
         return trap_new, A_new
 
     def _solve_nonsparse_relax_and_split(self, hess, gradient_constant):

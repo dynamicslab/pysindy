@@ -64,9 +64,8 @@ def check_local_stability(Xi, sindy_opt: ps.TrappingSR3, mean_val):
     opt_m = sindy_opt.m_history_[-1]
     PC_tensor = sindy_opt.PC_
     PL_tensor_unsym = sindy_opt.PL_unsym_
-    PM_tensor = sindy_opt.PM_
     PQ_tensor = sindy_opt.PQ_
-    p_As = _create_A_symm(PL_tensor_unsym, PM_tensor, opt_m, sindy_opt.enstrophy)
+    p_As = _create_A_symm(PL_tensor_unsym, PQ_tensor, opt_m, sindy_opt.enstrophy)
     As = np.tensordot(p_As, Xi, axes=([3, 2], [0, 1]))
     eigvals, _ = np.linalg.eigh(As)
     print("optimal m: ", opt_m)

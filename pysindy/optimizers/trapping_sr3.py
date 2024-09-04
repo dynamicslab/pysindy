@@ -628,15 +628,15 @@ class TrappingSR3(ConstrainedSR3):
         """
         # prox-gradient descent for (A, m)
         # Calculate As
-        p_AS = _create_A_symm(self.PL_unsym_, self.PM_, trap_ctr, self.enstrophy)
+        p_AS = _create_A_symm(self.PL_unsym_, self.PQ_, trap_ctr, self.enstrophy)
         AS_coeff = np.tensordot(p_AS, coef_sparse, axes=([3, 2], [0, 1]))
 
         # Calculate error in quadratic balance, and adjust trap center
         relax_err_wrt_proxy = (prev_A - AS_coeff) / self.eta
         # Calculate quadratic terms of As as a function of m
-        A_wrt_m = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
+        Q = np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1]))
         A_wrt_m = np.einsum(
-            "ya,abc,bz->yzc", self.enstrophy.P_root, A_wrt_m, self.enstrophy.P_root_inv
+            "ya,abc,bz->yzc", self.enstrophy.P_root, Q, self.enstrophy.P_root_inv
         )
         A_wrt_m = (A_wrt_m + np.transpose(A_wrt_m, [1, 0, 2])) / 2
         # PMT_PW is gradient of relaxation wrt trap center (eqn 35)
@@ -729,7 +729,7 @@ class TrappingSR3(ConstrainedSR3):
         objective_history = []
         for k in range(self.max_iter):
             # update p_AS tensor from the newest trap center
-            p_AS = _create_A_symm(self.PL_unsym_, self.PM_, trap_ctr, self.enstrophy)
+            p_AS = _create_A_symm(self.PL_unsym_, self.PQ_, trap_ctr, self.enstrophy)
             Pmatrix = p_AS.reshape(n_tgts * n_tgts, n_tgts * n_features)
             self.p_history_.append(p_AS)
 
@@ -931,7 +931,7 @@ TwoOrFourD = TypeVar("TwoOrFourD", Float2D, Float4D)
 
 
 def _create_A_symm(
-    L_obj: TwoOrFourD, M_obj: Float3D | Float5D, trap_ctr: Float1D, ens: EnstrophyMat
+    L_obj: TwoOrFourD, Q_obj: Float3D | Float5D, trap_ctr: Float1D, ens: EnstrophyMat
 ) -> TwoOrFourD:
     r"""Create the enstrophy/energy growth quadratic form
 
@@ -944,16 +944,16 @@ def _create_A_symm(
         L_obj: The linear terms in the original differential equation.  This
             can either be the coefficients themselves, or a projector onto the
             coefficients
-        M_obj: The quadratic form of the original differential equation,
-            plus its transpose of the 2nd and 3rd axes.  See eqn 3.8 of
-            Schlegel and Noack 2015.  This can be the quadratic form, or
-            a projector onto the quadratic form.  If a projector, it must match
-            L_obj.
+        Q_obj: The quadratic form of the original differential equation.
+            Note eqn 3.8 of Schlegel and Noack 2015.  This can be the quadratic
+            form, or a projector onto the quadratic form.  If a projector, it
+            must match L_obj.
         trap_ctr: The posited center of the trapping region.
         ens: the enstrophy matrix of the system
     """
-    mPM = np.einsum("ijk...,k->ij...", M_obj, trap_ctr)
-    A = np.einsum("ya,ab...,bz->yz...", ens.P_root, L_obj + mPM, ens.P_root_inv)
+    # Note that Qijk + Qikj = 2 * Qijk because Q is symmetric in 2nd and 3rd axis
+    mPQ = np.einsum("ijk...,k->ij...", 2 * Q_obj, trap_ctr)
+    A = np.einsum("ya,ab...,bz->yz...", ens.P_root, L_obj + mPQ, ens.P_root_inv)
     A_S = (A + np.einsum("ij...->ji...", A)) / 2
     return A_S
 

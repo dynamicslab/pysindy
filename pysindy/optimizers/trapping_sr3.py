@@ -206,7 +206,7 @@ class TrappingSR3(ConstrainedSR3):
     def __init__(
         self,
         *,
-        _n_tgts: int = None,
+        _n_tgts: Union[int, None] = None,
         _include_bias: bool = False,
         _interaction_only: bool = False,
         method: str = "global",
@@ -239,7 +239,14 @@ class TrappingSR3(ConstrainedSR3):
             self._n_tgts = 1
         if self.mod_matrix is None:
             mod_matrix = np.eye(self._n_tgts)
-
+        (
+            self.PC_,
+            self.PL_unsym_,
+            self.PL_,
+            self.PQ_,
+            self.PT_,
+            self.PM_,
+        ) = self._set_Ptensors(self._n_tgts)
         self.enstrophy = EnstrophyMat(mod_matrix)
         if method == "global":
             if hasattr(kwargs, "constraint_separation_index"):
@@ -251,7 +258,20 @@ class TrappingSR3(ConstrainedSR3):
             constraint_rhs, constraint_lhs = _make_constraints(
                 self._n_tgts, include_bias=_include_bias
             )
+            PQinv = np.zeros_like(self.PQ_)
+            PQinv[np.where(self.PQ_ != 0)] = 1
             constraint_lhs = np.tensordot(constraint_lhs, self.enstrophy.P, axes=1)
+            constraint_lhs_qform = np.einsum(
+                "zed,abcde->zabc", constraint_lhs, self.PQ_
+            )
+            constraint_lhs_H0tilde = np.einsum(
+                "xb,abcd,cy,dz->axyz",
+                self.enstrophy.P_root_inv,
+                constraint_lhs_qform,
+                self.enstrophy.P_root_inv,
+                self.enstrophy.P_root_inv,
+            )
+            constraint_lhs = np.einsum("bcdyz,abcd->azy", PQinv, constraint_lhs_H0tilde)
             constraint_order = kwargs.pop("constraint_order", "feature")
             if constraint_order == "target":
                 constraint_lhs = np.transpose(constraint_lhs, [0, 2, 1])

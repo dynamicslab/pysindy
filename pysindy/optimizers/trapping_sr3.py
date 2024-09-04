@@ -633,14 +633,15 @@ class TrappingSR3(ConstrainedSR3):
 
         # Calculate error in quadratic balance, and adjust trap center
         relax_err_wrt_proxy = (prev_A - AS_coeff) / self.eta
+        relax_err_wrt_AS_coeff = -relax_err_wrt_proxy
         # Calculate quadratic terms of As as a function of m
-        A_wrt_m = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
-        A_wrt_m = np.einsum(
-            "ya,abc,bz->yzc", self.enstrophy.P_root, A_wrt_m, self.enstrophy.P_root_inv
+        AS_wrt_m = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
+        AS_wrt_m = np.einsum(
+            "ya,abc,bz->yzc", self.enstrophy.P_root, AS_wrt_m, self.enstrophy.P_root_inv
         )
-        A_wrt_m = (A_wrt_m + np.transpose(A_wrt_m, [1, 0, 2])) / 2
+        AS_wrt_m = (AS_wrt_m + np.transpose(AS_wrt_m, [1, 0, 2])) / 2
         # PMT_PW is gradient of relaxation wrt trap center (eqn 35)
-        PMT_PW = np.tensordot(A_wrt_m, relax_err_wrt_proxy, axes=([2, 1], [0, 1]))
+        PMT_PW = np.tensordot(AS_wrt_m, relax_err_wrt_AS_coeff, axes=([2, 1], [0, 1]))
         trap_new = trap_ctr - self.alpha_m * PMT_PW
 
         # Update A

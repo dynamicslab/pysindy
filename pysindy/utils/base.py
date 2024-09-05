@@ -186,8 +186,8 @@ def get_prox(
     Returns:
     --------
     proximal_operator: (x: np.array, reg_weight: float | np.array) -> np.array
-        A function that takes an input array x and a regularization weight, 
-        which can be either a scalar or array of the same shape, 
+        A function that takes an input array x and a regularization weight,
+        which can be either a scalar or array of the same shape,
         and returns an array of the same shape
     """
 
@@ -234,7 +234,7 @@ def get_regularization(
     Returns:
     --------
     regularization_function: (x: np.array, reg_weight: float | np.array) -> np.array
-        A function that takes an input array x and a regularization weight, 
+        A function that takes an input array x and a regularization weight,
         which can be either a scalar or array of the same shape,
         and returns a float
     """

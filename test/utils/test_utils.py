@@ -89,7 +89,6 @@ def test_get_regularization(regularization, lam, expected):
     [
         np.array([[1, 2]]),
         np.array([[1]]),
-
     ],
 )
 def test_get_prox_and_regularization_bad_shape(regularization, lam):

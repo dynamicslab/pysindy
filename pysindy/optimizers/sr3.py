@@ -35,7 +35,7 @@ class SR3(BaseOptimizer):
 
     Parameters
     ----------
-    reg_weight : float or np.ndarray[float], shape (n_targets, n_features) \
+    reg_weight_lam : float or np.ndarray[float], shape (n_targets, n_features) \
         optional (default 0.005)
         Determines the strength of the regularization. When the
         regularization function R is the l0 norm, the regularization
@@ -48,18 +48,18 @@ class SR3(BaseOptimizer):
         to a function from the feature library.
         Recall that SINDy seeks a matrix :math:`\\Xi` such that
         :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``reg_weight[i, j]`` should specify the weight to be used for the
+        ``reg_weight_lam[i, j]`` should specify the weight to be used for the
         (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
         weight to be used for the (j + 1)st library function in the equation
         for the (i + 1)st measurement variable.
 
     regularizer : string, optional (default 'L0')
         Regularization function to use. Currently implemented options
-        are 'L0' (L0 norm), 'L1' (L1 norm), 'L2' (L2 norm) and 'CAD' (clipped
-        absolute deviation). Note by 'L2 norm' we really mean
+        are 'L0' (L0 norm), 'L1' (L1 norm) and 'L2' (L2 norm).
+        Note by 'L2 norm' we really mean
         the squared L2 norm, i.e. ridge regression
 
-    nu : float, optional (default 1)
+    relax_coeff_nu : float, optional (default 1)
         Determines the level of relaxation. Decreasing nu encourages
         w and v to be close, whereas increasing nu allows the
         regularized coefficients v to be farther from w.
@@ -126,7 +126,7 @@ class SR3(BaseOptimizer):
     >>>                        z[0] * z[1] - 8 / 3 * z[2]]
     >>> t = np.arange(0, 2, .002)
     >>> x = odeint(lorenz, [-8, 8, 27], t)
-    >>> opt = SR3(reg_weight=0.1, nu=1)
+    >>> opt = SR3(reg_weight_lam=0.1, relax_coeff_nu=1)
     >>> model = SINDy(optimizer=opt)
     >>> model.fit(x, t=t[1] - t[0])
     >>> model.print()
@@ -137,9 +137,9 @@ class SR3(BaseOptimizer):
 
     def __init__(
         self,
-        reg_weight=0.005,
+        reg_weight_lam=0.005,
         regularizer="L0",
-        nu=1.0,
+        relax_coeff_nu=1.0,
         tol=1e-5,
         trimming_fraction=0.0,
         trimming_step_size=1.0,
@@ -157,8 +157,8 @@ class SR3(BaseOptimizer):
             normalize_columns=normalize_columns,
             unbias=unbias,
         )
-        if nu <= 0:
-            raise ValueError("nu must be positive")
+        if relax_coeff_nu <= 0:
+            raise ValueError("relax_coeff_nu must be positive")
         if tol <= 0:
             raise ValueError("tol must be positive")
         if (trimming_fraction < 0) or (trimming_fraction > 1):
@@ -181,18 +181,18 @@ class SR3(BaseOptimizer):
                 "weighted_l0, weighted_l1, weighted_l2."
             )
         if regularizer[:8].lower() == "weighted" and not isinstance(
-            reg_weight, np.ndarray
+            reg_weight_lam, np.ndarray
         ):
             raise ValueError(
-                "weighted regularization requires the reg_weight parameter "
+                "weighted regularization requires the reg_weight_lam parameter "
                 "to be a 2d array"
             )
-        if np.any(reg_weight < 0):
-            raise ValueError("reg_weight cannot contain negative entries")
-        if isinstance(reg_weight, np.ndarray):
-            reg_weight = reg_weight.T
-        self.reg_weight = reg_weight
-        self.nu = nu
+        if np.any(reg_weight_lam < 0):
+            raise ValueError("reg_weight_lam cannot contain negative entries")
+        if isinstance(reg_weight_lam, np.ndarray):
+            reg_weight_lam = reg_weight_lam.T
+        self.reg_weight_lam = reg_weight_lam
+        self.relax_coeff_nu = relax_coeff_nu
         self.tol = tol
         self.regularizer = regularizer
         self.reg = get_regularization(regularizer)
@@ -206,8 +206,8 @@ class SR3(BaseOptimizer):
         self.verbose = verbose
 
     @staticmethod
-    def calculate_l0_weight(threshold: Union[float, np.ndarray[np.float64]], nu: float):
-        return (threshold**2) / (2 * nu)
+    def calculate_l0_weight(threshold: Union[float, np.ndarray[np.float64]], relax_coeff_nu: float):
+        return (threshold**2) / (2 * relax_coeff_nu)
 
     def enable_trimming(self, trimming_fraction):
         """
@@ -238,12 +238,12 @@ class SR3(BaseOptimizer):
         if self.use_trimming:
             assert trimming_array is not None
             R2 *= trimming_array.reshape(x.shape[0], 1)
-        regularization = self.reg(coef_full, self.reg_weight)
+        regularization = self.reg(coef_full, self.reg_weight_lam)
         if print_ind == 0 and self.verbose:
             row = [
                 q,
                 np.sum(R2),
-                np.sum(D2) / self.nu,
+                np.sum(D2) / self.relax_coeff_nu,
                 regularization,
                 np.sum(R2) + np.sum(D2) + regularization,
             ]
@@ -251,18 +251,18 @@ class SR3(BaseOptimizer):
                 "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
                 " ... {4:10.4e}".format(*row)
             )
-        return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
+        return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.relax_coeff_nu
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
         """Update the unregularized weight vector"""
-        b = x_transpose_y + coef_sparse / self.nu
+        b = x_transpose_y + coef_sparse / self.relax_coeff_nu
         coef_full = cho_solve(cho, b)
         self.iters += 1
         return coef_full
 
     def _update_sparse_coef(self, coef_full):
         """Update the regularized weight vector"""
-        coef_sparse = self.prox(coef_full, self.reg_weight * self.nu)
+        coef_sparse = self.prox(coef_full, self.reg_weight_lam * self.relax_coeff_nu)
         return coef_sparse
 
     def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):
@@ -280,7 +280,7 @@ class SR3(BaseOptimizer):
             last_coef = self.history_[-2]
         else:
             last_coef = np.zeros_like(this_coef)
-        err_coef = np.sqrt(np.sum((this_coef - last_coef) ** 2)) / self.nu
+        err_coef = np.sqrt(np.sum((this_coef - last_coef) ** 2)) / self.relax_coeff_nu
         if self.use_trimming:
             this_trimming_array = self.history_trimming_[-1]
             if len(self.history_trimming_) > 1:
@@ -315,7 +315,8 @@ class SR3(BaseOptimizer):
 
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
-        cho = cho_factor(np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu)))
+        cho = cho_factor(np.dot(x.T, x) +
+                         np.diag(np.full(x.shape[1], 1.0 / self.relax_coeff_nu)))
         x_transpose_y = np.dot(x.T, y)
 
         # Print initial values for each term in the optimization
@@ -337,7 +338,7 @@ class SR3(BaseOptimizer):
                 x_weighted = x * trimming_array.reshape(n_samples, 1)
                 cho = cho_factor(
                     np.dot(x_weighted.T, x)
-                    + np.diag(np.full(x.shape[1], 1.0 / self.nu))
+                    + np.diag(np.full(x.shape[1], 1.0 / self.relax_coeff_nu))
                 )
                 x_transpose_y = np.dot(x_weighted.T, y)
                 trimming_grad = 0.5 * np.sum((y - x.dot(coef_full)) ** 2, axis=1)

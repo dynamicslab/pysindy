@@ -72,7 +72,7 @@ class TrappingSR3(ConstrainedSR3):
         this should be approximately equivalent to the ConstrainedSR3 method.
 
     eps_solver :
-        If reg_weight != 0, this specifies the error tolerance in the
+        If reg_weight_lam != 0, this specifies the error tolerance in the
         CVXPY (OSQP) solve. Default 1.0e-7
 
     alpha:
@@ -174,7 +174,7 @@ class TrappingSR3(ConstrainedSR3):
     >>>                        z[0]*z[1] - 8/3*z[2]]
     >>> t = np.arange(0,2,.002)
     >>> x = odeint(lorenz, [-8,8,27], t)
-    >>> opt = TrappingSR3(reg_weight=0.1)
+    >>> opt = TrappingSR3(reg_weight_lam=0.1)
     >>> model = SINDy(optimizer=opt)
     >>> model.fit(x, t=t[1]-t[0])
     >>> model.print()
@@ -318,8 +318,8 @@ class TrappingSR3(ConstrainedSR3):
             raise ValueError("gamma must be negative")
         if self.tol <= 0 or self.tol_m <= 0 or self.eps_solver <= 0:
             raise ValueError("tol and tol_m must be positive")
-        if self.inequality_constraints and np.any(self.reg_weight == 0.0):
-            raise ValueError("Inequality constraints requires reg_weight!=0")
+        if self.inequality_constraints and np.any(self.reg_weight_lam == 0.0):
+            raise ValueError("Inequality constraints requires reg_weight_lam!=0")
         if self.A0 is None:
             self.A0 = np.diag(self.gamma * np.ones(self._n_tgts))
         if self.m0 is None:
@@ -446,7 +446,7 @@ class TrappingSR3(ConstrainedSR3):
         return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
 
     def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
-        """Solves the coefficient update analytically if reg_weight = 0"""
+        """Solves the coefficient update analytically if reg_weight_lam = 0"""
         g = x_transpose_y + P_transpose_A / self.eta
         inv1 = np.linalg.pinv(H, rcond=1e-10)
         inv2 = np.linalg.pinv(
@@ -497,7 +497,7 @@ class TrappingSR3(ConstrainedSR3):
         beta2 = (
             Qijk + np.transpose(Qijk, [1, 2, 0]) + np.transpose(Qijk, [2, 0, 1])
         ) ** 2
-        L1 = np.sum(self.reg_weight * np.abs(coef_sparse.flatten()))
+        L1 = np.sum(self.reg_weight_lam * np.abs(coef_sparse.flatten()))
         R2 = 0.5 * np.sum(R2)
         stability_term = 0.5 * np.sum(A2) / self.eta
         alpha_term = 0.5 * np.sum(Qijk**2) / self.alpha
@@ -514,7 +514,7 @@ class TrappingSR3(ConstrainedSR3):
                 beta_term,
                 R2 + stability_term + L1 + alpha_term + beta_term,
             ]
-            if np.any(self.reg_weight == 0):
+            if np.any(self.reg_weight_lam == 0):
                 if k % max(int(self.max_iter / 10.0), 1) == 0:
                     print(
                         "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
@@ -533,7 +533,7 @@ class TrappingSR3(ConstrainedSR3):
     def _update_coef_sparse_rs(
         self, n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
     ):
-        """Solve coefficient update with CVXPY if reg_weight != 0"""
+        """Solve coefficient update with CVXPY if reg_weight_lam != 0"""
         xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
 
@@ -609,7 +609,7 @@ class TrappingSR3(ConstrainedSR3):
         return trap_new, A_new
 
     def _solve_nonsparse_relax_and_split(self, H, xTy, P_transpose_A, coef_prev):
-        """Update for the coefficients if reg_weight = 0."""
+        """Update for the coefficients if reg_weight_lam = 0."""
         if self.use_constraints:
             coef_sparse = self._update_coef_constraints(
                 H, xTy, P_transpose_A, coef_prev
@@ -707,7 +707,7 @@ class TrappingSR3(ConstrainedSR3):
             self.p_history_.append(p)
 
             coef_prev = coef_sparse
-            if np.any(self.reg_weight > 0.0) or self.inequality_constraints:
+            if np.any(self.reg_weight_lam > 0.0) or self.inequality_constraints:
                 coef_sparse = self._update_coef_sparse_rs(
                     n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
                 )

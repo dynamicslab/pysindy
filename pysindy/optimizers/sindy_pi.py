@@ -88,7 +88,7 @@ class SINDyPI(SR3):
 
     def __init__(
         self,
-        reg_weight=0.1,
+        reg_weight_lam=0.1,
         regularizer="l1",
         tol=1e-5,
         max_iter=10000,
@@ -99,7 +99,7 @@ class SINDyPI(SR3):
         unbias=False,
     ):
         super().__init__(
-            reg_weight=reg_weight,
+            reg_weight_lam=reg_weight_lam,
             regularizer=regularizer,
             tol=tol,
             max_iter=max_iter,
@@ -152,7 +152,7 @@ class SINDyPI(SR3):
             # Note that norm choice below must be convex,
             # so regularizer must be L1 or L2
             regularizer = self.regularizer.lower()
-            lam = self.reg_weight
+            lam = self.reg_weight_lam
             if regularizer == "l1":
                 cost = cp.sum_squares(x[:, i] - x @ xi) + cp.sum(
                     cp.multiply(lam, cp.abs(xi))

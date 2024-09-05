@@ -336,7 +336,7 @@ model.print()
 # In[18]:
 
 
-sr3_optimizer = ps.SR3(reg_weight=0.1, regularizer="l1")
+sr3_optimizer = ps.SR3(reg_weight_lam=0.1, regularizer="l1")
 
 model = ps.SINDy(optimizer=sr3_optimizer)
 model.fit(x_train, t=dt)
@@ -375,19 +375,19 @@ model.print()
 
 
 weight = ps.SR3.calculate_l0_weight(0.1, 1)
-sr3_optimizer = ps.SR3(reg_weight=weight, regularizer="l0")
+sr3_optimizer = ps.SR3(reg_weight_lam=weight, regularizer="l0")
 with ignore_specific_warnings():
     model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)
 print("L0 regularizer: ")
 model.print()
 
-sr3_optimizer = ps.SR3(reg_weight=0.1, regularizer="l1")
+sr3_optimizer = ps.SR3(reg_weight_lam=0.1, regularizer="l1")
 with ignore_specific_warnings():
     model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)
 print("L1 regularizer: ")
 model.print()
 
-sr3_optimizer = ps.SR3(reg_weight=0.1, regularizer="l2")
+sr3_optimizer = ps.SR3(reg_weight_lam=0.1, regularizer="l2")
 with ignore_specific_warnings():
     model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)
 print("L2 regularizer: ")
@@ -402,14 +402,14 @@ model.print()
 
 # Without thresholds matrix
 weight = ps.SR3.calculate_l0_weight(0.1, 1)
-sr3_optimizer = ps.SR3(reg_weight=0.1, regularizer="l0")
+sr3_optimizer = ps.SR3(reg_weight_lam=0.1, regularizer="l0")
 print("Threshold = 0.1 for all terms")
 model.print()
 
 # With thresholds matrix
 weights = 2 * np.ones((3, 10))
 weights[4:, :] = ps.SR3.calculate_l0_weight(0.1, 1)
-sr3_optimizer = ps.SR3(regularizer="weighted_l0", reg_weight=weights)
+sr3_optimizer = ps.SR3(regularizer="weighted_l0", reg_weight_lam=weights)
 model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)
 print("Threshold = 0.1 for quadratic terms, else threshold = 1")
 model.print()
@@ -462,7 +462,7 @@ optimizer = ps.ConstrainedSR3(
     constraint_rhs=constraint_rhs,
     constraint_lhs=constraint_lhs,
     normalize_columns=True,
-    reg_weight=weight,
+    reg_weight_lam=weight,
 )
 with ignore_specific_warnings():
     model = ps.SINDy(optimizer=optimizer, feature_library=library).fit(x_train, t=dt)
@@ -511,7 +511,7 @@ if run_cvxpy:
         inequality_constraints=True,
         regularizer="l1",
         tol=1e-7,
-        reg_weight=10,
+        reg_weight_lam=10,
         max_iter=10000,
     )
     model = ps.SINDy(optimizer=optimizer, feature_library=library).fit(x_train, t=dt)
@@ -1263,7 +1263,7 @@ if run_cvxpy:
     # Note that if LHS of the equation fits the data poorly,
     # CVXPY often returns failure.
     sindy_opt = ps.SINDyPI(
-        reg_weight=1e-6,
+        reg_weight_lam=1e-6,
         tol=1e-8,
         regularizer="l1",
         max_iter=20000,

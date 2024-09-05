@@ -143,9 +143,9 @@ class StableLinearSR3(ConstrainedSR3):
 
     def __init__(
         self,
-        reg_weight=0.1,
+        reg_weight_lam=0.1,
         regularizer="l1",
-        nu=1.0,
+        relax_coeff_nu=1.0,
         tol=1e-5,
         max_iter=30,
         trimming_fraction=0.0,
@@ -165,9 +165,9 @@ class StableLinearSR3(ConstrainedSR3):
         unbias=False,
     ):
         super().__init__(
-            reg_weight=reg_weight,
+            reg_weight_lam=reg_weight_lam,
             regularizer=regularizer,
-            nu=nu,
+            relax_coeff_nu=relax_coeff_nu,
             tol=tol,
             trimming_fraction=trimming_fraction,
             trimming_step_size=trimming_step_size,
@@ -186,15 +186,15 @@ class StableLinearSR3(ConstrainedSR3):
             unbias=unbias,
         )
         self.gamma = gamma
-        self.alpha_A = nu
+        self.alpha_A = relax_coeff_nu
         self.max_iter = max_iter
         warnings.warn(
             "This optimizer is set up to only be used with a purely linear"
             " library in the variables. No constant or nonlinear terms!"
         )
-        if not np.isclose(reg_weight, 0.0):
+        if not np.isclose(reg_weight_lam, 0.0):
             warnings.warn(
-                "This optimizer uses CVXPY if the reg_weight is nonzero, "
+                "This optimizer uses CVXPY if the reg_weight_lam is nonzero, "
                 " meaning the optimization will be much slower for large "
                 "datasets."
             )
@@ -209,7 +209,7 @@ class StableLinearSR3(ConstrainedSR3):
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
         cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (2 * self.nu)
-        penalty = self._calculate_penalty(self.thresholder, np.ravel(self.reg_weight), xi)
+        penalty = self._calculate_penalty(self.thresholder, np.ravel(self.reg_weight_lam), xi)
         return xi, cost + penalty
 
     def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
@@ -228,8 +228,8 @@ class StableLinearSR3(ConstrainedSR3):
                     [
                         self.constraint_lhs[: self.constraint_separation_index, :] @ xi
                         <= self.constraint_rhs[: self.constraint_separation_index],
-                        self.constraint_lhs[self.constraint_separation_index :, :] @ xi
-                        == self.constraint_rhs[self.constraint_separation_index :],
+                        self.constraint_lhs[self.constraint_separation_index:, :] @ xi
+                        == self.constraint_rhs[self.constraint_separation_index:],
                     ],
                 )
             elif self.inequality_constraints:
@@ -324,7 +324,7 @@ class StableLinearSR3(ConstrainedSR3):
             self.constraint_lhs = reorder_constraints(self.constraint_lhs, n_features)
 
         # Precompute some objects for optimization
-        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
+        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.relax_coeff_nu))
         x_transpose_y = np.dot(x.T, y)
         if not self.use_constraints:
             cho = cho_factor(H)
@@ -352,7 +352,7 @@ class StableLinearSR3(ConstrainedSR3):
         eigs_history = []
         coef_history = []
         for k in range(self.max_iter):
-            if not np.isclose(self.reg_weight, 0.0) or self.use_constraints:
+            if not np.isclose(self.reg_weight_lam, 0.0) or self.use_constraints:
                 coef_sparse = self._update_coef_cvxpy(
                     x_expanded, y, coef_sparse, coef_negative_definite
                 )
@@ -362,7 +362,8 @@ class StableLinearSR3(ConstrainedSR3):
                 )
             coef_negative_definite = self._update_A(
                 coef_negative_definite
-                - self.alpha_A * (coef_negative_definite - coef_sparse) / self.nu,
+                - self.alpha_A * (coef_negative_definite -
+                                  coef_sparse) / self.relax_coeff_nu,
                 coef_sparse,
             ).T
             objective_history.append(

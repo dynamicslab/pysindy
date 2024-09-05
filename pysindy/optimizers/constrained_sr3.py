@@ -153,9 +153,9 @@ class ConstrainedSR3(SR3):
 
     def __init__(
         self,
-        reg_weight=0.005,
+        reg_weight_lam=0.005,
         regularizer="l0",
-        nu=1.0,
+        relax_coeff_nu=1.0,
         tol=1e-5,
         max_iter=30,
         trimming_fraction=0.0,
@@ -174,9 +174,9 @@ class ConstrainedSR3(SR3):
         unbias=False,
     ):
         super().__init__(
-            reg_weight=reg_weight,
+            reg_weight_lam=reg_weight_lam,
             regularizer=regularizer,
-            nu=nu,
+            relax_coeff_nu=relax_coeff_nu,
             tol=tol,
             trimming_fraction=trimming_fraction,
             trimming_step_size=trimming_step_size,
@@ -254,7 +254,7 @@ class ConstrainedSR3(SR3):
         self.constraint_separation_index = constraint_separation_index
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
-        g = x_transpose_y + coef_sparse / self.nu
+        g = x_transpose_y + coef_sparse / self.relax_coeff_nu
         inv1 = np.linalg.inv(H)
         inv1_mod = np.kron(inv1, np.eye(coef_sparse.shape[1]))
         inv2 = np.linalg.inv(
@@ -299,7 +299,7 @@ class ConstrainedSR3(SR3):
     ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        penalty = self._calculate_penalty(self.regularizer, np.ravel(self.reg_weight), xi)
+        penalty = self._calculate_penalty(self.regularizer, np.ravel(self.reg_weight_lam), xi)
         return xi, cost + penalty
 
     def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
@@ -307,8 +307,8 @@ class ConstrainedSR3(SR3):
             constraints = []
             if self.equality_constraints:
                 constraints.append(
-                    self.constraint_lhs[self.constraint_separation_index :, :] @ xi
-                    == self.constraint_rhs[self.constraint_separation_index :],
+                    self.constraint_lhs[self.constraint_separation_index:, :] @ xi
+                    == self.constraint_rhs[self.constraint_separation_index:],
                 )
             if self.inequality_constraints:
                 constraints.append(
@@ -381,8 +381,8 @@ class ConstrainedSR3(SR3):
             self.constraint_lhs = reorder_constraints(self.constraint_lhs, n_features)
 
         # Precompute some objects for upcoming least-squares solves.
-        # Assumes that self.nu is fixed throughout optimization procedure.
-        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
+        # Assumes that self.relax_coeff_nu is fixed throughout optimization procedure.
+        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.relax_coeff_nu))
         x_transpose_y = np.dot(x.T, y)
         if not self.use_constraints:
             cho = cho_factor(H)
@@ -421,7 +421,7 @@ class ConstrainedSR3(SR3):
                 if self.use_trimming:
                     x_weighted = x * trimming_array.reshape(n_samples, 1)
                     H = np.dot(x_weighted.T, x) + np.diag(
-                        np.full(x.shape[1], 1.0 / self.nu)
+                        np.full(x.shape[1], 1.0 / self.relax_coeff_nu)
                     )
                     x_transpose_y = np.dot(x_weighted.T, y)
                     if not self.use_constraints:

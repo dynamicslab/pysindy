@@ -127,6 +127,9 @@ def test_get_weighted_prox_and_regularization_bad_shape(regularization, lam):
         ("l0", 1, np.array([[2]])),
         ("l1", 0.5, np.array([[1.5]])),
         ("l2", 0.5, np.array([[1]])),
+        ("weighted_l0", np.array([[1]]), np.array([[2]])),
+        ("weighted_l1", np.array([[0.5]]), np.array([[1.5]])),
+        ("weighted_l2", np.array([[0.5]]), np.array([[1]])),
     ],
 )
 def test_get_prox(regularization, lam, expected):

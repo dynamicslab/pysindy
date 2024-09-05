@@ -46,42 +46,6 @@ class ConstrainedSR3(SR3):
 
     Parameters
     ----------
-    reg_weight : float or np.ndarray[float], shape (n_targets, n_features) \
-        optional (default 0.005)
-        Determines the strength of the regularization. When the
-        regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding.
-        Use the method calculate_l0_weight to calculate the weight from the threshold.
-
-        When using weighted regularization, this is the array of weights
-        for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``reg_weight[i, j]`` should specify the weight to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        weight to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
-
-    regularizer : string, optional (default 'L0')
-        Regularization function to use. Currently implemented options
-        are 'L0' (L0 norm), 'L1' (L1 norm), 'L2' (L2 norm) and 'CAD' (clipped
-        absolute deviation). Note by 'L2 norm' we really mean
-        the squared L2 norm, i.e. ridge regression
-
-    nu : float, optional (default 1)
-        Determines the level of relaxation. Decreasing nu encourages
-        w and v to be close, whereas increasing nu allows the
-        regularized coefficients v to be farther from w.
-
-    tol : float, optional (default 1e-5)
-        Tolerance used for determining convergence of the optimization
-        algorithm.
-
-    max_iter : int, optional (default 30)
-        Maximum iterations of the optimization algorithm.
-
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
         The left hand side matrix C of Cw <= d (Or Cw = d for equality
@@ -103,32 +67,15 @@ class ConstrainedSR3(SR3):
         library feature, the next ``n_targets`` columns to the second library
         feature, and so on.
 
-    normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed. Note that
-        this parameter is incompatible with the constraints!
-
-    initial_guess : np.ndarray, optional (default None)
-        Shape should be (n_features) or (n_targets, n_features).
-        Initial guess for coefficients ``coef_``, (v in the mathematical equations)
-        If None, least-squares is used to obtain an initial guess.
-
     inequality_constraints : bool, optional (default False)
         If True, CVXPY methods are used to solve the problem.
-
-    verbose : bool, optional (default False)
-        If True, prints out the different error terms every
-        max_iter / 10 iterations.
 
     verbose_cvxpy : bool, optional (default False)
         Boolean flag which is passed to CVXPY solve function to indicate if
         output should be verbose or not. Only relevant for optimizers that
         use the CVXPY package in some capabity.
 
-    unbias: bool (default False)
-        See base class for definition.  Most options are incompatible
-        with unbiasing.
+    See base class for additional arguments
 
     Attributes
     ----------

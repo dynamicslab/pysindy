@@ -27,43 +27,10 @@ class SINDyPI(SR3):
 
     Parameters
     ----------
-    reg_weight : float or np.ndarray[float], shape (n_targets, n_features) \
-        optional (default 0.1)
-        Determines the strength of the regularization. When the
-        regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding.
-        Use the method calculate_l0_weight to calculate the weight from the threshold.
-
-        When using weighted regularization, this is the array of weights
-        for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``reg_weight[i, j]`` should specify the weight to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        weight to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
-
     regularizer : string, optional (default 'l1')
         Regularization function to use. Currently implemented options
         are 'l1' (l1 norm), 'weighted_l1' (weighted l1 norm), l2, and
         'weighted_l2' (weighted l2 norm)
-
-    tol : float, optional (default 1e-5)
-        Tolerance used for determining convergence of the optimization
-        algorithm.
-
-    max_iter : int, optional (default 10000)
-        Maximum iterations of the optimization algorithm.
-
-    normalize_columns : boolean, optional (default False)
-        This parameter normalizes the columns of Theta before the
-        optimization is done. This tends to standardize the columns
-        to similar magnitudes, often improving performance.
-
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
 
     model_subset : np.ndarray, shape(n_models), optional (default None)
         List of indices to compute models for. If list is not provided,

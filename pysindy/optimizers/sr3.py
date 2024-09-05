@@ -206,7 +206,15 @@ class SR3(BaseOptimizer):
         self.verbose = verbose
 
     @staticmethod
-    def calculate_l0_weight(threshold: Union[float, np.ndarray[np.float64]], relax_coeff_nu: float):
+    def calculate_l0_weight(
+            threshold: Union[float, np.ndarray[np.float64]],
+            relax_coeff_nu: float):
+        """
+        See Appendix S1 of the following paper for more details.
+            Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N.
+            (2020). A unified sparse optimization framework to learn parsimonious
+            physics-informed models from data. IEEE Access, 8, 169259-169271.
+        """
         return (threshold**2) / (2 * relax_coeff_nu)
 
     def enable_trimming(self, trimming_fraction):

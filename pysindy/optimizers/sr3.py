@@ -207,8 +207,8 @@ class SR3(BaseOptimizer):
 
     @staticmethod
     def calculate_l0_weight(
-            threshold: Union[float, np.ndarray[np.float64]],
-            relax_coeff_nu: float):
+        threshold: Union[float, np.ndarray[np.float64]], relax_coeff_nu: float
+    ):
         """
         See Appendix S1 of the following paper for more details.
             Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N.
@@ -259,7 +259,11 @@ class SR3(BaseOptimizer):
                 "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
                 " ... {4:10.4e}".format(*row)
             )
-        return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.relax_coeff_nu
+        return (
+            0.5 * np.sum(R2)
+            + 0.5 * regularization
+            + 0.5 * np.sum(D2) / self.relax_coeff_nu
+        )
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
         """Update the unregularized weight vector"""
@@ -323,8 +327,9 @@ class SR3(BaseOptimizer):
 
         # Precompute some objects for upcoming least-squares solves.
         # Assumes that self.nu is fixed throughout optimization procedure.
-        cho = cho_factor(np.dot(x.T, x) +
-                         np.diag(np.full(x.shape[1], 1.0 / self.relax_coeff_nu)))
+        cho = cho_factor(
+            np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.relax_coeff_nu))
+        )
         x_transpose_y = np.dot(x.T, y)
 
         # Print initial values for each term in the optimization

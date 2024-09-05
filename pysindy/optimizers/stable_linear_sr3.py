@@ -158,7 +158,9 @@ class StableLinearSR3(ConstrainedSR3):
     ) -> Tuple["cp.Variable", "cp.Expression"]:
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
-        cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (2 * self.nu)
+        cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (
+            2 * self.relax_coeff_nu
+        )
         penalty = self._calculate_penalty(self.thresholder, np.ravel(self.reg_weight_lam), xi)
         return xi, cost + penalty
 
@@ -178,8 +180,8 @@ class StableLinearSR3(ConstrainedSR3):
                     [
                         self.constraint_lhs[: self.constraint_separation_index, :] @ xi
                         <= self.constraint_rhs[: self.constraint_separation_index],
-                        self.constraint_lhs[self.constraint_separation_index:, :] @ xi
-                        == self.constraint_rhs[self.constraint_separation_index:],
+                        self.constraint_lhs[self.constraint_separation_index :, :] @ xi
+                        == self.constraint_rhs[self.constraint_separation_index :],
                     ],
                 )
             elif self.inequality_constraints:
@@ -312,8 +314,9 @@ class StableLinearSR3(ConstrainedSR3):
                 )
             coef_negative_definite = self._update_A(
                 coef_negative_definite
-                - self.alpha_A * (coef_negative_definite -
-                                  coef_sparse) / self.relax_coeff_nu,
+                - self.alpha_A
+                * (coef_negative_definite - coef_sparse)
+                / self.relax_coeff_nu,
                 coef_sparse,
             ).T
             objective_history.append(

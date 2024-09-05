@@ -7,8 +7,6 @@
 # An interactive version of this notebook is available on binder.
 # [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dynamicslab/pysindy/v1.7.3?filepath=examples/1_feature_overview.ipynb)
 # In[1]:
-from scipy.io import loadmat
-import pandas as pd
 import warnings
 from contextlib import contextmanager
 from copy import copy
@@ -16,7 +14,9 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from scipy.integrate import solve_ivp
+from scipy.io import loadmat
 from scipy.linalg import LinAlgWarning
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import Lasso

@@ -206,7 +206,9 @@ def test_STLSQ_bad_parameters(params):
         STLSQ(**params)
 
 
-@pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3, StableLinearSR3, TrappingSR3])
+@pytest.mark.parametrize(
+    "optimizer", [SR3, ConstrainedSR3, StableLinearSR3, TrappingSR3]
+)
 @pytest.mark.parametrize("params", [dict(reg_weight_lam=-1), dict(max_iter=0)])
 def test_general_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
@@ -531,7 +533,9 @@ def test_stable_linear_sr3_linear_library():
         dict(regularizer="l2", reg_weight_lam=0, _include_bias=True),
         dict(regularizer="l2", reg_weight_lam=1e-5, _include_bias=True),
         dict(
-            regularizer="weighted_l2", reg_weight_lam=np.zeros((1, 2)), _include_bias=False
+            regularizer="weighted_l2",
+            reg_weight_lam=np.zeros((1, 2)),
+            _include_bias=False,
         ),
         dict(
             regularizer="weighted_l2",
@@ -593,9 +597,21 @@ def test_trapping_sr3_quadratic_library(params):
         (ValueError, SR3, dict(regularizer="weighted_l2", reg_weight_lam=None)),
         (ValueError, SR3, dict(reg_weight_lam=-np.ones((5, 5)))),
         (ValueError, SR3, dict(initial_guess=np.zeros(3))),
-        (ValueError, ConstrainedSR3, dict(regularizer="weighted_l0", reg_weight_lam=None)),
-        (ValueError, ConstrainedSR3, dict(regularizer="weighted_l1", reg_weight_lam=None)),
-        (ValueError, ConstrainedSR3, dict(regularizer="weighted_l2", reg_weight_lam=None)),
+        (
+            ValueError,
+            ConstrainedSR3,
+            dict(regularizer="weighted_l0", reg_weight_lam=None),
+        ),
+        (
+            ValueError,
+            ConstrainedSR3,
+            dict(regularizer="weighted_l1", reg_weight_lam=None),
+        ),
+        (
+            ValueError,
+            ConstrainedSR3,
+            dict(regularizer="weighted_l2", reg_weight_lam=None),
+        ),
         (ValueError, ConstrainedSR3, dict(reg_weight_lam=-np.ones((5, 5)))),
         (ValueError, ConstrainedSR3, dict(initial_guess=np.zeros(3))),
         (
@@ -923,15 +939,29 @@ def test_constrained_inequality_constraints(data_lorenz, params):
     "params",
     [
         dict(regularizer="l1", reg_weight_lam=2, expected=2.5),
-        dict(regularizer="weighted_l1", reg_weight_lam=0.5 * np.ones((1, 2)), expected=1.0),
+        dict(
+            regularizer="weighted_l1",
+            reg_weight_lam=0.5 * np.ones((1, 2)),
+            expected=1.0,
+        ),
         dict(regularizer="l2", reg_weight_lam=2, expected=1.5),
         dict(
-            regularizer="weighted_l2", reg_weight_lam=0.5 * np.ones((1, 2)), expected=0.75
+            regularizer="weighted_l2",
+            reg_weight_lam=0.5 * np.ones((1, 2)),
+            expected=0.75,
         ),
         dict(regularizer="l1", reg_weight_lam=0, expected=0.5),
-        dict(regularizer="weighted_l1", reg_weight_lam=0.0 * np.ones((1, 2)), expected=0.5),
+        dict(
+            regularizer="weighted_l1",
+            reg_weight_lam=0.0 * np.ones((1, 2)),
+            expected=0.5,
+        ),
         dict(regularizer="l2", reg_weight_lam=0.0, expected=0.5),
-        dict(regularizer="weighted_l2", reg_weight_lam=0.0 * np.ones((1, 2)), expected=0.5),
+        dict(
+            regularizer="weighted_l2",
+            reg_weight_lam=0.0 * np.ones((1, 2)),
+            expected=0.5,
+        ),
     ],
     ids=lambda d: d["regularizer"],
 )

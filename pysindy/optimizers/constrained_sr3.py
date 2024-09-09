@@ -279,8 +279,8 @@ class ConstrainedSR3(SR3):
         regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' |
                         'l2' | 'weighted_l2'
         regularization_weight: float | np.array, can be a scalar
-                               or an array of shape (m, n)
-        xi: cp.Variable of length m*n
+                               or an array of the same shape as xi
+        xi: cp.Variable
 
         Returns:
         --------
@@ -290,11 +290,11 @@ class ConstrainedSR3(SR3):
         if regularization == "l1":
             return regularization_weight * cp.sum(cp.abs(xi))
         elif regularization == "weighted_l1":
-            return cp.sum(cp.multiply(np.ravel(regularization_weight), cp.abs(xi)))
+            return cp.sum(cp.multiply(regularization_weight, cp.abs(xi)))
         elif regularization == "l2":
             return regularization_weight * cp.sum(xi**2)
         elif regularization == "weighted_l2":
-            return cp.sum(cp.multiply(np.ravel(regularization_weight), xi**2))
+            return cp.sum(cp.multiply(regularization_weight, xi**2))
 
     def _create_var_and_part_cost(
         self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
@@ -302,7 +302,7 @@ class ConstrainedSR3(SR3):
         xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
         threshold = self.thresholds if self.thresholds is not None else self.threshold
-        penalty = self._calculate_penalty(self.thresholder, threshold, xi)
+        penalty = self._calculate_penalty(self.thresholder, np.ravel(threshold), xi)
         return xi, cost + penalty
 
     def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):

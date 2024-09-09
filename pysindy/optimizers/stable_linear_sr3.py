@@ -210,15 +210,9 @@ class StableLinearSR3(ConstrainedSR3):
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
         cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (2 * self.nu)
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi)
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
-        return xi, cost
+        threshold = self.thresholds if self.thresholds is not None else self.threshold
+        penalty = self._calculate_penalty(self.thresholder, np.ravel(threshold), xi)
+        return xi, cost + penalty
 
     def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
         """

@@ -484,7 +484,7 @@ def test_constrained_sr3_quadratic_library(params):
 )
 def test_constrained_sr3_penalty_term(regularizer, lam, expected):
     xi = cp.Variable(3)
-    penalty = ConstrainedSR3._calculate_penalty(regularizer, lam, xi)
+    penalty = ConstrainedSR3._calculate_penalty(regularizer, np.ravel(lam), xi)
     xi.value = np.array([-2, 3, 5])
     np.testing.assert_allclose(penalty.value, expected)
 

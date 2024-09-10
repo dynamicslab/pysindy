@@ -62,8 +62,7 @@ class StableLinearSR3(ConstrainedSR3):
 
     thresholder : string, optional (default 'l1')
         Regularization function to use. Currently implemented options
-        are 'l1' (l1 norm), 'l2' (l2 norm), 'cad' (clipped
-        absolute deviation),
+        are 'l1' (l1 norm), 'l2' (l2 norm),
         'weighted_l1' (weighted l1 norm), and 'weighted_l2' (weighted l2 norm).
         Note that the thresholder must be convex here.
 
@@ -211,15 +210,9 @@ class StableLinearSR3(ConstrainedSR3):
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
         cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (2 * self.nu)
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi)
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi)
-        return xi, cost
+        threshold = self.thresholds if self.thresholds is not None else self.threshold
+        penalty = self._calculate_penalty(self.thresholder, np.ravel(threshold), xi)
+        return xi, cost + penalty
 
     def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
         """
@@ -309,39 +302,6 @@ class StableLinearSR3(ConstrainedSR3):
             A_temp[:r, :r] = np.real(eigvecsPW @ A @ np.linalg.inv(eigvecsPW))
             A_temp[r:, :r] = A_old[r:, :r]
             return A_temp.T
-
-    def _objective(
-        self, x, y, q, coef_negative_definite, coef_sparse, trimming_array=None
-    ):
-        """Objective function"""
-        if q != 0:
-            print_ind = q % (self.max_iter // 10.0)
-        else:
-            print_ind = q
-        R2 = (y - np.dot(x, coef_negative_definite)) ** 2
-        D2 = (coef_negative_definite - coef_sparse) ** 2
-        if self.use_trimming:
-            assert trimming_array is not None
-            R2 *= trimming_array.reshape(x.shape[0], 1)
-
-        regularization = self.reg(
-            coef_negative_definite,
-            (self.threshold**2 if self.thresholds is None else self.thresholds**2)
-            / self.nu,
-        )
-        if print_ind == 0 and self.verbose:
-            row = [
-                q,
-                np.sum(R2),
-                np.sum(D2) / self.nu,
-                regularization,
-                np.sum(R2) + np.sum(D2) + regularization,
-            ]
-            print(
-                "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                " ... {4:10.4e}".format(*row)
-            )
-        return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
 
     def _reduce(self, x, y):
         """

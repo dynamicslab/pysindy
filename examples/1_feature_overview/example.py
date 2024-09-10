@@ -406,7 +406,7 @@ print("Threshold = 0.1 for all terms")
 model.print()
 
 # With thresholds matrix
-thresholds = 2 * np.ones((10, 3))
+thresholds = 2 * np.ones((3, 10))
 thresholds[4:, :] = 0.1
 sr3_optimizer = ps.SR3(thresholder="weighted_l0", thresholds=thresholds)
 model = ps.SINDy(optimizer=sr3_optimizer).fit(x_train, t=dt)

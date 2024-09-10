@@ -52,8 +52,8 @@ class SR3(BaseOptimizer):
 
     thresholder : string, optional (default 'L0')
         Regularization function to use. Currently implemented options
-        are 'L0' (L0 norm), 'L1' (L1 norm), 'L2' (L2 norm) and 'CAD' (clipped
-        absolute deviation). Note by 'L2 norm' we really mean
+        are 'L0' (L0 norm), 'L1' (L1 norm) and 'L2' (L2 norm).
+        Note by 'L2 norm' we really mean
         the squared L2 norm, i.e. ridge regression
 
     trimming_fraction : float, optional (default 0.0)
@@ -179,10 +179,9 @@ class SR3(BaseOptimizer):
             "weighted_l0",
             "weighted_l1",
             "weighted_l2",
-            "cad",
         ):
             raise NotImplementedError(
-                "Please use a valid thresholder, l0, l1, l2, cad, "
+                "Please use a valid thresholder, l0, l1, l2, "
                 "weighted_l0, weighted_l1, weighted_l2."
             )
         if thresholder[:8].lower() == "weighted" and thresholds is None:
@@ -212,6 +211,10 @@ class SR3(BaseOptimizer):
         self.threshold = threshold
         self.thresholds = thresholds
         self.nu = nu
+        if thresholds is not None:
+            self.lam = thresholds.T**2 / (2 * nu)
+        else:
+            self.lam = threshold**2 / (2 * nu)
         self.tol = tol
         self.thresholder = thresholder
         self.reg = get_regularization(thresholder)
@@ -253,36 +256,20 @@ class SR3(BaseOptimizer):
         if self.use_trimming:
             assert trimming_array is not None
             R2 *= trimming_array.reshape(x.shape[0], 1)
-        if self.thresholds is None:
-            regularization = self.reg(coef_full, self.threshold**2 / self.nu)
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
-        else:
-            regularization = self.reg(coef_full, self.thresholds**2 / self.nu)
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
+        regularization = self.reg(coef_full, self.lam)
+        if print_ind == 0 and self.verbose:
+            row = [
+                q,
+                np.sum(R2),
+                np.sum(D2) / self.nu,
+                regularization,
+                np.sum(R2) + np.sum(D2) + regularization,
+            ]
+            print(
+                "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
+                " ... {4:10.4e}".format(*row)
+            )
+        return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
 
     def _update_full_coef(self, cho, x_transpose_y, coef_sparse):
         """Update the unregularized weight vector"""
@@ -293,10 +280,7 @@ class SR3(BaseOptimizer):
 
     def _update_sparse_coef(self, coef_full):
         """Update the regularized weight vector"""
-        if self.thresholds is None:
-            coef_sparse = self.prox(coef_full, self.threshold)
-        else:
-            coef_sparse = self.prox(coef_full, self.thresholds.T)
+        coef_sparse = self.prox(coef_full, self.lam * self.nu)
         return coef_sparse
 
     def _update_trimming_array(self, coef_full, trimming_array, trimming_grad):

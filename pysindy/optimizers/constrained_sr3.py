@@ -14,7 +14,6 @@ import numpy as np
 from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
 
-from ..utils import get_regularization
 from ..utils import reorder_constraints
 from .sr3 import SR3
 
@@ -65,9 +64,9 @@ class ConstrainedSR3(SR3):
 
     thresholder : string, optional (default 'l0')
         Regularization function to use. Currently implemented options
-        are 'l0' (l0 norm), 'l1' (l1 norm), 'l2' (l2 norm), 'cad' (clipped
-        absolute deviation), 'weighted_l0' (weighted l0 norm),
-        'weighted_l1' (weighted l1 norm), and 'weighted_l2' (weighted l2 norm).
+        are 'l0' (l0 norm), 'l1' (l1 norm), 'l2' (l2 norm),
+        'weighted_l0' (weighted l0 norm), 'weighted_l1' (weighted l1 norm),
+        and 'weighted_l2' (weighted l2 norm).
 
     max_iter : int, optional (default 30)
         Maximum iterations of the optimization algorithm.
@@ -192,7 +191,6 @@ class ConstrainedSR3(SR3):
         )
 
         self.verbose_cvxpy = verbose_cvxpy
-        self.reg = get_regularization(thresholder)
         self.constraint_lhs = constraint_lhs
         self.constraint_rhs = constraint_rhs
         self.constraint_order = constraint_order
@@ -271,20 +269,41 @@ class ConstrainedSR3(SR3):
         rhs = rhs.reshape(g.shape)
         return inv1.dot(rhs)
 
+    @staticmethod
+    def _calculate_penalty(
+        regularization: str, regularization_weight, xi: cp.Variable
+    ) -> cp.Expression:
+        """
+        Args:
+        -----
+        regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' |
+                        'l2' | 'weighted_l2'
+        regularization_weight: float | np.array, can be a scalar
+                               or an array of the same shape as xi
+        xi: cp.Variable
+
+        Returns:
+        --------
+        cp.Expression
+        """
+        regularization = regularization.lower()
+        if regularization == "l1":
+            return regularization_weight * cp.sum(cp.abs(xi))
+        elif regularization == "weighted_l1":
+            return cp.sum(cp.multiply(regularization_weight, cp.abs(xi)))
+        elif regularization == "l2":
+            return regularization_weight * cp.sum(xi**2)
+        elif regularization == "weighted_l2":
+            return cp.sum(cp.multiply(regularization_weight, xi**2))
+
     def _create_var_and_part_cost(
         self, var_len: int, x_expanded: np.ndarray, y: np.ndarray
     ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        if self.thresholder.lower() == "l1":
-            cost = cost + self.threshold * cp.norm1(xi)
-        elif self.thresholder.lower() == "weighted_l1":
-            cost = cost + cp.norm1(np.ravel(self.thresholds) @ xi)
-        elif self.thresholder.lower() == "l2":
-            cost = cost + self.threshold * cp.norm2(xi) ** 2
-        elif self.thresholder.lower() == "weighted_l2":
-            cost = cost + cp.norm2(np.ravel(self.thresholds) @ xi) ** 2
-        return xi, cost
+        threshold = self.thresholds if self.thresholds is not None else self.threshold
+        penalty = self._calculate_penalty(self.thresholder, np.ravel(threshold), xi)
+        return xi, cost + penalty
 
     def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
         if self.use_constraints:
@@ -341,58 +360,6 @@ class ConstrainedSR3(SR3):
             return None
         coef_new = (xi.value).reshape(coef_prev.shape)
         return coef_new
-
-    def _update_sparse_coef(self, coef_full):
-        """Update the regularized weight vector"""
-        if self.thresholds is None:
-            return super(ConstrainedSR3, self)._update_sparse_coef(coef_full)
-        else:
-            coef_sparse = self.prox(coef_full, self.thresholds.T)
-        self.history_.append(coef_sparse.T)
-        return coef_sparse
-
-    def _objective(self, x, y, q, coef_full, coef_sparse, trimming_array=None):
-        """Objective function"""
-        if q != 0:
-            print_ind = q % (self.max_iter // 10.0)
-        else:
-            print_ind = q
-        R2 = (y - np.dot(x, coef_full)) ** 2
-        D2 = (coef_full - coef_sparse) ** 2
-        if self.use_trimming:
-            assert trimming_array is not None
-            R2 *= trimming_array.reshape(x.shape[0], 1)
-
-        if self.thresholds is None:
-            regularization = self.reg(coef_full, self.threshold**2 / self.nu)
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
-        else:
-            regularization = self.reg(coef_full, self.thresholds**2 / self.nu)
-            if print_ind == 0 and self.verbose:
-                row = [
-                    q,
-                    np.sum(R2),
-                    np.sum(D2) / self.nu,
-                    regularization,
-                    np.sum(R2) + np.sum(D2) + regularization,
-                ]
-                print(
-                    "{0:10d} ... {1:10.4e} ... {2:10.4e} ... {3:10.4e}"
-                    " ... {4:10.4e}".format(*row)
-                )
-            return 0.5 * np.sum(R2) + 0.5 * regularization + 0.5 * np.sum(D2) / self.nu
 
     def _reduce(self, x, y):
         """

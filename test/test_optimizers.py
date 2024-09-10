@@ -3,6 +3,7 @@ Unit tests for optimizers.
 """
 import pickle
 
+import cvxpy as cp
 import numpy as np
 import pytest
 import scipy.linalg
@@ -473,23 +474,19 @@ def test_constrained_sr3_quadratic_library(params):
 
 
 @pytest.mark.parametrize(
-    "params",
+    ["regularizer", "lam", "expected"],
     [
-        dict(thresholder="l1", threshold=1, expected=2.5),
-        dict(thresholder="weighted_l1", thresholds=np.ones((4, 1)), expected=2.5),
-        dict(thresholder="l2", threshold=1, expected=1.5),
-        dict(thresholder="weighted_l2", thresholds=np.ones((4, 1)), expected=2.5),
+        ("l1", np.array([[2]]), 20),
+        ("weighted_l1", np.array([[3, 2, 0.5]]).T, 14.5),
+        ("l2", np.array([[2]]), 76),
+        ("weighted_l2", np.array([[3, 2, 0.5]]).T, 42.5),
     ],
-    ids=lambda d: d["thresholder"],
 )
-def test_stable_linear_sr3_cost_function(params):
-    expected = params.pop("expected")
-    opt = StableLinearSR3(**params)
-    x = np.eye(2)
-    y = np.ones(1)
-    xi, cost = opt._create_var_and_part_cost(x.flatten(), y, x, x)
-    xi.value = 0.5 * np.ones(4)
-    np.testing.assert_allclose(cost.value, expected)
+def test_constrained_sr3_penalty_term(regularizer, lam, expected):
+    xi = cp.Variable(3)
+    penalty = ConstrainedSR3._calculate_penalty(regularizer, np.ravel(lam), xi)
+    xi.value = np.array([-2, 3, 5])
+    np.testing.assert_allclose(penalty.value, expected)
 
 
 def test_stable_linear_sr3_linear_library():
@@ -650,14 +647,6 @@ def test_prox_functions(data_derivative_1d, optimizer, thresholder):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
     model = optimizer(thresholder=thresholder)
-    model.fit(x, x_dot)
-    check_is_fitted(model)
-
-
-def test_cad_prox_function(data_derivative_1d):
-    x, x_dot = data_derivative_1d
-    x = x.reshape(-1, 1)
-    model = SR3(thresholder="cad")
     model.fit(x, x_dot)
     check_is_fitted(model)
 

@@ -162,7 +162,7 @@ class StableLinearSR3(ConstrainedSR3):
             2 * self.relax_coeff_nu
         )
         penalty = self._calculate_penalty(
-            self.thresholder, np.ravel(self.reg_weight_lam), xi
+            self.regularizer, np.ravel(self.reg_weight_lam), xi
         )
         return xi, cost + penalty
 

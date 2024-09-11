@@ -277,17 +277,6 @@ class ConstrainedSR3(SR3):
                 eps_rel=tol,
                 verbose=self.verbose_cvxpy,
             )
-        # Annoying error coming from L2 norm switching to use the ECOS
-        # solver, which uses "max_iters" instead of "max_iter", and
-        # similar semantic changes for the other variables.
-        except (TypeError, ValueError):
-            try:
-                prob = prob_clone
-                prob.solve(max_iters=self.max_iter, verbose=self.verbose_cvxpy)
-                xi = prob.variables()[0]
-            except cp.error.SolverError:
-                warnings.warn("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(var_len)
         except cp.error.SolverError:
             try:
                 prob = prob_clone

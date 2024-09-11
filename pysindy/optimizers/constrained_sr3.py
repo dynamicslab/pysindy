@@ -269,7 +269,6 @@ class ConstrainedSR3(SR3):
             prob = cp.Problem(cp.Minimize(cost))
 
         prob_clone = deepcopy(prob)
-        # default solver is SCS/OSQP here but switches to ECOS for L2
         try:
             prob.solve(
                 max_iter=self.max_iter,

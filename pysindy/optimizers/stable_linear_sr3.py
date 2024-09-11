@@ -199,7 +199,6 @@ class StableLinearSR3(ConstrainedSR3):
         else:
             prob = cp.Problem(cp.Minimize(cost))
 
-        # default solver is OSQP here but switches to ECOS for L2
         try:
             prob.solve(
                 max_iter=self.max_iter**2,
@@ -207,15 +206,6 @@ class StableLinearSR3(ConstrainedSR3):
                 eps_rel=self.tol,
                 verbose=self.verbose_cvxpy,
             )
-        # Annoying error coming from L2 norm switching to use the ECOS
-        # solver, which uses "max_iters" instead of "max_iter", and
-        # similar semantic changes for the other variables.
-        except TypeError:
-            try:
-                prob.solve(abstol=self.tol, reltol=self.tol, verbose=self.verbose_cvxpy)
-            except cp.error.SolverError:
-                print("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
         except cp.error.SolverError:
             print("Solver failed, setting coefs to zeros")
             xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])

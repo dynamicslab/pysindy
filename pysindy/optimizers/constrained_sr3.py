@@ -246,7 +246,9 @@ class ConstrainedSR3(SR3):
     ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        penalty = self._calculate_penalty(self.regularizer, np.ravel(self.reg_weight_lam), xi)
+        penalty = self._calculate_penalty(
+            self.regularizer, np.ravel(self.reg_weight_lam), xi
+        )
         return xi, cost + penalty
 
     def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):

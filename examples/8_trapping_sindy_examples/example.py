@@ -138,7 +138,7 @@ check_stability(r, Xi, sindy_opt, mean_val)
 # compute relative Frobenius error in the model coefficients
 terms = sindy_library.get_feature_names()
 Xi_meanfield = np.zeros(Xi.shape)
-Xi_meanfield[1: r + 1, :] = np.asarray([[0.01, -1, 0], [1, 0.01, 0], [0, 0, -1]]).T
+Xi_meanfield[1 : r + 1, :] = np.asarray([[0.01, -1, 0], [1, 0.01, 0], [0, 0, -1]]).T
 Xi_meanfield[terms.index("x0 x2"), 0] = -1
 Xi_meanfield[terms.index("x1 x2"), 1] = -1
 Xi_meanfield[terms.index("x0^2"), 2] = 1
@@ -275,7 +275,7 @@ check_stability(r, Xi, sindy_opt, mean_val)
 # compute relative Frobenius error in the model coefficients
 terms = sindy_library.get_feature_names()
 Xi_oscillator = np.zeros(Xi.shape)
-Xi_oscillator[1: r + 1, :] = np.asarray(
+Xi_oscillator[1 : r + 1, :] = np.asarray(
     [[mu1, 0, 0], [0, mu2, omega], [0, -omega, mu2]]
 ).T
 Xi_oscillator[terms.index("x0 x1"), 0] = sigma
@@ -426,7 +426,7 @@ rho = 28
 beta = 8.0 / 3.0
 terms = sindy_library.get_feature_names()
 Xi_lorenz = np.zeros(Xi.shape)
-Xi_lorenz[1: r + 1, :] = np.asarray(
+Xi_lorenz[1 : r + 1, :] = np.asarray(
     [[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]
 ).T
 Xi_lorenz[terms.index("x0 x2"), 1] = -1
@@ -637,7 +637,10 @@ from scipy.optimize import dual_annealing as anneal_algo
 
 # get analytic L and Q operators and galerkin model
 L, Q = burgers_galerkin(sigma, nu, U)
-def rhs(t, a): return galerkin_model(a, L, Q)  # noqa: E731
+
+
+def rhs(t, a):
+    return galerkin_model(a, L, Q)  # noqa: E731
 
 
 # Generate initial condition from unstable eigenvectors
@@ -740,7 +743,10 @@ galerkin5 = {}
 galerkin5["L"] = galerkin9["L"][inds5]
 inds5 = np.ix_([0, 1, 2, 3, -1], [0, 1, 2, 3, -1], [0, 1, 2, 3, -1])
 galerkin5["Q"] = galerkin9["Q"][inds5]
-def model5(t, a): return galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
+
+
+def model5(t, a):
+    return galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
 
 
 # make the 3D, 5D, and 9D POD-Galerkin trajectories

@@ -168,7 +168,7 @@ beta = 8.0 / 3.0
 
 terms = sindy_library.get_feature_names()
 Xi_lorenz = np.zeros(Xi.shape)
-Xi_lorenz[1: r + 1, :] = np.array([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
+Xi_lorenz[1 : r + 1, :] = np.array([[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]).T
 Xi_lorenz[terms.index("x0 x2"), 1] = -1
 Xi_lorenz[terms.index("x0 x1"), 2] = 1
 

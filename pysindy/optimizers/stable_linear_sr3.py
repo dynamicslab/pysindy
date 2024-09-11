@@ -161,7 +161,9 @@ class StableLinearSR3(ConstrainedSR3):
         cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (
             2 * self.relax_coeff_nu
         )
-        penalty = self._calculate_penalty(self.thresholder, np.ravel(self.reg_weight_lam), xi)
+        penalty = self._calculate_penalty(
+            self.thresholder, np.ravel(self.reg_weight_lam), xi
+        )
         return xi, cost + penalty
 
     def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):

@@ -12,34 +12,32 @@
 #
 # ### This notebook will show that both the energy and enstrophy can be used with the trapping theorem to promote global stability.
 # %%
-from scipy.optimize import dual_annealing as anneal_algo
-from trapping_utils import (
-    galerkin_model,
-    integrator_keywords,
-    nel,
-    nGLL,
-    interp,
-    get_velocity,
-    get_vorticity,
-    obj_function,
-    sindy_library_no_bias,
-    check_stability,
-    check_local_stability,
-    make_trap_progress_plots,
-    make_bar,
-    nx,
-    ny,
-    plot_field,
-    make_progress_plots,
-)
-import pymech.neksuite as nek
 import warnings
 
 import matplotlib.gridspec as gridspec
 import numpy as np
+import pymech.neksuite as nek
 import scipy.io as sio
 from matplotlib import pyplot as plt
 from scipy.integrate import solve_ivp
+from scipy.optimize import dual_annealing as anneal_algo
+from trapping_utils import check_local_stability
+from trapping_utils import check_stability
+from trapping_utils import galerkin_model
+from trapping_utils import get_velocity
+from trapping_utils import get_vorticity
+from trapping_utils import integrator_keywords
+from trapping_utils import interp
+from trapping_utils import make_bar
+from trapping_utils import make_progress_plots
+from trapping_utils import make_trap_progress_plots
+from trapping_utils import nel
+from trapping_utils import nGLL
+from trapping_utils import nx
+from trapping_utils import ny
+from trapping_utils import obj_function
+from trapping_utils import plot_field
+from trapping_utils import sindy_library_no_bias
 
 import pysindy as ps
 
@@ -85,12 +83,14 @@ galerkin9["Q_ep"] = (
     )
     / 6.0
 )
-def model9(t, a): return galerkin_model(a, galerkin9["L"], galerkin9["Q"])  # noqa: E731
 
 
-def model9_ep(t, a): return galerkin_model(  # noqa: E731
-    a, galerkin9["L"], galerkin9["Q_ep"]
-)
+def model9(t, a):
+    return galerkin_model(a, galerkin9["L"], galerkin9["Q"])  # noqa: E731
+
+
+def model9_ep(t, a):
+    return galerkin_model(a, galerkin9["L"], galerkin9["Q_ep"])  # noqa: E731
 
 
 # Generate initial condition from unstable eigenvectors
@@ -107,7 +107,10 @@ galerkin5["L"] = galerkin9["L"][inds5]
 inds5 = np.ix_([0, 1, 2, 3, -1], [0, 1, 2, 3, -1], [0, 1, 2, 3, -1])
 galerkin5["Q"] = galerkin9["Q"][inds5]
 galerkin5["Q_ep"] = galerkin9["Q_ep"][inds5]
-def model5(t, a): return galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
+
+
+def model5(t, a):
+    return galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
 
 
 # make the 5D POD-Galerkin model trajectories
@@ -171,7 +174,8 @@ Cy = np.array(
 )
 
 
-def filename(t_idx): return "cyl0.f{0:05d}".format(t_idx)  # noqa: E731
+def filename(t_idx):
+    return "cyl0.f{0:05d}".format(t_idx)  # noqa: E731
 
 
 # plot mean + leading POD modes
@@ -211,12 +215,14 @@ plt.show()
 
 # %%
 mass_matrix = np.loadtxt("../data/vonKarman_pod/pod_modes/mass_matrix.dat")
-def ip1(a, b): return np.dot(mass_matrix * a, b)  # noqa: E731
 
 
-def ip2(a, b, c, d): return np.dot(a * mass_matrix, c) + np.dot(  # noqa: E731
-    b * mass_matrix, d
-)
+def ip1(a, b):
+    return np.dot(mass_matrix * a, b)  # noqa: E731
+
+
+def ip2(a, b, c, d):
+    return np.dot(a * mass_matrix, c) + np.dot(b * mass_matrix, d)  # noqa: E731
 
 
 energy_integrals = np.zeros((6, 6))

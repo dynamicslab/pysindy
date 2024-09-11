@@ -239,6 +239,8 @@ model.print()
 # ### Discrete time dynamical system (map)
 
 # In[14]:
+
+
 def f(x):
     return 3.6 * x * (1 - x)
 

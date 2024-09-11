@@ -155,24 +155,6 @@ class SINDyPI(SR3):
                         ConvergenceWarning,
                     )
                 xi_final[:, i] = xi.value
-            # Annoying error coming from L2 norm switching to use the ECOS
-            # solver, which uses "max_iters" instead of "max_iter", and
-            # similar semantic changes for the other variables.
-            except TypeError:
-                prob.solve(
-                    max_iters=self.max_iter,
-                    abstol=self.tol,
-                    reltol=self.tol,
-                    verbose=self.verbose_cvxpy,
-                )
-                if xi.value is None:
-                    warnings.warn(
-                        "Infeasible solve on iteration "
-                        + str(i)
-                        + ", try changing your library",
-                        ConvergenceWarning,
-                    )
-                xi_final[:, i] = xi.value
             except cp.error.SolverError:
                 print("Solver failed on model ", str(i), ", setting coefs to zeros")
                 xi_final[:, i] = np.zeros(n_features)

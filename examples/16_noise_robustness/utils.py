@@ -1357,10 +1357,10 @@ def hyperparameter_scan_sr3(
     # start with initial guess that all coefs are zero
     optimizer = ps.EnsembleOptimizer(
         opt=ps.SR3(
-            threshold=0,
+            reg_weight_lam=0,
             max_iter=max_iter,
             normalize_columns=normalize_columns,
-            nu=nu,
+            relax_coeff_nu=nu,
         ),
         bagging=True,
         n_models=n_models,
@@ -1418,10 +1418,10 @@ def hyperparameter_scan_sr3(
     for i in range(tol_iter):
         optimizer = ps.EnsembleOptimizer(
             opt=ps.SR3(
-                threshold=tol,
+                reg_weight_lam=tol,
                 max_iter=max_iter,
                 normalize_columns=normalize_columns,
-                nu=nu,
+                relax_coeff_nu=nu,
             ),
             bagging=True,
             n_models=n_models,

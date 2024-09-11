@@ -97,7 +97,7 @@ x_test = solve_ivp(
 ).y.T
 
 # define hyperparameters
-threshold = 0.0
+reg_weight_lam = 0.0
 eta = 1e5
 max_iter = 5000
 
@@ -106,7 +106,7 @@ max_iter = 5000
 sindy_opt = ps.TrappingSR3(
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     gamma=-1,
@@ -138,7 +138,7 @@ check_stability(r, Xi, sindy_opt, mean_val)
 # compute relative Frobenius error in the model coefficients
 terms = sindy_library.get_feature_names()
 Xi_meanfield = np.zeros(Xi.shape)
-Xi_meanfield[1 : r + 1, :] = np.asarray([[0.01, -1, 0], [1, 0.01, 0], [0, 0, -1]]).T
+Xi_meanfield[1: r + 1, :] = np.asarray([[0.01, -1, 0], [1, 0.01, 0], [0, 0, -1]]).T
 Xi_meanfield[terms.index("x0 x2"), 0] = -1
 Xi_meanfield[terms.index("x1 x2"), 1] = -1
 Xi_meanfield[terms.index("x0^2"), 2] = 1
@@ -239,7 +239,7 @@ eta = 1.0e8
 sindy_opt = ps.TrappingSR3(
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
 )
@@ -275,7 +275,7 @@ check_stability(r, Xi, sindy_opt, mean_val)
 # compute relative Frobenius error in the model coefficients
 terms = sindy_library.get_feature_names()
 Xi_oscillator = np.zeros(Xi.shape)
-Xi_oscillator[1 : r + 1, :] = np.asarray(
+Xi_oscillator[1: r + 1, :] = np.asarray(
     [[mu1, 0, 0], [0, mu2, omega], [0, -omega, mu2]]
 ).T
 Xi_oscillator[terms.index("x0 x1"), 0] = sigma
@@ -371,7 +371,7 @@ x0 = (rng.random(3) - 0.5) * 30
 x_test = solve_ivp(lorenz, t_span, x0, t_eval=t, **integrator_keywords).y.T
 
 # define hyperparameters
-threshold = 0
+reg_weight_lam = 0
 max_iter = 5000
 eta = 1.0e3
 
@@ -381,7 +381,7 @@ alpha_m = 8e-1 * eta  # default is 1e-2 * eta so this speeds up the code here
 sindy_opt = ps.TrappingSR3(
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -426,7 +426,7 @@ rho = 28
 beta = 8.0 / 3.0
 terms = sindy_library.get_feature_names()
 Xi_lorenz = np.zeros(Xi.shape)
-Xi_lorenz[1 : r + 1, :] = np.asarray(
+Xi_lorenz[1: r + 1, :] = np.asarray(
     [[-sigma, sigma, 0], [rho, -1, 0], [0, 0, -beta]]
 ).T
 Xi_lorenz[terms.index("x0 x2"), 1] = -1
@@ -512,7 +512,7 @@ x0 = rng.random((6,)) - 0.5
 x_test = solve_ivp(mhd, t_span, x0, t_eval=t, **integrator_keywords).y.T
 
 # define hyperparameters
-threshold = 0.0
+reg_weight_lam = 0.0
 max_iter = 1000
 eta = 1.0e10
 alpha_m = 5.0e-1 * eta
@@ -521,7 +521,7 @@ alpha_m = 5.0e-1 * eta
 sindy_opt = ps.TrappingSR3(
     _n_tgts=6,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     verbose=True,
@@ -637,7 +637,8 @@ from scipy.optimize import dual_annealing as anneal_algo
 
 # get analytic L and Q operators and galerkin model
 L, Q = burgers_galerkin(sigma, nu, U)
-rhs = lambda t, a: galerkin_model(a, L, Q)  # noqa: E731
+def rhs(t, a): return galerkin_model(a, L, Q)  # noqa: E731
+
 
 # Generate initial condition from unstable eigenvectors
 lamb, Phi = np.linalg.eig(L)
@@ -739,7 +740,8 @@ galerkin5 = {}
 galerkin5["L"] = galerkin9["L"][inds5]
 inds5 = np.ix_([0, 1, 2, 3, -1], [0, 1, 2, 3, -1], [0, 1, 2, 3, -1])
 galerkin5["Q"] = galerkin9["Q"][inds5]
-model5 = lambda t, a: galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
+def model5(t, a): return galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
+
 
 # make the 3D, 5D, and 9D POD-Galerkin trajectories
 t_span = (t[0], t[-1])
@@ -793,7 +795,7 @@ eta = 1.0e2
 
 # don't need a threshold if eta is sufficiently small
 # which is good news because CVXPY is much slower
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 9e-1 * eta
 
 
@@ -801,7 +803,7 @@ alpha_m = 9e-1 * eta
 sindy_opt = ps.TrappingSR3(
     _n_tgts=5,
     _include_bias=False,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,

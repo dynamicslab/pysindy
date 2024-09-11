@@ -12,20 +12,7 @@
 #
 # ### This notebook will show that both the energy and enstrophy can be used with the trapping theorem to promote global stability.
 # %%
-import warnings
-
-import matplotlib.gridspec as gridspec
-import numpy as np
-import scipy.io as sio
-from matplotlib import pyplot as plt
-from scipy.integrate import solve_ivp
-
-import pysindy as ps
-
-# ignore warnings
-warnings.filterwarnings("ignore")
-
-import pymech.neksuite as nek
+from scipy.optimize import dual_annealing as anneal_algo
 from trapping_utils import (
     galerkin_model,
     integrator_keywords,
@@ -45,6 +32,20 @@ from trapping_utils import (
     plot_field,
     make_progress_plots,
 )
+import pymech.neksuite as nek
+import warnings
+
+import matplotlib.gridspec as gridspec
+import numpy as np
+import scipy.io as sio
+from matplotlib import pyplot as plt
+from scipy.integrate import solve_ivp
+
+import pysindy as ps
+
+# ignore warnings
+warnings.filterwarnings("ignore")
+
 
 # %% [markdown]
 # #### We have pre-loaded some useful functions, and now we can load in the von Karman DNS data. For simplicity (and speed of the code), we will limit ourselves to 5D models, using the first 4 POD modes + the shift mode.
@@ -84,10 +85,13 @@ galerkin9["Q_ep"] = (
     )
     / 6.0
 )
-model9 = lambda t, a: galerkin_model(a, galerkin9["L"], galerkin9["Q"])  # noqa: E731
-model9_ep = lambda t, a: galerkin_model(  # noqa: E731
+def model9(t, a): return galerkin_model(a, galerkin9["L"], galerkin9["Q"])  # noqa: E731
+
+
+def model9_ep(t, a): return galerkin_model(  # noqa: E731
     a, galerkin9["L"], galerkin9["Q_ep"]
 )
+
 
 # Generate initial condition from unstable eigenvectors
 # lamb, Phi = np.linalg.eig(galerkin9['L'])
@@ -103,7 +107,8 @@ galerkin5["L"] = galerkin9["L"][inds5]
 inds5 = np.ix_([0, 1, 2, 3, -1], [0, 1, 2, 3, -1], [0, 1, 2, 3, -1])
 galerkin5["Q"] = galerkin9["Q"][inds5]
 galerkin5["Q_ep"] = galerkin9["Q_ep"][inds5]
-model5 = lambda t, a: galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
+def model5(t, a): return galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
+
 
 # make the 5D POD-Galerkin model trajectories
 t_span = (t[0], t[-1])
@@ -165,7 +170,9 @@ Cy = np.array(
     ]
 )
 
-filename = lambda t_idx: "cyl0.f{0:05d}".format(t_idx)  # noqa: E731
+
+def filename(t_idx): return "cyl0.f{0:05d}".format(t_idx)  # noqa: E731
+
 
 # plot mean + leading POD modes
 clim = [-1, 1]
@@ -204,10 +211,14 @@ plt.show()
 
 # %%
 mass_matrix = np.loadtxt("../data/vonKarman_pod/pod_modes/mass_matrix.dat")
-ip1 = lambda a, b: np.dot(mass_matrix * a, b)  # noqa: E731
-ip2 = lambda a, b, c, d: np.dot(a * mass_matrix, c) + np.dot(  # noqa: E731
+def ip1(a, b): return np.dot(mass_matrix * a, b)  # noqa: E731
+
+
+def ip2(a, b, c, d): return np.dot(a * mass_matrix, c) + np.dot(  # noqa: E731
     b * mass_matrix, d
 )
+
+
 energy_integrals = np.zeros((6, 6))
 enstrophy_integrals = np.zeros((6, 6))
 for i, wi in enumerate(vorticities_flat):
@@ -248,7 +259,6 @@ L_enstrophy = np.dot(P_enstrophy, galerkin5["L"])
 
 # %%
 # Import simulated annealing algorithm from scipy
-from scipy.optimize import dual_annealing as anneal_algo
 
 # Search between -5000, 5000 for each component of m
 boundvals = np.zeros((r, 2))
@@ -380,7 +390,7 @@ print(np.max(abs(galerkin_ep)))
 # %%
 max_iter = 5000
 eta = 1.0e2
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 9e-1 * eta
 
 # run trapping SINDy
@@ -388,7 +398,7 @@ sindy_opt = ps.TrappingSR3(
     method="global",
     _n_tgts=5,
     _include_bias=False,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -418,7 +428,7 @@ print("Maximum deviation from the constraints = ", Q_sum)
 # %%
 max_iter = 5000
 eta = 1.0e4
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 1e-1 * eta
 
 mod_matrix = enstrophy_integrals[1:, 1:]
@@ -426,7 +436,7 @@ sindy_opt = ps.TrappingSR3(
     method="global",
     _n_tgts=5,
     _include_bias=False,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -571,7 +581,7 @@ plt.show()
 # %%
 max_iter = 5000
 eta = 1.0e4
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 1e-2 * eta
 # alpha = 1e10
 beta = 1e-12
@@ -582,7 +592,7 @@ sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=5,
     _include_bias=False,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     gamma=-1,
     alpha_m=alpha_m,

@@ -84,9 +84,9 @@ galerkin9["Q_ep"] = (
     / 6.0
 )
 model9 = lambda t, a: galerkin_model(a, galerkin9["L"], galerkin9["Q"])  # noqa: E731
-model9_ep = lambda t, a: galerkin_model(
+model9_ep = lambda t, a: galerkin_model(  # noqa: E731
     a, galerkin9["L"], galerkin9["Q_ep"]
-)  # noqa: E731
+)
 
 # Generate initial condition from unstable eigenvectors
 # lamb, Phi = np.linalg.eig(galerkin9['L'])
@@ -203,9 +203,9 @@ plt.show()
 # %%
 mass_matrix = np.loadtxt("../data/vonKarman_pod/pod_modes/mass_matrix.dat")
 ip1 = lambda a, b: np.dot(mass_matrix * a, b)  # noqa: E731
-ip2 = lambda a, b, c, d: np.dot(a * mass_matrix, c) + np.dot(
+ip2 = lambda a, b, c, d: np.dot(a * mass_matrix, c) + np.dot(  # noqa: E731
     b * mass_matrix, d
-)  # noqa: E731
+)
 
 energy_integrals = np.zeros((6, 6))
 enstrophy_integrals = np.zeros((6, 6))

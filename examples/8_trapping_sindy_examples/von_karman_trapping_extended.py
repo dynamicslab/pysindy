@@ -83,15 +83,10 @@ galerkin9["Q_ep"] = (
     )
     / 6.0
 )
-
-
-def model9(t, a):
-    return galerkin_model(a, galerkin9["L"], galerkin9["Q"])  # noqa: E731
-
-
-def model9_ep(t, a):
-    return galerkin_model(a, galerkin9["L"], galerkin9["Q_ep"])  # noqa: E731
-
+model9 = lambda t, a: galerkin_model(a, galerkin9["L"], galerkin9["Q"])  # noqa: E731
+model9_ep = lambda t, a: galerkin_model(
+    a, galerkin9["L"], galerkin9["Q_ep"]
+)  # noqa: E731
 
 # Generate initial condition from unstable eigenvectors
 # lamb, Phi = np.linalg.eig(galerkin9['L'])
@@ -107,11 +102,7 @@ galerkin5["L"] = galerkin9["L"][inds5]
 inds5 = np.ix_([0, 1, 2, 3, -1], [0, 1, 2, 3, -1], [0, 1, 2, 3, -1])
 galerkin5["Q"] = galerkin9["Q"][inds5]
 galerkin5["Q_ep"] = galerkin9["Q_ep"][inds5]
-
-
-def model5(t, a):
-    return galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
-
+model5 = lambda t, a: galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
 
 # make the 5D POD-Galerkin model trajectories
 t_span = (t[0], t[-1])
@@ -172,11 +163,7 @@ Cy = np.array(
         for k in range(nGLL)
     ]
 )
-
-
-def filename(t_idx):
-    return "cyl0.f{0:05d}".format(t_idx)  # noqa: E731
-
+filename = lambda t_idx: "cyl0.f{0:05d}".format(t_idx)  # noqa: E731
 
 # plot mean + leading POD modes
 clim = [-1, 1]
@@ -215,15 +202,10 @@ plt.show()
 
 # %%
 mass_matrix = np.loadtxt("../data/vonKarman_pod/pod_modes/mass_matrix.dat")
-
-
-def ip1(a, b):
-    return np.dot(mass_matrix * a, b)  # noqa: E731
-
-
-def ip2(a, b, c, d):
-    return np.dot(a * mass_matrix, c) + np.dot(b * mass_matrix, d)  # noqa: E731
-
+ip1 = lambda a, b: np.dot(mass_matrix * a, b)  # noqa: E731
+ip2 = lambda a, b, c, d: np.dot(a * mass_matrix, c) + np.dot(
+    b * mass_matrix, d
+)  # noqa: E731
 
 energy_integrals = np.zeros((6, 6))
 enstrophy_integrals = np.zeros((6, 6))

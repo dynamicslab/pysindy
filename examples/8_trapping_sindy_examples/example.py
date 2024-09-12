@@ -637,10 +637,7 @@ from scipy.optimize import dual_annealing as anneal_algo
 
 # get analytic L and Q operators and galerkin model
 L, Q = burgers_galerkin(sigma, nu, U)
-
-
-def rhs(t, a):
-    return galerkin_model(a, L, Q)  # noqa: E731
+rhs = lambda t, a: galerkin_model(a, L, Q)  # noqa: E731
 
 
 # Generate initial condition from unstable eigenvectors
@@ -743,10 +740,7 @@ galerkin5 = {}
 galerkin5["L"] = galerkin9["L"][inds5]
 inds5 = np.ix_([0, 1, 2, 3, -1], [0, 1, 2, 3, -1], [0, 1, 2, 3, -1])
 galerkin5["Q"] = galerkin9["Q"][inds5]
-
-
-def model5(t, a):
-    return galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
+model5 = lambda t, a: galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
 
 
 # make the 3D, 5D, and 9D POD-Galerkin trajectories

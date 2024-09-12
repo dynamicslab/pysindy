@@ -210,6 +210,8 @@ class SR3(BaseOptimizer):
         threshold: Union[float, np.ndarray[np.float64]], relax_coeff_nu: float
     ):
         """
+        Calculate the L0 regularizer weight that is equivalent to a known L0 threshold
+
         See Appendix S1 of the following paper for more details.
             Champion, K., Zheng, P., Aravkin, A. Y., Brunton, S. L., & Kutz, J. N.
             (2020). A unified sparse optimization framework to learn parsimonious

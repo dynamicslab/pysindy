@@ -1,14 +1,14 @@
 # %% [markdown]
-# # Extended Trapping SINDy
-# By Mai Peng and Alan Kaptanoglu
+#  # Extended Trapping SINDy
+#  By Mai Peng, Alan Kaptanoglu and Jake Stevens-Haas
 #
-# A very common issue is that models identified by system identification methods typically have no guarantees that the models are numerically or physically stable. This can be addressed with heuristic, data-driven, or analytic closure models, but we have recently directly promoted globally stable models into the system identification itself (see the Example 8 Jupyter notebook). This is really nice but there are three potential caveats, (1) the regression is nonconvex and there a number of hyperparameters, so this method can be difficult to learn, and (2) in order to promote global stability, one needs an analytic result from stability theory, and the one we use applies only for quadratically nonlinear dynamics (typically fluid and plasma flows) with energy-preserving, quadratic, nonlinearities. Moreover, we have good reason to believe that (3) generic quadratically nonlinear models will always be globally *unbounded*, so for these situations we can also promote local Lyapunov stability of the origin using some variations of the original Trapping SINDy algorithm. That is the goal of this notebook -- to illustrate how various forms of global and local stability can be promoted explicitly in the SINDy method to obtain stable data-driven models.
+#  A very common issue is that models identified by system identification methods typically have no guarantees that the models are numerically or physically stable. This can be addressed with heuristic, data-driven, or analytic closure models, but we have recently directly promoted globally stable models into the system identification itself (see the Example 8 Jupyter notebook). This is really nice but there are three potential caveats, (1) the regression is nonconvex and there a number of hyperparameters, so this method can be difficult to learn, and (2) in order to promote global stability, one needs an analytic result from stability theory, and the one we use applies only for quadratically nonlinear dynamics (typically fluid and plasma flows) with energy-preserving, quadratic, nonlinearities. Moreover, we have good reason to believe that (3) generic quadratically nonlinear models will always be globally *unbounded*, so for these situations we can also promote local Lyapunov stability of the origin using some variations of the original Trapping SINDy algorithm. That is the goal of this notebook -- to illustrate how various forms of global and local stability can be promoted explicitly in the SINDy method to obtain stable data-driven models.
 #
-# For the following, we will consider dynamical models of the form
-# $$\dot{x}_i = C_i +  L_{ij}x_j + Q_{ijk}x_ix_j.$$
-# For global stability promotion, we will require that the totally symmetric part of the quadratic coefficients vanishes (without loss of generality, $Q_{ijk}$ is symmetric in the last two indices):
-# $$ Q_{ijk} + Q_{jik} + Q_{kij} = 0.$$
-# This equation can be implemented as a hard or soft constraint in the optimization. For dynamical models that do not satisfy this condition, we can still promote locally stable models that are stable even at very large distances of the origin. The following examples show different ways to relax this hard constraint.
+#  For the following, we will consider dynamical models of the form
+#  $$\dot{x}_i = C_i +  L_{ij}x_j + Q_{ijk}x_ix_j.$$
+#  For global stability promotion, we will require that the totally symmetric part of the quadratic coefficients vanishes (without loss of generality, $Q_{ijk}$ is symmetric in the last two indices):
+#  $$ Q_{ijk} + Q_{jik} + Q_{kij} = 0.$$
+#  This equation can be implemented as a hard or soft constraint in the optimization. For dynamical models that do not satisfy this condition, we can still promote locally stable models that are stable even at very large distances of the origin. The following examples show different ways to relax this hard constraint.
 # %%
 import warnings
 
@@ -29,7 +29,6 @@ from trapping_utils import (
     make_fits,
     obj_function,
     check_local_stability,
-    check_stability,
     make_trap_progress_plots,
 )
 
@@ -37,64 +36,64 @@ np.random.seed(10)  # for reproducibility
 
 # %% [markdown]
 # # Lorenz model
-# The Lorenz system originates from a simple fluid model of atmospheric dynamics from Lorenz et al. (1963).
-# This system is likely the most famous example of chaotic, nonlinear behavior despite the somewhat innocuous system of equations,
+#  The Lorenz system originates from a simple fluid model of atmospheric dynamics from Lorenz et al. (1963).
+#  This system is likely the most famous example of chaotic, nonlinear behavior despite the somewhat innocuous system of equations,
 #
-# $$
-# \begin{align}
-#     \frac{d}{dt}\begin{bmatrix}
-#     x \\
-#     y \\
-#     z \\
-#     \end{bmatrix} &= \begin{bmatrix}
-#     -\sigma & \sigma & 0 \\
-#     \rho & -1 & 0 \\
-#     0 & 0 & -\beta
-#     \end{bmatrix}
-#     \begin{bmatrix}
-#     x \\
-#     y \\
-#     z
-#     \end{bmatrix}
-#     +
-#     \begin{bmatrix}
-#     0 \\
-#     -xz \\
-#     xy
-#     \end{bmatrix}, \qquad
-#     \mathbf{A}^S = \begin{bmatrix}
-#     -\sigma & \frac{1}{2}(\rho+\sigma - m_3) & \frac{1}{2}m_2 \\
-#     \frac{1}{2}(\rho+\sigma - m_3) & -1 & 0 \\
-#     \frac{1}{2}m_2 & 0 & -\beta
-#     \end{bmatrix}.
-# \end{align}
-# $$
+#  $$
+#  \begin{align}
+#      \frac{d}{dt}\begin{bmatrix}
+#      x \\
+#      y \\
+#      z \\
+#      \end{bmatrix} &= \begin{bmatrix}
+#      -\sigma & \sigma & 0 \\
+#      \rho & -1 & 0 \\
+#      0 & 0 & -\beta
+#      \end{bmatrix}
+#      \begin{bmatrix}
+#      x \\
+#      y \\
+#      z
+#      \end{bmatrix}
+#      +
+#      \begin{bmatrix}
+#      0 \\
+#      -xz \\
+#      xy
+#      \end{bmatrix}, \qquad
+#      \mathbf{A}^S = \begin{bmatrix}
+#      -\sigma & \frac{1}{2}(\rho+\sigma - m_3) & \frac{1}{2}m_2 \\
+#      \frac{1}{2}(\rho+\sigma - m_3) & -1 & 0 \\
+#      \frac{1}{2}m_2 & 0 & -\beta
+#      \end{bmatrix}.
+#  \end{align}
+#  $$
 #
-# For Lorenz's choice of parameters, $\sigma = 10$, $\rho = 28$, $\beta  = 8/3$, this system is known to exhibit a stable attractor. For $\mathbf{m} = [0,m_2,\rho+\sigma]$ ($m_1$ does not contribute to $\mathbf{A}^S$ so we set it to zero),
+#  For Lorenz's choice of parameters, $\sigma = 10$, $\rho = 28$, $\beta  = 8/3$, this system is known to exhibit a stable attractor. For $\mathbf{m} = [0,m_2,\rho+\sigma]$ ($m_1$ does not contribute to $\mathbf{A}^S$ so we set it to zero),
 #
-# $$
-# \begin{align}
-#     \mathbf{A}^S &= \begin{bmatrix}
-#     -\sigma & 0 & \frac{1}{2}m_2 \\
-#     0 & -1 & 0 \\
-#     \frac{1}{2}m_2 & 0 & -\beta
-#     \end{bmatrix}, \qquad
-#     \lambda_1 = -1, \qquad \lambda_{\pm} = -\frac{1}{2}\left[\beta+\sigma \mp \sqrt{m_2^2 + (\beta-\sigma)^2}\right],
-# \end{align}
-# $$
+#  $$
+#  \begin{align}
+#      \mathbf{A}^S &= \begin{bmatrix}
+#      -\sigma & 0 & \frac{1}{2}m_2 \\
+#      0 & -1 & 0 \\
+#      \frac{1}{2}m_2 & 0 & -\beta
+#      \end{bmatrix}, \qquad
+#      \lambda_1 = -1, \qquad \lambda_{\pm} = -\frac{1}{2}\left[\beta+\sigma \mp \sqrt{m_2^2 + (\beta-\sigma)^2}\right],
+#  \end{align}
+#  $$
 #
-# so that if $\lambda_{\pm} < 0$, then $-2\sqrt{\sigma\beta} < m_2 < 2\sqrt{\sigma\beta}$.
-# Our algorithm can successfully identify the optimal $\mathbf{m}$, and can be used to identify the inequality bounds on $m_2$ for stability.
+#  so that if $\lambda_{\pm} < 0$, then $-2\sqrt{\sigma\beta} < m_2 < 2\sqrt{\sigma\beta}$.
+#  Our algorithm can successfully identify the optimal $\mathbf{m}$, and can be used to identify the inequality bounds on $m_2$ for stability.
 
 # %% [markdown]
 # ### Check global stability of the Lorenz model
-# The skew-symmetric models below are globally stable *if and only if* there exists a vector $\mathbf{m}$ such that following matrix is negative definite:
-# $$A^S_{ij} = L^S_{ij} + (Q_{ijk} + Q_{jik})m_k.$$
-# Note that if the quadratic tensor has zero totally symmetric part, this is equal to
-# $$A^S_{ij} = L^S_{ij} - Q_{kij}m_k.$$
-# A negative definite $\mathbf{A}^S$ turns out to also be necessary for models that do not quite satisfy the constraint on $Q_{jik}$, but in this case is not sufficient for global boundedness.
+#  The skew-symmetric models below are globally stable *if and only if* there exists a vector $\mathbf{m}$ such that following matrix is negative definite:
+#  $$A^S_{ij} = L^S_{ij} + (Q_{ijk} + Q_{jik})m_k.$$
+#  Note that if the quadratic tensor has zero totally symmetric part, this is equal to
+#  $$A^S_{ij} = L^S_{ij} - Q_{kij}m_k.$$
+#  A negative definite $\mathbf{A}^S$ turns out to also be necessary for models that do not quite satisfy the constraint on $Q_{jik}$, but in this case is not sufficient for global boundedness.
 #
-# A decent-enough algorithm for a nonlinear search for such a $\mathbf{m}$ that makes $A^S_{ij}$ negative definite is simulated annealing, and a simple interface is provided by scipy.
+#  A decent-enough algorithm for a nonlinear search for such a $\mathbf{m}$ that makes $A^S_{ij}$ negative definite is simulated annealing, and a simple interface is provided by scipy.
 
 # %%
 # define parameters
@@ -112,7 +111,7 @@ x0 = (np.random.rand(3) - 0.5) * 30
 x_test = solve_ivp(lorenz, t_span, x0, t_eval=t, **integrator_keywords).y.T
 
 # define hyperparameters
-threshold = 0
+reg_weight_lam = 0
 max_iter = 5000
 eta = 1.0e3
 alpha_m = 8e-1 * eta
@@ -122,7 +121,7 @@ sindy_opt = ps.TrappingSR3(
     method="global",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     gamma=-1,
@@ -142,8 +141,8 @@ PQ_tensor = sindy_opt.PQ_
 Lenergy = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 print(
-    "Maximum deviation of Qijk from having zero totally symmetric part: ",
-    np.max(np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))),
+    r"|tilde{H_0}|_F = ",
+    np.sqrt(np.sum((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])) ** 2)),
 )
 
 # %%
@@ -185,7 +184,7 @@ print("Time-averaged derivative error = ", np.nanmean(deriv_error))
 
 # %% [markdown]
 # ### Use simulated annealing
-# We are going to check if any $\mathbf{m}$ exists such that $\mathbf{A}^S$ is negative definite, using the identified coefficients, to verify again that our model is globally stable.
+#  We are going to check if any $\mathbf{m}$ exists such that $\mathbf{A}^S$ is negative definite, using the identified coefficients, to verify again that our model is globally stable.
 
 # %%
 # Import simulated annealing algorithm from scipy
@@ -223,29 +222,29 @@ print(
 
 # %% [markdown]
 # ### Promoting locally stable models with estimates of the stability radius
-# So far, we have promoted globally stable models with trapping SINDy by enforcing the skew-symmetry structure in the nonlinearities as a hard constraint in the optimization problem:
-# $$\text{argmin}_{\mathbf{\xi},\mathbf m}\|\dot{\mathbf a} - \mathbf \Theta(\mathbf a) \mathbf{\xi}\|^2 + \gamma R(\mathbf \xi)  + \eta \lambda_1(\mathbf A^S)  \quad s.t. \quad Q_{ijk} + Q_{jik} + Q_{kji} = 0.$$
-# This problem is solved with a convex relaxation of the optimization.
+#  So far, we have promoted globally stable models with trapping SINDy by enforcing the skew-symmetry structure in the nonlinearities as a hard constraint in the optimization problem:
+#  $$\text{argmin}_{\mathbf{\xi},\mathbf m}\|\dot{\mathbf a} - \mathbf \Theta(\mathbf a) \mathbf{\xi}\|^2 + \gamma R(\mathbf \xi)  + \eta \lambda_1(\mathbf A^S)  \quad s.t. \quad Q_{ijk} + Q_{jik} + Q_{kji} = 0.$$
+#  This problem is solved with a convex relaxation of the optimization.
 #
-# Below, we relax the hard constraint to a soft constraint and instead solve
-# $$\text{argmin}_{\mathbf{\xi},\mathbf m}\|\dot{\mathbf a} - \mathbf \Theta(\mathbf a) \mathbf{\xi}\|^2 + \gamma R(\mathbf \xi)  + \eta \lambda_1(\mathbf A^S)  \quad s.t. \quad -\epsilon_Q \leq Q_{ijk} + Q_{jik} + Q_{kji} \leq \epsilon_Q.$$
-# This allows us to build locally Lyapunov stable models, and adjust the size of the local stability radius by varying $\epsilon_Q$. A conservative estimate of the local stability is:
-# $$\rho_+ = \frac{3|\lambda_{\text{max}}|}{2r^{\frac{3}{2}}\epsilon_Q} \left( 1 + \sqrt{1 - \frac{4r^{\frac{3}{2}}\epsilon_Q}{3\lambda^2_{\text{max}}(\textbf{A}_S)\|\mathbf{d}\|_2}} \right).$$
-# And the radius of the trapping region is given by:
-# $$\rho_- = \frac{3|\lambda_{\text{max}}|}{2r^{\frac{3}{2}}\epsilon_Q} \left( 1 - \sqrt{1 - \frac{4r^{\frac{3}{2}}\epsilon_Q}{3\lambda^2_{\text{max}}(\textbf{A}_S)\|\mathbf{d}\|_2}} \right).$$
+#  Below, we relax the hard constraint to a soft constraint and instead solve
+#  $$\text{argmin}_{\mathbf{\xi},\mathbf m}\|\dot{\mathbf a} - \mathbf \Theta(\mathbf a) \mathbf{\xi}\|^2 + \gamma R(\mathbf \xi)  + \eta \lambda_1(\mathbf A^S)  \quad s.t. \| Q_{ijk} + Q_{jik} + Q_{kji} \|_F \leq \epsilon_Q,$$
+#  where $\|\cdot\|_F$ denotes the Frobenius norm. This allows us to build locally Lyapunov stable models, and adjust the size of the local stability radius by varying $\epsilon_Q$. A conservative estimate of the local stability is:
+#  $$\rho_+ = \frac{3|\lambda_{\text{max}}|}{2\epsilon_Q} \left( 1 + \sqrt{1 - \frac{4\epsilon_Q}{3\lambda^2_{\text{max}}(\textbf{A}_S)\|\mathbf{d}\|_2}} \right).$$
+#  And the radius of the trapping region is given by:
+#  $$\rho_- = \frac{3|\lambda_{\text{max}}|}{2\epsilon_Q} \left( 1 - \sqrt{1 - \frac{4\epsilon_Q}{3\lambda^2_{\text{max}}(\textbf{A}_S)\|\mathbf{d}\|_2}} \right).$$
 #
-# In other words, there is a region $\rho_- < \|\mathbf{a}(t)\| < \rho_+$ such that the energy $K$ satisfies $K > 0$ and $\dot{K} < 0$, so that any trajectory with initial condition $\|\mathbf{a}_0\| < \rho_+$ will be bounded for all time. This is because it will fall towards the origin until at least it reaches $\rho_-$, and then it stays in the ball of radius $\rho_-$ for all time.
+#  In other words, there is a region $\rho_- < \|\mathbf{a}(t)\| < \rho_+$ such that the energy $K$ satisfies $K > 0$ and $\dot{K} < 0$, so that any trajectory with initial condition $\|\mathbf{a}_0\| < \rho_+$ will be bounded for all time. This is because it will fall towards the origin until at least it reaches $\rho_-$, and then it stays in the ball of radius $\rho_-$ for all time.
 
 # %% [markdown]
 # ### A better way to optimize
-# However, we find empirically that CVXPY struggles to solve the inequality-constrained problem adequately, and find much better performance by incorporating the constraint as a loss term in the objective.
-# Two other loss terms that can be used as alternatives to increase the size of the stability radius while avoiding extra constraints:
-# $$\alpha^{-1}\|Q_{ijk}\|$$
-# and
-# $$\beta^{-1}\|Q_{ijk} + Q_{jki} + Q_{kij}\|.$$
-# We can combine all of these options into the following unconstrained optimization problem:
-# $$argmin_{\mathbf{\xi},\mathbf m}\|\dot{\mathbf a} - \mathbf \Theta(\mathbf a) \mathbf{\xi}\|^2 + \gamma R(\mathbf \xi)  + \eta^{-1} \lambda_1(\mathbf A) + \alpha^{-1}\|Q_{ijk}\| + \beta^{-1}\|Q_{ijk} + Q_{jki} + Q_{kij}\|.$$
-# We now solve this problem for $\alpha \gg \beta$, $\alpha \ll \beta$, and $\alpha \sim \beta \sim 1.$
+#  However, we find empirically that CVXPY struggles to solve the inequality-constrained problem adequately, and find much better performance by incorporating the constraint as a loss term in the objective.
+#  Two other loss terms that can be used as alternatives to increase the size of the stability radius while avoiding extra constraints:
+#  $$\alpha^{-1}\|Q_{ijk}\|$$
+#  and
+#  $$\beta^{-1}\|Q_{ijk} + Q_{jki} + Q_{kij}\|.$$
+#  We can combine all of these options into the following unconstrained optimization problem:
+#  $$argmin_{\mathbf{\xi},\mathbf m}\|\dot{\mathbf a} - \mathbf \Theta(\mathbf a) \mathbf{\xi}\|^2 + \gamma R(\mathbf \xi)  + \eta^{-1} \lambda_1(\mathbf A) + \alpha^{-1}\|Q_{ijk}\| + \beta^{-1}\|Q_{ijk} + Q_{jki} + Q_{kij}\|.$$
+#  We now solve this problem for $\alpha \gg \beta$, $\alpha \ll \beta$, and $\alpha \sim \beta \sim 1.$
 
 # %% [markdown]
 # ### First case: $\alpha \gg 1$, $\beta \ll 1$, for which the model should just zero out all the quadratic nonlinear terms
@@ -253,16 +252,16 @@ print(
 # %%
 max_iter = 500
 eta = 1.0e2
-alpha = 1e-20
+alpha = 1e-15
 beta = 1e20
-threshold = 0
+reg_weight_lam = 0
 
 # run trapping SINDy... no more constraints!
 sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     gamma=-1,
@@ -283,21 +282,21 @@ Lenergy = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Qenergy = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
-check_stability(r, Xi, sindy_opt, mean_val)
+Rm, R_ls = check_local_stability(Xi, sindy_opt, mean_val)
 
 # %% [markdown]
 # Indeed, we found that if $\alpha \gg 1$ large enough, the quadratic terms in the model are zeroed, which is bad news both for fitting the model and for applying the trapping theorem since the theorem relies on nontrivial quadratic contributions.
 
 # %% [markdown]
 # ### Second case: $\alpha \ll 1$, $\beta \gg 1$, which should reproduce the energy-preserving nonlinear constraint to high accuracy
-# This is a different strategy for stability -- don't make the model's quadratic nonlinearities weak, but make it so that the totally symmetric part of $Q_{ijk}$ is very small.
+#  This is a different strategy for stability -- don't make the model's quadratic nonlinearities weak, but make it so that the totally symmetric part of $Q_{ijk}$ is very small.
 
 # %%
-max_iter = 2000
+max_iter = 10000
 eta = 1.0e3
 alpha = 1e20
 beta = 1e-10
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 0.9 * eta
 
 # run trapping SINDy... no more constraints!
@@ -305,7 +304,7 @@ sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -327,21 +326,22 @@ Lenergy = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Qenergy = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
-check_local_stability(Xi, sindy_opt, mean_val)
+R_m, R_ls = check_local_stability(Xi, sindy_opt, mean_val)
 Q = np.tensordot(sindy_opt.PQ_, Xi, axes=([4, 3], [0, 1]))
 
 # %% [markdown]
 # ### Plot how the two stability radii changes as the algorithm iterates
-# As the algorithm iterates, it is biasing the model to have a negative definite $\mathbf{A}^S$ matrix. Once this is true, we can estimate the local Lyapunov stability radius $\rho_+$ and the trapping region radius $\rho_-$.
+#  As the algorithm iterates, it is biasing the model to have a negative definite $\mathbf{A}^S$ matrix. Once this is true, we can estimate the local Lyapunov stability radius $\rho_+$ and the trapping region radius $\rho_-$.
 #
-# #### Note that with the soft constraint we can get the stability radius arbitrarily large here!
+#  #### Note that with the soft constraint we can get the stability radius arbitrarily large here!
 
 # %%
 rhos_minus, rhos_plus = make_trap_progress_plots(r, sindy_opt)
 Q = np.tensordot(sindy_opt.PQ_, Xi, axes=([4, 3], [0, 1]))
 Q_sum = np.max(np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1]))))
 print(
-    "Maximum deviation from having zero totally symmetric part: ", np.max(np.abs(Q_sum))
+    r"|tilde{H_0}|_F = ",
+    np.sqrt(np.sum((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])) ** 2)),
 )
 
 # %%
@@ -374,22 +374,22 @@ print("Time-averaged derivative error = ", np.nanmean(deriv_error))
 
 # %% [markdown]
 # ### Repeat $\alpha \gg 1$, $\beta \ll 1$ case with $\lambda > 0$
-# I find that solver will fail if eps_solver parameter is made too small (error tolerance of the CVXPY solver is very stringent)
+#  I find that solver will fail if eps_solver parameter is made too small (error tolerance of the CVXPY solver is very stringent)
 
 # %%
 max_iter = 100
-eta = 1.0e2
+eta = 1.0e5
 alpha = 1e20
-beta = 1e-20
-threshold = 5
-alpha_m = 9e-1 * eta
+beta = 1e-10
+reg_weight_lam = 5
+alpha_m = 0.9 * eta
 
 # run trapping SINDy... no more constraints!
 sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -415,8 +415,8 @@ mean_val = np.sqrt(np.sum(mean_val**2))
 check_local_stability(Xi, sindy_opt, mean_val)
 Q = np.tensordot(sindy_opt.PQ_, Xi, axes=([4, 3], [0, 1]))
 print(
-    "Maximum deviation from having zero totally symmetric part: ",
-    np.max(np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))),
+    r"|tilde{H_0}|_F = ",
+    np.sqrt(np.sum((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])) ** 2)),
 )
 # make_progress_plots(r, sindy_opt)
 
@@ -431,27 +431,28 @@ print(
 )
 
 # %% [markdown]
-# ### Now we add A LOT of noise to the Lorenz data and see if trapping extended algorithm improves robustness to noise.
+# ### Now we add a lot of noise to the Lorenz data and see if trapping extended algorithm improves robustness to noise.
 
 # %%
+np.random.seed(10)
 lorenz_noise = np.random.normal(
     0, mean_val / 4, x_train.shape
 )  # 25% noise added with zero mean
 x_train_noise = x_train + lorenz_noise
 
 max_iter = 10000
-eta = 1.0e-2
+eta = 1.0e2
 alpha = 1e20
 beta = 1e-14
-threshold = 0
-alpha_m = 0.9 * eta
+reg_weight_lam = 0
+alpha_m = 0.1 * eta
 
 # run trapping SINDy... no more constraints!
 sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -476,10 +477,10 @@ mean_val = np.sqrt(np.sum(mean_val**2))
 check_local_stability(Xi, sindy_opt, mean_val)
 Q = np.tensordot(sindy_opt.PQ_, Xi, axes=([4, 3], [0, 1]))
 print(
-    "Maximum deviation from having zero totally symmetric part: ",
-    np.max(np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])))),
+    r"|tilde{H_0}|_F = ",
+    np.sqrt(np.sum((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1])) ** 2)),
 )
-make_trap_progress_plots(r, sindy_opt)
+# make_trap_progress_plots(r, sindy_opt)
 
 # Calculate the x_dot and x trajectories for train and test sets
 xdot_test = model.differentiate(x_test, t=t)
@@ -500,12 +501,6 @@ for i in range(xdot_test.shape[0]):
 print("Time-averaged derivative error = ", np.nanmean(deriv_error))
 
 # %%
-# Calculate the x_dot and x trajectories for train and test sets
-xdot_test = model.differentiate(x_test, t=t)
-xdot_test_pred = model.predict(x_test)
-x_train_pred = model.simulate(x_train[0, :], t, integrator_kws=integrator_keywords)
-x_test_pred = model.simulate(x_test[0, :], t, integrator_kws=integrator_keywords)
-
 # plotting and analysis
 make_fits(r, t, xdot_test, xdot_test_pred, x_test, x_test_pred, "lorenz")
 mean_val = np.mean(x_test_pred, axis=0)
@@ -532,7 +527,7 @@ ax1 = fig.add_subplot(121, projection="3d")
 ax1.plot(x_train_noise[:, 0], x_train_noise[:, 1], x_train_noise[:, 2], "r-")
 ax1.plot(x_train_pred[:, 0], x_train_pred[:, 1], x_train_pred[:, 2], "k-")
 ax1.set(
-    xlabel="$x_0$", ylabel="$x_1$", zlabel="$x_2$", title="model simulation + 50% noise"
+    xlabel="$x_0$", ylabel="$x_1$", zlabel="$x_2$", title="model simulation + 25% noise"
 )
 
 ax2 = fig.add_subplot(122, projection="3d")
@@ -541,4 +536,5 @@ ax2.plot(x_test_pred[:, 0], x_test_pred[:, 1], x_test_pred[:, 2], "k--")
 ax2.set(
     xlabel="$x_0$", ylabel="$x_1$", zlabel="$x_2$", title="true simulation + prediction"
 )
+
 plt.show()

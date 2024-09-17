@@ -43,7 +43,7 @@ from trapping_utils import (
     sindy_library_no_bias,
     make_fits,
     make_lissajou,
-    check_stability,
+    check_local_stability,
     trapping_region,
     make_progress_plots,
     galerkin_model,
@@ -97,7 +97,7 @@ x_test = solve_ivp(
 ).y.T
 
 # define hyperparameters
-threshold = 0.0
+reg_weight_lam = 0.0
 eta = 1e5
 max_iter = 5000
 
@@ -106,7 +106,7 @@ max_iter = 5000
 sindy_opt = ps.TrappingSR3(
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     gamma=-1,
@@ -133,7 +133,7 @@ E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
 print("Frobenius Error = ", E_pred)
 mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
-check_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
 terms = sindy_library.get_feature_names()
@@ -153,15 +153,6 @@ for i in range(xdot_test.shape[0]):
         xdot_test[i, :] - xdot_test_pred[i, :], xdot_test[i, :] - xdot_test_pred[i, :]
     ) / np.dot(xdot_test[i, :], xdot_test[i, :])
 print("Time-averaged derivative error = ", np.nanmean(deriv_error))
-
-# %% [markdown]
-# Awesome! The trapping algorithm gets exactly the right model and produces a negative definite matrix,
-# $$\mathbf{A}^S = \begin{bmatrix}
-#     -1.32 & 0 & 0 \\
-#     0 & -1.31 & 0 \\
-#     0 & 0 & -1
-#     \end{bmatrix},$$
-# i.e. it identifies $\epsilon \approx 1.3$ from above. Note that with different algorithm hyperparameters it will produce different $\epsilon$, since the algorithm only cares that the matrix is negative definite (i.e. only cares about the largest eigenvalue), not the precise value of $\epsilon$. Moreover, these eigenvalues can change as the algorithm converges further.
 
 # %% [markdown]
 #
@@ -235,13 +226,14 @@ x_test = solve_ivp(
 # define hyperparameters
 eta = 1.0e8
 
-# run trapping SINDy, reusing previous threshold, max_iter and constraints
+# run trapping SINDy, reusing previous reg_weight_lam, max_iter and constraints
 sindy_opt = ps.TrappingSR3(
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
+    verbose=True,
 )
 model = ps.SINDy(
     optimizer=sindy_opt,
@@ -270,7 +262,7 @@ E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
 print("Frobenius error = ", E_pred)
 mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
-check_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 
 # compute relative Frobenius error in the model coefficients
 terms = sindy_library.get_feature_names()
@@ -371,7 +363,7 @@ x0 = (rng.random(3) - 0.5) * 30
 x_test = solve_ivp(lorenz, t_span, x0, t_eval=t, **integrator_keywords).y.T
 
 # define hyperparameters
-threshold = 0
+reg_weight_lam = 0
 max_iter = 5000
 eta = 1.0e3
 
@@ -381,7 +373,7 @@ alpha_m = 8e-1 * eta  # default is 1e-2 * eta so this speeds up the code here
 sindy_opt = ps.TrappingSR3(
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -416,7 +408,7 @@ print("Max deviation from the constraints = ", Q_sum)
 
 mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
-check_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
 print("Frobenius error = ", E_pred)
 
@@ -501,9 +493,9 @@ r = 6
 nu = 0.0  # viscosity
 mu = 0.0  # resistivity
 
-# define training and testing data
+# define training and testing data (low resolution)
 dt = 0.02
-T = 50
+T = 40
 t = np.arange(0, T + dt, dt)
 t_span = (t[0], t[-1])
 x0 = rng.random((6,)) - 0.5
@@ -512,16 +504,16 @@ x0 = rng.random((6,)) - 0.5
 x_test = solve_ivp(mhd, t_span, x0, t_eval=t, **integrator_keywords).y.T
 
 # define hyperparameters
-threshold = 0.0
+reg_weight_lam = 0.0
 max_iter = 1000
 eta = 1.0e10
-alpha_m = 5.0e-1 * eta
+alpha_m = 9.0e-1 * eta
 
 
 sindy_opt = ps.TrappingSR3(
     _n_tgts=6,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     verbose=True,
@@ -551,7 +543,7 @@ print("Max deviation from the constraints = ", Q_sum)
 make_lissajou(r, x_train, x_test, x_train_pred, x_test_pred, "mhd")
 mean_val = np.mean(x_test_pred, axis=0)
 mean_val = np.sqrt(np.sum(mean_val**2))
-check_stability(r, Xi, sindy_opt, mean_val)
+check_local_stability(Xi, sindy_opt, mean_val)
 E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)
 print(E_pred)
 
@@ -788,20 +780,19 @@ x_train = a
 x_test = a
 
 # define hyperparameters
-max_iter = 5000
-eta = 1.0e2
+max_iter = 10000
+eta = 1.0
 
-# don't need a threshold if eta is sufficiently small
+# don't need a reg_weight_lam if eta is sufficiently small
 # which is good news because CVXPY is much slower
-threshold = 0
-alpha_m = 9e-1 * eta
-
+reg_weight_lam = 0
+alpha_m = 1e-1 * eta
 
 # run trapping SINDy
 sindy_opt = ps.TrappingSR3(
     _n_tgts=5,
     _include_bias=False,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -822,7 +813,7 @@ L = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
 Q = np.tensordot(PQ_tensor, Xi, axes=([4, 3], [0, 1]))
 Q_sum = np.max(np.abs((Q + np.transpose(Q, [1, 2, 0]) + np.transpose(Q, [2, 0, 1]))))
 print("Max deviation from the constraints = ", Q_sum)
-if check_stability(r, Xi, sindy_opt, 1):
+if check_local_stability(Xi, sindy_opt, 1):
     x_train_pred = model.simulate(x_train[0, :], t, integrator_kws=integrator_keywords)
     x_test_pred = model.simulate(a0, t, integrator_kws=integrator_keywords)
     make_progress_plots(r, sindy_opt)
@@ -832,7 +823,7 @@ if check_stability(r, Xi, sindy_opt, 1):
     make_lissajou(r, x_train, x_test, x_train_pred, x_test_pred, "VonKarman")
     mean_val = np.mean(x_test_pred, axis=0)
     mean_val = np.sqrt(np.sum(mean_val**2))
-    check_stability(r, Xi, sindy_opt, mean_val)
+    check_local_stability(Xi, sindy_opt, mean_val)
     A_guess = sindy_opt.A_history_[-1]
     m_guess = sindy_opt.m_history_[-1]
     E_pred = np.linalg.norm(x_test - x_test_pred) / np.linalg.norm(x_test)

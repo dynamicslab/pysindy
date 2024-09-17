@@ -204,7 +204,7 @@ true_coefficients = make_dysts_true_coefficients(
 from scipy.optimize import dual_annealing as anneal_algo
 
 # define hyperparameters
-threshold = 0
+reg_weight_lam = 0
 max_iter = 5000
 eta = 1.0e3
 alpha_m = 4e-2 * eta  # default is 1e-2 * eta so this speeds up the code here
@@ -228,7 +228,7 @@ for i in range(len(systems_list)):
         method="global",
         _n_tgts=r,
         _include_bias=True,
-        threshold=threshold,
+        reg_weight_lam=reg_weight_lam,
         eta=eta,
         alpha_m=alpha_m,
         max_iter=max_iter,
@@ -309,7 +309,7 @@ plt.legend()
 
 # %%
 # define hyperparameters
-threshold = 0
+reg_weight_lam = 0
 max_iter = 5000
 eta = 1.0e7
 alpha_m = 0.1 * eta  # default is 1e-2 * eta so this speeds up the code here
@@ -333,7 +333,7 @@ for i in range(len(stable_systems_list)):
         method="local",
         _n_tgts=r,
         _include_bias=True,
-        threshold=threshold,
+        reg_weight_lam=reg_weight_lam,
         eta=eta,
         alpha_m=alpha_m,
         max_iter=max_iter,
@@ -457,7 +457,7 @@ r = 6  # POD truncation
 x_train = a_dns[:, :r]
 t_train = t_dns.copy()
 
-threshold = 0.0
+reg_weight_lam = 0.0
 eta = 1.0e10
 alpha_m = 1e-4 * eta  # default is 1e-2 * eta so this speeds up the code here
 beta = 1e-5
@@ -466,7 +466,7 @@ sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=r,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -487,7 +487,7 @@ check_local_stability(Xi, sindy_opt, 1.0)
 
 # Fit a baseline model -- this is almost always an unstable model!
 model_baseline = ps.SINDy(
-    optimizer=ps.STLSQ(threshold=0.0),
+    optimizer=ps.STLSQ(reg_weight_lam=0.0),
     feature_library=ps.PolynomialLibrary(),
 )
 model_baseline.fit(x_train, t=t_train)

@@ -931,7 +931,10 @@ TwoOrFourD = TypeVar("TwoOrFourD", Float2D, Float4D)
 
 
 def _create_A_symm(
-    L_obj: TwoOrFourD, M_obj: Float3D | Float5D, trap_ctr: Float1D, ens: EnstrophyMat
+    L_obj: TwoOrFourD,
+    M_obj: Union[Float3D, Float5D],
+    trap_ctr: Float1D,
+    ens: EnstrophyMat,
 ) -> TwoOrFourD:
     r"""Create the enstrophy/energy growth quadratic form
 

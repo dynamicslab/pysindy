@@ -92,7 +92,7 @@ class TrappingSR3(ConstrainedSR3):
         this should be approximately equivalent to the ConstrainedSR3 method.
 
     eps_solver :
-        If threshold != 0, this specifies the error tolerance in the
+        If reg_weight_lam != 0, this specifies the error tolerance in the
         CVXPY (OSQP) solve. Default 1.0e-7
 
     alpha:
@@ -130,7 +130,7 @@ class TrappingSR3(ConstrainedSR3):
         Tolerance used for determining convergence of the optimization
         algorithm over m.
 
-    thresholder :
+    regularizer :
         Regularization function to use. For current trapping SINDy,
         only the L1 and L2 norms are implemented. Note that other convex norms
         could be straightforwardly implemented, but L0 requires
@@ -194,7 +194,7 @@ class TrappingSR3(ConstrainedSR3):
     >>>                        z[0]*z[1] - 8/3*z[2]]
     >>> t = np.arange(0,2,.002)
     >>> x = odeint(lorenz, [-8,8,27], t)
-    >>> opt = TrappingSR3(threshold=0.1)
+    >>> opt = TrappingSR3(reg_weight_lam=0.1)
     >>> model = SINDy(optimizer=opt)
     >>> model.fit(x, t=t[1]-t[0])
     >>> model.print()
@@ -219,7 +219,7 @@ class TrappingSR3(ConstrainedSR3):
         alpha_m: Union[float, None] = None,
         gamma: float = -0.1,
         tol_m: float = 1e-5,
-        thresholder: str = "l1",
+        regularizer: str = "l1",
         m0: Union[NDArray, None] = None,
         A0: Union[NDArray, None] = None,
         **kwargs,
@@ -272,12 +272,12 @@ class TrappingSR3(ConstrainedSR3):
                 constraint_separation_index=constraint_separation_index,
                 constraint_order=constraint_order,
                 equality_constraints=True,
-                thresholder=thresholder,
+                regularizer=regularizer,
                 **kwargs,
             )
             self.method = "global"
         elif method == "local":
-            super().__init__(thresholder=thresholder, **kwargs)
+            super().__init__(regularizer=regularizer, **kwargs)
             self.method = "local"
         else:
             raise ValueError(f"Can either use 'global' or 'local' method, not {method}")
@@ -296,7 +296,7 @@ class TrappingSR3(ConstrainedSR3):
 
     def __post_init_guard(self):
         """Conduct initialization post-init, as required by scikitlearn API"""
-        if self.thresholder.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
+        if self.regularizer.lower() not in ("l1", "l2", "weighted_l1", "weighted_l2"):
             raise ValueError("Regularizer must be (weighted) L1 or L2")
         if self.eta is None:
             warnings.warn(
@@ -340,8 +340,8 @@ class TrappingSR3(ConstrainedSR3):
             raise ValueError("gamma must be negative")
         if self.tol <= 0 or self.tol_m <= 0 or self.eps_solver <= 0:
             raise ValueError("tol and tol_m must be positive")
-        if self.inequality_constraints and self.threshold == 0.0:
-            raise ValueError("Inequality constraints requires threshold!=0")
+        if self.inequality_constraints and np.any(self.reg_weight_lam == 0.0):
+            raise ValueError("Inequality constraints requires reg_weight_lam!=0")
         if self.A0 is None:
             self.A0 = np.diag(self.gamma * np.ones(self._n_tgts))
         if self.m0 is None:
@@ -508,7 +508,7 @@ class TrappingSR3(ConstrainedSR3):
         # Qijk is H0 in the paper
         Qijk_permsum = _permutation_asymmetry(Qijk) * 3
         H0tilde = _convert_quad_terms_to_ens_basis(Qijk_permsum, self.enstrophy)
-        L1 = self.threshold * np.sum(np.abs(coef_sparse.flatten()))
+        L1 = self.reg_weight_lam * np.sum(np.abs(coef_sparse.flatten()))
         sindy_loss = 0.5 * np.sum(sindy_loss)
         relax_loss = 0.5 * np.sum(relax_loss) / self.eta
         nonlin_ens_loss = 0.5 * np.sum(Qijk**2) / self.alpha
@@ -526,7 +526,7 @@ class TrappingSR3(ConstrainedSR3):
         return obj
 
     def _update_coef_sparse_rs(self, var_len, x_expanded, y, Pmatrix, A, coef_prev):
-        """Solve coefficient update with CVXPY if threshold != 0"""
+        """Solve coefficient update with CVXPY if reg_weight_lam != 0"""
         xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
 
@@ -648,7 +648,7 @@ class TrappingSR3(ConstrainedSR3):
         return trap_new, A_new
 
     def _solve_nonsparse_relax_and_split(self, hess, gradient_constant):
-        """Update for the coefficients if threshold = 0."""
+        """Update for the coefficients if reg_weight_lam = 0."""
         if self.use_constraints:
             coef_nonsparse = _equality_constrained_linlsq(
                 hess, gradient_constant, self.constraint_lhs, self.constraint_rhs
@@ -734,7 +734,7 @@ class TrappingSR3(ConstrainedSR3):
             self.p_history_.append(p_AS)
 
             coef_prev = coef_sparse
-            if (self.threshold > 0.0) or self.inequality_constraints:
+            if np.any(self.reg_weight_lam > 0.0) or self.inequality_constraints:
                 coef_sparse = self._update_coef_sparse_rs(
                     var_len, x_expanded, y, Pmatrix, A, coef_prev
                 )

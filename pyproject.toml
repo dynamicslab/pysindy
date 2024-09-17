@@ -95,3 +95,6 @@ packages = ["pysindy"]
 
 [tool.setuptools_scm]
 write_to = "pysindy/version.py"
+
+[tool.autopep8]
+ignore = ["E731"]

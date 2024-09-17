@@ -1,8 +1,11 @@
 import warnings
 from itertools import repeat
+from typing import Callable
 from typing import Sequence
+from typing import Union
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
@@ -150,98 +153,125 @@ def reorder_constraints(arr, n_features, output_order="feature"):
     return arr.reshape(starting_shape).transpose([0, 2, 1]).reshape((n_constraints, -1))
 
 
-def prox_l0(x, threshold):
-    """Proximal operator for L0 regularization."""
-    return x * (np.abs(x) > threshold)
+def _validate_prox_and_reg_inputs(func, regularization):
+    def wrapper(x, regularization_weight):
+        if regularization[:8] == "weighted":
+            if not isinstance(regularization_weight, np.ndarray):
+                raise ValueError(
+                    f"'regularization_weight' must be an array of shape {x.shape}."
+                )
+            weight_shape = regularization_weight.shape
+            if weight_shape != x.shape:
+                raise ValueError(
+                    f"Invalid shape for 'regularization_weight':"
+                    f"{weight_shape}. Must be the same shape as x: {x.shape}."
+                )
+        elif not isinstance(regularization_weight, (int, float)):
+            raise ValueError("'regularization_weight' must be a scalar")
+        return func(x, regularization_weight)
+
+    return wrapper
 
 
-def prox_weighted_l0(x, thresholds):
-    """Proximal operator for weighted l0 regularization."""
-    y = np.zeros(np.shape(x))
-    transp_thresholds = thresholds.T
-    for i in range(transp_thresholds.shape[0]):
-        for j in range(transp_thresholds.shape[1]):
-            y[i, j] = x[i, j] * (np.abs(x[i, j]) > transp_thresholds[i, j])
-    return y
-
-
-def prox_l1(x, threshold):
-    """Proximal operator for L1 regularization."""
-    return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
-
-
-def prox_weighted_l1(x, thresholds):
-    """Proximal operator for weighted l1 regularization."""
-    return np.sign(x) * np.maximum(np.abs(x) - thresholds, np.zeros(x.shape))
-
-
-def prox_l2(x, threshold):
-    """Proximal operator for ridge regularization."""
-    return 2 * threshold * x
-
-
-def prox_weighted_l2(x, thresholds):
-    """Proximal operator for ridge regularization."""
-    return 2 * thresholds * x
-
-
-# TODO: replace code block with proper math block
-def prox_cad(x, lower_threshold):
+def get_prox(
+    regularization: str,
+) -> Callable[
+    [NDArray[np.float64], Union[float, NDArray[np.float64]]], NDArray[np.float64]
+]:
     """
-    Proximal operator for CAD regularization
+    Args:
+    -----
+    regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' | 'l2' | 'weighted_l2'
 
-    .. code ::
-
-        prox_cad(z, a, b) =
-            0                    if |z| < a
-            sign(z)(|z| - a)   if a < |z| <= b
-            z                    if |z| > b
-
-    Entries of :math:`x` smaller than a in magnitude are set to 0,
-    entries with magnitudes larger than b are untouched,
-    and entries in between have soft-thresholding applied.
-
-    For simplicity we set :math:`b = 5*a` in this implementation.
+    Returns:
+    --------
+    proximal_operator: (x: np.array, reg_weight: float | np.array) -> np.array
+        A function that takes an input array x and a regularization weight,
+        which can be either a scalar or array of the same shape,
+        and returns an array of the same shape
     """
-    upper_threshold = 5 * lower_threshold
-    return prox_l0(x, upper_threshold) + prox_l1(x, lower_threshold) * (
-        np.abs(x) < upper_threshold
-    )
 
+    def prox_l0(
+        x: NDArray[np.float64],
+        regularization_weight: Union[float, NDArray[np.float64]],
+    ):
+        threshold = np.sqrt(2 * regularization_weight)
+        return x * (np.abs(x) > threshold)
 
-def get_prox(regularization):
+    def prox_l1(
+        x: NDArray[np.float64],
+        regularization_weight: Union[float, NDArray[np.float64]],
+    ):
+
+        return np.sign(x) * np.maximum(np.abs(x) - regularization_weight, 0)
+
+    def prox_l2(
+        x: NDArray[np.float64],
+        regularization_weight: Union[float, NDArray[np.float64]],
+    ):
+        return x / (1 + 2 * regularization_weight)
+
     prox = {
         "l0": prox_l0,
-        "weighted_l0": prox_weighted_l0,
+        "weighted_l0": prox_l0,
         "l1": prox_l1,
-        "weighted_l1": prox_weighted_l1,
+        "weighted_l1": prox_l1,
         "l2": prox_l2,
-        "weighted_l2": prox_weighted_l2,
-        "cad": prox_cad,
+        "weighted_l2": prox_l2,
     }
-    if regularization.lower() in prox.keys():
-        return prox[regularization.lower()]
-    else:
-        raise NotImplementedError("{} has not been implemented".format(regularization))
+    regularization = regularization.lower()
+    return _validate_prox_and_reg_inputs(prox[regularization], regularization)
 
 
-def get_regularization(regularization):
-    if regularization.lower() == "l0":
-        return lambda x, lam: lam * np.count_nonzero(x)
-    elif regularization.lower() == "weighted_l0":
-        return lambda x, lam: np.sum(lam[np.nonzero(x)])
-    elif regularization.lower() == "l1":
-        return lambda x, lam: lam * np.sum(np.abs(x))
-    elif regularization.lower() == "weighted_l1":
-        return lambda x, lam: np.sum(np.abs(lam @ x))
-    elif regularization.lower() == "l2":
-        return lambda x, lam: lam * np.sum(x**2)
-    elif regularization.lower() == "weighted_l2":
-        return lambda x, lam: np.sum(lam @ x**2)
-    elif regularization.lower() == "cad":  # dummy function
-        return lambda x, lam: 0
-    else:
-        raise NotImplementedError("{} has not been implemented".format(regularization))
+def get_regularization(
+    regularization: str,
+) -> Callable[[NDArray[np.float64], Union[float, NDArray[np.float64]]], float]:
+    """
+    Args:
+    -----
+    regularization: 'l0' | 'weighted_l0' | 'l1' | 'weighted_l1' | 'l2' | 'weighted_l2'
+
+    Returns:
+    --------
+    regularization_function: (x: np.array, reg_weight: float | np.array) -> np.array
+        A function that takes an input array x and a regularization weight,
+        which can be either a scalar or array of the same shape,
+        and returns a float
+    """
+
+    def regularization_l0(
+        x: NDArray[np.float64],
+        regularization_weight: Union[float, NDArray[np.float64]],
+    ):
+
+        return np.sum(regularization_weight * (x != 0))
+
+    def regularization_l1(
+        x: NDArray[np.float64],
+        regularization_weight: Union[float, NDArray[np.float64]],
+    ):
+
+        return np.sum(regularization_weight * np.abs(x))
+
+    def regularization_l2(
+        x: NDArray[np.float64],
+        regularization_weight: Union[float, NDArray[np.float64]],
+    ):
+
+        return np.sum(regularization_weight * x**2)
+
+    regularization_fn = {
+        "l0": regularization_l0,
+        "weighted_l0": regularization_l0,
+        "l1": regularization_l1,
+        "weighted_l1": regularization_l1,
+        "l2": regularization_l2,
+        "weighted_l2": regularization_l2,
+    }
+    regularization = regularization.lower()
+    return _validate_prox_and_reg_inputs(
+        regularization_fn[regularization], regularization
+    )
 
 
 def capped_simplex_projection(trimming_array, trimming_fraction):

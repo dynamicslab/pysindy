@@ -701,7 +701,7 @@ def test_sindypi_library(data_lorenz):
         function_names=library_function_names,
         include_bias=True,
     )
-    sindy_opt = SINDyPI(threshold=0.1, thresholder="l1")
+    sindy_opt = SINDyPI(reg_weight_lam=0.1, regularizer="l1")
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,
@@ -709,7 +709,7 @@ def test_sindypi_library(data_lorenz):
     model.fit(x, t=t)
     assert np.shape(sindy_opt.coef_) == (40, 40)
 
-    sindy_opt = SINDyPI(threshold=1, thresholder="l1", model_subset=[3])
+    sindy_opt = SINDyPI(reg_weight_lam=1, regularizer="l1", model_subset=[3])
     model = SINDy(
         optimizer=sindy_opt,
         feature_library=sindy_library,

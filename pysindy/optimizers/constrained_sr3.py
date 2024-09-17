@@ -46,31 +46,6 @@ class ConstrainedSR3(SR3):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
-        Determines the strength of the regularization. When the
-        regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding, and lambda
-        is chosen to threshold at the value given by this parameter.
-        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
-
-    nu : float, optional (default 1)
-        Determines the level of relaxation. Decreasing nu encourages
-        w and v to be close, whereas increasing nu allows the
-        regularized coefficients v to be farther from w.
-
-    tol : float, optional (default 1e-5)
-        Tolerance used for determining convergence of the optimization
-        algorithm.
-
-    thresholder : string, optional (default 'l0')
-        Regularization function to use. Currently implemented options
-        are 'l0' (l0 norm), 'l1' (l1 norm), 'l2' (l2 norm),
-        'weighted_l0' (weighted l0 norm), 'weighted_l1' (weighted l1 norm),
-        and 'weighted_l2' (weighted l2 norm).
-
-    max_iter : int, optional (default 30)
-        Maximum iterations of the optimization algorithm.
-
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
         The left hand side matrix C of Cw <= d (Or Cw = d for equality
@@ -92,43 +67,15 @@ class ConstrainedSR3(SR3):
         library feature, the next ``n_targets`` columns to the second library
         feature, and so on.
 
-    normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed. Note that
-        this parameter is incompatible with the constraints!
-
-    initial_guess : np.ndarray, optional (default None)
-        Shape should be (n_features) or (n_targets, n_features).
-        Initial guess for coefficients ``coef_``, (v in the mathematical equations)
-        If None, least-squares is used to obtain an initial guess.
-
-    thresholds : np.ndarray, shape (n_targets, n_features), optional (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
-
     inequality_constraints : bool, optional (default False)
         If True, CVXPY methods are used to solve the problem.
-
-    verbose : bool, optional (default False)
-        If True, prints out the different error terms every
-        max_iter / 10 iterations.
 
     verbose_cvxpy : bool, optional (default False)
         Boolean flag which is passed to CVXPY solve function to indicate if
         output should be verbose or not. Only relevant for optimizers that
         use the CVXPY package in some capabity.
 
-    unbias: bool (default False)
-        See base class for definition.  Most options are incompatible
-        with unbiasing.
+    See base class for additional arguments
 
     Attributes
     ----------
@@ -153,10 +100,10 @@ class ConstrainedSR3(SR3):
 
     def __init__(
         self,
-        threshold=0.1,
-        nu=1.0,
+        reg_weight_lam=0.005,
+        regularizer="l0",
+        relax_coeff_nu=1.0,
         tol=1e-5,
-        thresholder="l0",
         max_iter=30,
         trimming_fraction=0.0,
         trimming_step_size=1.0,
@@ -166,7 +113,6 @@ class ConstrainedSR3(SR3):
         normalize_columns=False,
         copy_X=True,
         initial_guess=None,
-        thresholds=None,
         equality_constraints=False,
         inequality_constraints=False,
         constraint_separation_index: Optional[bool] = None,
@@ -175,11 +121,10 @@ class ConstrainedSR3(SR3):
         unbias=False,
     ):
         super().__init__(
-            threshold=threshold,
-            nu=nu,
+            reg_weight_lam=reg_weight_lam,
+            regularizer=regularizer,
+            relax_coeff_nu=relax_coeff_nu,
             tol=tol,
-            thresholder=thresholder,
-            thresholds=thresholds,
             trimming_fraction=trimming_fraction,
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
@@ -232,7 +177,7 @@ class ConstrainedSR3(SR3):
                 "constraint_rhs."
             )
 
-        if inequality_constraints and thresholder.lower() not in (
+        if inequality_constraints and regularizer.lower() not in (
             "l1",
             "l2",
             "weighted_l1",
@@ -256,7 +201,7 @@ class ConstrainedSR3(SR3):
         self.constraint_separation_index = constraint_separation_index
 
     def _update_full_coef_constraints(self, H, x_transpose_y, coef_sparse):
-        g = x_transpose_y + coef_sparse / self.nu
+        g = x_transpose_y + coef_sparse / self.relax_coeff_nu
         inv1 = np.linalg.inv(H)
         inv1_mod = np.kron(inv1, np.eye(coef_sparse.shape[1]))
         inv2 = np.linalg.inv(
@@ -301,8 +246,9 @@ class ConstrainedSR3(SR3):
     ) -> Tuple[cp.Variable, cp.Expression]:
         xi = cp.Variable(var_len)
         cost = cp.sum_squares(x_expanded @ xi - y.flatten())
-        threshold = self.thresholds if self.thresholds is not None else self.threshold
-        penalty = self._calculate_penalty(self.thresholder, np.ravel(threshold), xi)
+        penalty = self._calculate_penalty(
+            self.regularizer, np.ravel(self.reg_weight_lam), xi
+        )
         return xi, cost + penalty
 
     def _update_coef_cvxpy(self, xi, cost, var_len, coef_prev, tol):
@@ -323,7 +269,6 @@ class ConstrainedSR3(SR3):
             prob = cp.Problem(cp.Minimize(cost))
 
         prob_clone = deepcopy(prob)
-        # default solver is SCS/OSQP here but switches to ECOS for L2
         try:
             prob.solve(
                 max_iter=self.max_iter,
@@ -331,17 +276,6 @@ class ConstrainedSR3(SR3):
                 eps_rel=tol,
                 verbose=self.verbose_cvxpy,
             )
-        # Annoying error coming from L2 norm switching to use the ECOS
-        # solver, which uses "max_iters" instead of "max_iter", and
-        # similar semantic changes for the other variables.
-        except (TypeError, ValueError):
-            try:
-                prob = prob_clone
-                prob.solve(max_iters=self.max_iter, verbose=self.verbose_cvxpy)
-                xi = prob.variables()[0]
-            except cp.error.SolverError:
-                warnings.warn("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(var_len)
         except cp.error.SolverError:
             try:
                 prob = prob_clone
@@ -384,8 +318,8 @@ class ConstrainedSR3(SR3):
             self.constraint_lhs = reorder_constraints(self.constraint_lhs, n_features)
 
         # Precompute some objects for upcoming least-squares solves.
-        # Assumes that self.nu is fixed throughout optimization procedure.
-        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
+        # Assumes that self.relax_coeff_nu is fixed throughout optimization procedure.
+        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.relax_coeff_nu))
         x_transpose_y = np.dot(x.T, y)
         if not self.use_constraints:
             cho = cho_factor(H)
@@ -424,7 +358,7 @@ class ConstrainedSR3(SR3):
                 if self.use_trimming:
                     x_weighted = x * trimming_array.reshape(n_samples, 1)
                     H = np.dot(x_weighted.T, x) + np.diag(
-                        np.full(x.shape[1], 1.0 / self.nu)
+                        np.full(x.shape[1], 1.0 / self.relax_coeff_nu)
                     )
                     x_transpose_y = np.dot(x_weighted.T, y)
                     if not self.use_constraints:

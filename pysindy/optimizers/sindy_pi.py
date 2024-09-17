@@ -27,44 +27,10 @@ class SINDyPI(SR3):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
-        Determines the strength of the regularization. When the
-        regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding, and lambda
-        is chosen to threshold at the value given by this parameter.
-        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
-
-    tol : float, optional (default 1e-5)
-        Tolerance used for determining convergence of the optimization
-        algorithm.
-
-    thresholder : string, optional (default 'l1')
+    regularizer : string, optional (default 'l1')
         Regularization function to use. Currently implemented options
         are 'l1' (l1 norm), 'weighted_l1' (weighted l1 norm), l2, and
         'weighted_l2' (weighted l2 norm)
-
-    max_iter : int, optional (default 10000)
-        Maximum iterations of the optimization algorithm.
-
-    normalize_columns : boolean, optional (default False)
-        This parameter normalizes the columns of Theta before the
-        optimization is done. This tends to standardize the columns
-        to similar magnitudes, often improving performance.
-
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
-
-    thresholds : np.ndarray, shape (n_targets, n_features), optional \
-            (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
 
     model_subset : np.ndarray, shape(n_models), optional (default None)
         List of indices to compute models for. If list is not provided,
@@ -89,34 +55,27 @@ class SINDyPI(SR3):
 
     def __init__(
         self,
-        threshold=0.1,
+        reg_weight_lam=0.1,
+        regularizer="l1",
         tol=1e-5,
-        thresholder="l1",
         max_iter=10000,
         copy_X=True,
-        thresholds=None,
         model_subset=None,
         normalize_columns=False,
         verbose_cvxpy=False,
         unbias=False,
     ):
         super().__init__(
-            threshold=threshold,
-            thresholds=thresholds,
+            reg_weight_lam=reg_weight_lam,
+            regularizer=regularizer,
             tol=tol,
-            thresholder=thresholder,
             max_iter=max_iter,
             copy_X=copy_X,
             normalize_columns=normalize_columns,
             unbias=unbias,
         )
 
-        if (
-            thresholder.lower() != "l1"
-            and thresholder.lower() != "l2"
-            and thresholder.lower() != "weighted_l1"
-            and thresholder.lower() != "weighted_l2"
-        ):
+        if regularizer.lower() not in ["l1", "l2", "weighted_l1", "weighted_l2"]:
             raise ValueError(
                 "l0 and other nonconvex regularizers are not implemented "
                 " in current version of SINDy-PI"
@@ -158,27 +117,25 @@ class SINDyPI(SR3):
             print("Model ", i)
             xi = cp.Variable(n_features)
             # Note that norm choice below must be convex,
-            # so thresholder must be L1 or L2
-            if (self.thresholder).lower() in ("l1", "weighted_l1"):
-                if self.thresholds is None:
-                    cost = cp.sum_squares(x[:, i] - x @ xi) + self.threshold * cp.norm1(
-                        xi
-                    )
-                else:
-                    cost = cp.sum_squares(x[:, i] - x @ xi) + cp.norm1(
-                        self.thresholds[i, :] @ xi
-                    )
-            if (self.thresholder).lower() in ("l2", "weighted_l2"):
-                if self.thresholds is None:
-                    cost = (
-                        cp.sum_squares(x[:, i] - x @ xi)
-                        + self.threshold * cp.norm2(xi) ** 2
-                    )
-                else:
-                    cost = (
-                        cp.sum_squares(x[:, i] - x @ xi)
-                        + cp.norm2(self.thresholds[i, :] @ xi) ** 2
-                    )
+            # so regularizer must be L1 or L2
+            regularizer = self.regularizer.lower()
+            lam = self.reg_weight_lam
+            if regularizer == "l1":
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.sum(
+                    cp.multiply(lam, cp.abs(xi))
+                )
+            elif regularizer == "weighted_l1":
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.sum(
+                    cp.multiply(lam[:, i], cp.abs(xi))
+                )
+            elif regularizer == "l2":
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.sum(
+                    cp.multiply(lam, xi**2)
+                )
+            elif regularizer == "weighted_l2":
+                cost = cp.sum_squares(x[:, i] - x @ xi) + cp.sum(
+                    cp.multiply(lam[:, i], xi**2)
+                )
             prob = cp.Problem(
                 cp.Minimize(cost),
                 [xi[i] == 0.0],
@@ -188,24 +145,6 @@ class SINDyPI(SR3):
                     max_iter=self.max_iter,
                     eps_abs=self.tol,
                     eps_rel=self.tol,
-                    verbose=self.verbose_cvxpy,
-                )
-                if xi.value is None:
-                    warnings.warn(
-                        "Infeasible solve on iteration "
-                        + str(i)
-                        + ", try changing your library",
-                        ConvergenceWarning,
-                    )
-                xi_final[:, i] = xi.value
-            # Annoying error coming from L2 norm switching to use the ECOS
-            # solver, which uses "max_iters" instead of "max_iter", and
-            # similar semantic changes for the other variables.
-            except TypeError:
-                prob.solve(
-                    max_iters=self.max_iter,
-                    abstol=self.tol,
-                    reltol=self.tol,
                     verbose=self.verbose_cvxpy,
                 )
                 if xi.value is None:

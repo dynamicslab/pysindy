@@ -112,7 +112,7 @@ x0 = (np.random.rand(3) - 0.5) * 30
 x_test = solve_ivp(lorenz, t_span, x0, t_eval=t, **integrator_keywords).y.T
 
 # define hyperparameters
-threshold = 0
+reg_weight_lam = 0
 max_iter = 5000
 eta = 1.0e3
 alpha_m = 8e-1 * eta
@@ -122,7 +122,7 @@ sindy_opt = ps.TrappingSR3(
     method="global",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     gamma=-1,
@@ -255,14 +255,14 @@ max_iter = 500
 eta = 1.0e2
 alpha = 1e-20
 beta = 1e20
-threshold = 0
+reg_weight_lam = 0
 
 # run trapping SINDy... no more constraints!
 sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     gamma=-1,
@@ -297,7 +297,7 @@ max_iter = 2000
 eta = 1.0e3
 alpha = 1e20
 beta = 1e-10
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 0.9 * eta
 
 # run trapping SINDy... no more constraints!
@@ -305,7 +305,7 @@ sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -381,7 +381,7 @@ max_iter = 100
 eta = 1.0e2
 alpha = 1e20
 beta = 1e-20
-threshold = 5
+reg_weight_lam = 5
 alpha_m = 9e-1 * eta
 
 # run trapping SINDy... no more constraints!
@@ -389,7 +389,7 @@ sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -443,7 +443,7 @@ max_iter = 10000
 eta = 1.0e-2
 alpha = 1e20
 beta = 1e-14
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 0.9 * eta
 
 # run trapping SINDy... no more constraints!
@@ -451,7 +451,7 @@ sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,

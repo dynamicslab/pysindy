@@ -139,14 +139,16 @@ for i, equation_name in enumerate(systems_list):
 # Get training and testing trajectories for all the experimental systems
 n = 1000  # Trajectories with 1000 points
 pts_per_period = 100  # sampling with 100 points per period
-n_trajectories = 1  # generate n_trajectories starting from different initial conditions on the attractor
+# generate n_trajectories starting from different initial conditions on the attractor
+n_trajectories = 1
 all_sols_train, all_t_train, all_sols_test, all_t_test = load_data(
     systems_list,
     all_properties,
     n=n,
     pts_per_period=pts_per_period,
     random_bump=False,  # optionally start with initial conditions pushed slightly off the attractor
-    include_transients=False,  # optionally do high-resolution sampling at rate proportional to the dt parameter
+    # optionally do high-resolution sampling at rate proportional to the dt parameter
+    include_transients=False,
     n_trajectories=n_trajectories,
 )
 
@@ -204,7 +206,7 @@ true_coefficients = make_dysts_true_coefficients(
 from scipy.optimize import dual_annealing as anneal_algo
 
 # define hyperparameters
-threshold = 0
+reg_weight_lam = 0
 max_iter = 5000
 eta = 1.0e3
 alpha_m = 4e-2 * eta  # default is 1e-2 * eta so this speeds up the code here
@@ -228,7 +230,7 @@ for i in range(len(systems_list)):
         method="global",
         _n_tgts=r,
         _include_bias=True,
-        threshold=threshold,
+        reg_weight_lam=reg_weight_lam,
         eta=eta,
         alpha_m=alpha_m,
         max_iter=max_iter,
@@ -309,7 +311,7 @@ plt.legend()
 
 # %%
 # define hyperparameters
-threshold = 0
+reg_weight_lam = 0
 max_iter = 5000
 eta = 1.0e7
 alpha_m = 0.1 * eta  # default is 1e-2 * eta so this speeds up the code here
@@ -333,7 +335,7 @@ for i in range(len(stable_systems_list)):
         method="local",
         _n_tgts=r,
         _include_bias=True,
-        threshold=threshold,
+        reg_weight_lam=reg_weight_lam,
         eta=eta,
         alpha_m=alpha_m,
         max_iter=max_iter,
@@ -457,7 +459,7 @@ r = 6  # POD truncation
 x_train = a_dns[:, :r]
 t_train = t_dns.copy()
 
-threshold = 0.0
+reg_weight_lam = 0.0
 eta = 1.0e10
 alpha_m = 1e-4 * eta  # default is 1e-2 * eta so this speeds up the code here
 beta = 1e-5
@@ -466,7 +468,7 @@ sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=r,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,

@@ -16,35 +16,34 @@ import warnings
 
 import matplotlib.gridspec as gridspec
 import numpy as np
+import pymech.neksuite as nek
 import scipy.io as sio
 from matplotlib import pyplot as plt
 from scipy.integrate import solve_ivp
+from scipy.optimize import dual_annealing as anneal_algo
+from trapping_utils import check_local_stability
+from trapping_utils import check_stability
+from trapping_utils import galerkin_model
+from trapping_utils import get_velocity
+from trapping_utils import get_vorticity
+from trapping_utils import integrator_keywords
+from trapping_utils import interp
+from trapping_utils import make_bar
+from trapping_utils import make_progress_plots
+from trapping_utils import make_trap_progress_plots
+from trapping_utils import nel
+from trapping_utils import nGLL
+from trapping_utils import nx
+from trapping_utils import ny
+from trapping_utils import obj_function
+from trapping_utils import plot_field
+from trapping_utils import sindy_library_no_bias
 
 import pysindy as ps
 
 # ignore warnings
 warnings.filterwarnings("ignore")
 
-import pymech.neksuite as nek
-from trapping_utils import (
-    galerkin_model,
-    integrator_keywords,
-    nel,
-    nGLL,
-    interp,
-    get_velocity,
-    get_vorticity,
-    obj_function,
-    sindy_library_no_bias,
-    check_stability,
-    check_local_stability,
-    make_trap_progress_plots,
-    make_bar,
-    nx,
-    ny,
-    plot_field,
-    make_progress_plots,
-)
 
 # %% [markdown]
 # #### We have pre-loaded some useful functions, and now we can load in the von Karman DNS data. For simplicity (and speed of the code), we will limit ourselves to 5D models, using the first 4 POD modes + the shift mode.
@@ -164,7 +163,6 @@ Cy = np.array(
         for k in range(nGLL)
     ]
 )
-
 filename = lambda t_idx: "cyl0.f{0:05d}".format(t_idx)  # noqa: E731
 
 # plot mean + leading POD modes
@@ -208,6 +206,7 @@ ip1 = lambda a, b: np.dot(mass_matrix * a, b)  # noqa: E731
 ip2 = lambda a, b, c, d: np.dot(a * mass_matrix, c) + np.dot(  # noqa: E731
     b * mass_matrix, d
 )
+
 energy_integrals = np.zeros((6, 6))
 enstrophy_integrals = np.zeros((6, 6))
 for i, wi in enumerate(vorticities_flat):
@@ -248,7 +247,6 @@ L_enstrophy = np.dot(P_enstrophy, galerkin5["L"])
 
 # %%
 # Import simulated annealing algorithm from scipy
-from scipy.optimize import dual_annealing as anneal_algo
 
 # Search between -5000, 5000 for each component of m
 boundvals = np.zeros((r, 2))
@@ -380,7 +378,7 @@ print(np.max(abs(galerkin_ep)))
 # %%
 max_iter = 5000
 eta = 1.0e2
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 9e-1 * eta
 
 # run trapping SINDy
@@ -388,7 +386,7 @@ sindy_opt = ps.TrappingSR3(
     method="global",
     _n_tgts=5,
     _include_bias=False,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -418,7 +416,7 @@ print("Maximum deviation from the constraints = ", Q_sum)
 # %%
 max_iter = 5000
 eta = 1.0e4
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 1e-1 * eta
 
 mod_matrix = enstrophy_integrals[1:, 1:]
@@ -426,7 +424,7 @@ sindy_opt = ps.TrappingSR3(
     method="global",
     _n_tgts=5,
     _include_bias=False,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -571,7 +569,7 @@ plt.show()
 # %%
 max_iter = 5000
 eta = 1.0e4
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 1e-2 * eta
 # alpha = 1e10
 beta = 1e-12
@@ -582,7 +580,7 @@ sindy_opt = ps.TrappingSR3(
     method="local",
     _n_tgts=5,
     _include_bias=False,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     gamma=-1,
     alpha_m=alpha_m,

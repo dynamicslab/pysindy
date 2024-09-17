@@ -44,31 +44,11 @@ class StableLinearSR3(ConstrainedSR3):
 
     Parameters
     ----------
-    threshold : float, optional (default 0.1)
-        Determines the strength of the regularization. When the
-        regularization function R is the l0 norm, the regularization
-        is equivalent to performing hard thresholding, and lambda
-        is chosen to threshold at the value given by this parameter.
-        This is equivalent to choosing lambda = threshold^2 / (2 * nu).
-
-    nu : float, optional (default 1)
-        Determines the level of relaxation. Decreasing nu encourages
-        w and v to be close, whereas increasing nu allows the
-        regularized coefficients v to be farther from w.
-
-    tol : float, optional (default 1e-5)
-        Tolerance used for determining convergence of the optimization
-        algorithm.
-
-    thresholder : string, optional (default 'l1')
+    regularizer : string, optional (default 'l1')
         Regularization function to use. Currently implemented options
-        are 'l1' (l1 norm), 'l2' (l2 norm),
-        'weighted_l1' (weighted l1 norm), and 'weighted_l2' (weighted l2 norm).
-        Note that the thresholder must be convex here.
-
-    max_iter : int, optional (default 30)
-        Maximum iterations of the optimization algorithm.
-
+        are 'l1' (l1 norm), 'l2' (l2 norm), 'weighted_l1' (weighted l1 norm),
+        and 'weighted_l2' (weighted l2 norm).
+        Note that the regularizer must be convex here.
     constraint_lhs : numpy ndarray, optional (default None)
         Shape should be (n_constraints, n_features * n_targets),
         The left hand side matrix C of Cw <= d.
@@ -90,37 +70,8 @@ class StableLinearSR3(ConstrainedSR3):
         library feature, the next ``n_targets`` columns to the second library
         feature, and so on.
 
-    normalize_columns : boolean, optional (default False)
-        Normalize the columns of x (the SINDy library terms) before regression
-        by dividing by the L2-norm. Note that the 'normalize' option in sklearn
-        is deprecated in sklearn versions >= 1.0 and will be removed. Note that
-        this parameter is incompatible with the constraints!
-
-    copy_X : boolean, optional (default True)
-        If True, X will be copied; else, it may be overwritten.
-
-    initial_guess : np.ndarray, optional (default None)
-        Shape should be (n_features) or (n_targets, n_features).
-        Initial guess for coefficients ``coef_``, (v in the mathematical equations)
-        If None, least-squares is used to obtain an initial guess.
-
-    thresholds : np.ndarray, shape (n_targets, n_features), optional (default None)
-        Array of thresholds for each library function coefficient.
-        Each row corresponds to a measurement variable and each column
-        to a function from the feature library.
-        Recall that SINDy seeks a matrix :math:`\\Xi` such that
-        :math:`\\dot{X} \\approx \\Theta(X)\\Xi`.
-        ``thresholds[i, j]`` should specify the threshold to be used for the
-        (j + 1, i + 1) entry of :math:`\\Xi`. That is to say it should give the
-        threshold to be used for the (j + 1)st library function in the equation
-        for the (i + 1)st measurement variable.
-
     inequality_constraints : bool, optional (default False)
         If True, CVXPY methods are used to solve the problem.
-
-    verbose : bool, optional (default False)
-        If True, prints out the different error terms every
-        max_iter / 10 iterations.
 
     verbose_cvxpy : bool, optional (default False)
         Boolean flag which is passed to CVXPY solve function to indicate if
@@ -142,10 +93,10 @@ class StableLinearSR3(ConstrainedSR3):
 
     def __init__(
         self,
-        threshold=0.1,
-        nu=1.0,
+        reg_weight_lam=0.1,
+        regularizer="l1",
+        relax_coeff_nu=1.0,
         tol=1e-5,
-        thresholder="l1",
         max_iter=30,
         trimming_fraction=0.0,
         trimming_step_size=1.0,
@@ -155,7 +106,6 @@ class StableLinearSR3(ConstrainedSR3):
         normalize_columns=False,
         copy_X=True,
         initial_guess=None,
-        thresholds=None,
         equality_constraints=False,
         inequality_constraints=False,
         constraint_separation_index=0,
@@ -165,11 +115,10 @@ class StableLinearSR3(ConstrainedSR3):
         unbias=False,
     ):
         super().__init__(
-            threshold=threshold,
-            nu=nu,
+            reg_weight_lam=reg_weight_lam,
+            regularizer=regularizer,
+            relax_coeff_nu=relax_coeff_nu,
             tol=tol,
-            thresholder=thresholder,
-            thresholds=thresholds,
             trimming_fraction=trimming_fraction,
             trimming_step_size=trimming_step_size,
             max_iter=max_iter,
@@ -187,15 +136,15 @@ class StableLinearSR3(ConstrainedSR3):
             unbias=unbias,
         )
         self.gamma = gamma
-        self.alpha_A = nu
+        self.alpha_A = relax_coeff_nu
         self.max_iter = max_iter
         warnings.warn(
             "This optimizer is set up to only be used with a purely linear"
             " library in the variables. No constant or nonlinear terms!"
         )
-        if not np.isclose(threshold, 0.0):
+        if not np.isclose(reg_weight_lam, 0.0):
             warnings.warn(
-                "This optimizer uses CVXPY if the threshold is nonzero, "
+                "This optimizer uses CVXPY if the reg_weight_lam is nonzero, "
                 " meaning the optimization will be much slower for large "
                 "datasets."
             )
@@ -209,15 +158,18 @@ class StableLinearSR3(ConstrainedSR3):
     ) -> Tuple["cp.Variable", "cp.Expression"]:
         xi = cp.Variable(coef_sparse.shape[0] * coef_sparse.shape[1])
         cost = cp.sum_squares(x @ xi - y.flatten())
-        cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (2 * self.nu)
-        threshold = self.thresholds if self.thresholds is not None else self.threshold
-        penalty = self._calculate_penalty(self.thresholder, np.ravel(threshold), xi)
+        cost = cost + cp.sum_squares(xi - coef_neg_def.flatten()) / (
+            2 * self.relax_coeff_nu
+        )
+        penalty = self._calculate_penalty(
+            self.regularizer, np.ravel(self.reg_weight_lam), xi
+        )
         return xi, cost + penalty
 
     def _update_coef_cvxpy(self, x, y, coef_sparse, coef_negative_definite):
         """
         Update the coefficients using CVXPY. This function is called if
-        the sparsity threshold is nonzero or constraints are used.
+        the sparsity weight is nonzero or constraints are used.
         """
         xi, cost = self._create_var_and_part_cost(
             x, y, coef_sparse, coef_negative_definite
@@ -247,7 +199,6 @@ class StableLinearSR3(ConstrainedSR3):
         else:
             prob = cp.Problem(cp.Minimize(cost))
 
-        # default solver is OSQP here but switches to ECOS for L2
         try:
             prob.solve(
                 max_iter=self.max_iter**2,
@@ -255,15 +206,6 @@ class StableLinearSR3(ConstrainedSR3):
                 eps_rel=self.tol,
                 verbose=self.verbose_cvxpy,
             )
-        # Annoying error coming from L2 norm switching to use the ECOS
-        # solver, which uses "max_iters" instead of "max_iter", and
-        # similar semantic changes for the other variables.
-        except TypeError:
-            try:
-                prob.solve(abstol=self.tol, reltol=self.tol, verbose=self.verbose_cvxpy)
-            except cp.error.SolverError:
-                print("Solver failed, setting coefs to zeros")
-                xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
         except cp.error.SolverError:
             print("Solver failed, setting coefs to zeros")
             xi.value = np.zeros(coef_sparse.shape[0] * coef_sparse.shape[1])
@@ -326,7 +268,7 @@ class StableLinearSR3(ConstrainedSR3):
             self.constraint_lhs = reorder_constraints(self.constraint_lhs, n_features)
 
         # Precompute some objects for optimization
-        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.nu))
+        H = np.dot(x.T, x) + np.diag(np.full(x.shape[1], 1.0 / self.relax_coeff_nu))
         x_transpose_y = np.dot(x.T, y)
         if not self.use_constraints:
             cho = cho_factor(H)
@@ -354,7 +296,7 @@ class StableLinearSR3(ConstrainedSR3):
         eigs_history = []
         coef_history = []
         for k in range(self.max_iter):
-            if not np.isclose(self.threshold, 0.0) or self.use_constraints:
+            if not np.isclose(self.reg_weight_lam, 0.0) or self.use_constraints:
                 coef_sparse = self._update_coef_cvxpy(
                     x_expanded, y, coef_sparse, coef_negative_definite
                 )
@@ -364,7 +306,9 @@ class StableLinearSR3(ConstrainedSR3):
                 )
             coef_negative_definite = self._update_A(
                 coef_negative_definite
-                - self.alpha_A * (coef_negative_definite - coef_sparse) / self.nu,
+                - self.alpha_A
+                * (coef_negative_definite - coef_sparse)
+                / self.relax_coeff_nu,
                 coef_sparse,
             ).T
             objective_history.append(

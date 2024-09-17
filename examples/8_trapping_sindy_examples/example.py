@@ -97,7 +97,7 @@ x_test = solve_ivp(
 ).y.T
 
 # define hyperparameters
-threshold = 0.0
+reg_weight_lam = 0.0
 eta = 1e5
 max_iter = 5000
 
@@ -106,7 +106,7 @@ max_iter = 5000
 sindy_opt = ps.TrappingSR3(
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     gamma=-1,
@@ -239,7 +239,7 @@ eta = 1.0e8
 sindy_opt = ps.TrappingSR3(
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
 )
@@ -371,7 +371,7 @@ x0 = (rng.random(3) - 0.5) * 30
 x_test = solve_ivp(lorenz, t_span, x0, t_eval=t, **integrator_keywords).y.T
 
 # define hyperparameters
-threshold = 0
+reg_weight_lam = 0
 max_iter = 5000
 eta = 1.0e3
 
@@ -381,7 +381,7 @@ alpha_m = 8e-1 * eta  # default is 1e-2 * eta so this speeds up the code here
 sindy_opt = ps.TrappingSR3(
     _n_tgts=3,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,
@@ -512,7 +512,7 @@ x0 = rng.random((6,)) - 0.5
 x_test = solve_ivp(mhd, t_span, x0, t_eval=t, **integrator_keywords).y.T
 
 # define hyperparameters
-threshold = 0.0
+reg_weight_lam = 0.0
 max_iter = 1000
 eta = 1.0e10
 alpha_m = 5.0e-1 * eta
@@ -521,7 +521,7 @@ alpha_m = 5.0e-1 * eta
 sindy_opt = ps.TrappingSR3(
     _n_tgts=6,
     _include_bias=True,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     max_iter=max_iter,
     verbose=True,
@@ -639,6 +639,7 @@ from scipy.optimize import dual_annealing as anneal_algo
 L, Q = burgers_galerkin(sigma, nu, U)
 rhs = lambda t, a: galerkin_model(a, L, Q)  # noqa: E731
 
+
 # Generate initial condition from unstable eigenvectors
 lamb, Phi = np.linalg.eig(L)
 idx = np.argsort(-np.real(lamb))
@@ -741,6 +742,7 @@ inds5 = np.ix_([0, 1, 2, 3, -1], [0, 1, 2, 3, -1], [0, 1, 2, 3, -1])
 galerkin5["Q"] = galerkin9["Q"][inds5]
 model5 = lambda t, a: galerkin_model(a, galerkin5["L"], galerkin5["Q"])  # noqa: E731
 
+
 # make the 3D, 5D, and 9D POD-Galerkin trajectories
 t_span = (t[0], t[-1])
 a_galerkin5 = solve_ivp(model5, t_span, a0[:5], t_eval=t, **integrator_keywords).y.T
@@ -793,7 +795,7 @@ eta = 1.0e2
 
 # don't need a threshold if eta is sufficiently small
 # which is good news because CVXPY is much slower
-threshold = 0
+reg_weight_lam = 0
 alpha_m = 9e-1 * eta
 
 
@@ -801,7 +803,7 @@ alpha_m = 9e-1 * eta
 sindy_opt = ps.TrappingSR3(
     _n_tgts=5,
     _include_bias=False,
-    threshold=threshold,
+    reg_weight_lam=reg_weight_lam,
     eta=eta,
     alpha_m=alpha_m,
     max_iter=max_iter,

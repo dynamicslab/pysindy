@@ -200,8 +200,16 @@ def test_sample_weight_optimizers(data_1d, optimizer):
     check_is_fitted(opt)
 
 
-@pytest.mark.parametrize("optimizer", [STLSQ, SR3, ConstrainedSR3, StableLinearSR3])
 @pytest.mark.parametrize("params", [dict(threshold=-1), dict(max_iter=0)])
+def test_STLSQ_bad_parameters(params):
+    with pytest.raises(ValueError):
+        STLSQ(**params)
+
+
+@pytest.mark.parametrize(
+    "optimizer", [SR3, ConstrainedSR3, StableLinearSR3, TrappingSR3]
+)
+@pytest.mark.parametrize("params", [dict(reg_weight_lam=-1), dict(max_iter=0)])
 def test_general_bad_parameters(optimizer, params):
     with pytest.raises(ValueError):
         optimizer(**params)
@@ -211,7 +219,7 @@ def test_general_bad_parameters(optimizer, params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(nu=0),
+        dict(relax_coeff_nu=0),
         dict(tol=0),
         dict(trimming_fraction=-1),
         dict(trimming_fraction=2),
@@ -232,8 +240,7 @@ def test_sr3_bad_parameters(optimizer, params):
         dict(eta=1, alpha_m=-1),
         dict(eta=1, alpha_A=-1),
         dict(gamma=1),
-        dict(thresholder="l0"),
-        dict(threshold=-1),
+        dict(regularizer="l0"),
         dict(max_iter=0),
         dict(eta=10, alpha_m=20),
         dict(eta=10, alpha_A=20),
@@ -262,10 +269,10 @@ def test_trapping_objective_print():
     [
         dict(tol=0),
         dict(max_iter=-1),
-        dict(thresholder="l0"),
-        dict(threshold=-1),
-        dict(thresholds=1),
-        dict(thresholder="weighted_l1"),
+        dict(regularizer="l0"),
+        dict(reg_weight_lam=-1),
+        dict(regularizer="weighted_l1", reg_weight_lam=1),
+        dict(regularizer="weighted_l1"),
         dict(model_subset=0),
         dict(model_subset=[50]),
         dict(model_subset=[0, 0.5, 1]),
@@ -283,10 +290,10 @@ def test_sindypi_bad_parameters(data_lorenz, params):
     "params",
     [
         dict(tol=1e-3),
-        dict(thresholder="l1"),
-        dict(thresholder="weighted_l1", thresholds=np.zeros((10, 10))),
-        dict(thresholder="l2"),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((10, 10))),
+        dict(regularizer="l1"),
+        dict(regularizer="weighted_l1", reg_weight_lam=np.zeros((10, 10))),
+        dict(regularizer="l2"),
+        dict(regularizer="weighted_l2", reg_weight_lam=np.zeros((10, 10))),
         dict(model_subset=[5]),
     ],
 )
@@ -388,14 +395,14 @@ def test_sbr_accurate():
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0),
-        dict(thresholder="l1", threshold=1e-5),
-        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 9))),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
-        dict(thresholder="l2", threshold=0),
-        dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 9))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
+        dict(regularizer="l1", reg_weight_lam=0),
+        dict(regularizer="l1", reg_weight_lam=1e-5),
+        dict(regularizer="weighted_l1", reg_weight_lam=np.zeros((3, 9))),
+        dict(regularizer="weighted_l1", reg_weight_lam=1e-5 * np.ones((3, 9))),
+        dict(regularizer="l2", reg_weight_lam=0),
+        dict(regularizer="l2", reg_weight_lam=1e-5),
+        dict(regularizer="weighted_l2", reg_weight_lam=np.zeros((3, 9))),
+        dict(regularizer="weighted_l2", reg_weight_lam=1e-5 * np.ones((3, 9))),
     ],
 )
 def test_sr3_quadratic_library(params):
@@ -424,14 +431,14 @@ def test_sr3_quadratic_library(params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0),
-        dict(thresholder="l1", threshold=1e-5),
-        dict(thresholder="weighted_l1", thresholds=np.zeros((3, 9))),
-        dict(thresholder="weighted_l1", thresholds=1e-5 * np.ones((3, 9))),
-        dict(thresholder="l2", threshold=0),
-        dict(thresholder="l2", threshold=1e-5),
-        dict(thresholder="weighted_l2", thresholds=np.zeros((3, 9))),
-        dict(thresholder="weighted_l2", thresholds=1e-5 * np.ones((3, 9))),
+        dict(regularizer="l1", reg_weight_lam=0),
+        dict(regularizer="l1", reg_weight_lam=1e-5),
+        dict(regularizer="weighted_l1", reg_weight_lam=np.zeros((3, 9))),
+        dict(regularizer="weighted_l1", reg_weight_lam=1e-5 * np.ones((3, 9))),
+        dict(regularizer="l2", reg_weight_lam=0),
+        dict(regularizer="l2", reg_weight_lam=1e-5),
+        dict(regularizer="weighted_l2", reg_weight_lam=np.zeros((3, 9))),
+        dict(regularizer="weighted_l2", reg_weight_lam=1e-5 * np.ones((3, 9))),
     ],
 )
 def test_constrained_sr3_quadratic_library(params):
@@ -508,29 +515,31 @@ def test_stable_linear_sr3_linear_library():
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0, _include_bias=True),
-        dict(thresholder="l1", threshold=1e-5, _include_bias=True),
+        dict(regularizer="l1", reg_weight_lam=0, _include_bias=True),
+        dict(regularizer="l1", reg_weight_lam=1e-5, _include_bias=True),
         dict(
-            thresholder="weighted_l1",
-            thresholds=np.zeros((1, 2)),
+            regularizer="weighted_l1",
+            reg_weight_lam=np.zeros((1, 2)),
             eta=1e5,
             alpha_m=1e4,
             alpha_A=1e5,
             _include_bias=False,
         ),
         dict(
-            thresholder="weighted_l1",
-            thresholds=1e-5 * np.ones((1, 2)),
+            regularizer="weighted_l1",
+            reg_weight_lam=1e-5 * np.ones((1, 2)),
             _include_bias=False,
         ),
-        dict(thresholder="l2", threshold=0, _include_bias=True),
-        dict(thresholder="l2", threshold=1e-5, _include_bias=True),
+        dict(regularizer="l2", reg_weight_lam=0, _include_bias=True),
+        dict(regularizer="l2", reg_weight_lam=1e-5, _include_bias=True),
         dict(
-            thresholder="weighted_l2", thresholds=np.zeros((1, 2)), _include_bias=False
+            regularizer="weighted_l2",
+            reg_weight_lam=np.zeros((1, 2)),
+            _include_bias=False,
         ),
         dict(
-            thresholder="weighted_l2",
-            thresholds=1e-5 * np.ones((1, 2)),
+            regularizer="weighted_l2",
+            reg_weight_lam=1e-5 * np.ones((1, 2)),
             _include_bias=False,
         ),
     ],
@@ -569,9 +578,9 @@ def test_trapping_sr3_quadratic_library(params):
         (ValueError, SSR, dict(criteria="None")),
         (ValueError, SSR, dict(max_iter=-1)),
         (ValueError, FROLS, dict(max_iter=-1)),
-        (NotImplementedError, SR3, dict(thresholder="l3")),
-        (NotImplementedError, ConstrainedSR3, dict(thresholder="l3")),
-        (NotImplementedError, StableLinearSR3, dict(thresholder="l3")),
+        (NotImplementedError, SR3, dict(regularizer="l3")),
+        (NotImplementedError, ConstrainedSR3, dict(regularizer="l3")),
+        (NotImplementedError, StableLinearSR3, dict(regularizer="l3")),
         (
             ValueError,
             ConstrainedSR3,
@@ -579,19 +588,31 @@ def test_trapping_sr3_quadratic_library(params):
                 inequality_constraints=True,
                 constraint_lhs=np.zeros((1, 1)),
                 constraint_rhs=np.zeros(1),
-                thresholder="l0",
+                regularizer="l0",
             ),
         ),
         (ValueError, ConstrainedSR3, dict(inequality_constraints=True)),
-        (ValueError, SR3, dict(thresholder="weighted_l0", thresholds=None)),
-        (ValueError, SR3, dict(thresholder="weighted_l1", thresholds=None)),
-        (ValueError, SR3, dict(thresholder="weighted_l2", thresholds=None)),
-        (ValueError, SR3, dict(thresholds=-np.ones((5, 5)))),
+        (ValueError, SR3, dict(regularizer="weighted_l0", reg_weight_lam=None)),
+        (ValueError, SR3, dict(regularizer="weighted_l1", reg_weight_lam=None)),
+        (ValueError, SR3, dict(regularizer="weighted_l2", reg_weight_lam=None)),
+        (ValueError, SR3, dict(reg_weight_lam=-np.ones((5, 5)))),
         (ValueError, SR3, dict(initial_guess=np.zeros(3))),
-        (ValueError, ConstrainedSR3, dict(thresholder="weighted_l0", thresholds=None)),
-        (ValueError, ConstrainedSR3, dict(thresholder="weighted_l1", thresholds=None)),
-        (ValueError, ConstrainedSR3, dict(thresholder="weighted_l2", thresholds=None)),
-        (ValueError, ConstrainedSR3, dict(thresholds=-np.ones((5, 5)))),
+        (
+            ValueError,
+            ConstrainedSR3,
+            dict(regularizer="weighted_l0", reg_weight_lam=None),
+        ),
+        (
+            ValueError,
+            ConstrainedSR3,
+            dict(regularizer="weighted_l1", reg_weight_lam=None),
+        ),
+        (
+            ValueError,
+            ConstrainedSR3,
+            dict(regularizer="weighted_l2", reg_weight_lam=None),
+        ),
+        (ValueError, ConstrainedSR3, dict(reg_weight_lam=-np.ones((5, 5)))),
         (ValueError, ConstrainedSR3, dict(initial_guess=np.zeros(3))),
         (
             ValueError,
@@ -642,34 +663,34 @@ def test_initial_guess_sr3(optimizer):
 # The different capitalizations are intentional;
 # I want to make sure different versions are recognized
 @pytest.mark.parametrize("optimizer", [SR3, ConstrainedSR3])
-@pytest.mark.parametrize("thresholder", ["L0", "l1"])
-def test_prox_functions(data_derivative_1d, optimizer, thresholder):
+@pytest.mark.parametrize("regularizer", ["L0", "l1"])
+def test_prox_functions(data_derivative_1d, optimizer, regularizer):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    model = optimizer(thresholder=thresholder)
+    model = optimizer(regularizer=regularizer)
     model.fit(x, x_dot)
     check_is_fitted(model)
 
 
-@pytest.mark.parametrize("thresholder", ["weighted_l0", "weighted_l1"])
-def test_weighted_prox_functions(data, thresholder):
+@pytest.mark.parametrize("regularizer", ["weighted_l0", "weighted_l1"])
+def test_weighted_prox_functions(data, regularizer):
     x, x_dot = data
     if x.ndim == 1:
         x = x.reshape(-1, 1)
-        thresholds = np.ones((1, 1))
+        reg_weight_lam = np.ones((1, 1))
     else:
-        thresholds = np.ones((x_dot.shape[1], x.shape[1]))
+        reg_weight_lam = np.ones((x_dot.shape[1], x.shape[1]))
 
-    model = ConstrainedSR3(thresholder=thresholder, thresholds=thresholds)
+    model = ConstrainedSR3(regularizer=regularizer, reg_weight_lam=reg_weight_lam)
     model.fit(x, x_dot)
     check_is_fitted(model)
 
 
-@pytest.mark.parametrize("thresholder", ["L0", "l1"])
-def test_constrained_sr3_prox_functions(data_derivative_1d, thresholder):
+@pytest.mark.parametrize("regularizer", ["L0", "l1"])
+def test_constrained_sr3_prox_functions(data_derivative_1d, regularizer):
     x, x_dot = data_derivative_1d
     x = x.reshape(-1, 1)
-    model = ConstrainedSR3(thresholder=thresholder)
+    model = ConstrainedSR3(regularizer=regularizer)
     model.fit(x, x_dot)
     check_is_fitted(model)
 
@@ -880,10 +901,10 @@ def test_target_format_constraints(data_linear_combination, optimizer, target_va
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=0.0005),
-        dict(thresholder="weighted_l1", thresholds=0.0005 * np.ones((3, 10))),
-        dict(thresholder="l2", threshold=0.0005),
-        dict(thresholder="weighted_l2", thresholds=0.0005 * np.ones((3, 10))),
+        dict(regularizer="l1", reg_weight_lam=0.0005),
+        dict(regularizer="weighted_l1", reg_weight_lam=0.0005 * np.ones((3, 10))),
+        dict(regularizer="l2", reg_weight_lam=0.0005),
+        dict(regularizer="weighted_l2", reg_weight_lam=0.0005 * np.ones((3, 10))),
     ],
 )
 def test_constrained_inequality_constraints(data_lorenz, params):
@@ -917,18 +938,32 @@ def test_constrained_inequality_constraints(data_lorenz, params):
 @pytest.mark.parametrize(
     "params",
     [
-        dict(thresholder="l1", threshold=2, expected=2.5),
-        dict(thresholder="weighted_l1", thresholds=0.5 * np.ones((1, 2)), expected=1.0),
-        dict(thresholder="l2", threshold=2, expected=1.5),
+        dict(regularizer="l1", reg_weight_lam=2, expected=2.5),
         dict(
-            thresholder="weighted_l2", thresholds=0.5 * np.ones((1, 2)), expected=0.75
+            regularizer="weighted_l1",
+            reg_weight_lam=0.5 * np.ones((1, 2)),
+            expected=1.0,
         ),
-        dict(thresholder="l1", threshold=0, expected=0.5),
-        dict(thresholder="weighted_l1", thresholds=0.0 * np.ones((1, 2)), expected=0.5),
-        dict(thresholder="l2", threshold=0.0, expected=0.5),
-        dict(thresholder="weighted_l2", thresholds=0.0 * np.ones((1, 2)), expected=0.5),
+        dict(regularizer="l2", reg_weight_lam=2, expected=1.5),
+        dict(
+            regularizer="weighted_l2",
+            reg_weight_lam=0.5 * np.ones((1, 2)),
+            expected=0.75,
+        ),
+        dict(regularizer="l1", reg_weight_lam=0, expected=0.5),
+        dict(
+            regularizer="weighted_l1",
+            reg_weight_lam=0.0 * np.ones((1, 2)),
+            expected=0.5,
+        ),
+        dict(regularizer="l2", reg_weight_lam=0.0, expected=0.5),
+        dict(
+            regularizer="weighted_l2",
+            reg_weight_lam=0.0 * np.ones((1, 2)),
+            expected=0.5,
+        ),
     ],
-    ids=lambda d: d["thresholder"],
+    ids=lambda d: d["regularizer"],
 )
 def test_trapping_cost_function(params):
     # TODO: are all these parameters necessary?  What are we testing?
@@ -1002,7 +1037,7 @@ def test_inequality_constraints_reqs():
     constraint_matrix[1, 17] = 1.0
     with pytest.raises(ValueError):
         TrappingSR3(
-            threshold=0.0,
+            reg_weight_lam=0.0,
             constraint_lhs=constraint_matrix,
             constraint_rhs=constraint_rhs,
             constraint_order="feature",

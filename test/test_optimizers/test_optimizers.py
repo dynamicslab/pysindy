@@ -1202,6 +1202,8 @@ def test_ssr_history():
     x[:, 0] = y
     x += np.random.normal(size=(10, 3), scale=1e-2)
     opt = SSR()
-    opt.fit(x, y).coef_
+    result = opt.fit(x, y).coef_
+    expected = np.array([[1, 0, 0]])
 
     assert len(opt.history_) == len(opt.err_history_)
+    np.testing.assert_allclose(result, expected)

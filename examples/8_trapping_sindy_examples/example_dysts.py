@@ -139,16 +139,14 @@ for i, equation_name in enumerate(systems_list):
 # Get training and testing trajectories for all the experimental systems
 n = 1000  # Trajectories with 1000 points
 pts_per_period = 100  # sampling with 100 points per period
-# generate n_trajectories starting from different initial conditions on the attractor
-n_trajectories = 1
+n_trajectories = 1  # generate n_trajectories starting from different initial conditions on the attractor
 all_sols_train, all_t_train, all_sols_test, all_t_test = load_data(
     systems_list,
     all_properties,
     n=n,
     pts_per_period=pts_per_period,
     random_bump=False,  # optionally start with initial conditions pushed slightly off the attractor
-    # optionally do high-resolution sampling at rate proportional to the dt parameter
-    include_transients=False,
+    include_transients=False,  # optionally do high-resolution sampling at rate proportional to the dt parameter
     n_trajectories=n_trajectories,
 )
 
@@ -257,7 +255,7 @@ for i in range(len(systems_list)):
     plt.grid(True)
     plt.legend()
 
-    check_local_stability(r, Xi, sindy_opt, 1.0)
+    check_local_stability(Xi, sindy_opt, 1.0)
     Xi_true = (true_coefficients[i].T)[: Xi.shape[0], :]
 
     # run simulated annealing on the true system to make sure the system is amenable to trapping theorem
@@ -358,7 +356,7 @@ for i in range(len(stable_systems_list)):
     x_test_pred = model.simulate(x_test[0, :], t, integrator_kws=integrator_keywords)
 
     # Check stability and try simulated annealing with the IDENTIFIED model
-    check_local_stability(r, Xi, sindy_opt, 1.0)
+    check_local_stability(Xi, sindy_opt, 1.0)
     PL_tensor = sindy_opt.PL_
     PM_tensor = sindy_opt.PM_
     L = np.tensordot(PL_tensor, Xi, axes=([3, 2], [0, 1]))
@@ -485,11 +483,11 @@ model = ps.SINDy(
 
 model.fit(x_train, t=t_train)
 Xi = model.coefficients().T
-check_local_stability(r, Xi, sindy_opt, 1.0)
+check_local_stability(Xi, sindy_opt, 1.0)
 
 # Fit a baseline model -- this is almost always an unstable model!
 model_baseline = ps.SINDy(
-    optimizer=ps.STLSQ(threshold=0.0),
+    optimizer=ps.STLSQ(reg_weight_lam=0.0),
     feature_library=ps.PolynomialLibrary(),
 )
 model_baseline.fit(x_train, t=t_train)

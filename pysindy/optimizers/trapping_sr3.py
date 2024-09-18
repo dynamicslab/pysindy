@@ -1,4 +1,5 @@
 import warnings
+from functools import partial
 from itertools import combinations as combo_nr
 from itertools import product
 from itertools import repeat
@@ -6,6 +7,7 @@ from math import comb
 from typing import cast
 from typing import NewType
 from typing import Optional
+from typing import TypeVar
 from typing import Union
 
 import cvxpy as cp
@@ -29,6 +31,24 @@ Float5D = np.ndarray[tuple[int, int, int, int, int], AnyFloat]
 FloatND = NDArray[np.floating[NBitBase]]
 NFeat = NewType("NFeat", int)
 NTarget = NewType("NTarget", int)
+
+
+class EnstrophyMat:
+    """Pre-compute some useful factors of an enstrophy matrix
+
+    The matrix, root, and root inverse are frequently used in transformation
+    between the original and enstrophy bases
+    """
+
+    P: Float2D
+    P_root: Float2D
+    P_root_inv: Float2D
+
+    def __init__(self, P):
+        self.P = P
+        lsv, sing_vals, rsv = np.linalg.svd(P)
+        self.P_root = lsv @ np.diag(np.sqrt(sing_vals)) @ rsv
+        self.P_root_inv = lsv @ np.diag(np.sqrt(1 / sing_vals)) @ rsv
 
 
 class TrappingSR3(ConstrainedSR3):
@@ -218,7 +238,9 @@ class TrappingSR3(ConstrainedSR3):
             )
             self._n_tgts = 1
         if self.mod_matrix is None:
-            self.mod_matrix = np.eye(self._n_tgts)
+            mod_matrix = np.eye(self._n_tgts)
+
+        self.enstrophy = EnstrophyMat(mod_matrix)
         if method == "global":
             if hasattr(kwargs, "constraint_separation_index"):
                 constraint_separation_index = kwargs["constraint_separation_index"]
@@ -229,7 +251,7 @@ class TrappingSR3(ConstrainedSR3):
             constraint_rhs, constraint_lhs = _make_constraints(
                 self._n_tgts, include_bias=_include_bias
             )
-            constraint_lhs = np.tensordot(constraint_lhs, self.mod_matrix, axes=1)
+            constraint_lhs = np.tensordot(constraint_lhs, self.enstrophy.P, axes=1)
             constraint_order = kwargs.pop("constraint_order", "feature")
             if constraint_order == "target":
                 constraint_lhs = np.transpose(constraint_lhs, [0, 2, 1])
@@ -441,26 +463,19 @@ class TrappingSR3(ConstrainedSR3):
         PQ_tensor = self._build_PQ(polyterms)
         PT_tensor = PQ_tensor.transpose([1, 0, 2, 3, 4])
         # PM is the sum of PQ and PQ which projects out the sum of Qijk and Qjik
+        # These are the quadtratic terms of the energy growth
         PM_tensor = cast(Float5D, PQ_tensor + PT_tensor)
 
         return PC_tensor, PL_tensor_unsym, PL_tensor, PQ_tensor, PT_tensor, PM_tensor
 
-    def _update_coef_constraints(self, H, x_transpose_y, P_transpose_A, coef_sparse):
-        """Solves the coefficient update analytically if reg_weight_lam = 0"""
-        g = x_transpose_y + P_transpose_A / self.eta
-        inv1 = np.linalg.pinv(H, rcond=1e-10)
-        inv2 = np.linalg.pinv(
-            self.constraint_lhs.dot(inv1).dot(self.constraint_lhs.T), rcond=1e-10
-        )
-
-        rhs = g.flatten() + self.constraint_lhs.T.dot(inv2).dot(
-            self.constraint_rhs - self.constraint_lhs.dot(inv1).dot(g.flatten())
-        )
-        rhs = rhs.reshape(g.shape)
-        return inv1.dot(rhs)
-
     def _update_A(self, A_old, PW):
-        """Update the symmetrized A matrix"""
+        """Update the proxy enstrophy quadratic form, :math:`A`?
+
+        Currently, this function projects a proxy of the quadratic form onto the
+        negative definite cone (w/tol gamma) and then "projects" the exitisting
+        quadratic form onto those same eigenvalues
+
+        """
         eigvals, eigvecs = np.linalg.eigh(A_old)
         eigPW, eigvecsPW = np.linalg.eigh(PW)
         r = A_old.shape[0]
@@ -487,146 +502,161 @@ class TrappingSR3(ConstrainedSR3):
     def _objective(self, x, y, coef_sparse, A, PW, k):
         """Objective function"""
         # Compute the errors
-        R2 = (y - np.dot(x, coef_sparse)) ** 2
-        A2 = (A - PW) ** 2
-        Qijk = np.tensordot(
-            self.mod_matrix,
-            np.tensordot(self.PQ_, coef_sparse, axes=([4, 3], [0, 1])),
-            axes=([1], [0]),
-        )
-        beta2 = (
-            Qijk + np.transpose(Qijk, [1, 2, 0]) + np.transpose(Qijk, [2, 0, 1])
-        ) ** 2
-        L1 = np.sum(self.reg_weight_lam * np.abs(coef_sparse.flatten()))
-        R2 = 0.5 * np.sum(R2)
-        stability_term = 0.5 * np.sum(A2) / self.eta
-        alpha_term = 0.5 * np.sum(Qijk**2) / self.alpha
-        beta_term = 0.5 * np.sum(beta2) / self.beta
+        sindy_loss = (y - np.dot(x, coef_sparse)) ** 2
+        relax_loss = (A - PW) ** 2
+        Qijk = np.einsum("ya,abcde,ed", self.enstrophy.P, self.PQ_, coef_sparse)
+        # Qijk is H0 in the paper
+        Qijk_permsum = _permutation_asymmetry(Qijk) * 3
+        H0tilde = _convert_quad_terms_to_ens_basis(Qijk_permsum, self.enstrophy)
+        L1 = self.reg_weight_lam * np.sum(np.abs(coef_sparse.flatten()))
+        sindy_loss = 0.5 * np.sum(sindy_loss)
+        relax_loss = 0.5 * np.sum(relax_loss) / self.eta
+        nonlin_ens_loss = 0.5 * np.sum(Qijk**2) / self.alpha
+        cubic_ens_loss = 0.5 * np.sum(H0tilde**2) / self.beta
 
-        # convoluted way to print every max_iter / 10 iterations
-        if self.verbose and k % max(1, self.max_iter // 10) == 0:
-            row = [
-                k,
-                R2,
-                stability_term,
-                L1,
-                alpha_term,
-                beta_term,
-                R2 + stability_term + L1 + alpha_term + beta_term,
-            ]
-            if np.any(self.reg_weight_lam == 0):
-                if k % max(int(self.max_iter / 10.0), 1) == 0:
-                    print(
-                        "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
-                        " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
-                    )
-            else:
-                print(
-                    "{0:5d} ... {1:8.3e} ... {2:8.3e} ... {3:8.2e}"
-                    " ... {4:8.2e} ... {5:8.2e} ... {6:8.2e}".format(*row)
-                )
-        obj = R2 + stability_term + L1
+        obj = sindy_loss + relax_loss + L1
         if self.method == "local":
-            obj += alpha_term + beta_term
+            obj += nonlin_ens_loss + nonlin_ens_loss
+
+        if self.verbose and k % max(1, self.max_iter // 10) == 0:
+            print(
+                f"{k:5d} ... {sindy_loss:8.3e} ... {relax_loss:8.3e} ... {L1:8.2e}"
+                f" ... {nonlin_ens_loss:8.2e} ... {cubic_ens_loss:8.2e} ... {obj:8.2e}"
+            )
         return obj
 
-    def _update_coef_sparse_rs(
-        self, n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
-    ):
+    def _update_coef_sparse_rs(self, var_len, x_expanded, y, Pmatrix, A, coef_prev):
         """Solve coefficient update with CVXPY if reg_weight_lam != 0"""
         xi, cost = self._create_var_and_part_cost(var_len, x_expanded, y)
         cost = cost + cp.sum_squares(Pmatrix @ xi - A.flatten()) / self.eta
 
-        # new terms minimizing quadratic piece ||P^Q @ xi||_2^2
         if self.method == "local":
-            Q = np.reshape(
-                self.PQ_, (n_tgts * n_tgts * n_tgts, n_features * n_tgts), "F"
-            )
-            cost = cost + cp.sum_squares(Q @ xi) / self.alpha
-            Q = np.reshape(self.PQ_, (n_tgts, n_tgts, n_tgts, n_features * n_tgts), "F")
-            Q_ep = Q + np.transpose(Q, [1, 2, 0, 3]) + np.transpose(Q, [2, 0, 1, 3])
-            Q_ep = np.reshape(
-                Q_ep, (n_tgts * n_tgts * n_tgts, n_features * n_tgts), "F"
-            )
-            cost = cost + cp.sum_squares(Q_ep @ xi) / self.beta
+            p_Q = np.reshape(self.PQ_, (-1, var_len), "F")
+            p_PQ = np.tensordot(self.enstrophy.P, self.PQ_, axes=([1], [0]))
+            p_PQ_ep = _permutation_asymmetry(p_PQ)
+            p_H0tilde = _convert_quad_terms_to_ens_basis(p_PQ_ep, self.enstrophy)
+            p_H0tilde = np.reshape(p_H0tilde, (-1, var_len), "F")
+            cost = cost + 0.5 * cp.sum_squares(p_Q @ xi) / self.alpha
+            cost = cost + 0.5 * cp.sum_squares(p_H0tilde @ xi) / self.beta
 
         return self._update_coef_cvxpy(xi, cost, var_len, coef_prev, self.eps_solver)
 
     def _update_coef_nonsparse_rs(
-        self, n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
+        self,
+        x: Float2D,
+        y: Float2D,
+        P_A: Float4D,
+        quad_energy_coeff_A: Float2D,
     ):
-        pTp = np.dot(Pmatrix.T, Pmatrix)
-        H = xTx + pTp / self.eta
-        P_transpose_A = np.dot(Pmatrix.T, A.flatten())
+        """Solve a partial minimization for w, the SINDy coefficients
 
+        Letting :math:`Q_{ijk} =P_Q w` and :math:`A=P_A w`, Partially minimizes the sum
+        of:
+        * Error in predicting SINDy dynamics, :math:`||Xw-y||`
+        * Deviation from previous iterate of quadratic energy coefficients,
+            :math:`||A-A^{-}||^2`
+        * (Optionally) the size of the quadratic ODE terms, :math:`||Q_{ijk}||^2`
+        * (Optionally) the symmetry-breaking of the quadratic ODE terms,
+            :math:`||Q_{ijk} + Q_{jki} + Q_{kij}||^2`
+
+        Args:
+            x: The samples of SINDy features
+            y: The SINDy derivatives
+            P_A: Projects coefficients w onto energy quadratic form.
+            quad_energy_coeff_A: The energy quadratic form from the previous
+                iteration of trapping SINDy
+            coef_prev
+
+        """
+        _, _, n_tgts, n_features = P_A.shape
+        var_len = n_tgts * n_features
+
+        # Input variable still has 2 dimensions, so hessians have 4
+        hess = np.zeros((n_tgts, n_features, n_tgts, n_features))
+        xTx = x.T @ x
+        for tgt in range(n_tgts):
+            hess[tgt, :, tgt, :] = xTx
+        pTp = np.einsum("abcd,baef->cdef", P_A, P_A)
+        hess += pTp / self.eta
         if self.method == "local":
-            # notice reshaping PQ here requires fortran-ordering
-            PQ = np.tensordot(self.mod_matrix, self.PQ_, axes=([1], [0]))
-            PQ = np.reshape(PQ, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F")
-            PQTPQ = np.dot(PQ.T, PQ)
-            PQ = np.reshape(
-                self.PQ_, (n_tgts, n_tgts, n_tgts, n_tgts * n_features), "F"
-            )
-            PQ = np.tensordot(self.mod_matrix, PQ, axes=([1], [0]))
-            PQ_ep = PQ + np.transpose(PQ, [1, 2, 0, 3]) + np.transpose(PQ, [2, 0, 1, 3])
-            PQ_ep = np.reshape(
-                PQ_ep, (n_tgts * n_tgts * n_tgts, n_tgts * n_features), "F"
-            )
-            PQTPQ_ep = np.dot(PQ_ep.T, PQ_ep)
-            H += PQTPQ / self.alpha + PQTPQ_ep / self.beta
+            PQTPQ = np.tensordot(self.PQ_, self.PQ_, axes=([0, 1, 2], [0, 1, 2]))
+            p_PQ = np.einsum("ya,abcde->ybcde", self.enstrophy.P, self.PQ_)
+            p_H0 = _permutation_asymmetry(p_PQ) * 3
+            p_H0tilde = _convert_quad_terms_to_ens_basis(p_H0, self.enstrophy)
+            PQTPQ_ep = np.tensordot(p_H0tilde, p_H0tilde, axes=([0, 1, 2], [0, 1, 2]))
+            hess += PQTPQ / self.alpha + PQTPQ_ep / self.beta
 
-        return self._solve_nonsparse_relax_and_split(H, xTy, P_transpose_A, coef_prev)
+        PaTA = np.einsum("bacd,ab->cd", P_A, quad_energy_coeff_A)
+        # We are still, across most of SR3, handling (NFeat,NTarget) shaped arrays
+        xTy = x.T @ y
+        PaTA = np.transpose(PaTA)
+        grad_const = xTy + PaTA / self.eta
+        hess = np.transpose(hess, [1, 0, 3, 2])
+        hess = np.reshape(hess, (var_len, var_len))
+        grad_const = np.reshape(grad_const, (var_len))
+        coef_flat = self._solve_nonsparse_relax_and_split(hess, grad_const)
+        return coef_flat.reshape(n_features, n_tgts)
 
     def _solve_m_relax_and_split(
         self,
         trap_ctr: Float1D,
-        A: Float2D,
+        prev_A: Float2D,
         coef_sparse: np.ndarray[tuple[NFeat, NTarget], AnyFloat],
     ) -> tuple[Float1D, Float2D]:
-        """Solves the (m, A) algorithm update.
+        r"""Updates the trap center
 
-        TODO: explain the optimization this solves, add good names to variables,
-        and refactor/indirect the if global/local trapping conditionals
+        Ideally, the step would find a trap center that reduces the enstrophy
+        quadratic form as close as possible to the negative semidefinite cone.
 
-        Returns the new trap center (m) and the new A
+        .. math::
+
+            \underset{m, A\in \mathcal S^{--}}{\arg\min}||(L-Qm)^S - A||^2
+
+        where the trap center is :math:`m`.  However, the algorithm simply
+        performs one step of gradient update on the trap center and a
+        gradient-like step of the proxy enstrophy quadratic form.
+
+        TODO: improve variable names, test out variants such as completely
+        optimizing over trap center, limiting A update to projection onto
+        negative definite cone, or using updated trap center in A update.
+
+        See eqn 31-35 in Kaptanoglu et al 2021 and Algorithm 1
+
+        Returns:
+            new trap center (:math:`m`) and proxy enstrophy quadratic terms
+            (:math:`A`)
         """
         # prox-gradient descent for (A, m)
-        # Calculate projection matrix from Quad terms to As
-        mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
-        p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-        PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
-        # Calculate As and its quad term components
-        PMW = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
-        PMW = np.tensordot(self.mod_matrix, PMW, axes=([1], [0]))
+        # Calculate As
+        p_AS = _create_A_symm(self.PL_unsym_, self.PM_, trap_ctr, self.enstrophy)
+        AS_coeff = np.tensordot(p_AS, coef_sparse, axes=([3, 2], [0, 1]))
+
         # Calculate error in quadratic balance, and adjust trap center
-        A_b = (A - PW) / self.eta
-        # PQWT_PW is gradient of some loss in m
-        PMT_PW = np.tensordot(PMW, A_b, axes=([2, 1], [0, 1]))
+        relax_err_wrt_proxy = (prev_A - AS_coeff) / self.eta
+        # Calculate quadratic terms of As as a function of m
+        A_wrt_m = np.tensordot(self.PM_, coef_sparse, axes=([4, 3], [0, 1]))
+        A_wrt_m = np.einsum(
+            "ya,abc,bz->yzc", self.enstrophy.P_root, A_wrt_m, self.enstrophy.P_root_inv
+        )
+        A_wrt_m = (A_wrt_m + np.transpose(A_wrt_m, [1, 0, 2])) / 2
+        # PMT_PW is gradient of relaxation wrt trap center (eqn 35)
+        PMT_PW = np.tensordot(A_wrt_m, relax_err_wrt_proxy, axes=([2, 1], [0, 1]))
         trap_new = trap_ctr - self.alpha_m * PMT_PW
 
         # Update A
-        A_new = self._update_A(A - self.alpha_A * A_b, PW)
+        A_new = self._update_A(prev_A - self.alpha_A * relax_err_wrt_proxy, AS_coeff)
         return trap_new, A_new
 
-    def _solve_nonsparse_relax_and_split(self, H, xTy, P_transpose_A, coef_prev):
+    def _solve_nonsparse_relax_and_split(self, hess, gradient_constant):
         """Update for the coefficients if reg_weight_lam = 0."""
         if self.use_constraints:
-            coef_sparse = self._update_coef_constraints(
-                H, xTy, P_transpose_A, coef_prev
-            ).reshape(coef_prev.shape)
+            coef_nonsparse = _equality_constrained_linlsq(
+                hess, gradient_constant, self.constraint_lhs, self.constraint_rhs
+            )
         else:
-            # Alan Kaptanoglu: removed cho factor calculation here
-            # which has numerical issues in certain cases. Easier to chop
-            # things using pinv, but gives dumb results sometimes.
-            warnings.warn(
-                "TrappingSR3._solve_nonsparse_relax_and_split using "
-                "naive pinv() call here, be careful with rcond parameter."
-            )
-            Hinv = np.linalg.pinv(H, rcond=1e-15)
-            coef_sparse = Hinv.dot(xTy + P_transpose_A / self.eta).reshape(
-                coef_prev.shape
-            )
-        return coef_sparse
+            hess_inv = np.linalg.pinv(hess, rcond=1e-10)
+            coef_nonsparse = hess_inv.dot(gradient_constant)
+        return coef_nonsparse
 
     def _reduce(self, x, y):
         """
@@ -691,8 +721,6 @@ class TrappingSR3(ConstrainedSR3):
         for i in range(n_tgts):
             x_expanded[:, i, :, i] = x
         x_expanded = np.reshape(x_expanded, (n_samples * n_tgts, n_tgts * n_features))
-        xTx = np.dot(x_expanded.T, x_expanded)
-        xTy = np.dot(x_expanded.T, y.flatten())
 
         # keep track of last solution in case method fails
         trap_prev_ctr = trap_ctr
@@ -700,21 +728,18 @@ class TrappingSR3(ConstrainedSR3):
         # Begin optimization loop
         objective_history = []
         for k in range(self.max_iter):
-            # update P tensor from the newest trap center
-            mPM = np.tensordot(self.PM_, trap_ctr, axes=([2], [0]))
-            p = np.tensordot(self.mod_matrix, self.PL_ + mPM, axes=([1], [0]))
-            Pmatrix = p.reshape(n_tgts * n_tgts, n_tgts * n_features)
-            self.p_history_.append(p)
+            # update p_AS tensor from the newest trap center
+            p_AS = _create_A_symm(self.PL_unsym_, self.PM_, trap_ctr, self.enstrophy)
+            Pmatrix = p_AS.reshape(n_tgts * n_tgts, n_tgts * n_features)
+            self.p_history_.append(p_AS)
 
             coef_prev = coef_sparse
             if np.any(self.reg_weight_lam > 0.0) or self.inequality_constraints:
                 coef_sparse = self._update_coef_sparse_rs(
-                    n_tgts, n_features, var_len, x_expanded, y, Pmatrix, A, coef_prev
+                    var_len, x_expanded, y, Pmatrix, A, coef_prev
                 )
             else:
-                coef_sparse = self._update_coef_nonsparse_rs(
-                    n_tgts, n_features, Pmatrix, A, coef_prev, xTx, xTy
-                )
+                coef_sparse = self._update_coef_nonsparse_rs(x, y, p_AS, A)
 
             # If problem over xi becomes infeasible, break out of the loop
             if coef_sparse is None:
@@ -728,7 +753,7 @@ class TrappingSR3(ConstrainedSR3):
                 trap_ctr = trap_prev_ctr
                 break
             self.history_.append(coef_sparse.T)
-            PW = np.tensordot(p, coef_sparse, axes=([3, 2], [0, 1]))
+            PW = np.tensordot(p_AS, coef_sparse, axes=([3, 2], [0, 1]))
 
             # (m,A) update finished, append the result
             self.m_history_.append(trap_ctr)
@@ -871,3 +896,103 @@ def _build_lib_info(
         np.argmax(exps): t_ind for t_ind, exps in polyterms if sum(exps) == 1
     }
     return n_targets, n_features, linear_terms, pure_terms, mixed_terms
+
+
+def _equality_constrained_linlsq(
+    hess: Float2D, grad_const: Float2D, constraint_lhs: Float2D, constraint_rhs: Float2D
+):
+    """Solve the constrained least squares problem via lagrange multipliers
+
+    For the inversion of the lagrange gradient matrix, see
+    `wikipedia <https://en.wikipedia.org/wiki/Block_matrix#Inversion>`_
+
+    Arguments:
+        hess: the hessian of the loss term.  For regression Ax = b, this is A^TA.
+            Must be a square (positive definite) matrix
+        grad_const: the constant part of the gradient of the loss term.  For
+            regression Ax = b, this is A^Tb.  Must be a column vector.
+        constraint_lhs: matrix on left hand side of constraint equation Cx=d.
+            Must have same second dimension as hess
+        constraint_rhs: vector on right hand side of constraint equation Cx=d.
+            Must be a column vector.
+
+    Returns:
+        Column vector
+    """
+    C = constraint_lhs
+    d = constraint_rhs
+    # Careful with ill-conditioned matrices!
+    inv1 = np.linalg.pinv(hess, rcond=1e-10)
+    inv2 = np.linalg.pinv(C @ inv1 @ C.T, rcond=1e-10)
+    return inv1 @ (grad_const + C.T @ inv2 @ (d - C @ inv1 @ grad_const))
+
+
+TwoOrFourD = TypeVar("TwoOrFourD", Float2D, Float4D)
+
+
+def _create_A_symm(
+    L_obj: TwoOrFourD,
+    M_obj: Union[Float3D, Float5D],
+    trap_ctr: Float1D,
+    ens: EnstrophyMat,
+) -> TwoOrFourD:
+    r"""Create the enstrophy/energy growth quadratic form
+
+    In the paper, this is :math:`A^S`.  This function can be used
+    to create either the matrix itself or a projector from SINDy coefficient
+    layout to the matrix.  Note that L and Q themselves are the unsymmetrized
+    variants.
+
+    Args:
+        L_obj: The linear terms in the original differential equation.  This
+            can either be the coefficients themselves, or a projector onto the
+            coefficients
+        M_obj: The quadratic form of the original differential equation,
+            plus its transpose of the 2nd and 3rd axes.  See eqn 3.8 of
+            Schlegel and Noack 2015.  This can be the quadratic form, or
+            a projector onto the quadratic form.  If a projector, it must match
+            L_obj.
+        trap_ctr: The posited center of the trapping region.
+        ens: the enstrophy matrix of the system
+    """
+    mPM = np.einsum("ijk...,k->ij...", M_obj, trap_ctr)
+    A = np.einsum("ya,ab...,bz->yz...", ens.P_root, L_obj + mPM, ens.P_root_inv)
+    A_S = (A + np.einsum("ij...->ji...", A)) / 2
+    return A_S
+
+
+Q_Arr = TypeVar("Q_Arr", Float3D, Float5D)
+
+
+def _permutation_asymmetry(Q_obj: Q_Arr) -> Q_Arr:
+    r"""Calculate the permutation-asymmetric part of the first 3 axes of Q
+
+    In the paper, this defines the directions of cubic energy growth.  It is
+    used to create :math:`\tilde{Q}'`, its 2D flattening, :math:`H_0`,
+    and its enstrophy-basis (z-space) version, :math:`\tilde {H_0}`
+
+    This works on both the true quadratic terms as well as the projector
+    onto the quadratic terms.
+
+    Note: The paper uses three times this quantity.
+    """
+    p1 = partial(np.einsum, "ijk...->jki...")
+    p2 = partial(np.einsum, "ijk...->kij...")
+    return (Q_obj + p1(Q_obj) + p2(Q_obj)) / 3
+
+
+def _convert_quad_terms_to_ens_basis(PQ: Q_Arr, ens: EnstrophyMat) -> Q_Arr:
+    r"""Convert quadratic enstrophy terms to enstrophy basis.
+
+    In the paper, this captures the change from :math:`\tilde{Q}=PQ`, the
+    quadratic enstrophy terms acting on :math:`y`, to the quadratic
+    terms acting on :math:`z=P^{1/2}y`.  It is also used to convert
+    the cubic enstrophy growth terms to cubic growth terms in the enstrophy
+    basis, i.e. :math:`\tilde {H_0}` from :math:`H_0`.
+
+    This works on both the true quadratic terms as well as the projector
+    onto the quadratic terms
+    """
+    return np.einsum(
+        "xa,abc...,by,cz->xyz...", ens.P_root_inv, PQ, ens.P_root_inv, ens.P_root_inv
+    )

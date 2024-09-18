@@ -1194,3 +1194,14 @@ def test_pickle(data_lorenz, opt_cls, opt_args):
     new_opt = pickle.loads(pickle.dumps(opt))
     result = new_opt.coef_
     np.testing.assert_array_equal(result, expected)
+
+
+def test_ssr_history():
+    x = np.zeros((10, 3))
+    y = np.ones((10,))
+    x[:, 0] = y
+    x += np.random.normal(size=(10, 3), scale=1e-2)
+    opt = SSR()
+    opt.fit(x, y).coef_
+
+    assert len(opt.history_) == len(opt.err_history_)

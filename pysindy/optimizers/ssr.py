@@ -194,6 +194,7 @@ class SSR(BaseOptimizer):
                 " ... {: >10} ... {: >10}".format(*row)
             )
 
+        self.history_ = []
         self.err_history_ = []
         for k in range(self.max_iter):
             for i in range(n_targets):

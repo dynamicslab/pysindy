@@ -194,7 +194,10 @@ class SSR(BaseOptimizer):
                 " ... {: >10} ... {: >10}".format(*row)
             )
 
-        self.err_history_ = []
+        self.history_ = [coef]
+        self.err_history_ = [
+            np.sum((y - x @ coef.T) ** 2) + l0_penalty * np.count_nonzero(coef)
+        ]
         for k in range(self.max_iter):
             for i in range(n_targets):
                 if self.criteria == "coefficient_value":
@@ -226,5 +229,25 @@ class SSR(BaseOptimizer):
             if np.all(np.sum(np.asarray(inds, dtype=int), axis=1) <= 1):
                 # each equation has one last term
                 break
-        err_min = np.argmin(self.err_history_)
-        self.coef_ = np.asarray(self.history_)[err_min, :, :]
+
+        if self.kappa is not None:
+            ind_best = np.argmin(self.err_history_)
+        else:
+            # err history is reverse of ordering in paper
+            ind_best = (
+                len(self.err_history_) - 1 - _ind_inflection(self.err_history_[::-1])
+            )
+        self.coef_ = np.asarray(self.history_)[ind_best, :, :]
+
+
+def _ind_inflection(err_descending: list[float]) -> int:
+    "Calculate the index of the inflection point in error"
+    if len(err_descending) == 1:
+        raise ValueError("Cannot find the inflection point of a single point")
+    err_descending = np.array(err_descending)
+    if np.any(err_descending < 0):
+        raise ValueError("SSR inflection point method requires nonnegative losses")
+    if np.any(err_descending == 0):
+        return np.argmin(err_descending)
+    err_ratio = err_descending[:-1] / err_descending[1:]
+    return np.argmax(err_ratio) + 1

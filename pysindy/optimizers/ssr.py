@@ -228,8 +228,24 @@ class SSR(BaseOptimizer):
                 # each equation has one last term
                 break
 
-        # err history is reverse of ordering in paper
-        self.err_history_ = self.err_history_[::-1]
-        err_ratio = np.array(self.err_history_[:-1]) / np.array(self.err_history_[1:])
-        ind_err_inflection = np.argmax(err_ratio) + 1
-        self.coef_ = np.asarray(self.history_)[ind_err_inflection, :, :]
+        if self.kappa is not None:
+            ind_best = np.argmin(self.err_history_)
+        else:
+            # err history is reverse of ordering in paper
+            ind_best = (
+                len(self.err_history_) - 1 - _ind_inflection(self.err_history_[::-1])
+            )
+        self.coef_ = np.asarray(self.history_)[ind_best, :, :]
+
+
+def _ind_inflection(err_descending: list[float]) -> int:
+    "Calculate the index of the inflection point in error"
+    if len(err_descending) == 1:
+        raise ValueError("Cannot find the inflection point of a single point")
+    err_descending = np.array(err_descending)
+    if np.any(err_descending < 0):
+        raise ValueError("SSR inflection point method requires nonnegative losses")
+    if np.any(err_descending == 0):
+        return np.argmin(err_descending)
+    err_ratio = err_descending[:-1] / err_descending[1:]
+    return np.argmax(err_ratio) + 1

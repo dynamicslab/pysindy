@@ -227,5 +227,9 @@ class SSR(BaseOptimizer):
             if np.all(np.sum(np.asarray(inds, dtype=int), axis=1) <= 1):
                 # each equation has one last term
                 break
-        err_min = np.argmin(self.err_history_)
-        self.coef_ = np.asarray(self.history_)[err_min, :, :]
+
+        # err history is reverse of ordering in paper
+        self.err_history_ = self.err_history_[::-1]
+        err_ratio = np.array(self.err_history_[:-1]) / np.array(self.err_history_[1:])
+        ind_err_inflection = np.argmax(err_ratio) + 1
+        self.coef_ = np.asarray(self.history_)[ind_err_inflection, :, :]

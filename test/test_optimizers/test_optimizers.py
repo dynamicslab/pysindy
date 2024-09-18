@@ -1197,13 +1197,16 @@ def test_pickle(data_lorenz, opt_cls, opt_args):
 
 
 def test_ssr_history():
-    x = np.zeros((10, 3))
-    y = np.ones((10,))
-    x[:, 0] = y
-    x += np.random.normal(size=(10, 3), scale=1e-2)
+    x = np.zeros((10, 8))
+    rng = np.random.default_rng(1)
+    real_cols = rng.normal(scale=3, size=(10, 4))
+    x[:, :4] = real_cols
+    expected = np.array([[1, 1, 1, 1, 0, 0, 0, 0]])
+    y = x @ expected.T
+
+    x += np.random.normal(size=(10, 8), scale=1e-2)
     opt = SSR()
     result = opt.fit(x, y).coef_
-    expected = np.array([[1, 0, 0]])
 
     assert len(opt.history_) == len(opt.err_history_)
-    np.testing.assert_allclose(result, expected)
+    np.testing.assert_allclose(result, expected, atol=1e-2)

@@ -194,8 +194,10 @@ class SSR(BaseOptimizer):
                 " ... {: >10} ... {: >10}".format(*row)
             )
 
-        self.history_ = []
-        self.err_history_ = []
+        self.history_ = [coef]
+        self.err_history_ = [
+            np.sum((y - x @ coef.T) ** 2) + l0_penalty * np.count_nonzero(coef)
+        ]
         for k in range(self.max_iter):
             for i in range(n_targets):
                 if self.criteria == "coefficient_value":

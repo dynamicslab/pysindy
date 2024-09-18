@@ -79,6 +79,8 @@ def _align_optimizer_and_1dfeatures(
     if isinstance(opt, TrappingSR3):
         opt = TrappingSR3(_n_tgts=1, _include_bias=False)
         features = np.hstack([features, features])
+    elif isinstance(opt, SSR):
+        features = np.hstack([features, features])
     else:
         features = features
     return opt, features

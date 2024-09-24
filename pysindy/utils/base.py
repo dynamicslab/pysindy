@@ -289,25 +289,6 @@ def capped_simplex_projection(trimming_array, trimming_fraction):
     return np.maximum(np.minimum(trimming_array - x, 1.0), 0.0)
 
 
-def print_model(
-    coef,
-    input_features,
-    precision=3,
-):
-    def term(c, name):
-        rounded_coef = np.round(c, precision)
-        if rounded_coef == 0:
-            return ""
-        else:
-            return f"{c:.{precision}f} {name}"
-
-    components = [term(c, i) for c, i in zip(coef, input_features)]
-    eq = " + ".join(filter(bool, components))
-    if not eq:
-        eq = f"{0:.{precision}f}"
-    return eq
-
-
 def supports_multiple_targets(estimator):
     """Checks whether estimator supports multiple targets."""
     if isinstance(estimator, MultiOutputMixin):

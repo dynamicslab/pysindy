@@ -8,7 +8,6 @@ from .base import drop_nan_samples
 from .base import flatten_2d_tall
 from .base import get_prox
 from .base import get_regularization
-from .base import print_model
 from .base import reorder_constraints
 from .base import supports_multiple_targets
 from .base import validate_control_variables
@@ -56,7 +55,6 @@ __all__ = [
     "drop_nan_samples",
     "get_prox",
     "get_regularization",
-    "print_model",
     "reorder_constraints",
     "supports_multiple_targets",
     "validate_control_variables",

@@ -20,8 +20,8 @@ from typing_extensions import Self
 
 from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
-from .feature_library import BaseFeatureLibrary
 from .feature_library import PolynomialLibrary
+from .feature_library.base import BaseFeatureLibrary
 
 try:  # Waiting on PEP 690 to lazy import CVXPY
     from .optimizers import SINDyPI

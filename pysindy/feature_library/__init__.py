@@ -1,4 +1,3 @@
-from .base import BaseFeatureLibrary
 from .base import ConcatLibrary
 from .base import TensoredLibrary
 from .custom_library import CustomLibrary
@@ -12,7 +11,6 @@ from .sindy_pi_library import SINDyPILibrary
 from .weak_pde_library import WeakPDELibrary
 
 __all__ = [
-    "BaseFeatureLibrary",
     "ConcatLibrary",
     "TensoredLibrary",
     "GeneralizedLibrary",

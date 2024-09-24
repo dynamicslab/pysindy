@@ -46,6 +46,9 @@ class _BaseSINDy(BaseEstimator, ABC):
     discrete_time: bool
     model: Pipeline
     feature_names: Optional[list[str]]
+    # Hacks to remove later
+    discrete_time: bool = False
+    n_control_features_: int = 0
 
     @abstractmethod
     def fit(self, x, t, *args, **kwargs) -> Self:
@@ -107,10 +110,7 @@ class _BaseSINDy(BaseEstimator, ABC):
         """
         eqns = self.equations(precision)
         for name, eqn in zip(self.feature_names, eqns, strict=True):
-            if self.discrete_time:
-                lhs = f"({name})[k+1]"
-            else:
-                lhs = f"({name})'"
+            lhs = f"({name})'"
             print(f"{lhs} = {eqn}", **kwargs)
 
     def get_feature_names(self):

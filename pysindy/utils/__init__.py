@@ -5,7 +5,6 @@ from .axes import SampleConcatter
 from .axes import wrap_axes
 from .base import capped_simplex_projection
 from .base import drop_nan_samples
-from .base import equations
 from .base import flatten_2d_tall
 from .base import get_prox
 from .base import get_regularization
@@ -55,7 +54,6 @@ __all__ = [
     "comprehend_axes",
     "capped_simplex_projection",
     "drop_nan_samples",
-    "equations",
     "get_prox",
     "get_regularization",
     "print_model",

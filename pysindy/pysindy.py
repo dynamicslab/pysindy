@@ -1,11 +1,12 @@
-from abc import ABC, abstractmethod
 import sys
 import warnings
+from abc import ABC
+from abc import abstractmethod
 from itertools import product
 from typing import Collection
+from typing import Optional
 from typing import Sequence
 from typing import Union
-from typing import Optional
 
 import numpy as np
 from scipy.integrate import odeint
@@ -18,7 +19,8 @@ from sklearn.utils.validation import check_is_fitted
 from typing_extensions import Self
 
 from .differentiation import FiniteDifference
-from .feature_library import PolynomialLibrary, BaseFeatureLibrary
+from .feature_library import BaseFeatureLibrary
+from .feature_library import PolynomialLibrary
 
 try:  # Waiting on PEP 690 to lazy import CVXPY
     from .optimizers import SINDyPI
@@ -31,7 +33,6 @@ from .utils import AxesArray
 from .utils import comprehend_axes
 from .utils import concat_sample_axis
 from .utils import drop_nan_samples
-from .utils import equations
 from .utils import SampleConcatter
 from .utils import validate_control_variables
 from .utils import validate_input
@@ -39,7 +40,7 @@ from .utils import validate_no_reshape
 
 
 class _BaseSINDy(BaseEstimator, ABC):
-    
+
     feature_library: BaseFeatureLibrary
     optimizer: BaseOptimizer
     discrete_time: bool
@@ -50,8 +51,7 @@ class _BaseSINDy(BaseEstimator, ABC):
     def fit(self, x, t, *args, **kwargs) -> Self:
         ...
 
-
-    def equations(self, precision: int) -> list[str]:
+    def equations(self, precision: int = 3) -> list[str]:
         """
         Get the right hand sides of the SINDy model equations.
 
@@ -69,17 +69,29 @@ class _BaseSINDy(BaseEstimator, ABC):
         """
         check_is_fitted(self, "model")
         if self.discrete_time:
-            base_feature_names = [name + "[k]" for name in self.feature_names]
+            sys_coord_names = [name + "[k]" for name in self.feature_names]
         else:
-            base_feature_names = self.feature_names
-        return equations(
-            self.model,
-            input_features=base_feature_names,
-            precision=precision,
-        )
+            sys_coord_names = self.feature_names
+        feat_names = self.feature_library.get_feature_names(sys_coord_names)
 
+        def term(c, name):
+            rounded_coef = np.round(c, precision)
+            if rounded_coef == 0:
+                return ""
+            else:
+                return f"{c:.{precision}f} {name}"
 
-    def print(self, precision: int, **kwargs) -> None:
+        equations = []
+        for coef_row in self.optimizer.coef_:
+            components = [term(c, i) for c, i in zip(coef_row, feat_names)]
+            eq = " + ".join(filter(bool, components))
+            if not eq:
+                eq = f"{0:.{precision}f}"
+            equations.append(eq)
+
+        return equations
+
+    def print(self, precision: int = 3, **kwargs) -> None:
         """Print the SINDy model equations.
 
         Parameters
@@ -403,7 +415,6 @@ class SINDy(_BaseSINDy):
         if not multiple_trajectories:
             return result[0]
         return result
-
 
     def print(self, lhs=None, precision=3, **kwargs):
         """Print the SINDy model equations.

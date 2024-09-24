@@ -1,5 +1,4 @@
 import warnings
-from itertools import repeat
 from typing import Callable
 from typing import Sequence
 from typing import Union
@@ -293,64 +292,20 @@ def capped_simplex_projection(trimming_array, trimming_fraction):
 def print_model(
     coef,
     input_features,
-    errors=None,
-    intercept=None,
-    error_intercept=None,
     precision=3,
-    pm="±",
 ):
-    """
-    Args:
-        coef:
-        input_features:
-        errors:
-        intercept:
-        sigma_intercept:
-        precision:
-        pm:
-    Returns:
-    """
-
-    def term(c, sigma, name):
+    def term(c, name):
         rounded_coef = np.round(c, precision)
-        if rounded_coef == 0 and sigma is None:
-            return ""
-        elif sigma is None:
-            return f"{c:.{precision}f} {name}"
-        elif rounded_coef == 0 and np.round(sigma, precision) == 0:
+        if rounded_coef == 0:
             return ""
         else:
-            return f"({c:.{precision}f} {pm} {sigma:.{precision}f}) {name}"
+            return f"{c:.{precision}f} {name}"
 
-    errors = errors if errors is not None else repeat(None)
-    components = [term(c, e, i) for c, e, i in zip(coef, errors, input_features)]
+    components = [term(c, i) for c, i in zip(coef, input_features)]
     eq = " + ".join(filter(bool, components))
-
-    if not eq or intercept or error_intercept is not None:
-        intercept = intercept or 0
-        intercept_str = term(intercept, error_intercept, "").strip()
-        if eq and intercept_str:
-            eq += " + "
-            eq += intercept_str
-        elif not eq:
-            eq = f"{intercept:.{precision}f}"
+    if not eq:
+        eq = f"{0:.{precision}f}"
     return eq
-
-
-def equations(pipeline, input_features=None, precision=3, input_fmt=None):
-    input_features = pipeline.steps[0][1].get_feature_names(input_features)
-    if input_fmt:
-        input_features = [input_fmt(i) for i in input_features]
-    coef = pipeline.steps[-1][1].coef_
-    intercept = pipeline.steps[-1][1].intercept_
-    if np.isscalar(intercept):
-        intercept = intercept * np.ones(coef.shape[0])
-    return [
-        print_model(
-            coef[i], input_features, intercept=intercept[i], precision=precision
-        )
-        for i in range(coef.shape[0])
-    ]
 
 
 def supports_multiple_targets(estimator):

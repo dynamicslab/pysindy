@@ -29,7 +29,9 @@ try:  # Waiting on PEP 690 to lazy import CVXPY
     sindy_pi_flag = True
 except ImportError:
     sindy_pi_flag = False
-from .optimizers import STLSQ, BaseOptimizer
+from .optimizers import STLSQ
+from .optimizers.base import _BaseOptimizer
+from .optimizers.base import BaseOptimizer
 from .utils import AxesArray
 from .utils import comprehend_axes
 from .utils import concat_sample_axis
@@ -43,7 +45,7 @@ from .utils import validate_no_reshape
 class _BaseSINDy(BaseEstimator, ABC):
 
     feature_library: BaseFeatureLibrary
-    optimizer: BaseOptimizer
+    optimizer: _BaseOptimizer
     discrete_time: bool
     model: Pipeline
     feature_names: Optional[list[str]]

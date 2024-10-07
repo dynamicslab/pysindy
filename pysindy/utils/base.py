@@ -61,7 +61,7 @@ def validate_input(x, t=T_DEFAULT):
     return x_new
 
 
-def validate_no_reshape(x, t=T_DEFAULT):
+def validate_no_reshape(x, t: float | np.ndarray = T_DEFAULT):
     """Check types and numerical sensibility of arguments.
 
     Args:
@@ -72,7 +72,7 @@ def validate_no_reshape(x, t=T_DEFAULT):
         x as 2D array, with time dimension on first axis and coordinate
         index on second axis.
     """
-    if not isinstance(x, np.ndarray):
+    if not hasattr(x, "shape"):
         raise TypeError("Input value must be array-like")
     check_array(x, ensure_2d=False, allow_nd=True)
 
@@ -84,7 +84,7 @@ def validate_no_reshape(x, t=T_DEFAULT):
             if t <= 0:
                 raise ValueError("t must be positive")
         # Only apply these tests if t is array-like
-        elif isinstance(t, np.ndarray):
+        elif hasattr(t, "shape"):
             if not len(t) == x.shape[-2]:
                 raise ValueError("Length of t should match x.shape[-2].")
             if not np.all(t[:-1] < t[1:]):

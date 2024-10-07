@@ -146,7 +146,8 @@ def x_sequence_or_item(wrapped_func):
         if isinstance(x, Sequence):
             xs = [AxesArray(xi, comprehend_axes(xi)) for xi in x]
             result = wrapped_func(self, xs, *args, **kwargs)
-            if isinstance(result, Sequence):  # e.g. transform() returns x
+            # if transform() is a normal "return x"
+            if isinstance(result, Sequence) and isinstance(result[0], np.ndarray):
                 return [AxesArray(xp, comprehend_axes(xp)) for xp in result]
             return result  # e.g. fit() returns self
         else:

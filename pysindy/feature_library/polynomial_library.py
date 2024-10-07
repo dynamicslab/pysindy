@@ -160,7 +160,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         return feature_names
 
     @x_sequence_or_item
-    def fit(self, x_full, y=None):
+    def fit(self, x_full: list[AxesArray], y=None):
         """
         Compute number of output features.
 

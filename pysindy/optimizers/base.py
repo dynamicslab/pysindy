@@ -4,10 +4,13 @@ Base class for SINDy optimizers.
 import abc
 import warnings
 from typing import Callable
+from typing import NewType
 from typing import Tuple
 
 import numpy as np
+from numpy.typing import NBitBase
 from scipy import sparse
+from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model._base import _preprocess_data
 from sklearn.utils.extmath import safe_sparse_dot
@@ -16,6 +19,10 @@ from sklearn.utils.validation import check_X_y
 
 from ..utils import AxesArray
 from ..utils import drop_nan_samples
+
+AnyFloat = np.dtype[np.floating[NBitBase]]
+NFeat = NewType("NFeat", int)
+NTarget = NewType("NTarget", int)
 
 
 def _rescale_data(X, y, sample_weight):
@@ -31,14 +38,17 @@ def _rescale_data(X, y, sample_weight):
     return X, y
 
 
-class ComplexityMixin:
+class _BaseOptimizer(BaseEstimator, abc.ABC):
+    coef_: np.ndarray[tuple[NTarget, NFeat], AnyFloat]
+    intercept_: np.ndarray[tuple[NTarget], AnyFloat]
+
     @property
     def complexity(self):
         check_is_fitted(self)
         return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)
 
 
-class BaseOptimizer(LinearRegression, ComplexityMixin):
+class BaseOptimizer(LinearRegression, _BaseOptimizer):
     """
     Base class for SINDy optimizers. Subclasses must implement
     a _reduce method for carrying out the bulk of the work of
@@ -87,6 +97,12 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
         sometimes needed for various applications.
 
     """
+
+    max_iter: int
+    normalize_columns: bool
+    initial_guess: None | np.ndarray[tuple[NTarget, NFeat], AnyFloat]
+    copy_X: bool
+    unbias: bool
 
     def __init__(
         self,

@@ -19,9 +19,11 @@ from sklearn.exceptions import ConvergenceWarning
 from ..feature_library.polynomial_library import n_poly_features
 from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
+from .base import AnyFloat
+from .base import NFeat
+from .base import NTarget
 from .constrained_sr3 import ConstrainedSR3
 
-AnyFloat = np.dtype[np.floating[NBitBase]]
 Int1D = np.ndarray[tuple[int], np.dtype[np.int_]]
 Float1D = np.ndarray[tuple[int], AnyFloat]
 Float2D = np.ndarray[tuple[int, int], AnyFloat]
@@ -29,8 +31,6 @@ Float3D = np.ndarray[tuple[int, int, int], AnyFloat]
 Float4D = np.ndarray[tuple[int, int, int, int], AnyFloat]
 Float5D = np.ndarray[tuple[int, int, int, int, int], AnyFloat]
 FloatND = NDArray[np.floating[NBitBase]]
-NFeat = NewType("NFeat", int)
-NTarget = NewType("NTarget", int)
 
 
 class EnstrophyMat:

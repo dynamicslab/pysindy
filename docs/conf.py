@@ -2,6 +2,9 @@ import importlib
 import shutil
 from pathlib import Path
 
+from docutils.parsers.rst import Directive
+from sphinx.application import Sphinx
+
 author = "dynamicslab"
 project = "pysindy"  # package name
 
@@ -105,7 +108,7 @@ GoogleDocstring._unpatched_parse = GoogleDocstring._parse
 GoogleDocstring._parse = patched_parse
 
 
-def setup(app):
+def setup(app: Sphinx):
     """Our sphinx extension for copying from examples/ to docs/examples
 
     Since nbsphinx does not handle glob/regex paths, we need to
@@ -135,3 +138,18 @@ def setup(app):
     )
     if (here / "static/custom.css").exists():
         app.add_css_file("custom.css")
+
+    app.add_directive("pysindy-example", PysindyExample)
+
+
+class PysindyExample(Directive):
+    required_arguments = 3
+    optional_arguments = 0
+    final_argument_whitespace = True
+    option_spec = {"repo": str, "ref": str, "title": str}
+    has_content = True
+
+    def run(
+        self,
+    ):
+        pass

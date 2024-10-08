@@ -24,23 +24,24 @@ We recommend that people new to SINDy start here. We give a gentle introduction 
 
     ./2_introduction_to_sindy/example
 
-`Original paper <./3_original_paper/example.ipynb>`_
--------------------------------------------------------------------------------------------------------
-This notebook uses PySINDy to reproduce the examples in the `original SINDy paper <https://www.pnas.org/content/pnas/113/15/3932.full.pdf>`_. Namely, it applies PySINDy to the following problems:
 
-* Linear 2D ODE
-* Cubic 2D ODE
-* Linear 3D ODE
-* Lorenz system
-* Fluid wake behind a cylinder
-* Logistic map
-* Hopf system
+.. external-example::
+    :repo: dynamicslab/original-sindy-paper
+    :ref: ??????
+    :title: Original paper
 
-.. toctree::
-    :hidden:
-    :maxdepth: 1
+    This notebook uses PySINDy to reproduce the examples in the
+    `original SINDy paper <https://www.pnas.org/content/pnas/113/15/3932.full.pdf>`_.
+    Namely, it applies PySINDy to the following problems:
 
-    ./3_original_paper/example
+    * Linear 2D ODE
+    * Cubic 2D ODE
+    * Linear 3D ODE
+    * Lorenz system
+    * Fluid wake behind a cylinder
+    * Logistic map
+    * Hopf system
+
 
 `Scikit-learn compatibility <./4_scikit_learn_compatibility/example.ipynb>`_
 -------------------------------------------------------------------------------------------------------------------------------

@@ -1,7 +1,14 @@
 PySINDy Examples
 ================
 
-This directory showcases the following examples of PySINDy in action.
+
+.. pysindy-example::
+    :repo: dynamicslab/pysindy-example
+    :ref: 673d8b3
+    :title: An Example
+
+    This directory showcases the following examples of PySINDy in action.
+
 
 `Feature overview <./1_feature_overview/example.ipynb>`_
 -----------------------------------------------------------------------------------------------------------
@@ -24,23 +31,8 @@ We recommend that people new to SINDy start here. We give a gentle introduction 
 
     ./2_introduction_to_sindy/example
 
-`Original paper <./3_original_paper/example.ipynb>`_
--------------------------------------------------------------------------------------------------------
-This notebook uses PySINDy to reproduce the examples in the `original SINDy paper <https://www.pnas.org/content/pnas/113/15/3932.full.pdf>`_. Namely, it applies PySINDy to the following problems:
 
-* Linear 2D ODE
-* Cubic 2D ODE
-* Linear 3D ODE
-* Lorenz system
-* Fluid wake behind a cylinder
-* Logistic map
-* Hopf system
 
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./3_original_paper/example
 
 `Scikit-learn compatibility <./4_scikit_learn_compatibility/example.ipynb>`_
 -------------------------------------------------------------------------------------------------------------------------------

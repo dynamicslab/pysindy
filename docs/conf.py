@@ -1,6 +1,16 @@
 import importlib
+import os
+import re
 import shutil
 from pathlib import Path
+from typing import TypeVar
+
+import requests
+from docutils import nodes
+from docutils.statemachine import StringList
+from sphinx.application import Sphinx
+from sphinx.directives.other import TocTree
+from sphinx.util.docutils import SphinxDirective
 
 author = "dynamicslab"
 project = "pysindy"  # package name
@@ -105,7 +115,7 @@ GoogleDocstring._unpatched_parse = GoogleDocstring._parse
 GoogleDocstring._parse = patched_parse
 
 
-def setup(app):
+def setup(app: Sphinx):
     """Our sphinx extension for copying from examples/ to docs/examples
 
     Since nbsphinx does not handle glob/regex paths, we need to
@@ -135,3 +145,72 @@ def setup(app):
     )
     if (here / "static/custom.css").exists():
         app.add_css_file("custom.css")
+
+    app.add_directive("pysindy-example", PysindyExample)
+
+
+class PysindyExample(SphinxDirective):
+    required_arguments = 0
+    optional_arguments = 0
+    final_argument_whitespace = True
+    option_spec = {"repo": str, "ref": str, "title": str}
+    has_content = True
+
+    def run(self) -> list[nodes.Node]:
+        repo = self.options.get("repo")
+        ref = self.options.get("ref")
+        base = f"https://raw.githubusercontent.com/{repo}/{ref}/docs/build/"
+        example_node = nodes.subtitle(text=self.options.get("title"))
+        content_node = nodes.paragraph(text="\n".join(self.content))
+        documents = fetch_notebook_list(base)
+        local_docs = [(name, copy_html(base, url, repo)) for name, url in documents]
+        toc_items = [f"{name} <{url}>" for name, url in local_docs]
+        toc_nodes = TocTree(
+            name="PysindyExample",
+            options={},
+            arguments=[],
+            content=StringList(initlist=toc_items),
+            lineno=self.lineno,
+            block_text="",
+            content_offset=0,
+            state=self.state,
+            state_machine=self.state_machine,
+        ).run()
+        return [example_node, content_node, *toc_nodes]
+
+
+def fetch_notebook_list(base: str) -> list[tuple[str, str]]:
+    """Gets the list of example notebooks from a repo's index.html
+
+    Each entry is a tuple of the title name of a link and the address
+    """
+
+    index = requests.get(base + "index.html")
+    if index.status_code != 200:
+        raise RuntimeError("Unable to locate external example directory")
+    text = str(index.content, encoding="utf-8")
+    start = '<li class="toctree-l1"><a class="reference internal" href="'
+    mid = '">'
+    end = "</a></li>\n"
+    matchstr = start + "(.*)" + mid + "(.*)" + end
+    T = TypeVar("T")
+
+    def deduplicate(mylist: list[T]) -> list[T]:
+        return list(set(mylist))
+
+    rellinks: list[str] = deduplicate(re.findall(matchstr, text))
+    return [(name, address) for address, name in rellinks]
+
+
+def copy_html(base: str, location: str, repo: str) -> str:
+    """Create a local copy of external file, returning relative reference"""
+    example_dir = Path(__file__).parent / "examples"
+    repo_root = example_dir / repo
+    repo_root.mkdir(parents=True, exist_ok=True)
+    page = requests.get(base + location)
+    if page.status_code != 200:
+        raise RuntimeError("Unable to locate external example notebook")
+    filename = repo_root / location.rsplit("/", 1)[1]
+    with open(filename, "wb") as f:
+        f.write(page.content)
+    return os.path.relpath(filename, start=example_dir)

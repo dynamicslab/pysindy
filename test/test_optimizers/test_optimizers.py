@@ -126,7 +126,7 @@ def data(request):
         ElasticNet(fit_intercept=False),
         DummyLinearModel(),
         MIOSR(),
-        SBR(),
+        SBR(num_warmup=10, num_samples=10),
     ],
     ids=lambda param: type(param),
 )

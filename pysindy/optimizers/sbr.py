@@ -96,6 +96,7 @@ class SBR(BaseOptimizer):
         num_warmup: int = 1000,
         num_samples: int = 5000,
         mcmc_kwargs: Optional[dict] = None,
+        nuts_kwargs: Optional[dict] = None,
         unbias: bool = False,
         **kwargs,
     ):
@@ -135,10 +136,14 @@ class SBR(BaseOptimizer):
             self.mcmc_kwargs = mcmc_kwargs
         else:
             self.mcmc_kwargs = {}
+        if nuts_kwargs is not None:
+            self.nuts_kwargs = nuts_kwargs
+        else:
+            self.nuts_kwargs = {}
 
     def _reduce(self, x, y):
         # set up a sparse regression and sample.
-        self.mcmc_ = self._run_mcmc(x, y, **self.mcmc_kwargs)
+        self.mcmc_ = self._run_mcmc(x, y, self.nuts_kwargs, self.mcmc_kwargs)
 
         # set the mean values as the coefficients.
         self.coef_ = np.array(self.mcmc_.get_samples()["beta"].mean(axis=0))
@@ -165,15 +170,18 @@ class SBR(BaseOptimizer):
         sigma = numpyro.sample("sigma", Exponential(self.noise_hyper_lambda))
         numpyro.sample("obs", Normal(mu, sigma), obs=y)
 
-    def _run_mcmc(self, x, y, **kwargs):
+    def _run_mcmc(self, x, y, nuts_kwargs, mcmc_kwargs):
         # set up a jax random key.
-        seed = kwargs.pop("seed", 0)
+        seed = mcmc_kwargs.pop("seed", 0)
         rng_key = random.PRNGKey(seed)
 
         # run the MCMC
-        kernel = NUTS(self._numpyro_model)
+        kernel = NUTS(self._numpyro_model, **nuts_kwargs)
         mcmc = MCMC(
-            kernel, num_warmup=self.num_warmup, num_samples=self.num_samples, **kwargs
+            kernel,
+            num_warmup=self.num_warmup,
+            num_samples=self.num_samples,
+            **mcmc_kwargs,
         )
         mcmc.run(rng_key, x=x, y=y)
 

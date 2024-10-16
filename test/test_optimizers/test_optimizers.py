@@ -35,6 +35,7 @@ from pysindy.optimizers import StableLinearSR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.optimizers import WrappedOptimizer
+from pysindy.optimizers.ssr import _ind_inflection
 from pysindy.optimizers.stlsq import _remove_and_decrement
 from pysindy.utils import supports_multiple_targets
 from pysindy.utils.odes import enzyme
@@ -77,6 +78,8 @@ def _align_optimizer_and_1dfeatures(
     # This is a hack until constraints are moved from init to fit
     if isinstance(opt, TrappingSR3):
         opt = TrappingSR3(_n_tgts=1, _include_bias=False)
+        features = np.hstack([features, features])
+    elif isinstance(opt, SSR):
         features = np.hstack([features, features])
     else:
         features = features
@@ -151,7 +154,19 @@ def test_not_fitted(optimizer):
         optimizer.predict(np.ones((1, 3)))
 
 
-@pytest.mark.parametrize("optimizer", [STLSQ(), SR3(), SBR()])
+@pytest.mark.parametrize(
+    "optimizer",
+    [
+        STLSQ(),
+        SR3(),
+        SBR(
+            num_warmup=1,
+            num_samples=1,
+            nuts_kwargs={"max_tree_depth": 1, "target_accept_prob": 0.1},
+        ),
+    ],
+    ids=type,
+)
 def test_complexity_not_fitted(optimizer, data_derivative_2d):
     with pytest.raises(NotFittedError):
         optimizer.complexity
@@ -1194,3 +1209,42 @@ def test_pickle(data_lorenz, opt_cls, opt_args):
     new_opt = pickle.loads(pickle.dumps(opt))
     result = new_opt.coef_
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize("kappa", (None, 0.1), ids=["inflection", "L0"])
+def test_ssr_history_selection(kappa):
+    rng = np.random.default_rng(1)
+    x = rng.normal(size=(30, 8))
+    expected = np.array([[1, 1, 1, 0, 0, 0, 0, 0]])
+    y = x @ expected.T
+
+    x += np.random.normal(size=(30, 8), scale=1e-2)
+    opt = SSR(kappa=kappa)
+    result = opt.fit(x, y).coef_
+
+    assert len(opt.history_) == len(opt.err_history_)
+    np.testing.assert_allclose(result, expected, atol=1e-2)
+    np.testing.assert_array_equal(result == 0, expected == 0)
+
+
+@pytest.mark.parametrize(
+    ["errs", "expected"],
+    (([3, 1, 0.9], 1), ([1, 0, 0], 1)),
+    ids=["basic", "zero-error"],
+)
+def test_ssr_inflection(errs, expected):
+    result = _ind_inflection(errs)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ["errs", "expected", "message"],
+    (
+        ([1], ValueError, "single point"),
+        ([-1, 1, 1], ValueError, ""),
+    ),
+    ids=["length-1", "negative"],
+)
+def test_ssr_inflection_bad_args(errs, expected, message):
+    with pytest.raises(expected, match=message):
+        _ind_inflection(errs)

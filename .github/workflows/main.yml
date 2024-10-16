@@ -85,7 +85,7 @@ jobs:
         pip install .[dev,miosr,cvxpy,sbr]
     - name: Test with pytest
       run: |
-        coverage run --source=pysindy -m pytest test -m "not slow"  && coverage xml
+        coverage run --source=pysindy -m pytest test -m "notebooks or not notebooks"  && coverage xml
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:

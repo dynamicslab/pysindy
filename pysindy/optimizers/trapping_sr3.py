@@ -5,32 +5,28 @@ from itertools import product
 from itertools import repeat
 from math import comb
 from typing import cast
-from typing import NewType
 from typing import Optional
 from typing import TypeVar
 from typing import Union
 
 import cvxpy as cp
 import numpy as np
-from numpy.typing import NBitBase
 from numpy.typing import NDArray
 from sklearn.exceptions import ConvergenceWarning
 
+from .._typing import Float1D
+from .._typing import Float2D
+from .._typing import Float3D
+from .._typing import Float4D
+from .._typing import Float5D
+from .._typing import Int1D
 from ..feature_library.polynomial_library import n_poly_features
 from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
-from .base import AnyFloat
+from .base import FloatDType
 from .base import NFeat
 from .base import NTarget
 from .constrained_sr3 import ConstrainedSR3
-
-Int1D = np.ndarray[tuple[int], np.dtype[np.int_]]
-Float1D = np.ndarray[tuple[int], AnyFloat]
-Float2D = np.ndarray[tuple[int, int], AnyFloat]
-Float3D = np.ndarray[tuple[int, int, int], AnyFloat]
-Float4D = np.ndarray[tuple[int, int, int, int], AnyFloat]
-Float5D = np.ndarray[tuple[int, int, int, int, int], AnyFloat]
-FloatND = NDArray[np.floating[NBitBase]]
 
 
 class EnstrophyMat:
@@ -601,7 +597,7 @@ class TrappingSR3(ConstrainedSR3):
         self,
         trap_ctr: Float1D,
         prev_A: Float2D,
-        coef_sparse: np.ndarray[tuple[NFeat, NTarget], AnyFloat],
+        coef_sparse: np.ndarray[tuple[NFeat, NTarget], FloatDType],
     ) -> tuple[Float1D, Float2D]:
         r"""Updates the trap center
 
@@ -693,7 +689,7 @@ class TrappingSR3(ConstrainedSR3):
             self.constraint_lhs = reorder_constraints(
                 self.constraint_lhs, n_features, output_order="feature"
             )
-        coef_sparse: np.ndarray[tuple[NFeat, NTarget], AnyFloat] = self.coef_.T
+        coef_sparse: np.ndarray[tuple[NFeat, NTarget], FloatDType] = self.coef_.T
 
         # Print initial values for each term in the optimization
         if self.verbose:

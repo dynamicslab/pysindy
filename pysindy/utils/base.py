@@ -61,7 +61,7 @@ def validate_input(x, t=T_DEFAULT):
     return x_new
 
 
-def validate_no_reshape(x, t: float | np.ndarray = T_DEFAULT):
+def validate_no_reshape(x, t: Union[float, np.ndarray, object] = T_DEFAULT):
     """Check types and numerical sensibility of arguments.
 
     Args:

@@ -5,10 +5,10 @@ import abc
 import warnings
 from typing import Callable
 from typing import NewType
+from typing import Optional
 from typing import Tuple
 
 import numpy as np
-from numpy.typing import NBitBase
 from scipy import sparse
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
@@ -18,10 +18,10 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
 from .._typing import Float2D
+from .._typing import FloatDType
 from ..utils import AxesArray
 from ..utils import drop_nan_samples
 
-AnyFloat = np.dtype[np.floating[NBitBase]]
 NFeat = NewType("NFeat", int)
 NTarget = NewType("NTarget", int)
 
@@ -40,8 +40,8 @@ def _rescale_data(X, y, sample_weight):
 
 
 class _BaseOptimizer(BaseEstimator, abc.ABC):
-    coef_: np.ndarray[tuple[NTarget, NFeat], AnyFloat]
-    intercept_: np.ndarray[tuple[NTarget], AnyFloat]
+    coef_: np.ndarray[tuple[NTarget, NFeat], FloatDType]
+    intercept_: np.ndarray[tuple[NTarget], FloatDType]
 
     @property
     def complexity(self):
@@ -101,7 +101,7 @@ class BaseOptimizer(LinearRegression, _BaseOptimizer):
 
     max_iter: int
     normalize_columns: bool
-    initial_guess: None | np.ndarray[tuple[NTarget, NFeat], AnyFloat]
+    initial_guess: Optional[np.ndarray[tuple[NTarget, NFeat], FloatDType]]
     copy_X: bool
     unbias: bool
 

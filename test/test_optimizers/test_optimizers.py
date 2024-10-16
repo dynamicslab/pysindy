@@ -35,6 +35,7 @@ from pysindy.optimizers import StableLinearSR3
 from pysindy.optimizers import STLSQ
 from pysindy.optimizers import TrappingSR3
 from pysindy.optimizers import WrappedOptimizer
+from pysindy.optimizers.base import _normalize_features
 from pysindy.optimizers.ssr import _ind_inflection
 from pysindy.optimizers.stlsq import _remove_and_decrement
 from pysindy.utils import supports_multiple_targets
@@ -1034,33 +1035,16 @@ def test_inequality_constraints_reqs():
         )
 
 
-@pytest.mark.parametrize(
-    "optimizer",
-    [
-        STLSQ,
-        SSR,
-        FROLS,
-        SR3,
-        ConstrainedSR3,
-        StableLinearSR3,
-        TrappingSR3,
-        MIOSR,
-        SBR,
-    ],
-)
-def test_normalize_columns(data_derivative_1d, optimizer):
+def test_normalize_columns(data_derivative_1d):
     x, x_dot = data_derivative_1d
-    if len(x.shape) == 1:
-        x = x.reshape(-1, 1)
-    opt = optimizer(normalize_columns=True)
-    opt, x = _align_optimizer_and_1dfeatures(opt, x)
-    opt.fit(x, x_dot)
-    check_is_fitted(opt)
-    assert opt.complexity >= 0
-    if len(x_dot.shape) > 1:
-        assert opt.coef_.shape == (x.shape[1], x_dot.shape[1])
-    else:
-        assert opt.coef_.shape == (1, x.shape[1])
+    x = np.reshape(x, (-1, 1))
+    x_dot = np.reshape(x_dot, (-1, 1))
+    cols = np.hstack((x, x_dot))
+    norm, ncols = _normalize_features(cols)
+    result = np.linalg.norm(ncols, axis=0)
+    expected = [1.0, 1.0]
+    np.testing.assert_allclose(result, expected)
+    np.testing.assert_allclose(ncols * norm, cols)
 
 
 @pytest.mark.parametrize(

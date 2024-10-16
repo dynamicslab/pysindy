@@ -14,6 +14,7 @@ from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
 
+from .._typing import Float2D
 from ..utils import AxesArray
 from ..utils import drop_nan_samples
 
@@ -178,8 +179,7 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         x_normed = np.copy(x)
         if self.normalize_columns:
-            reg = 1 / np.linalg.norm(x, 2, axis=0)
-            x_normed = x * reg
+            feat_norms, x_normed = _normalize_features(x_normed)
 
         if self.initial_guess is None:
             self.coef_ = np.linalg.lstsq(x_normed, y, rcond=None)[0].T
@@ -203,11 +203,11 @@ class BaseOptimizer(LinearRegression, ComplexityMixin):
 
         # Rescale coefficients to original units
         if self.normalize_columns:
-            self.coef_ = np.multiply(reg, self.coef_)
+            self.coef_ = self.coef_ / feat_norms
             if hasattr(self, "coef_full_"):
-                self.coef_full_ = np.multiply(reg, self.coef_full_)
+                self.coef_full_ = self.coef_full_ / feat_norms
             for i in range(np.shape(self.history_)[0]):
-                self.history_[i] = np.multiply(reg, self.history_[i])
+                self.history_[i] = self.history_[i] / feat_norms
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
@@ -395,3 +395,9 @@ def _drop_random_samples(
     x_dot_new = np.take(x_dot, rand_inds, axis=x.ax_sample)
 
     return x_new, x_dot_new
+
+
+def _normalize_features(x: Float2D) -> Float2D:
+    "Calculate the length of vectors and normalize them"
+    lengths = np.linalg.norm(x, 2, axis=0)
+    return lengths, x / lengths

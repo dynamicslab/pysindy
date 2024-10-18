@@ -1,7 +1,10 @@
 import sys
 import warnings
+from abc import ABC
+from abc import abstractmethod
 from itertools import product
 from typing import Collection
+from typing import Optional
 from typing import Sequence
 from typing import Union
 
@@ -13,9 +16,12 @@ from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
+from typing_extensions import Self
 
+from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
 from .feature_library import PolynomialLibrary
+from .feature_library.base import BaseFeatureLibrary
 
 try:  # Waiting on PEP 690 to lazy import CVXPY
     from .optimizers import SINDyPI
@@ -24,18 +30,119 @@ try:  # Waiting on PEP 690 to lazy import CVXPY
 except ImportError:
     sindy_pi_flag = False
 from .optimizers import STLSQ
+from .optimizers.base import _BaseOptimizer
+from .optimizers.base import BaseOptimizer
 from .utils import AxesArray
 from .utils import comprehend_axes
 from .utils import concat_sample_axis
 from .utils import drop_nan_samples
-from .utils import equations
 from .utils import SampleConcatter
 from .utils import validate_control_variables
 from .utils import validate_input
 from .utils import validate_no_reshape
 
 
-class SINDy(BaseEstimator):
+class _BaseSINDy(BaseEstimator, ABC):
+
+    feature_library: BaseFeatureLibrary
+    optimizer: _BaseOptimizer
+    discrete_time: bool
+    model: Pipeline
+    feature_names: Optional[list[str]]
+    # Hacks to remove later
+    discrete_time: bool = False
+    n_control_features_: int = 0
+
+    @abstractmethod
+    def fit(self, x, t, *args, **kwargs) -> Self:
+        ...
+
+    def _fit_shape(self):
+        """Assign shape attributes for the system that are used post-fit"""
+        self.n_features_in_ = self.feature_library.n_features_in_
+        self.n_output_features_ = self.feature_library.n_output_features_
+        if self.feature_names is None:
+            feature_names = []
+            for i in range(self.n_features_in_ - self.n_control_features_):
+                feature_names.append("x" + str(i))
+            for i in range(self.n_control_features_):
+                feature_names.append("u" + str(i))
+            self.feature_names = feature_names
+
+    def equations(self, precision: int = 3) -> list[str]:
+        """
+        Get the right hand sides of the SINDy model equations.
+
+        Parameters
+        ----------
+        precision: int, optional (default 3)
+            Number of decimal points to include for each coefficient in the
+            equation.
+
+        Returns
+        -------
+        equations: list of strings
+            List of strings representing the SINDy model equations for each
+            input feature.
+        """
+        check_is_fitted(self, "model")
+        if self.discrete_time:
+            sys_coord_names = [name + "[k]" for name in self.feature_names]
+        else:
+            sys_coord_names = self.feature_names
+        feat_names = self.feature_library.get_feature_names(sys_coord_names)
+
+        def term(c, name):
+            rounded_coef = np.round(c, precision)
+            if rounded_coef == 0:
+                return ""
+            else:
+                return f"{c:.{precision}f} {name}"
+
+        equations = []
+        for coef_row in self.optimizer.coef_:
+            components = [term(c, i) for c, i in zip(coef_row, feat_names)]
+            eq = " + ".join(filter(bool, components))
+            if not eq:
+                eq = f"{0:.{precision}f}"
+            equations.append(eq)
+
+        return equations
+
+    def print(self, precision: int = 3, **kwargs) -> None:
+        """Print the SINDy model equations.
+
+        Parameters
+        ----------
+        lhs: list of strings, optional (default None)
+            List of variables to print on the left-hand sides of the learned equations.
+            By default :code:`self.input_features` are used.
+
+        precision: int, optional (default 3)
+            Precision to be used when printing out model coefficients.
+
+        **kwargs: Additional keyword arguments passed to the builtin print function
+        """
+        eqns = self.equations(precision)
+        for name, eqn in zip(self.feature_names, eqns, strict=True):
+            lhs = f"({name})'"
+            print(f"{lhs} = {eqn}", **kwargs)
+
+    def get_feature_names(self):
+        """
+        Get a list of names of features used by SINDy model.
+
+        Returns
+        -------
+        feats: list
+            A list of strings giving the names of the features in the feature
+            library, :code:`self.feature_library`.
+        """
+        check_is_fitted(self, "model")
+        return self.feature_library.get_feature_names(input_features=self.feature_names)
+
+
+class SINDy(_BaseSINDy):
     """
     Sparse Identification of Nonlinear Dynamical Systems (SINDy).
     Uses sparse regression to learn a dynamical systems model from measurement data.
@@ -150,12 +257,12 @@ class SINDy(BaseEstimator):
 
     def __init__(
         self,
-        optimizer=None,
-        feature_library=None,
-        differentiation_method=None,
-        feature_names=None,
-        t_default=1,
-        discrete_time=False,
+        optimizer: Optional[BaseOptimizer] = None,
+        feature_library: Optional[BaseFeatureLibrary] = None,
+        differentiation_method: Optional[BaseDifferentiation] = None,
+        feature_names: Optional[list[str]] = None,
+        t_default: float = 1,
+        discrete_time: bool = False,
     ):
         if optimizer is None:
             optimizer = STLSQ()
@@ -257,17 +364,7 @@ class SINDy(BaseEstimator):
         x_dot = concat_sample_axis(x_dot)
         self.model = Pipeline(steps)
         self.model.fit(x, x_dot)
-
-        self.n_features_in_ = self.feature_library.n_features_in_
-        self.n_output_features_ = self.feature_library.n_output_features_
-
-        if self.feature_names is None:
-            feature_names = []
-            for i in range(self.n_features_in_ - self.n_control_features_):
-                feature_names.append("x" + str(i))
-            for i in range(self.n_control_features_):
-                feature_names.append("u" + str(i))
-            self.feature_names = feature_names
+        self._fit_shape()
 
         return self
 
@@ -323,33 +420,6 @@ class SINDy(BaseEstimator):
         if not multiple_trajectories:
             return result[0]
         return result
-
-    def equations(self, precision=3):
-        """
-        Get the right hand sides of the SINDy model equations.
-
-        Parameters
-        ----------
-        precision: int, optional (default 3)
-            Number of decimal points to include for each coefficient in the
-            equation.
-
-        Returns
-        -------
-        equations: list of strings
-            List of strings representing the SINDy model equations for each
-            input feature.
-        """
-        check_is_fitted(self, "model")
-        if self.discrete_time:
-            base_feature_names = [f + "[k]" for f in self.feature_names]
-        else:
-            base_feature_names = self.feature_names
-        return equations(
-            self.model,
-            input_features=base_feature_names,
-            precision=precision,
-        )
 
     def print(self, lhs=None, precision=3, **kwargs):
         """Print the SINDy model equations.
@@ -551,19 +621,6 @@ class SINDy(BaseEstimator):
         """
         check_is_fitted(self, "model")
         return self.optimizer.coef_
-
-    def get_feature_names(self):
-        """
-        Get a list of names of features used by SINDy model.
-
-        Returns
-        -------
-        feats: list
-            A list of strings giving the names of the features in the feature
-            library, :code:`self.feature_library`.
-        """
-        check_is_fitted(self, "model")
-        return self.feature_library.get_feature_names(input_features=self.feature_names)
 
     def simulate(
         self,

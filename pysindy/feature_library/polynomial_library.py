@@ -12,6 +12,7 @@ from sklearn.utils.validation import check_is_fitted
 from ..utils import AxesArray
 from ..utils import comprehend_axes
 from ..utils import wrap_axes
+from ..utils._axis_conventions import AX_COORD
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
 
@@ -160,7 +161,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
         return feature_names
 
     @x_sequence_or_item
-    def fit(self, x_full, y=None):
+    def fit(self, x_full: list[AxesArray], y=None):
         """
         Compute number of output features.
 
@@ -180,7 +181,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                 "Can't have include_interaction be False and interaction_only"
                 " be True"
             )
-        n_features = x_full[0].shape[x_full[0].ax_coord]
+        n_features = x_full[0].shape[AX_COORD]
         combinations = self._combinations(
             n_features,
             self.degree,
@@ -217,7 +218,7 @@ class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
                 axes = comprehend_axes(x)
                 x = x.asformat("csc")
                 wrap_axes(axes, x)
-            n_features = x.shape[x.ax_coord]
+            n_features = x.shape[AX_COORD]
             if n_features != self.n_features_in_:
                 raise ValueError("x shape does not match training shape")
 

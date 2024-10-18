@@ -3,6 +3,7 @@ Shared pytest fixtures for unit tests.
 """
 from pathlib import Path
 
+import jax
 import numpy as np
 import pytest
 from scipy.integrate import solve_ivp
@@ -19,6 +20,8 @@ from pysindy.utils.odes import logistic_map_control
 from pysindy.utils.odes import logistic_map_multicontrol
 from pysindy.utils.odes import lorenz
 from pysindy.utils.odes import lorenz_control
+
+jax.config.update("jax_platform_name", "cpu")
 
 
 def pytest_addoption(parser):

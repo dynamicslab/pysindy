@@ -1,5 +1,4 @@
 import warnings
-from itertools import repeat
 from typing import Callable
 from typing import Sequence
 from typing import Union
@@ -62,7 +61,7 @@ def validate_input(x, t=T_DEFAULT):
     return x_new
 
 
-def validate_no_reshape(x, t=T_DEFAULT):
+def validate_no_reshape(x, t: Union[float, np.ndarray, object] = T_DEFAULT):
     """Check types and numerical sensibility of arguments.
 
     Args:
@@ -73,7 +72,7 @@ def validate_no_reshape(x, t=T_DEFAULT):
         x as 2D array, with time dimension on first axis and coordinate
         index on second axis.
     """
-    if not isinstance(x, np.ndarray):
+    if not hasattr(x, "shape"):
         raise TypeError("Input value must be array-like")
     check_array(x, ensure_2d=False, allow_nd=True)
 
@@ -85,7 +84,7 @@ def validate_no_reshape(x, t=T_DEFAULT):
             if t <= 0:
                 raise ValueError("t must be positive")
         # Only apply these tests if t is array-like
-        elif isinstance(t, np.ndarray):
+        elif hasattr(t, "shape"):
             if not len(t) == x.shape[-2]:
                 raise ValueError("Length of t should match x.shape[-2].")
             if not np.all(t[:-1] < t[1:]):
@@ -288,69 +287,6 @@ def capped_simplex_projection(trimming_array, trimming_fraction):
     x = bisect(f, a, b)
 
     return np.maximum(np.minimum(trimming_array - x, 1.0), 0.0)
-
-
-def print_model(
-    coef,
-    input_features,
-    errors=None,
-    intercept=None,
-    error_intercept=None,
-    precision=3,
-    pm="±",
-):
-    """
-    Args:
-        coef:
-        input_features:
-        errors:
-        intercept:
-        sigma_intercept:
-        precision:
-        pm:
-    Returns:
-    """
-
-    def term(c, sigma, name):
-        rounded_coef = np.round(c, precision)
-        if rounded_coef == 0 and sigma is None:
-            return ""
-        elif sigma is None:
-            return f"{c:.{precision}f} {name}"
-        elif rounded_coef == 0 and np.round(sigma, precision) == 0:
-            return ""
-        else:
-            return f"({c:.{precision}f} {pm} {sigma:.{precision}f}) {name}"
-
-    errors = errors if errors is not None else repeat(None)
-    components = [term(c, e, i) for c, e, i in zip(coef, errors, input_features)]
-    eq = " + ".join(filter(bool, components))
-
-    if not eq or intercept or error_intercept is not None:
-        intercept = intercept or 0
-        intercept_str = term(intercept, error_intercept, "").strip()
-        if eq and intercept_str:
-            eq += " + "
-            eq += intercept_str
-        elif not eq:
-            eq = f"{intercept:.{precision}f}"
-    return eq
-
-
-def equations(pipeline, input_features=None, precision=3, input_fmt=None):
-    input_features = pipeline.steps[0][1].get_feature_names(input_features)
-    if input_fmt:
-        input_features = [input_fmt(i) for i in input_features]
-    coef = pipeline.steps[-1][1].coef_
-    intercept = pipeline.steps[-1][1].intercept_
-    if np.isscalar(intercept):
-        intercept = intercept * np.ones(coef.shape[0])
-    return [
-        print_model(
-            coef[i], input_features, intercept=intercept[i], precision=precision
-        )
-        for i in range(coef.shape[0])
-    ]
 
 
 def supports_multiple_targets(estimator):

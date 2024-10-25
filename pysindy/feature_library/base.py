@@ -28,6 +28,9 @@ class BaseFeatureLibrary(TransformerMixin):
     and ``get_feature_names`` methods.
     """
 
+    n_features_in_: int
+    n_output_features_: int
+
     def validate_input(self, x, *args, **kwargs):
         return validate_no_reshape(x, *args, **kwargs)
 

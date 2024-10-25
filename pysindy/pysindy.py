@@ -3,7 +3,6 @@ import warnings
 from abc import ABC
 from abc import abstractmethod
 from itertools import product
-from typing import Collection
 from typing import Optional
 from typing import Sequence
 from typing import Union
@@ -792,7 +791,10 @@ class SINDy(_BaseSINDy):
 
 
 def _zip_like_sequence(x, t):
-    """Create an iterable like zip(x, t), but works if t is scalar."""
+    """Create an iterable like zip(x, t), but works if t is scalar.
+
+    If t is an array, it is repeated for each x
+    """
     if isinstance(t, Sequence):
         return zip(x, t)
     else:
@@ -870,7 +872,8 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u) -> tuple:
         Tuple of updated x, t, x_dot, u
     """
     x = [x]
-    if isinstance(t, Collection):
+    # if t is not a dt
+    if not isinstance(t, np.ScalarType):
         t = [t]
     if x_dot is not None:
         x_dot = [x_dot]

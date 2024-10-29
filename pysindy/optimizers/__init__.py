@@ -4,6 +4,7 @@ from .frols import FROLS
 from .sr3 import SR3
 from .ssr import SSR
 from .stlsq import STLSQ
+from .sindy_pi import SINDyPI
 from .wrapped_optimizer import WrappedOptimizer
 
 try:

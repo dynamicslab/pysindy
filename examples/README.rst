@@ -3,8 +3,7 @@ PySINDy Examples
 
 
 .. pysindy-example::
-    :repo: dynamicslab/pysindy-example
-    :ref: 673d8b3
+    :key: sample
     :title: An Example
 
     This directory showcases the following examples of PySINDy in action.

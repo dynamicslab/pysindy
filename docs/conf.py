@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TypeVar
 
 import requests
+import yaml
 from docutils import nodes
 from docutils.statemachine import StringList
 from sphinx.application import Sphinx
@@ -52,8 +53,7 @@ language = "en"
 
 here = Path(__file__).parent.resolve()
 
-if (here / "static/custom.css").exists():
-    html_static_path = ["static"]
+html_static_path = ["_static"]
 
 exclude_patterns = ["build", "_build", "Youtube"]
 # pygments_style = "sphinx"
@@ -146,25 +146,41 @@ def setup(app: Sphinx):
     if (here / "static/custom.css").exists():
         app.add_css_file("custom.css")
 
+    _grab_external_examples(example_source, doc_examples)
     app.add_directive("pysindy-example", PysindyExample)
+
+
+EXTERNAL_EXAMPLES: dict[str, dict[str, os.PathLike]] = {}
+
+
+def _grab_external_examples(example_source: Path, doc_examples: Path):
+    ext_config = example_source / "external.yml"
+    with open(ext_config) as f:
+        ext_examples = yaml.safe_load(f)
+    for example in ext_examples:
+        repo = example["repo"]
+        ref = example["ref"]
+        base = f"https://raw.githubusercontent.com/{repo}/{ref}/docs/build/"
+        documents = fetch_notebook_list(base)
+        file_map = {}
+        for name, url in documents:
+            file_map[name] = copy_html(base, url, repo)
+        EXTERNAL_EXAMPLES[example["key"]] = file_map
 
 
 class PysindyExample(SphinxDirective):
     required_arguments = 0
     optional_arguments = 0
-    final_argument_whitespace = True
-    option_spec = {"repo": str, "ref": str, "title": str}
+    option_spec = {"key": str, "title": str}
     has_content = True
 
     def run(self) -> list[nodes.Node]:
-        repo = self.options.get("repo")
-        ref = self.options.get("ref")
-        base = f"https://raw.githubusercontent.com/{repo}/{ref}/docs/build/"
+        key = self.options["key"]
         example_node = nodes.subtitle(text=self.options.get("title"))
         content_node = nodes.paragraph(text="\n".join(self.content))
-        documents = fetch_notebook_list(base)
-        local_docs = [(name, copy_html(base, url, repo)) for name, url in documents]
-        toc_items = [f"{name} <{url}>" for name, url in local_docs]
+        toc_items = [
+            f"{name} <{relpath}>" for name, relpath in EXTERNAL_EXAMPLES[key].items()
+        ]
         toc_nodes = TocTree(
             name="PysindyExample",
             options={},
@@ -172,7 +188,7 @@ class PysindyExample(SphinxDirective):
             content=StringList(initlist=toc_items),
             lineno=self.lineno,
             block_text="",
-            content_offset=0,
+            content_offset=self.content_offset,
             state=self.state,
             state_machine=self.state_machine,
         ).run()
@@ -205,7 +221,7 @@ def fetch_notebook_list(base: str) -> list[tuple[str, str]]:
 def copy_html(base: str, location: str, repo: str) -> str:
     """Create a local copy of external file, returning relative reference"""
     example_dir = Path(__file__).parent / "examples"
-    repo_root = example_dir / repo
+    repo_root = Path(__file__).parent / "_static" / repo
     repo_root.mkdir(parents=True, exist_ok=True)
     page = requests.get(base + location)
     if page.status_code != 200:

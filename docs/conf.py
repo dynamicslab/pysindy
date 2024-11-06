@@ -150,7 +150,7 @@ def setup(app: Sphinx):
     app.add_directive("pysindy-example", PysindyExample)
 
 
-EXTERNAL_EXAMPLES: dict[str, dict[str, os.PathLike]] = {}
+EXTERNAL_EXAMPLES: dict[str, list[tuple[str, str]]] = {}
 
 
 def _grab_external_examples(example_source: Path, doc_examples: Path):
@@ -158,14 +158,16 @@ def _grab_external_examples(example_source: Path, doc_examples: Path):
     with open(ext_config) as f:
         ext_examples = yaml.safe_load(f)
     for example in ext_examples:
-        repo = example["repo"]
-        ref = example["ref"]
-        base = f"https://raw.githubusercontent.com/{repo}/{ref}/docs/build/"
-        documents = fetch_notebook_list(base)
-        file_map = {}
-        for name, url in documents:
-            file_map[name] = copy_html(base, url, repo)
-        EXTERNAL_EXAMPLES[example["key"]] = file_map
+        ex_name: str = example["name"]
+        user: str = example["user"]
+        repo: str = example["repo"]
+        ref: str = example["ref"]
+        dir: str = example["dir"]
+        base = f"https://raw.githubusercontent.com/{user}/{repo}/{ref}/{dir}/"
+        notebooks = fetch_notebook_list(base)
+        base = f"https://raw.githubusercontent.com/{user}/{repo}/{ref}/"
+        local_nbs = [(name, copy_nb(base, pth, repo)) for name, pth in notebooks]
+        EXTERNAL_EXAMPLES[ex_name] = local_nbs
 
 
 class PysindyExample(SphinxDirective):
@@ -178,9 +180,13 @@ class PysindyExample(SphinxDirective):
         key = self.options["key"]
         example_node = nodes.subtitle(text=self.options.get("title"))
         content_node = nodes.paragraph(text="\n".join(self.content))
-        toc_items = [
-            f"{name} <{relpath}>" for name, relpath in EXTERNAL_EXAMPLES[key].items()
-        ]
+        toc_items = []
+        for name, relpath in EXTERNAL_EXAMPLES[key]:
+            if name:
+                toc_str = f"{name} <{relpath}>"
+            if not name:
+                toc_str = relpath
+            toc_items.append(toc_str)
         toc_nodes = TocTree(
             name="PysindyExample",
             options={},
@@ -200,33 +206,29 @@ def fetch_notebook_list(base: str) -> list[tuple[str, str]]:
 
     Each entry is a tuple of the title name of a link and the address
     """
-
-    index = requests.get(base + "index.html")
+    index = requests.get(base + "index.rst")
     if index.status_code != 200:
         raise RuntimeError("Unable to locate external example directory")
     text = str(index.content, encoding="utf-8")
-    start = '<li class="toctree-l1"><a class="reference internal" href="'
-    mid = '">'
-    end = "</a></li>\n"
-    matchstr = start + "(.*)" + mid + "(.*)" + end
+    link_line = r"^\s+(.*)[^\S\r\n]+(\S+.ipynb)"
     T = TypeVar("T")
 
     def deduplicate(mylist: list[T]) -> list[T]:
         return list(set(mylist))
 
-    rellinks: list[str] = deduplicate(re.findall(matchstr, text))
-    return [(name, address) for address, name in rellinks]
+    rellinks = deduplicate(re.findall(link_line, text, flags=re.MULTILINE))
+    return rellinks
 
 
-def copy_html(base: str, location: str, repo: str) -> str:
-    """Create a local copy of external file, returning relative reference"""
+def copy_nb(base: str, relpath: str, repo: str) -> str:
+    """Create a local copy of external file, modifying relative reference"""
     example_dir = Path(__file__).parent / "examples"
-    repo_root = Path(__file__).parent / "_static" / repo
-    repo_root.mkdir(parents=True, exist_ok=True)
-    page = requests.get(base + location)
+    repo_local_dir = example_dir / repo
+    repo_local_dir.mkdir(exist_ok=True)
+    page = requests.get(base + relpath)
     if page.status_code != 200:
-        raise RuntimeError("Unable to locate external example notebook")
-    filename = repo_root / location.rsplit("/", 1)[1]
+        raise RuntimeError(f"Unable to locate external notebook at {base + relpath}")
+    filename = repo_local_dir / relpath.rsplit("/", 1)[1]
     with open(filename, "wb") as f:
         f.write(page.content)
     return os.path.relpath(filename, start=example_dir)

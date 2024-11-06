@@ -1,3 +1,5 @@
-- key: sample
-  repo: "dynamicslab/pysindy-example"
-  ref: 673d8b3
+- name: "sample"
+  user: "dynamicslab"
+  repo: "pysindy-example"
+  ref: "673d8b3"
+  dir: "examples"

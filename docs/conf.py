@@ -178,7 +178,12 @@ class PysindyExample(SphinxDirective):
 
     def run(self) -> list[nodes.Node]:
         key = self.options["key"]
-        example_node = nodes.subtitle(text=self.options.get("title"))
+        heading_text: str = self.options.get("title")
+        normalized_text = re.sub(r"\s", "_", heading_text)
+        tgt_node = nodes.target(refid=normalized_text)
+        title_node = nodes.title()
+        title_text = nodes.Text(heading_text)
+        title_node += [title_text, tgt_node]
         content_node = nodes.paragraph(text="\n".join(self.content))
         toc_items = []
         for name, relpath in EXTERNAL_EXAMPLES[key]:
@@ -198,7 +203,11 @@ class PysindyExample(SphinxDirective):
             state=self.state,
             state_machine=self.state_machine,
         ).run()
-        return [example_node, content_node, *toc_nodes]
+        section_node = nodes.section(ids=[heading_text], names=[heading_text])
+        section_node += [title_node, content_node, *toc_nodes]
+        # test_ref = nodes.reference(name="boo", refuri="normalized_text")
+        # section_node += test_ref
+        return [section_node]
 
 
 def fetch_notebook_list(base: str) -> list[tuple[str, str]]:

@@ -1,15 +1,16 @@
 PySINDy Examples
 ================
 
+This directory showcases examples of PySINDy in action.
 
 .. pysindy-example::
     :key: sample
-    :title: An Example
+    :title: Template
 
-    This directory showcases the following examples of PySINDy in action.
+    This repository is a sample of how to build external documentation examples
 
 
-`Feature overview <./1_feature_overview/example.ipynb>`_
+Feature overview
 -----------------------------------------------------------------------------------------------------------
 This notebook gives an almost exhaustive overview of the different features available in PySINDy. It's a good reference for how to set various options and work with different types of datasets.
 

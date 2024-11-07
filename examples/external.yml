@@ -1,5 +1,5 @@
-- name: "sample"
+- name: "original"
   user: "dynamicslab"
-  repo: "pysindy-example"
-  ref: "673d8b3"
+  repo: "sindy-original-example"
+  ref: "e68efeb"
   dir: "examples"

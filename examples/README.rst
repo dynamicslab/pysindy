@@ -1,14 +1,13 @@
 PySINDy Examples
 ================
 
-This directory showcases examples of PySINDy in action.
+This directory showcases examples of PySINDy in action.  Not all examples are run on
+the current master branch. They serve to show what is possible with pysindy, but do
+not necessarily use the current API.
+Each is copied from another repository that contains dependency information and
+potentially a greater description.
 
-.. pysindy-example::
-    :key: sample
-    :title: Template
-
-    This repository is a sample of how to build external documentation examples
-
+Some notebooks require substantial computing resources.
 
 Feature overview
 -----------------------------------------------------------------------------------------------------------
@@ -32,7 +31,19 @@ We recommend that people new to SINDy start here. We give a gentle introduction 
     ./2_introduction_to_sindy/example
 
 
+.. pysindy-example::
+    :key: original
+    :title: Original Paper
 
+    This repository recreates the results from the `original SINDy paper <https://www.pnas.org/content/pnas/113/15/3932.full.pdf>`_.
+    It applies SINDy to the following problems:
+    * Linear 2D ODE
+    * Cubic 2D ODE
+    * Linear 3D ODE
+    * Lorenz system
+    * Fluid wake behind a cylinder
+    * Logistic map
+    * Hopf system
 
 `Scikit-learn compatibility <./4_scikit_learn_compatibility/example.ipynb>`_
 -------------------------------------------------------------------------------------------------------------------------------

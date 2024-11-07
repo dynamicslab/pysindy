@@ -146,23 +146,28 @@ def setup(app: Sphinx):
     if (here / "static/custom.css").exists():
         app.add_css_file("custom.css")
 
-    _grab_external_examples(example_source, doc_examples)
+    _grab_external_examples(example_source)
     app.add_directive("pysindy-example", PysindyExample)
 
 
 EXTERNAL_EXAMPLES: dict[str, list[tuple[str, str]]] = {}
 
 
-def _grab_external_examples(example_source: Path, doc_examples: Path):
+def _load_ext_config(example_source: Path) -> list[dict[str, str]]:
     ext_config = example_source / "external.yml"
     with open(ext_config) as f:
         ext_examples = yaml.safe_load(f)
+    return ext_examples
+
+
+def _grab_external_examples(example_source: Path):
+    ext_examples = _load_ext_config(example_source)
     for example in ext_examples:
-        ex_name: str = example["name"]
-        user: str = example["user"]
-        repo: str = example["repo"]
-        ref: str = example["ref"]
-        dir: str = example["dir"]
+        ex_name = example["name"]
+        user = example["user"]
+        repo = example["repo"]
+        ref = example["ref"]
+        dir = example["dir"]
         base = f"https://raw.githubusercontent.com/{user}/{repo}/{ref}/{dir}/"
         notebooks = fetch_notebook_list(base)
         base = f"https://raw.githubusercontent.com/{user}/{repo}/{ref}/"
@@ -178,13 +183,24 @@ class PysindyExample(SphinxDirective):
 
     def run(self) -> list[nodes.Node]:
         key = self.options["key"]
+        example_config = _load_ext_config((here / "../examples").resolve())
+        try:
+            this_example = [ex for ex in example_config if ex["name"] == key][0]
+        except IndexError:
+            RuntimeError("Unknown configuration key for external example")
         heading_text: str = self.options.get("title")
+        base_repo = f"https://github.com/{this_example['user']}/{this_example['repo']}"
+        repo_ref = nodes.reference(name="Source repo", refuri=base_repo)
+        ref_text = nodes.Text("Source repo")
+        repo_ref += ref_text
+        repo_par = nodes.paragraph()
+        repo_par += repo_ref
         normalized_text = re.sub(r"\s", "_", heading_text)
         tgt_node = nodes.target(refid=normalized_text)
         title_node = nodes.title()
         title_text = nodes.Text(heading_text)
         title_node += [title_text, tgt_node]
-        content_node = nodes.paragraph(text="\n".join(self.content))
+        content_nodes = self.parse_content_to_nodes()
         toc_items = []
         for name, relpath in EXTERNAL_EXAMPLES[key]:
             if name:
@@ -194,7 +210,7 @@ class PysindyExample(SphinxDirective):
             toc_items.append(toc_str)
         toc_nodes = TocTree(
             name="PysindyExample",
-            options={},
+            options={"maxdepth": 1},
             arguments=[],
             content=StringList(initlist=toc_items),
             lineno=self.lineno,
@@ -204,9 +220,7 @@ class PysindyExample(SphinxDirective):
             state_machine=self.state_machine,
         ).run()
         section_node = nodes.section(ids=[heading_text], names=[heading_text])
-        section_node += [title_node, content_node, *toc_nodes]
-        # test_ref = nodes.reference(name="boo", refuri="normalized_text")
-        # section_node += test_ref
+        section_node += [title_node, *content_nodes, *toc_nodes, repo_par]
         return [section_node]
 
 

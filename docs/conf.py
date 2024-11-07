@@ -53,8 +53,6 @@ language = "en"
 
 here = Path(__file__).parent.resolve()
 
-html_static_path = ["_static"]
-
 exclude_patterns = ["build", "_build", "Youtube"]
 # pygments_style = "sphinx"
 

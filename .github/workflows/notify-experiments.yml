@@ -2,7 +2,6 @@ on:
   push:
     branches:
       - master
-      - example-directory
 
 jobs:
   notify-notebook:

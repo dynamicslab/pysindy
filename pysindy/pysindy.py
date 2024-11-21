@@ -68,6 +68,19 @@ class _BaseSINDy(BaseEstimator, ABC):
                 feature_names.append("u" + str(i))
             self.feature_names = feature_names
 
+    def coefficients(self):
+        """
+        Get an array of the coefficients learned by SINDy model.
+
+        Returns
+        -------
+        coef: np.ndarray, shape (n_input_features, n_output_features)
+            Learned coefficients of the SINDy model.
+            Equivalent to :math:`\\Xi^\\top` in the literature.
+        """
+        check_is_fitted(self)
+        return self.optimizer.coef_
+
     def equations(self, precision: int = 3) -> list[str]:
         """
         Get the right hand sides of the SINDy model equations.
@@ -607,19 +620,6 @@ class SINDy(_BaseSINDy):
         if not multiple_trajectories:
             return result[0]
         return result
-
-    def coefficients(self):
-        """
-        Get an array of the coefficients learned by SINDy model.
-
-        Returns
-        -------
-        coef: np.ndarray, shape (n_input_features, n_output_features)
-            Learned coefficients of the SINDy model.
-            Equivalent to :math:`\\Xi^\\top` in the literature.
-        """
-        check_is_fitted(self, "model")
-        return self.optimizer.coef_
 
     def simulate(
         self,

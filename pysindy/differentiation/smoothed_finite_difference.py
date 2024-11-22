@@ -46,7 +46,7 @@ class SmoothedFiniteDifference(FiniteDifference):
     """
 
     def __init__(
-        self, smoother=savgol_filter, smoother_kws={}, save_smooth=True, **kwargs
+        self, smoother=savgol_filter, smoother_kws={}, save_smooth=True, axis=0, **kwargs
     ):
         super(SmoothedFiniteDifference, self).__init__(**kwargs)
         self.smoother = smoother
@@ -58,7 +58,7 @@ class SmoothedFiniteDifference(FiniteDifference):
                 self.smoother_kws["window_length"] = 11
             if "polyorder" not in smoother_kws:
                 self.smoother_kws["polyorder"] = 3
-            self.smoother_kws["axis"] = 0
+            self.smoother_kws["axis"] = axis
 
     def _differentiate(self, x, t):
         """Apply finite difference method after smoothing."""

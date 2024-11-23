@@ -48,7 +48,7 @@ class SmoothedFiniteDifference(FiniteDifference):
     def __init__(
         self, smoother=savgol_filter, smoother_kws={}, save_smooth=True, axis=0, **kwargs
     ):
-        super(SmoothedFiniteDifference, self).__init__(**kwargs)
+        super(SmoothedFiniteDifference, self).__init__(axis=axis, **kwargs)
         self.smoother = smoother
         self.smoother_kws = smoother_kws
         self.save_smooth = save_smooth

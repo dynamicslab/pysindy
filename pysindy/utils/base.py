@@ -1,4 +1,5 @@
 import warnings
+from functools import wraps
 from typing import Callable
 from typing import Sequence
 from typing import Union
@@ -152,17 +153,19 @@ def reorder_constraints(arr, n_features, output_order="feature"):
     return arr.reshape(starting_shape).transpose([0, 2, 1]).reshape((n_constraints, -1))
 
 
-def _validate_prox_and_reg_inputs(func, regularization):
+def _validate_prox_and_reg_inputs(func):
+    """Add guard code to ensure weight and argument have compatible shape/type
+
+    Decorates prox and regularization functions.
+    """
+
+    @wraps(func)
     def wrapper(x, regularization_weight):
-        if regularization[:8] == "weighted":
-            if not isinstance(regularization_weight, np.ndarray):
-                raise ValueError(
-                    f"'regularization_weight' must be an array of shape {x.shape}."
-                )
+        if isinstance(regularization_weight, np.ndarray):
             weight_shape = regularization_weight.shape
             if weight_shape != x.shape:
                 raise ValueError(
-                    f"Invalid shape for 'regularization_weight':"
+                    f"Invalid shape for 'regularization_weight': "
                     f"{weight_shape}. Must be the same shape as x: {x.shape}."
                 )
         elif not isinstance(regularization_weight, (int, float)):
@@ -190,36 +193,66 @@ def get_prox(
         and returns an array of the same shape
     """
 
-    def prox_l0(
-        x: NDArray[np.float64],
-        regularization_weight: Union[float, NDArray[np.float64]],
-    ):
-        threshold = np.sqrt(2 * regularization_weight)
-        return x * (np.abs(x) > threshold)
-
-    def prox_l1(
-        x: NDArray[np.float64],
-        regularization_weight: Union[float, NDArray[np.float64]],
-    ):
-
-        return np.sign(x) * np.maximum(np.abs(x) - regularization_weight, 0)
-
-    def prox_l2(
-        x: NDArray[np.float64],
-        regularization_weight: Union[float, NDArray[np.float64]],
-    ):
-        return x / (1 + 2 * regularization_weight)
-
     prox = {
-        "l0": prox_l0,
-        "weighted_l0": prox_l0,
-        "l1": prox_l1,
-        "weighted_l1": prox_l1,
-        "l2": prox_l2,
-        "weighted_l2": prox_l2,
+        "l0": _prox_l0,
+        "weighted_l0": _prox_l0,
+        "l1": _prox_l1,
+        "weighted_l1": _prox_l1,
+        "l2": _prox_l2,
+        "weighted_l2": _prox_l2,
     }
     regularization = regularization.lower()
-    return _validate_prox_and_reg_inputs(prox[regularization], regularization)
+    return prox[regularization]
+
+
+@_validate_prox_and_reg_inputs
+def _prox_l0(
+    x: NDArray[np.float64],
+    regularization_weight: Union[float, NDArray[np.float64]],
+):
+    threshold = np.sqrt(2 * regularization_weight)
+    return x * (np.abs(x) > threshold)
+
+
+@_validate_prox_and_reg_inputs
+def _prox_l1(
+    x: NDArray[np.float64],
+    regularization_weight: Union[float, NDArray[np.float64]],
+):
+
+    return np.sign(x) * np.maximum(np.abs(x) - regularization_weight, 0)
+
+
+@_validate_prox_and_reg_inputs
+def _prox_l2(
+    x: NDArray[np.float64],
+    regularization_weight: Union[float, NDArray[np.float64]],
+):
+    return x / (1 + 2 * regularization_weight)
+
+
+@_validate_prox_and_reg_inputs
+def _regularization_l0(
+    x: NDArray[np.float64],
+    regularization_weight: Union[float, NDArray[np.float64]],
+):
+    return np.sum(regularization_weight * (x != 0))
+
+
+@_validate_prox_and_reg_inputs
+def _regularization_l1(
+    x: NDArray[np.float64],
+    regularization_weight: Union[float, NDArray[np.float64]],
+):
+    return np.sum(regularization_weight * np.abs(x))
+
+
+@_validate_prox_and_reg_inputs
+def _regularization_l2(
+    x: NDArray[np.float64],
+    regularization_weight: Union[float, NDArray[np.float64]],
+):
+    return np.sum(regularization_weight * x**2)
 
 
 def get_regularization(
@@ -238,39 +271,16 @@ def get_regularization(
         and returns a float
     """
 
-    def regularization_l0(
-        x: NDArray[np.float64],
-        regularization_weight: Union[float, NDArray[np.float64]],
-    ):
-
-        return np.sum(regularization_weight * (x != 0))
-
-    def regularization_l1(
-        x: NDArray[np.float64],
-        regularization_weight: Union[float, NDArray[np.float64]],
-    ):
-
-        return np.sum(regularization_weight * np.abs(x))
-
-    def regularization_l2(
-        x: NDArray[np.float64],
-        regularization_weight: Union[float, NDArray[np.float64]],
-    ):
-
-        return np.sum(regularization_weight * x**2)
-
     regularization_fn = {
-        "l0": regularization_l0,
-        "weighted_l0": regularization_l0,
-        "l1": regularization_l1,
-        "weighted_l1": regularization_l1,
-        "l2": regularization_l2,
-        "weighted_l2": regularization_l2,
+        "l0": _regularization_l0,
+        "weighted_l0": _regularization_l0,
+        "l1": _regularization_l1,
+        "weighted_l1": _regularization_l1,
+        "l2": _regularization_l2,
+        "weighted_l2": _regularization_l2,
     }
     regularization = regularization.lower()
-    return _validate_prox_and_reg_inputs(
-        regularization_fn[regularization], regularization
-    )
+    return regularization_fn[regularization]
 
 
 def capped_simplex_projection(trimming_array, trimming_fraction):

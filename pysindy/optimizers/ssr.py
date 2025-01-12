@@ -1,7 +1,19 @@
+from typing import cast
+from typing import NewType
+from typing import TypeVar
+
 import numpy as np
+from numpy.typing import NBitBase
 from sklearn.linear_model import ridge_regression
 
 from .base import BaseOptimizer
+
+Rows = TypeVar("Rows", covariant=True, bound=int)
+Cols = TypeVar("Cols", covariant=True, bound=int)
+Float2D = np.ndarray[tuple[Rows, Cols], np.dtype[np.floating[NBitBase]]]
+Features = NewType("Features", int)
+Targets = NewType("Targets", int)
+Samples = NewType("Samples", int)
 
 
 class SSR(BaseOptimizer):
@@ -157,10 +169,13 @@ class SSR(BaseOptimizer):
         cc[total_ind] = 0.0
         return cc, total_ind
 
-    def _regress(self, x, y):
+    def _regress(
+        self, x: Float2D[Samples, Features], y: Float2D[Samples, Targets]
+    ) -> Float2D[Targets, Features]:
         """Perform the ridge regression"""
         kw = self.ridge_kw or {}
         coef = ridge_regression(x, y, self.alpha, **kw)
+        coef = np.atleast_2d(coef)  # type: ignore
         self.iters += 1
         return coef
 
@@ -168,6 +183,9 @@ class SSR(BaseOptimizer):
         """Performs at most ``self.max_iter`` iterations of the
         SSR greedy algorithm.
         """
+        # Until static typing grows, use cast
+        x = cast(Float2D[Samples, Features], x)
+        y = cast(Float2D[Samples, Targets], y)
         n_samples, n_features = x.shape
         n_targets = y.shape[1]
         cond_num = np.linalg.cond(x)

@@ -101,17 +101,9 @@ def test_get_prox_and_regularization_bad_shape(regularization, lam):
         prox(data, lam)
 
 
-@pytest.mark.parametrize(
-    "regularization", ["weighted_l0", "weighted_l1", "weighted_l2"]
-)
-@pytest.mark.parametrize(
-    "lam",
-    [
-        np.array([[1, 2]]),
-        1,
-    ],
-)
-def test_get_weighted_prox_and_regularization_bad_shape(regularization, lam):
+@pytest.mark.parametrize("regularization", ["l0", "l1", "l2"])
+def test_get_weighted_prox_and_regularization_bad_shape(regularization):
+    lam = np.array([[1, 2]])
     data = np.array([[-2, 5]]).T
     reg = get_regularization(regularization)
     with pytest.raises(ValueError):

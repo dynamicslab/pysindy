@@ -140,7 +140,7 @@ class _BaseSINDy(BaseEstimator, ABC):
             lhs = f"({name})'"
             print(f"{lhs} = {eqn}", **kwargs)
 
-    def get_feature_names(self):
+    def get_feature_names(self) -> list[str]:
         """
         Get a list of names of features used by SINDy model.
 

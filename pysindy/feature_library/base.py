@@ -112,7 +112,7 @@ class BaseFeatureLibrary(TransformerMixin):
 
     # Force subclasses to implement this
     @abc.abstractmethod
-    def get_feature_names(self, input_features=None):
+    def get_feature_names(self, input_features=None) -> list[str]:
         """Return feature names for output features.
 
         Parameters

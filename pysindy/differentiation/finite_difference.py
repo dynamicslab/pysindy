@@ -109,7 +109,13 @@ class FiniteDifference(BaseDifferentiation):
         matrices = dt_endpoints[:, "power", :] ** pows
         b = AxesArray(np.zeros((1, self.n_stencil)), {"ax_time": 0, "ax_power": 1})
         b[0, self.d] = factorial(self.d)
-        return np.linalg.solve(matrices, b)
+        # as of numpy 2.0:
+        # solve requires that the 'b' matrix has shape (M,) or (..., M, K)
+        # with corresponding output (..., M) or (..., M, K),
+        # so add axis K = 1 then squeeze that axis away
+        # This change also propagates to all other _coefficients functions
+        # and is compatible with numpy 1.*
+        return np.squeeze(np.linalg.solve(matrices, b[..., np.newaxis]), axis=2)
 
     def _coefficients_boundary_forward(self, t):
         # use the same stencil for each boundary point,
@@ -145,7 +151,7 @@ class FiniteDifference(BaseDifferentiation):
 
         b = np.zeros(self.stencil_inds.shape).T
         b[:, self.d] = factorial(self.d)
-        return np.linalg.solve(matrices, b)
+        return np.squeeze(np.linalg.solve(matrices, b[..., np.newaxis]), axis=2)
 
     def _coefficients_boundary_periodic(self, t):
         # use centered periodic stencils
@@ -198,7 +204,7 @@ class FiniteDifference(BaseDifferentiation):
 
         b = np.zeros(self.stencil_inds.shape).T
         b[:, self.d] = factorial(self.d)
-        return np.linalg.solve(matrices, b)
+        return np.squeeze(np.linalg.solve(matrices, b[..., np.newaxis]), axis=2)
 
     def _constant_coefficients(self, dt):
         pows = np.arange(self.n_stencil)[:, np.newaxis]

@@ -1183,12 +1183,14 @@ def test_remove_and_decrement():
     (
         (MIOSR, {"target_sparsity": 7}),
         (SBR, {"num_warmup": 10, "num_samples": 10}),
+        (SR3, {}),
+        (TrappingSR3, {"_n_tgts": 3, "_include_bias": True}),
     ),
 )
 def test_pickle(data_lorenz, opt_cls, opt_args):
     x, t = data_lorenz
     y = PolynomialLibrary(degree=2).fit_transform(x)
-    opt = opt_cls(**opt_args).fit(x, y)
+    opt = opt_cls(**opt_args).fit(y, x)
     expected = opt.coef_
     new_opt = pickle.loads(pickle.dumps(opt))
     result = new_opt.coef_

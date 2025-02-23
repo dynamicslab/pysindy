@@ -811,10 +811,10 @@ def _apply_indexing(
 
 def comprehend_axes(x):
     axes = {}
-    axes["ax_coord"] = len(x.shape) - 1
-    axes["ax_time"] = len(x.shape) - 2
-    if x.ndim > 2:
-        axes["ax_spatial"] = list(range(len(x.shape) - 2))
+    axes["ax_coord"] = len(x if isinstance(x, list) else x.shape) - 1
+    axes["ax_time"] = len(x if isinstance(x, list) else x.shape) - 2
+    if np.array(x).ndim > 2:
+        axes["ax_spatial"] = list(range(len(x if isinstance(x, list) else x.shape) - 2))
     return axes
 
 

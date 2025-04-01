@@ -3,6 +3,21 @@ from itertools import combinations
 import numpy as np
 
 
+def sparse_penalty_fe(Fs, lmbda, num_terms):
+    """
+    Applies a sparse penalty to the given feature matrix.
+
+    Parameters:
+    - Fs (numpy.ndarray): The feature matrix.
+    - lmbda (float): The sparse penalty parameter.
+    - num_terms (int): The number of terms in the penalty.
+
+    Returns:
+    - numpy.ndarray: The feature matrix with the sparse penalty applied.
+    """
+    return Fs + lmbda * num_terms
+
+
 def free_energy(C, V, rho, gamma):
     """
     Calculate the free energy.
@@ -16,17 +31,15 @@ def free_energy(C, V, rho, gamma):
     Returns:
     - float: The calculated free energy.
     """
-    print(V.shape)
     subC = C[gamma][:, gamma]
-    subV = V[gamma]
-    print(subV.shape)
+    subV = V[gamma].reshape(-1, 1)
 
     tempF = (
         -len(gamma) * 0.5 * np.log(2 * np.pi * rho**2)
         + 0.5 * np.linalg.slogdet(subC)[1]
         - 0.5 / rho**2 * (subV.T @ np.linalg.inv(subC) @ subV)
     )
-    return tempF
+    return tempF.reshape(-1)
 
 
 def free_energy_coefs(C, V, rho, num_terms, num_feats, dim):
@@ -52,7 +65,7 @@ def free_energy_coefs(C, V, rho, num_terms, num_feats, dim):
     for i, gamma in enumerate(gammas):
         lgamma = list(gamma)
         Fs[gamma] = free_energy(C, V[:, dim], rho, lgamma)
-        mean_coefs[gamma] = np.linalg.inv(C[lgamma][:, lgamma]) @ V[lgamma, dim]
+        mean_coefs[gamma] = sum(np.linalg.inv(C[lgamma][:, lgamma]) * V[lgamma, dim])
 
     return gammas, Fs, mean_coefs
 
@@ -62,3 +75,47 @@ def get_idx_combinations(list_len, num_terms):
     Returns all possible combinations of length num_terms from a list of length list_len
     """
     return [i for i in combinations(range(list_len), num_terms)]
+
+
+def lowest_n_combs(num_lowest, Fs, feat_names):
+    """
+    Calculate the lowest energies of given number of combinations.
+
+    Parameters:
+
+
+    Returns:
+
+    """
+    myList = sorted(Fs.items())
+    x, y = zip(*myList)
+    y = np.array(y).reshape(-1)
+    lowest_n = np.argsort(y)[:num_lowest]
+
+    Fs_n = []
+    combs_n = []
+    for i in range(num_lowest):
+        a = list(x[lowest_n[i]])
+        c_temp = []
+        for c in a:
+            c_temp.append(feat_names[c])
+        combs_n.append(" ".join(c_temp))
+        Fs_n.append(lowest_n[i])
+
+    lowest_n = np.argsort(y)[:num_lowest]
+    comb_n = []
+    Fs_n = []
+    for i in range(len(lowest_n)):
+        comb_n.append(comb_n[lowest_n[i]])
+        Fs_n.append(lowest_n[i])
+
+    return comb_n, Fs_n
+
+
+def dict_to_lists(Fs, mean_coefs, gammas):
+    Fs_list = []
+    coef_list = []
+    for g in gammas:
+        Fs_list.append(Fs[g])
+        coef_list.append(mean_coefs[g])
+    return Fs_list, coef_list

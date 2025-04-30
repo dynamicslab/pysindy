@@ -65,7 +65,9 @@ def free_energy_coefs(C, V, rho, num_terms, num_feats, dim):
     for i, gamma in enumerate(gammas):
         lgamma = list(gamma)
         Fs[gamma] = free_energy(C, V[:, dim], rho, lgamma)
-        mean_coefs[gamma] = sum(np.linalg.inv(C[lgamma][:, lgamma]) * V[lgamma, dim])
+        mean_coefs[gamma] = np.linalg.inv(C[lgamma][:, lgamma]) @ V[
+            lgamma, dim
+        ].reshape(-1, 1)
 
     return gammas, Fs, mean_coefs
 

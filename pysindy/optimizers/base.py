@@ -351,7 +351,10 @@ class EnsembleOptimizer(BaseOptimizer):
         x = AxesArray(np.asarray(x), {"ax_sample": 0, "ax_coord": 1})
         n_samples = x.shape[x.ax_sample]
         if self.bagging and self.n_subset is None:
-            self.n_subset = int(0.6 * n_samples)
+            if self.replace:
+                self.n_subset = n_samples
+            else:
+                self.n_subset = int(0.6 * n_samples)
         if self.bagging and self.n_subset > n_samples and not self.replace:
             warnings.warn(
                 "n_subset is larger than sample count without replacement; cannot bag."

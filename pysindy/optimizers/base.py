@@ -273,7 +273,11 @@ class EnsembleOptimizer(BaseOptimizer):
         Number of models to generate via ensemble
 
     n_subset : int, optional (default len(time base))
-        Number of time points to use for ensemble
+        Number of time points to use for ensemble.
+        When bagging with replacement (bootstrap), a value equal to the 
+        original number of samples is standard.
+        See: B. Efron (1979), "Bootstrap Methods: Another Look at the 
+        Jackknife", The Annals of Statistics.
 
     n_candidates_to_drop : int, optional (default 1)
         Number of candidate terms in the feature library to drop during

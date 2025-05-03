@@ -5,6 +5,7 @@ from abc import abstractmethod
 from itertools import product
 from typing import Optional
 from typing import Sequence
+from typing import TypeVar
 from typing import Union
 
 import numpy as np
@@ -41,19 +42,36 @@ from .utils import validate_input
 from .utils import validate_no_reshape
 
 
+TrajectoryType = TypeVar("TrajectoryType", list[np.ndarray], np.ndarray)
+
+
 class _BaseSINDy(BaseEstimator, ABC):
 
     feature_library: BaseFeatureLibrary
     optimizer: _BaseOptimizer
     discrete_time: bool
     model: Pipeline
-    feature_names: Optional[list[str]]
     # Hacks to remove later
+    feature_names: Optional[list[str]]
     discrete_time: bool = False
     n_control_features_: int = 0
 
     @abstractmethod
-    def fit(self, x, t, *args, **kwargs) -> Self:
+    def fit(self, x: TrajectoryType, t: TrajectoryType, *args, **kwargs) -> Self:
+        ...
+
+    @abstractmethod
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        ...
+
+    @abstractmethod
+    def simulate(self, x0: np.ndarray, t: np.ndarray) -> np.ndarray:
+        ...
+
+    @abstractmethod
+    def score(
+        self, x: TrajectoryType, t: TrajectoryType, x_dot: TrajectoryType
+    ) -> float:
         ...
 
     def _fit_shape(self):

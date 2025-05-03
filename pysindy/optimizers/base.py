@@ -273,7 +273,11 @@ class EnsembleOptimizer(BaseOptimizer):
         Number of models to generate via ensemble
 
     n_subset : int, optional (default len(time base))
-        Number of time points to use for ensemble
+        Number of time points to use for ensemble.
+        When bagging with replacement (bootstrap), a value equal to the
+        original number of samples is standard.
+        See: B. Efron (1979), "Bootstrap Methods: Another Look at the
+        Jackknife", The Annals of Statistics.
 
     n_candidates_to_drop : int, optional (default 1)
         Number of candidate terms in the feature library to drop during
@@ -351,7 +355,10 @@ class EnsembleOptimizer(BaseOptimizer):
         x = AxesArray(np.asarray(x), {"ax_sample": 0, "ax_coord": 1})
         n_samples = x.shape[x.ax_sample]
         if self.bagging and self.n_subset is None:
-            self.n_subset = int(0.6 * n_samples)
+            if self.replace:
+                self.n_subset = n_samples
+            else:
+                self.n_subset = int(0.6 * n_samples)
         if self.bagging and self.n_subset > n_samples and not self.replace:
             warnings.warn(
                 "n_subset is larger than sample count without replacement; cannot bag."

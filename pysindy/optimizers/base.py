@@ -274,9 +274,9 @@ class EnsembleOptimizer(BaseOptimizer):
 
     n_subset : int, optional (default len(time base))
         Number of time points to use for ensemble.
-        When bagging with replacement (bootstrap), a value equal to the 
+        When bagging with replacement (bootstrap), a value equal to the
         original number of samples is standard.
-        See: B. Efron (1979), "Bootstrap Methods: Another Look at the 
+        See: B. Efron (1979), "Bootstrap Methods: Another Look at the
         Jackknife", The Annals of Statistics.
 
     n_candidates_to_drop : int, optional (default 1)

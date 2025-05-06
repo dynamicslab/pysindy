@@ -173,7 +173,7 @@ class FROLS(BaseOptimizer):
             )
 
         # History of selected functions: [iteration x output x coefficients]
-        self.history_ = np.zeros((n_features, n_targets, n_features), dtype=x.dtype)
+        self.history_ = [np.zeros((n_features, n_targets, n_features), dtype=x.dtype)]
         # Error Reduction Ratio: [iteration x output]
         self.ERR_global = np.zeros((n_features, n_targets))
         for k in range(n_targets):
@@ -223,12 +223,12 @@ class FROLS(BaseOptimizer):
                 coef_k[L[:i]] = alpha
                 coef_k[abs(coef_k) < 1e-10] = 0
 
-                self.history_[i, k, :] = np.copy(coef_k)
+                self.history_[0][i, k, :] = np.copy(coef_k)
 
                 if i >= self.max_iter:
                     break
                 if self.verbose:
-                    coef = self.history_[i, k, :]
+                    coef = self.history_[0][i, k, :]
                     R2 = np.sum((y[:, k] - np.dot(x, coef).T) ** 2)
                     L2 = self.alpha * np.sum(coef**2)
                     L0 = np.count_nonzero(coef)
@@ -250,4 +250,4 @@ class FROLS(BaseOptimizer):
             self.loss_[: self.max_iter + 1, :], axis=0
         )  # Minimum loss for this output function
         for k in range(n_targets):
-            self.coef_[k, :] = self.history_[loss_min[k], k, :]
+            self.coef_[k, :] = self.history_[0][loss_min[k], k, :]

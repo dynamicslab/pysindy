@@ -26,7 +26,6 @@ classifiers = [
 ]
 readme = "README.rst"
 dependencies = [
-    "jax>=0.4,<0.5",
     "scikit-learn>=1.1, !=1.5.0, !=1.6.0",
     "numpy<2.0",
     "derivative>=0.6.2",
@@ -69,7 +68,8 @@ cvxpy = [
 sbr = [
     "numpyro",
     "arviz==0.17.1",
-    "scipy<1.13.0"
+    "scipy<1.13.0",
+    "jax>=0.4,<0.5"
 ]
 
 [tool.black]

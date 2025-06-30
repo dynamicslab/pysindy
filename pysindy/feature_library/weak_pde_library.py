@@ -157,7 +157,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
         self.num_trajectories = 1
         self.differentiation_method = differentiation_method
         self.diff_kwargs = diff_kwargs
-        if function_library is None:
+        self.multiindices = multiindices
+        self.spatiotemporal_grid = spatiotemporal_grid
+        if self.function_library is None:
             self.function_library = PolynomialLibrary(degree=3, include_bias=False)
 
         if spatiotemporal_grid is None:
@@ -177,14 +179,23 @@ class WeakPDELibrary(BaseFeatureLibrary):
                 "in favor of differetiation_method and diff_kwargs.",
                 UserWarning,
             )
+        # Weak form checks and setup
+        self._weak_form_setup()
 
+    def set_params(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+        self._weak_form_setup()
+
+
+    def _weak_form_setup(self):
         # list of integrals
         indices = ()
-        if np.array(spatiotemporal_grid).ndim == 1:
-            spatiotemporal_grid = np.reshape(
-                spatiotemporal_grid, (len(spatiotemporal_grid), 1)
+        if np.array(self.spatiotemporal_grid).ndim == 1:
+            self.spatiotemporal_grid = np.reshape(
+                self.spatiotemporal_grid, (len(self.spatiotemporal_grid), 1)
             )
-        dims = spatiotemporal_grid.shape[:-1]
+        dims = self.spatiotemporal_grid.shape[:-1]
         self.grid_dims = dims
         self.grid_ndim = len(dims)
 
@@ -195,30 +206,25 @@ class WeakPDELibrary(BaseFeatureLibrary):
             self.ind_range = len(dims) - 1
 
         for i in range(self.ind_range):
-            indices = indices + (range(derivative_order + 1),)
+            indices = indices + (range(self.derivative_order + 1),)
 
-        if multiindices is None:
+        if self.multiindices is None:
             multiindices = []
             for ind in iproduct(*indices):
                 current = np.array(ind)
-                if np.sum(ind) > 0 and np.sum(ind) <= derivative_order:
+                if np.sum(ind) > 0 and np.sum(ind) <= self.derivative_order:
                     multiindices.append(current)
-            multiindices = np.array(multiindices)
-        num_derivatives = len(multiindices)
+            self.multiindices = np.array(multiindices)
+        num_derivatives = len(self.multiindices)
         if num_derivatives > 0:
-            self.derivative_order = np.max(multiindices)
+            self.derivative_order = np.max(self.multiindices)
 
         self.num_derivatives = num_derivatives
         self.multiindices = multiindices
 
         self.spatiotemporal_grid = AxesArray(
-            spatiotemporal_grid, axes=comprehend_axes(spatiotemporal_grid)
+            self.spatiotemporal_grid, axes=comprehend_axes(self.spatiotemporal_grid)
         )
-
-        # Weak form checks and setup
-        self._weak_form_setup()
-
-    def _weak_form_setup(self):
         xt1, xt2 = self._get_spatial_endpoints()
         L_xt = xt2 - xt1
         if self.H_xt is not None:

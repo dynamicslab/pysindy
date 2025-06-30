@@ -11,7 +11,7 @@ from typing import Sequence
 import jax
 import numpy as np
 from scipy import sparse
-from sklearn.base import TransformerMixin
+from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -20,7 +20,7 @@ from ..utils import validate_no_reshape
 from ..utils import wrap_axes
 
 
-class BaseFeatureLibrary(TransformerMixin):
+class BaseFeatureLibrary(TransformerMixin, BaseEstimator):
     """
     Base class for feature libraries.
 

@@ -187,7 +187,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
             setattr(self, k, v)
         self._weak_form_setup()
 
-
     def _weak_form_setup(self):
         # list of integrals
         indices = ()

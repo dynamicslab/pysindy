@@ -11,7 +11,8 @@ from typing import Sequence
 import jax
 import numpy as np
 from scipy import sparse
-from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.base import BaseEstimator
+from sklearn.base import TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray

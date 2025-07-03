@@ -183,26 +183,52 @@ def make_3d_plots(x_test, x_test_pred, filename):
 
 
 # Plot the SINDy fits of X and Xdot against the ground truth
-def make_fits(r, t, xdot_test, xdot_test_pred, x_test, x_test_pred, filename):
-    fig = plt.figure(figsize=(16, 8))
+def make_fits(r, t, xdot, xdot_pred, x, x_pred, x_data=None, xdot_data=None):
+    fig = plt.figure(figsize=(16, 12))
     spec = gridspec.GridSpec(ncols=2, nrows=r, figure=fig, hspace=0.0, wspace=0.0)
     for i in range(r):
         plt.subplot(spec[i, 0])  # r, 2, 2 * i + 2)
-        plt.plot(t, xdot_test[:, i], "r", label=r"true $\dot{x}_" + str(i) + "$")
-        plt.plot(t, xdot_test_pred[:, i], "k--", label=r"pred $\dot{x}_" + str(i) + "$")
+        plt.plot(
+            t,
+            xdot[:, i],
+            label=r"true $\dot{x}_" + str(i) + "$",
+            color="red",
+            linewidth=2.5,
+        )
+        if xdot_data is not None:
+            plt.plot(
+                t,
+                xdot_data[:, i],
+                ".",
+                label=r"noisy data $\dot{x}_" + str(i) + "$",
+                color="darkblue",
+                markersize=2,
+            )
+        plt.plot(t, xdot_pred[:, i], "k--", label=r"pred $\dot{x}_" + str(i) + "$")
         ax = plt.gca()
-        ax.set_xticklabels([])
+        # ax.set_xticklabels([])
         ax.set_yticklabels([])
-        plt.legend(fontsize=12)
+        plt.legend(fontsize=12, markerscale=4)
         if i == r - 1:
             plt.xlabel("t", fontsize=18)
         plt.subplot(spec[i, 1])
-        plt.plot(t, x_test[:, i], "r", label=r"true $x_" + str(i) + "$")
-        plt.plot(t, x_test_pred[:, i], "k--", label=r"pred $x_" + str(i) + "$")
+        plt.plot(
+            t, x[:, i], label=r"true $x_" + str(i) + "$", color="red", linewidth=2.5
+        )
+        if x_data is not None:
+            plt.plot(
+                t,
+                x_data[:, i],
+                ".",
+                label=r"noisy data $x_" + str(i) + "$",
+                color="darkblue",
+                markersize=2,
+            )
+        plt.plot(t, x_pred[:, i], "k--", label=r"pred $x_" + str(i) + "$")
         ax = plt.gca()
-        ax.set_xticklabels([])
+        # ax.set_xticklabels([])
         ax.set_yticklabels([])
-        plt.legend(fontsize=12)
+        plt.legend(fontsize=12, markerscale=4)
         if i == r - 1:
             plt.xlabel("t", fontsize=18)
 

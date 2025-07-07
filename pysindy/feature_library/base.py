@@ -8,7 +8,6 @@ from itertools import repeat
 from typing import Optional
 from typing import Sequence
 
-import jax
 import numpy as np
 from scipy import sparse
 from sklearn.base import TransformerMixin
@@ -145,31 +144,32 @@ def x_sequence_or_item(wrapped_func):
     @wraps(wrapped_func)
     def func(self, x, *args, **kwargs):
         if isinstance(x, Sequence):
-            if isinstance(x[0], jax.Array):
-                xs = x
-            else:
+            if isinstance(x[0], np.ndarray):
                 xs = [AxesArray(xi, comprehend_axes(xi)) for xi in x]
+            else:
+                # e.g. jax array
+                xs = x
             result = wrapped_func(self, xs, *args, **kwargs)
             # if transform() is a normal "return x"
             if isinstance(result, Sequence) and isinstance(result[0], np.ndarray):
                 return [AxesArray(xp, comprehend_axes(xp)) for xp in result]
             return result  # e.g. fit() returns self
         else:
-            if isinstance(x, jax.Array):
-
-                def reconstructor(x):
-                    return x
-
-            elif not sparse.issparse(x) and isinstance(x, np.ndarray):
+            if not sparse.issparse(x) and isinstance(x, np.ndarray):
                 x = AxesArray(x, comprehend_axes(x))
 
                 def reconstructor(x):
                     return x
 
-            else:  # sparse
+            elif sparse.issparse(x):
                 reconstructor = type(x)
                 axes = comprehend_axes(x)
                 wrap_axes(axes, x)
+            else:  # e.g. jax array
+
+                def reconstructor(x):
+                    return x
+
             result = wrapped_func(self, [x], *args, **kwargs)
             if isinstance(result, Sequence):  # e.g. transform() returns x
                 return reconstructor(result[0])

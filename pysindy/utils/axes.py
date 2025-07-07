@@ -631,18 +631,26 @@ def linalg_solve(a: AxesArray, b: AxesArray) -> AxesArray:
     result = np.linalg.solve(np.asarray(a), np.asarray(b))
     a_rev = a._ax_map.reverse_map
     a_names = [a_rev[k] for k in sorted(a_rev)]
-    contracted_axis_name = a_names[-1]
     b_rev = b._ax_map.reverse_map
     b_names = [b_rev[k] for k in sorted(b_rev)]
-    match_axes_list = a_names[:-1]
-    start = max(b.ndim - a.ndim, 0)
-    end = start + len(match_axes_list)
-    align = slice(start, end)
-    if match_axes_list != b_names[align]:
+    a_bcast_names = a_names[:-1]
+    a_broadcast_ndim = a.ndim - 1
+    if b.ndim == 1:
+        b_broadcast_ndim = 1
+        b_stack_axis_k = []
+        b_bcast_names = b_names
+        if b_names[0] != a_names[-2]:
+            raise ValueError("Mismatch in operand axis names when aligning A and b")
+    else:
+        b_broadcast_ndim = b.ndim - 1
+        b_stack_axis_k = [b_names[-1]]
+        b_bcast_names = b_names[:-1]
+    if a_bcast_names[-b_broadcast_ndim:] != b_bcast_names[-a_broadcast_ndim:]:
         raise ValueError("Mismatch in operand axis names when aligning A and b")
-    all_names = (
-        b_names[: align.stop - 1] + [contracted_axis_name] + b_names[align.stop :]
+    bcast_names = (
+        a_bcast_names if len(a_bcast_names) > len(b_bcast_names) else b_bcast_names
     )
+    all_names = bcast_names[:-1] + [a_names[-1]] + b_stack_axis_k
     axes = fwd_from_names(all_names)
     return AxesArray(result, axes)
 

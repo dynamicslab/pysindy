@@ -12,12 +12,15 @@ from pysindy.utils.axes import AxesArray
 class FiniteDifference(BaseDifferentiation):
     """Finite difference derivatives.
 
+    Only centered differences are implemented, for even order and
+    left-off-centered differences for odd order. See
+    `wikipedia <https://en.wikipedia.org/wiki/Finite_difference_coefficient>`_
+    for the coefficient formula used.
+
     Parameters
     ----------
     order: int, optional (default 2)
-        The order of the finite difference method to be used.
-        Currently only centered differences are implemented, for even order
-        and left-off-centered differences for odd order.
+        The accuracy big-O exponent of the finite difference method to be used.
 
     d : int, optional (default 1)
         The order of derivative to take.  Must be positive integer.
@@ -42,6 +45,9 @@ class FiniteDifference(BaseDifferentiation):
         with centered differences for periodic=True on the boundaries.
         No effect if drop_endpoints=True
 
+    Attributes:
+        n_stencil: the number of coefficients in the finite difference expression.
+
     Examples
     --------
     >>> import numpy as np
@@ -59,20 +65,20 @@ class FiniteDifference(BaseDifferentiation):
 
     def __init__(
         self,
-        order=2,
+        order: int = 2,
         d: int = 1,
-        axis=0,
-        is_uniform=False,
-        drop_endpoints=False,
-        periodic=False,
+        axis: int = 0,
+        is_uniform: bool = False,
+        drop_endpoints: bool = False,
+        periodic: bool = False,
     ):
         if order <= 0 or not isinstance(order, int):
             raise ValueError("order must be a positive int")
         if d <= 0:
             raise ValueError("differentiation order must be a positive int")
 
-        self.d = int(d)
-        self.order = int(order)
+        self.d = d
+        self.order = order
         self.is_uniform = is_uniform
         self.axis = axis
         self.drop_endpoints = drop_endpoints
@@ -107,8 +113,8 @@ class FiniteDifference(BaseDifferentiation):
             - t[(self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2, "offset"]
         )
         matrices = dt_endpoints[:, "power", :] ** pows
-        b = AxesArray(np.zeros((1, self.n_stencil)), {"ax_time": 0, "ax_power": 1})
-        b[0, self.d] = factorial(self.d)
+        b = AxesArray(np.zeros((self.n_stencil)), {"ax_power": 0})
+        b[self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _coefficients_boundary_forward(self, t):
@@ -143,8 +149,8 @@ class FiniteDifference(BaseDifferentiation):
                 ((t[self.stencil_inds] - t[tinds])[:, np.newaxis, :]) ** pows
             )
 
-        b = np.zeros(self.stencil_inds.shape).T
-        b[:, self.d] = factorial(self.d)
+        b = np.zeros((self.n_stencil_forward,))
+        b[self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _coefficients_boundary_periodic(self, t):
@@ -196,8 +202,8 @@ class FiniteDifference(BaseDifferentiation):
                 ** pows
             )
 
-        b = np.zeros(self.stencil_inds.shape).T
-        b[:, self.d] = factorial(self.d)
+        b = np.zeros(self.n_stencil)
+        b[self.d] = factorial(self.d)
         return np.linalg.solve(matrices, b)
 
     def _constant_coefficients(self, dt):

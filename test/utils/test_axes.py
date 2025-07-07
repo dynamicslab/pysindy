@@ -543,10 +543,10 @@ def test_transpose():
 def test_linalg_solve_align_left():
     axesA = {"ax_prob": 0, "ax_sample": 1, "ax_coord": 2}
     arrA = AxesArray(np.arange(8).reshape(2, 2, 2), axesA)
-    axesb = {"ax_prob": 0, "ax_sample": 1}
+    axesb = {"ax_sample": 0, "ax_feat": 1}
     arrb = AxesArray(np.arange(4).reshape(2, 2), axesb)
     result = np.linalg.solve(arrA, arrb)
-    expected_axes = {"ax_prob": 0, "ax_coord": 1}
+    expected_axes = {"ax_prob": 0, "ax_coord": 1, "ax_feat": 2}
     assert result.axes == expected_axes
     super_result = np.linalg.solve(np.asarray(arrA), np.asarray(arrb))
     assert_array_equal(result, super_result)

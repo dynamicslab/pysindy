@@ -10,6 +10,7 @@ from typing import Sequence
 
 import numpy as np
 from scipy import sparse
+from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
@@ -19,13 +20,16 @@ from ..utils import validate_no_reshape
 from ..utils import wrap_axes
 
 
-class BaseFeatureLibrary(TransformerMixin):
+class BaseFeatureLibrary(TransformerMixin, BaseEstimator):
     """
     Base class for feature libraries.
 
     Forces subclasses to implement ``fit``, ``transform``,
     and ``get_feature_names`` methods.
     """
+
+    n_features_in_: int
+    n_output_features_: int
 
     def validate_input(self, x, *args, **kwargs):
         return validate_no_reshape(x, *args, **kwargs)
@@ -108,7 +112,7 @@ class BaseFeatureLibrary(TransformerMixin):
 
     # Force subclasses to implement this
     @abc.abstractmethod
-    def get_feature_names(self, input_features=None):
+    def get_feature_names(self, input_features=None) -> list[str]:
         """Return feature names for output features.
 
         Parameters

@@ -3,9 +3,9 @@ import warnings
 from abc import ABC
 from abc import abstractmethod
 from itertools import product
-from typing import Collection
 from typing import Optional
 from typing import Sequence
+from typing import TypeVar
 from typing import Union
 
 import numpy as np
@@ -42,19 +42,36 @@ from .utils import validate_input
 from .utils import validate_no_reshape
 
 
+TrajectoryType = TypeVar("TrajectoryType", list[np.ndarray], np.ndarray)
+
+
 class _BaseSINDy(BaseEstimator, ABC):
 
     feature_library: BaseFeatureLibrary
     optimizer: _BaseOptimizer
     discrete_time: bool
     model: Pipeline
-    feature_names: Optional[list[str]]
     # Hacks to remove later
+    feature_names: Optional[list[str]]
     discrete_time: bool = False
     n_control_features_: int = 0
 
     @abstractmethod
-    def fit(self, x, t, *args, **kwargs) -> Self:
+    def fit(self, x: TrajectoryType, t: TrajectoryType, *args, **kwargs) -> Self:
+        ...
+
+    @abstractmethod
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        ...
+
+    @abstractmethod
+    def simulate(self, x0: np.ndarray, t: np.ndarray) -> np.ndarray:
+        ...
+
+    @abstractmethod
+    def score(
+        self, x: TrajectoryType, t: TrajectoryType, x_dot: TrajectoryType
+    ) -> float:
         ...
 
     def _fit_shape(self):
@@ -68,6 +85,19 @@ class _BaseSINDy(BaseEstimator, ABC):
             for i in range(self.n_control_features_):
                 feature_names.append("u" + str(i))
             self.feature_names = feature_names
+
+    def coefficients(self):
+        """
+        Get an array of the coefficients learned by SINDy model.
+
+        Returns
+        -------
+        coef: np.ndarray, shape (n_input_features, n_output_features)
+            Learned coefficients of the SINDy model.
+            Equivalent to :math:`\\Xi^\\top` in the literature.
+        """
+        check_is_fitted(self)
+        return self.optimizer.coef_
 
     def equations(self, precision: int = 3) -> list[str]:
         """
@@ -128,7 +158,7 @@ class _BaseSINDy(BaseEstimator, ABC):
             lhs = f"({name})'"
             print(f"{lhs} = {eqn}", **kwargs)
 
-    def get_feature_names(self):
+    def get_feature_names(self) -> list[str]:
         """
         Get a list of names of features used by SINDy model.
 
@@ -609,19 +639,6 @@ class SINDy(_BaseSINDy):
             return result[0]
         return result
 
-    def coefficients(self):
-        """
-        Get an array of the coefficients learned by SINDy model.
-
-        Returns
-        -------
-        coef: np.ndarray, shape (n_input_features, n_output_features)
-            Learned coefficients of the SINDy model.
-            Equivalent to :math:`\\Xi^\\top` in the literature.
-        """
-        check_is_fitted(self, "model")
-        return self.optimizer.coef_
-
     def simulate(
         self,
         x0,
@@ -792,7 +809,10 @@ class SINDy(_BaseSINDy):
 
 
 def _zip_like_sequence(x, t):
-    """Create an iterable like zip(x, t), but works if t is scalar."""
+    """Create an iterable like zip(x, t), but works if t is scalar.
+
+    If t is an array, it is repeated for each x
+    """
     if isinstance(t, Sequence):
         return zip(x, t)
     else:
@@ -870,7 +890,8 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u) -> tuple:
         Tuple of updated x, t, x_dot, u
     """
     x = [x]
-    if isinstance(t, Collection):
+    # if t is not a dt
+    if not isinstance(t, np.ScalarType):
         t = [t]
     if x_dot is not None:
         x_dot = [x_dot]

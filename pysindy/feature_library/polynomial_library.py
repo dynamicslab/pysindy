@@ -17,7 +17,7 @@ from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
 
 
-class PolynomialLibrary(PolynomialFeatures, BaseFeatureLibrary):
+class PolynomialLibrary(BaseFeatureLibrary, PolynomialFeatures):
     """Generate polynomial and interaction features.
 
     This is the same as :code:`sklearn.preprocessing.PolynomialFeatures`,

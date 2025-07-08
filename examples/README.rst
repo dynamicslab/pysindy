@@ -190,6 +190,15 @@ Demonstrates the use of SINDyCP for discovery of parameterized pattern formation
 
     ./17_parameterized_pattern_formation/example
 
+
+.. pysindy-example::
+    :key: sbr
+    :title: Post-analysis of Bayesian SINDy
+
+    Demonstrates using Arviz to analyze the results of Bayesian SINDy.
+
+
+
 `All examples including examples under development`_
 ----------------------------------------------------------------------------------------------
 

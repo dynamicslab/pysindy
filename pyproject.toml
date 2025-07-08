@@ -29,6 +29,7 @@ dependencies = [
     "scikit-learn>=1.1, !=1.5.0, !=1.6.0",
     "numpy>=2.0",
     "derivative>=0.6.2",
+    "scipy",
     "typing_extensions",
 ]
 
@@ -62,14 +63,12 @@ miosr = [
     "gurobipy>=9.5.1,!=10.0.0"
 ]
 cvxpy = [
-    "cvxpy<1.5",
+    "cvxpy>=1.5",
     "scs>=2.1, !=2.1.4"
 ]
 sbr = [
     "numpyro",
-    "arviz==0.17.1",
-    "scipy<1.13.0",
-    "jax>=0.4,<0.5"
+    "jax"
 ]
 
 [tool.black]

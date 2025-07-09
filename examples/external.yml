@@ -4,6 +4,12 @@
   ref: "e68efeb"
   dir: "examples"
 
+- name: "stable_linear_sr3"
+  user: "dynamicslab"
+  repo: "sindy-addl-examples"
+  ref: "018b17d"
+  dir: "examples"
+
 - name: "sbr"
   user: "dynamicslab"
   repo: "sindy-addl-examples"

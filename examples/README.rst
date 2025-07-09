@@ -192,6 +192,14 @@ Demonstrates the use of SINDyCP for discovery of parameterized pattern formation
 
 
 .. pysindy-example::
+    :key: stable_linear_sr3
+    :title: Discovering stable linear models: ``StabilizedLinearSR3``
+
+    While trapping SINDy handles a more complex type of stability (Lyapunov) for
+    nonlinear dynamics, the linear case is simpler.  Here are several demonstrations
+    of the ``StabilizedLinearSR3`` optimizer for POD and state-space models.
+
+.. pysindy-example::
     :key: sbr
     :title: Post-analysis of Bayesian SINDy
 

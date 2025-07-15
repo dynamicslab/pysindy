@@ -169,9 +169,6 @@ class SINDy(_BaseSINDy):
         Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
         ``['x0', 'x1', ...]``.
 
-    t_default : float, optional (default 1)
-        Default value for the time step.
-
     discrete_time : boolean, optional (default False)
         If True, dynamical system is treated as a map. Rather than predicting
         derivatives, the right hand side functions step the system forward by
@@ -261,7 +258,6 @@ class SINDy(_BaseSINDy):
         feature_library: Optional[BaseFeatureLibrary] = None,
         differentiation_method: Optional[BaseDifferentiation] = None,
         feature_names: Optional[list[str]] = None,
-        t_default: float = 1,
         discrete_time: bool = False,
     ):
         if optimizer is None:
@@ -273,19 +269,13 @@ class SINDy(_BaseSINDy):
         if differentiation_method is None:
             differentiation_method = FiniteDifference(axis=-2)
         self.differentiation_method = differentiation_method
-        if not isinstance(t_default, float) and not isinstance(t_default, int):
-            raise ValueError("t_default must be a positive number")
-        elif t_default <= 0:
-            raise ValueError("t_default must be a positive number")
-        else:
-            self.t_default = t_default
         self.feature_names = feature_names
         self.discrete_time = discrete_time
 
     def fit(
         self,
         x,
-        t=None,
+        t,
         x_dot=None,
         u=None,
     ):
@@ -299,8 +289,7 @@ class SINDy(_BaseSINDy):
             x should be a list containing data for each trajectory. Individual
             trajectories may contain different numbers of samples.
 
-        t: float, numpy array of shape (n_samples,), or list of numpy arrays, optional \
-                (default None)
+        t: float, numpy array of shape (n_samples,), or list of numpy arrays
             If t is a float, it specifies the timestep between each sample.
             If array-like, it specifies the time at which each sample was
             collected.
@@ -308,7 +297,6 @@ class SINDy(_BaseSINDy):
             In the case of multi-trajectory training data, t may also be a list
             of arrays containing the collection times for each individual
             trajectory.
-            If None, the default time step ``t_default`` will be used.
 
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
                 optional (default None)
@@ -331,9 +319,6 @@ class SINDy(_BaseSINDy):
         -------
         self: a fitted :class:`SINDy` instance
         """
-
-        if t is None:
-            t = self.t_default
 
         if not _check_multiple_trajectories(x, x_dot, u):
             x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
@@ -452,7 +437,7 @@ class SINDy(_BaseSINDy):
                 names = f"{lhs[i]}"
             print(f"{names} = {eqn}", **kwargs)
 
-    def score(self, x, t=None, x_dot=None, u=None, metric=r2_score, **metric_kws):
+    def score(self, x, t, x_dot=None, u=None, metric=r2_score, **metric_kws):
         """
         Returns a score for the time derivative prediction produced by the model.
 
@@ -461,12 +446,10 @@ class SINDy(_BaseSINDy):
         x: array-like or list of array-like, shape (n_samples, n_input_features)
             Samples from which to make predictions.
 
-        t: float, numpy array of shape (n_samples,), or list of numpy arrays, optional \
-                (default None)
+        t: float, numpy array of shape (n_samples,), or list of numpy arrays
             Time step between samples or array of collection times. Optional,
             used to compute the time derivatives of the samples if x_dot is not
             provided.
-            If None, the default time step ``t_default`` will be used.
 
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features), \
                 optional (default None)
@@ -496,9 +479,6 @@ class SINDy(_BaseSINDy):
         score: float
             Metric function value for the model prediction of x_dot.
         """
-
-        if t is None:
-            t = self.t_default
 
         if not _check_multiple_trajectories(x, x_dot, u):
             x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
@@ -580,7 +560,6 @@ class SINDy(_BaseSINDy):
         t: int, numpy array of shape (n_samples,), or list of numpy arrays, optional \
                 (default None)
             Time step between samples or array of collection times.
-            If None, the default time step ``t_default`` will be used.
 
         Returns
         -------
@@ -593,7 +572,7 @@ class SINDy(_BaseSINDy):
             "Call the differentiation_method parameter"
         )
         if t is None:
-            t = self.t_default
+            t = 1
         if self.discrete_time:
             raise RuntimeError("No differentiation implemented for discrete time model")
         if not _check_multiple_trajectories(x, None, None):

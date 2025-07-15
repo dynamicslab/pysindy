@@ -172,7 +172,7 @@ class FROLS(BaseOptimizer):
                 " as the loss function being minimized by FROLS!"
             )
 
-        # History of selected functions as a list of [output x coefficients] 
+        # History of selected functions as a list of [output x coefficients]
         # with a length of number of iterations
         self.history_ = []
         # Error Reduction Ratio: [iteration x output]

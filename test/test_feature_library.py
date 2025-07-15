@@ -643,22 +643,22 @@ def test_parameterized_library(diffuse_multiple_trajectories):
 
 
 # Helper function for testing PDE libraries
-def pde_library_helper(library, u):
+def pde_library_helper(library, u, t):
     base_opt = STLSQ(normalize_columns=True, alpha=1e-10, threshold=0)
     model = SINDy(optimizer=base_opt, feature_library=library)
-    model.fit(u)
+    model.fit(u, t)
     assert np.any(base_opt.coef_ != 0.0)
 
 
 def test_1D_pdes(data_1d_random_pde):
-    _, spatial_grid, u, _ = data_1d_random_pde
+    t, spatial_grid, u, _ = data_1d_random_pde
     pde_lib = PDELibrary(
         function_library=PolynomialLibrary(degree=2, include_bias=False),
         derivative_order=4,
         spatial_grid=spatial_grid,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u)
+    pde_library_helper(pde_lib, u, t)
 
 
 def test_1D_weak_pdes():
@@ -676,7 +676,7 @@ def test_1D_weak_pdes():
         H_xt=2,
         include_bias=True,
     )
-    pde_library_helper(pde_lib, u)
+    pde_library_helper(pde_lib, u, t)
 
 
 def test_sindypi_library(data_lorenz):

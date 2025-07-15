@@ -98,11 +98,6 @@ def test_mixed_inputs(data):
     model.fit(x, t=2)
     check_is_fitted(model)
 
-    # x_dot is passed in
-    model = SINDy()
-    model.fit(x, x_dot=x)
-    check_is_fitted(model)
-
     model = SINDy()
     model.fit(x, t, x_dot=x)
     check_is_fitted(model)
@@ -142,31 +137,6 @@ def test_bad_t(data):
     t_new[3] = t_new[5]
     with pytest.raises(ValueError):
         model.fit(x, t_new)
-
-
-@pytest.mark.parametrize(
-    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
-)
-def test_t_default(data):
-    x, t = data
-    dt = t[1] - t[0]
-
-    with pytest.raises(ValueError):
-        model = SINDy(t_default=0)
-    with pytest.raises(ValueError):
-        model = SINDy(t_default="1")
-
-    model = SINDy()
-    model.fit(x, dt)
-
-    model_t_default = SINDy(t_default=dt)
-    model_t_default.fit(x)
-
-    np.testing.assert_allclose(model.coefficients(), model_t_default.coefficients())
-    np.testing.assert_almost_equal(model.score(x, t=dt), model_t_default.score(x))
-    np.testing.assert_almost_equal(
-        model.differentiate(x, t=dt), model_t_default.differentiate(x)
-    )
 
 
 @pytest.mark.parametrize(
@@ -281,11 +251,7 @@ def test_score(data):
     model = SINDy()
     model.fit(x, t)
 
-    assert model.score(x) <= 1
-
     assert model.score(x, t) <= 1
-
-    assert model.score(x, x_dot=x) <= 1
 
     assert model.score(x, t, x_dot=x) <= 1
 
@@ -303,11 +269,7 @@ def test_score_pde(data_1d_random_pde):
         t,
     )
 
-    assert model.score(u) <= 1
-
     assert model.score(u, t) <= 1
-
-    assert model.score(u, x_dot=u) <= 1
 
     assert model.score(u, t, x_dot=u) <= 1
 
@@ -324,8 +286,6 @@ def test_score_pde(data_1d_random_pde):
         t=t,
     )
 
-    assert model.score(u) <= 1
-
     assert model.score(u, t) <= 1
 
 
@@ -333,15 +293,9 @@ def test_fit_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
     model = SINDy()
 
-    model.fit(x)
-    check_is_fitted(model)
-
     model.fit(x, t=t)
-    assert model.score(x, t=t) > 0.8
-
-    model = SINDy()
-    model.fit(x, x_dot=x)
     check_is_fitted(model)
+    assert model.score(x, t=t) > 0.8
 
     model = SINDy()
     model.fit(x, t=t, x_dot=x)
@@ -367,13 +321,7 @@ def test_score_multiple_trajectories(data_multiple_trajectories):
     model = SINDy()
     model.fit(x, t=t)
 
-    s = model.score(x)
-    assert s <= 1
-
     s = model.score(x, t=t)
-    assert s <= 1
-
-    s = model.score(x, x_dot=x)
     assert s <= 1
 
     s = model.score(x, t=t, x_dot=x)
@@ -384,18 +332,18 @@ def test_fit_discrete_time(data_discrete_time):
     x = data_discrete_time
 
     model = SINDy(discrete_time=True)
-    model.fit(x)
+    model.fit(x, t=1)
     check_is_fitted(model)
 
     model = SINDy(discrete_time=True)
-    model.fit(x[:-1], x_dot=x[1:])
+    model.fit(x[:-1], x_dot=x[1:], t=1)
     check_is_fitted(model)
 
 
 def test_simulate_discrete_time(data_discrete_time):
     x = data_discrete_time
     model = SINDy(discrete_time=True)
-    model.fit(x)
+    model.fit(x, t=1)
     n_steps = x.shape[0]
     x1 = model.simulate(x[0], n_steps)
 
@@ -412,16 +360,16 @@ def test_simulate_discrete_time(data_discrete_time):
 def test_predict_discrete_time(data_discrete_time):
     x = data_discrete_time
     model = SINDy(discrete_time=True)
-    model.fit(x)
+    model.fit(x, t=1)
     assert len(model.predict(x)) == len(x)
 
 
 def test_score_discrete_time(data_discrete_time):
     x = data_discrete_time
     model = SINDy(discrete_time=True)
-    model.fit(x)
-    assert model.score(x) > 0.75
-    assert model.score(x, x_dot=x) < 1
+    model.fit(x, t=1)
+    assert model.score(x, t=1) > 0.75
+    assert model.score(x, x_dot=x, t=1) < 1
 
 
 def test_bad_multiple_trajectories(data_multiple_trajectories):
@@ -437,11 +385,11 @@ def test_fit_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
-    model.fit(x)
+    model.fit(x, t=1)
     check_is_fitted(model)
 
     model = SINDy(discrete_time=True)
-    model.fit(x, x_dot=x)
+    model.fit(x, x_dot=x, t=1)
     check_is_fitted(model)
 
 
@@ -450,7 +398,7 @@ def test_predict_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
-    model.fit(x)
+    model.fit(x, t=1)
 
     y = model.predict(x)
     assert len(y) == len(x)
@@ -461,13 +409,13 @@ def test_score_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = SINDy(discrete_time=True)
-    model.fit(x)
+    model.fit(x, t=1)
 
-    s = model.score(x)
+    s = model.score(x, t=1)
     assert s > 0.75
 
     # x is not its own derivative, so we expect bad performance here
-    s = model.score(x, x_dot=x)
+    s = model.score(x, x_dot=x, t=1)
     assert s < 1
 
 
@@ -498,7 +446,7 @@ def test_equations(data, capsys):
 def test_print_discrete_time(data_discrete_time, capsys):
     x = data_discrete_time
     model = SINDy(discrete_time=True)
-    model.fit(x)
+    model.fit(x, t=1)
     model.print()
 
     out, _ = capsys.readouterr()
@@ -518,7 +466,7 @@ def test_differentiate(data_lorenz, data_multiple_trajectories):
 
     model = SINDy(discrete_time=True)
     with pytest.raises(RuntimeError):
-        model.differentiate(x)
+        model.differentiate(x, t)
 
 
 def test_coefficients_equals_complexity(data_lorenz):
@@ -565,11 +513,8 @@ def test_fit_warn(data_lorenz, params, warning):
 
 def test_cross_validation(data_lorenz):
     x, t = data_lorenz
-    dt = t[1] - t[0]
 
-    model = SINDy(
-        t_default=dt, differentiation_method=SINDyDerivative(kind="spline", s=1e-2)
-    )
+    model = SINDy(differentiation_method=SINDyDerivative(kind="spline", s=1e-2))
 
     param_grid = {
         "optimizer__threshold": [0.01, 0.1],
@@ -583,7 +528,7 @@ def test_cross_validation(data_lorenz):
     search = RandomizedSearchCV(
         model, param_grid, cv=TimeSeriesSplit(n_splits=3), n_iter=5
     )
-    search.fit(x)
+    search.fit(x, t=t)
     check_is_fitted(search)
 
 
@@ -615,15 +560,16 @@ def test_data_shapes():
     model = SINDy()
     n = 10
     x = np.ones(n)
-    model.fit(x)
+    t = 1
+    model.fit(x, t)
     x = np.ones((n, 2))
-    model.fit(x)
+    model.fit(x, t)
     x = np.ones((n, n, 2))
-    model.fit(x)
+    model.fit(x, t)
     x = np.ones((n, n, n, 2))
-    model.fit(x)
+    model.fit(x, t)
     x = np.ones((n, n, n, n, 2))
-    model.fit(x)
+    model.fit(x, t)
 
 
 def test_diffusion_pde(diffuse_multiple_trajectories):

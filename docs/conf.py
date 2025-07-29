@@ -229,7 +229,7 @@ def fetch_notebook_list(base: str) -> list[tuple[str, str]]:
     """
     index = requests.get(base + "index.rst")
     if index.status_code != 200:
-        raise RuntimeError("Unable to locate external example directory")
+        raise RuntimeError(f"Unable to locate external example directory for {base}")
     text = str(index.content, encoding="utf-8")
     link_line = r"^\s+(.*)[^\S\r\n]+(\S+.ipynb)"
     T = TypeVar("T")

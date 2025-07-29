@@ -36,9 +36,6 @@ class SINDyEstimator(SINDy):
         Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
         ``['x0', 'x1', ...]``.
 
-    t_default : float, optional (default 1)
-        Default value for the time step.
-
     discrete_time : boolean, optional (default False)
         If True, dynamical system is treated as a map. Rather than predicting
         derivatives, the right hand side functions step the system forward by
@@ -65,7 +62,6 @@ class SINDyEstimator(SINDy):
         feature_library=None,
         differentiation_method=None,
         feature_names=None,
-        t_default=1,
         discrete_time=False,
     ):
         super(SINDyEstimator, self).__init__(
@@ -73,7 +69,6 @@ class SINDyEstimator(SINDy):
             feature_library=feature_library,
             differentiation_method=differentiation_method,
             feature_names=feature_names,
-            t_default=t_default,
             discrete_time=discrete_time,
         )
         self._model = None
@@ -102,7 +97,6 @@ class SINDyEstimator(SINDy):
             feature_library=self.model.steps[0][1],
             optimizer=self.model.steps[-1][1],
             feature_names=self.feature_names,
-            t_default=self.t_default,
             discrete_time=self.discrete_time,
             n_control_features_=self.n_control_features_,
         )
@@ -166,9 +160,6 @@ class SINDyModel(SINDy):
         Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
         ``['x0', 'x1', ...]``.
 
-    t_default : float, optional (default 1)
-        Default value for the time step.
-
     discrete_time : boolean, optional (default False)
         If True, dynamical system is treated as a map. Rather than predicting
         derivatives, the right hand side functions step the system forward by
@@ -193,7 +184,6 @@ class SINDyModel(SINDy):
         feature_library,
         optimizer,
         feature_names=None,
-        t_default=1,
         discrete_time=False,
         n_control_features_=0,
     ):
@@ -201,7 +191,6 @@ class SINDyModel(SINDy):
             feature_library=feature_library,
             optimizer=optimizer,
             feature_names=feature_names,
-            t_default=t_default,
             discrete_time=discrete_time,
         )
         self.n_control_features_ = n_control_features_

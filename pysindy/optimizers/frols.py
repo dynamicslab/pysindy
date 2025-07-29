@@ -172,27 +172,39 @@ class FROLS(BaseOptimizer):
                 " as the loss function being minimized by FROLS!"
             )
 
-        # History of selected functions: [iteration x output x coefficients]
-        self.history_ = np.zeros((n_features, n_targets, n_features), dtype=x.dtype)
+        # History of selected functions as a list of [output x coefficients]
+        # with a length of number of iterations
+        self.history_ = []
         # Error Reduction Ratio: [iteration x output]
         self.ERR_global = np.zeros((n_features, n_targets))
-        for k in range(n_targets):
-            # Initialize arrays
-            g_global = np.zeros(
-                n_features, dtype=x.dtype
-            )  # Coefficients for selected (orthogonal) functions
-            L = np.zeros(
-                n_features, dtype=int
-            )  # Order of selection, i.e. L[0] is the first, L[1] second...
-            A = np.zeros(
-                (n_features, n_features), dtype=x.dtype
-            )  # Used for inversion to original function set (A @ coef = g)
+        # Initialize arrays
+        g_global_full = np.zeros(
+            (n_targets, n_features), dtype=x.dtype
+        )  # Coefficients for selected (orthogonal) functions
+        L_full = np.zeros(
+            (n_targets, n_features), dtype=int
+        )  # Order of selection, i.e. L[0] is the first, L[1] second...
+        A_full = np.zeros(
+            (n_targets, n_features, n_features), dtype=x.dtype
+        )  # Used for inversion to original function set (A @ coef = g)
+        # Orthogonal function libraries
+        Q_full = np.zeros(
+            (n_targets, *x.shape), dtype=x.dtype
+        )  # Global library (built over time)
+        Qs_full = np.zeros(
+            (n_targets, *x.shape), dtype=x.dtype
+        )  # Same, but for each step
+        for i in range(n_features):
+            coef_i = np.zeros((n_targets, n_features), dtype=x.dtype)
 
-            # Orthogonal function libraries
-            Q = np.zeros_like(x)  # Global library (built over time)
-            Qs = np.zeros_like(x)  # Same, but for each step
-            sigma = np.real(np.vdot(y[:, k], y[:, k]))  # Variance of the signal
-            for i in range(n_features):
+            for k in range(n_targets):
+                g_global = g_global_full[k]
+                L = L_full[k]
+                A = A_full[k]
+                Q = Q_full[k]
+                Qs = Qs_full[k]
+                sigma = np.real(np.vdot(y[:, k], y[:, k]))  # Variance of the signal
+
                 for m in range(n_features):
                     if m not in L[:i]:
                         # Orthogonalize with respect to already selected functions
@@ -222,13 +234,10 @@ class FROLS(BaseOptimizer):
                 coef_k = np.zeros_like(g_global)
                 coef_k[L[:i]] = alpha
                 coef_k[abs(coef_k) < 1e-10] = 0
+                coef_i[k, :] = coef_k
 
-                self.history_[i, k, :] = np.copy(coef_k)
-
-                if i >= self.max_iter:
-                    break
                 if self.verbose:
-                    coef = self.history_[i, k, :]
+                    coef = coef_i[k, :]
                     R2 = np.sum((y[:, k] - np.dot(x, coef).T) ** 2)
                     L2 = self.alpha * np.sum(coef**2)
                     L0 = np.count_nonzero(coef)
@@ -237,6 +246,9 @@ class FROLS(BaseOptimizer):
                         "{0:10d} ... {1:5d} ... {2:10.4e} ... {3:10.4e}"
                         " ... {4:5d} ... {5:10.4e} ... {6:10.4e}".format(*row)
                     )
+            self.history_.append(coef_i)
+            if i >= self.max_iter:
+                break
 
         # Function selection: L2 error for output k at iteration i is given by
         # sum(ERR_global[k, :i]), and the number of nonzero coefficients is (i+1)
@@ -250,4 +262,4 @@ class FROLS(BaseOptimizer):
             self.loss_[: self.max_iter + 1, :], axis=0
         )  # Minimum loss for this output function
         for k in range(n_targets):
-            self.coef_[k, :] = self.history_[loss_min[k], k, :]
+            self.coef_[k, :] = self.history_[loss_min[k]][k, :]

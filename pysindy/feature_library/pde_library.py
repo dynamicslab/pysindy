@@ -279,8 +279,14 @@ class PDELibrary(BaseFeatureLibrary):
 
         # Select a subset of the feature_names
         if self.feature_indices is not None:
-            if max(self.feature_indices) >= len(feature_names) or min(self.feature_indices) < 0:
-                raise ValueError(f"feature_indices {self.feature_indices} is out of range [0, {len(feature_names)})")
+            if (
+                max(self.feature_indices) >= len(feature_names)
+                or min(self.feature_indices) < 0
+            ):
+                raise ValueError(
+                    f"feature_indices {self.feature_indices} is "
+                    f"out of range [0, {len(feature_names)})"
+                )
             feature_names = [feature_names[i] for i in self.feature_indices]
 
         return feature_names
@@ -412,8 +418,14 @@ class PDELibrary(BaseFeatureLibrary):
                 library_idx += n_library_terms * self.num_derivatives * n_features
             xp = AxesArray(xp, comprehend_axes(xp))
             if self.feature_indices is not None:
-                if max(self.feature_indices) >= len(xp.shape[-1]) or min(self.feature_indices) < 0:
-                    raise ValueError(f"feature_indices {self.feature_indices} is out of range [0, {xp.shape[-1]})")
+                if (
+                    max(self.feature_indices) >= xp.shape[-1]
+                    or min(self.feature_indices) < 0
+                ):
+                    raise ValueError(
+                        f"feature_indices {self.feature_indices} is "
+                        f"out of range [0, {xp.shape[-1]})"
+                    )
                 xp = xp[..., self.feature_indices]
             xp_full.append(xp)
         return xp_full

@@ -91,7 +91,7 @@ class PolynomialLibrary(BaseFeatureLibrary, PolynomialFeatures):
         (), (0,), (1,), (0, 0), (0, 1), (1, 1)
         1    x     y      x^2     x*y     y^2
 
-        Order of terms is preserved regardless of include_interation.
+        Order of terms is preserved regardless of include_interaction.
         """
         if not include_interaction:
             return chain(
@@ -260,7 +260,7 @@ def n_poly_features(
     n_in_feat: int,
     degree: int,
     include_bias: bool = False,
-    include_interation: bool = True,
+    include_interaction: bool = True,
     interaction_only: bool = False,
 ) -> int:
     """Calculate number of polynomial features
@@ -272,10 +272,10 @@ def n_poly_features(
         include_interaction: whether to include terms mixing multiple inputs
         interaction_only: whether to omit terms of x_m * x_n^p for p > 1
     """
-    if not include_interation and interaction_only:
+    if not include_interaction and interaction_only:
         raise ValueError("Cannot set interaction only if include_interaction is False")
     n_feat = include_bias
-    if not include_interation:
+    if not include_interaction:
         return n_feat + n_in_feat * degree
     for deg in range(1, degree + 1):
         if interaction_only:

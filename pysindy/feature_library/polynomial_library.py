@@ -84,7 +84,7 @@ class PolynomialLibrary(BaseFeatureLibrary, PolynomialFeatures):
         include_bias: bool,
     ) -> Iterator[Tuple[int, ...]]:
         """
-        Create selection tuples of input indexes for each polynomail term
+        Create selection tuples of input indexes for each polynomial term
 
         Selection tuple iterates the input indexes present in a single term.
         For example, (x+y+1)^2 would be in iterator of the tuples:

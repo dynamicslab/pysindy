@@ -46,6 +46,23 @@ class PDELibrary(BaseFeatureLibrary):
         will consist of only pure no-derivative terms and pure derivative
         terms, with no mixed terms.
 
+    feature_indices: list of integers, (default None)
+        Selects a subset of the feature_names for the library.
+
+        ex. if input_features is ['u']
+               lib_names is [u, u^3]
+               multiindices is [[3]]
+               feature_indices is [1, 3]
+
+               then, typically we get:
+
+               derivative_feature_names is [u_xxx]
+               feature_names is [u, u^3, u_xxx, u*u_xxx, u^3*u_xxx]
+
+               but then we select a subset of the feature_names:
+
+               feature_names is [u^3, u*u_xxx]
+
     implicit_terms : boolean
         Flag to indicate if SINDy-PI (temporal derivatives) is being used
         for the right-hand side of the SINDy fit.
@@ -87,6 +104,7 @@ class PDELibrary(BaseFeatureLibrary):
         include_interaction=True,
         implicit_terms=False,
         multiindices=None,
+        feature_indices=None,
         differentiation_method=FiniteDifference,
         diff_kwargs={},
         is_uniform=None,
@@ -97,6 +115,7 @@ class PDELibrary(BaseFeatureLibrary):
         self.implicit_terms = implicit_terms
         self.include_bias = include_bias
         self.include_interaction = include_interaction
+        self.feature_indices = feature_indices
         self.num_trajectories = 1
         self.differentiation_method = differentiation_method
         self.diff_kwargs = diff_kwargs
@@ -258,6 +277,12 @@ class PDELibrary(BaseFeatureLibrary):
                 .tolist()
             )
 
+        # Select a subset of the feature_names
+        if self.feature_indices is not None:
+            if max(self.feature_indices) >= len(feature_names) or min(self.feature_indices) < 0:
+                raise ValueError(f"feature_indices {self.feature_indices} is out of range [0, {len(feature_names)})")
+            feature_names = [feature_names[i] for i in self.feature_indices]
+
         return feature_names
 
     @x_sequence_or_item
@@ -386,6 +411,10 @@ class PDELibrary(BaseFeatureLibrary):
                 )
                 library_idx += n_library_terms * self.num_derivatives * n_features
             xp = AxesArray(xp, comprehend_axes(xp))
+            if self.feature_indices is not None:
+                if max(self.feature_indices) >= len(xp.shape[-1]) or min(self.feature_indices) < 0:
+                    raise ValueError(f"feature_indices {self.feature_indices} is out of range [0, {xp.shape[-1]})")
+                xp = xp[..., self.feature_indices]
             xp_full.append(xp)
         return xp_full
 

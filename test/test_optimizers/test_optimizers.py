@@ -436,7 +436,7 @@ def test_sr3_quadratic_library(params):
     # Test SR3
     opt = SR3(**params)
     model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
+    model.fit(x, t=1)
     check_is_fitted(model)
 
 
@@ -472,7 +472,7 @@ def test_constrained_sr3_quadratic_library(params):
     # Test constrained SR3 without constraints
     opt = ConstrainedSR3(**params)
     model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
+    model.fit(x, t=1)
     check_is_fitted(model)
 
     # rerun with identity constraints
@@ -487,7 +487,7 @@ def test_constrained_sr3_quadratic_library(params):
         constraint_lhs=constraint_matrix, constraint_rhs=constraint_rhs, **params
     )
     model = SINDy(optimizer=opt, feature_library=sindy_library)
-    model.fit(x)
+    model.fit(x, t=1)
     check_is_fitted(model)
     assert np.allclose((model.coefficients().flatten())[:p], 0.0)
 
@@ -1081,7 +1081,7 @@ def test_ssr_criteria(data_lorenz):
     x, t = data_lorenz
     opt = SSR(normalize_columns=True, criteria="model_residual", kappa=1e-3)
     model = SINDy(optimizer=opt)
-    model.fit(x)
+    model.fit(x, t)
     assert np.shape(opt.coef_) == (3, 10)
 
 

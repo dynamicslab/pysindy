@@ -83,6 +83,13 @@ jobs:
       run: |
         pip install --upgrade pip
         pip install .[dev,miosr,cvxpy,sbr]
+        pip freeze > environment.txt
+    - name: Save the environment
+      uses: actions/upload-artifact@v4
+      with:
+        name: requirements ${{matrix.python-version}}
+        path: environment.txt
+        retention-days: 5
     - name: Test with pytest
       run: |
         coverage run --source=pysindy -m pytest test -m "not slow"  && coverage xml

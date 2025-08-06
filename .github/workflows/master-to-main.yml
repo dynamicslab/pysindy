@@ -1,0 +1,33 @@
+name: Update Test Branch
+
+# This workflow keeps main branch up to date with
+# the master branch. It exists so that people can
+# use the main branch as a reference for actions
+# and environment dependencies.
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Git User
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "<EMAIL>"
+
+      - name: Update Main Branch
+        run: |
+          git checkout master
+          git fetch origin
+          git checkout main
+          git reset --hard origin/master
+          git push -f origin main

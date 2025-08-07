@@ -349,6 +349,7 @@ class EnsembleOptimizer(BaseOptimizer):
         self.replace = replace
         self.n_candidates_to_drop = n_candidates_to_drop
         self.coef_list = []
+        self.score_list = []
         self.unbias = False
 
     def _reduce(self, x: AxesArray, y: np.ndarray) -> None:
@@ -399,6 +400,8 @@ class EnsembleOptimizer(BaseOptimizer):
             new_coefs = np.zeros((y.shape[1], n_features))
             new_coefs[:, keep_inds] = self.opt.coef_
             self.coef_list.append(new_coefs)
+            score = self.opt.score(x_ensemble, y_ensemble)
+            self.score_list.append(score)
         # Get average coefficients
         if self.ensemble_aggregator is None:
             self.coef_ = np.median(self.coef_list, axis=0)

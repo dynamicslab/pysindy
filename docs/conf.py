@@ -196,8 +196,8 @@ class PysindyExample(SphinxDirective):
         normalized_text = re.sub(r"\s", "_", heading_text)
         tgt_node = nodes.target(refid=normalized_text)
         title_node = nodes.title()
-        title_text = nodes.Text(heading_text)
-        title_node += [title_text, tgt_node]
+        title_text = self.parse_inline(heading_text)[0]
+        title_node += [*title_text, tgt_node]
         content_nodes = self.parse_content_to_nodes()
         toc_items = []
         for name, relpath in EXTERNAL_EXAMPLES[key]:
@@ -208,7 +208,7 @@ class PysindyExample(SphinxDirective):
             toc_items.append(toc_str)
         toc_nodes = TocTree(
             name="PysindyExample",
-            options={"maxdepth": 1},
+            options={"maxdepth": 1, "titlesonly": True},
             arguments=[],
             content=StringList(initlist=toc_items),
             lineno=self.lineno,

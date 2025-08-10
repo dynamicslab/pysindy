@@ -9,7 +9,7 @@ potentially a greater description.
 
 Some notebooks require substantial computing resources.
 
-Feature overview
+`Feature overview <./1_feature_overview/example.ipynb>`_
 -----------------------------------------------------------------------------------------------------------
 This notebook gives an almost exhaustive overview of the different features available in PySINDy. It's a good reference for how to set various options and work with different types of datasets.
 
@@ -37,6 +37,7 @@ We recommend that people new to SINDy start here. We give a gentle introduction 
 
     This repository recreates the results from the `original SINDy paper <https://www.pnas.org/content/pnas/113/15/3932.full.pdf>`_.
     It applies SINDy to the following problems:
+
     * Linear 2D ODE
     * Cubic 2D ODE
     * Linear 3D ODE

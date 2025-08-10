@@ -174,6 +174,15 @@ def _grab_external_examples(example_source: Path):
 
 
 class PysindyExample(SphinxDirective):
+    """Create an entry in a list of examples.
+
+    The directive requires a title and key, which is a reference to external.yml.
+    See _load_ext_config and ../examples/external.yml for the required linking.
+
+    The directive attempts to create a level-two header, unless the directive
+    appears before any other level-1 header.
+    """
+
     required_arguments = 0
     optional_arguments = 0
     option_spec = {"key": str, "title": str}
@@ -219,7 +228,17 @@ class PysindyExample(SphinxDirective):
         ).run()
         section_node = nodes.section(ids=[heading_text], names=[heading_text])
         section_node += [title_node, *content_nodes, *toc_nodes, repo_par]
-        return [section_node]
+        # We need to find section level 1, and be it's child.
+        parent = self.state.parent
+        # If section level 1 or 2 haven't been created yet, just insert in position
+        if not isinstance(parent, nodes.section):
+            return [section_node]
+        # Otherwise, crawl up document tree until next_parent is document itself.
+        while isinstance(next_parent := parent.parent, nodes.section):
+            parent = next_parent
+            next_parent = next_parent.parent
+        parent += section_node
+        return []
 
 
 def fetch_notebook_list(base: str) -> list[tuple[str, str]]:

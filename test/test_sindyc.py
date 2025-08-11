@@ -239,7 +239,7 @@ def test_score_multiple_trajectories(data_multiple_trajectories):
     model = SINDy()
     model.fit(x, u=u, t=t)
     check_is_fitted(model)
-    
+
     s = model.score(x, u=u, t=t)
     assert s <= 1
 

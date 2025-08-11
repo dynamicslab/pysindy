@@ -170,8 +170,8 @@ model.print()
 # Since we used a uniform timestep when defining `t_train` we can tell set a default timestep to be used whenever `t` isn't passed in.
 
 # In[10]:
-model = ps.SINDy(t_default=dt)
-model.fit(x_train)
+model = ps.SINDy()
+model.fit(x_train, t=dt)
 model.print()
 
 # %% [markdown]
@@ -255,7 +255,7 @@ x_train_map[0] = 0.5
 for i in range(1, n_steps):
     x_train_map[i] = f(x_train_map[i - 1]) + eps * np.random.randn()
 model = ps.SINDy(discrete_time=True)
-model.fit(x_train_map)
+model.fit(x_train_map, t=1)
 
 model.print()
 
@@ -1219,7 +1219,7 @@ opt = ps.STLSQ(threshold=1e-1, normalize_columns=False)
 model = ps.SINDy(
     feature_library=lib, optimizer=opt, feature_names=["x", "r"], discrete_time=True
 )
-model.fit(xs_train, u=rs_train)
+model.fit(xs_train, u=rs_train, t=1)
 model.print()
 
 # %% [markdown]
@@ -1407,7 +1407,7 @@ generalized_library = ps.GeneralizedLibrary(
 )
 optimizer = ps.STLSQ(threshold=8, alpha=1e-3, normalize_columns=True)
 model = ps.SINDy(feature_library=generalized_library, optimizer=optimizer)
-model.fit(data, x_dot=data_dot)
+model.fit(data, x_dot=data_dot, t=1)
 
 # Note scale of phi is large so some coefficients >> 1
 # --> would want to rescale phi with eps_0 for a harder problem

@@ -547,7 +547,7 @@ class SINDy(_BaseSINDy):
                 )
         return x, x_dot
 
-    def differentiate(self, x, t=None):
+    def differentiate(self, x, t):
         """
         Apply the model's differentiation method
         (:code:`self.differentiation_method`) to data.
@@ -557,8 +557,7 @@ class SINDy(_BaseSINDy):
         x: array-like or list of array-like, shape (n_samples, n_input_features)
             Data to be differentiated.
 
-        t: int, numpy array of shape (n_samples,), or list of numpy arrays, optional \
-                (default None)
+        t: int, numpy array of shape (n_samples,), or list of numpy arrays
             Time step between samples or array of collection times.
 
         Returns
@@ -571,8 +570,7 @@ class SINDy(_BaseSINDy):
             "SINDy.differentiate is deprecated.  "
             "Call the differentiation_method parameter"
         )
-        if t is None:
-            t = 1
+
         if self.discrete_time:
             raise RuntimeError("No differentiation implemented for discrete time model")
         if not _check_multiple_trajectories(x, None, None):

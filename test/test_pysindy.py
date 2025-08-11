@@ -144,7 +144,7 @@ def test_bad_t(data):
 )
 def test_differentiate_returns_compatible_data_type(data):
     x, t = data
-    x_dot = SINDy().differentiate(x)
+    x_dot = SINDy().differentiate(x, t)
     assert isinstance(x_dot, type(x))
 
 

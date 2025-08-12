@@ -161,7 +161,6 @@ model = ps.SINDy(
     differentiation_method=differentiation_method,
     feature_library=feature_library,
     optimizer=optimizer,
-    feature_names=["x", "y"],
 )
 
 
@@ -170,7 +169,11 @@ model = ps.SINDy(
 # In[7]:
 
 
-model.fit(X, t=t)
+model.fit(
+    X,
+    t=t,
+    feature_names=["x", "y"],
+)
 
 
 # We can inspect the governing equations discovered by the model and check whether they seem reasonable with the `print` function.
@@ -219,7 +222,6 @@ model = ps.SINDy(
     differentiation_method=differentiation_method,
     feature_library=feature_library,
     optimizer=optimizer,
-    feature_names=["x", "y"],
 )
-model.fit(X, t=t)
+model.fit(X, t=t, feature_names=["x", "y"])
 model.print()

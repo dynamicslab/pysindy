@@ -270,10 +270,10 @@ import pandas as pd
 df = pd.DataFrame(data=x_train, columns=["x", "y", "z"], index=t_train)
 
 # The column names can be used as feature names
-model = ps.SINDy(feature_names=df.columns)
+model = ps.SINDy()
 
 # Everything needs to be converted to numpy arrays to be passed in
-model.fit(df.values, t=df.index.values)
+model.fit(df.values, t=df.index.values, feature_names=df.columns)
 model.print()
 
 # %% [markdown]
@@ -628,8 +628,8 @@ ensemble_optimizer = ps.EnsembleOptimizer(
     n_subset=int(0.6 * x_train.shape[0]),
 )
 
-model = ps.SINDy(optimizer=ensemble_optimizer, feature_names=feature_names)
-model.fit(x_train, t=dt)
+model = ps.SINDy(optimizer=ensemble_optimizer)
+model.fit(x_train, t=dt, feature_names=feature_names)
 ensemble_coefs = ensemble_optimizer.coef_list
 mean_ensemble = np.mean(ensemble_coefs, axis=0)
 std_ensemble = np.std(ensemble_coefs, axis=0)
@@ -638,9 +638,9 @@ std_ensemble = np.std(ensemble_coefs, axis=0)
 library_ensemble_optimizer = ps.EnsembleOptimizer(
     ps.STLSQ(threshold=1e-3, normalize_columns=False), library_ensemble=True
 )
-model = ps.SINDy(optimizer=library_ensemble_optimizer, feature_names=feature_names)
+model = ps.SINDy(optimizer=library_ensemble_optimizer)
 
-model.fit(x_train, t=dt)
+model.fit(x_train, t=dt, feature_names=feature_names)
 library_ensemble_coefs = library_ensemble_optimizer.coef_list
 mean_library_ensemble = np.mean(library_ensemble_coefs, axis=0)
 std_library_ensemble = np.std(library_ensemble_coefs, axis=0)
@@ -768,8 +768,8 @@ model.print()
 
 # In[47]:
 feature_names = ["x", "y", "z"]
-model = ps.SINDy(feature_names=feature_names)
-model.fit(x_train, t=dt)
+model = ps.SINDy()
+model.fit(x_train, t=dt, feature_names=feature_names)
 model.print()
 
 # %% [markdown]
@@ -865,8 +865,8 @@ identity_library = ps.IdentityLibrary()
 fourier_library = ps.FourierLibrary()
 combined_library = identity_library + fourier_library
 
-model = ps.SINDy(feature_library=combined_library, feature_names=feature_names)
-model.fit(x_train, t=dt)
+model = ps.SINDy(feature_library=combined_library)
+model.fit(x_train, t=dt, feature_names=feature_names)
 model.print()
 model.get_feature_names()
 
@@ -879,8 +879,8 @@ identity_library = ps.PolynomialLibrary(include_bias=False)
 fourier_library = ps.FourierLibrary()
 combined_library = identity_library * fourier_library
 
-model = ps.SINDy(feature_library=combined_library, feature_names=feature_names)
-model.fit(x_train, t=dt)
+model = ps.SINDy(feature_library=combined_library)
+model.fit(x_train, t=dt, feature_names=feature_names)
 # model.print()  # prints out long and unobvious model
 print("Feature names:\n", model.get_feature_names())
 
@@ -940,8 +940,8 @@ generalized_library = ps.GeneralizedLibrary(
 )
 
 # Fit the model and print the library feature names to check success
-model = ps.SINDy(feature_library=generalized_library, feature_names=feature_names)
-model.fit(x_train, t=dt)
+model = ps.SINDy(feature_library=generalized_library)
+model.fit(x_train, t=dt, feature_names=feature_names)
 model.print()
 print("Feature names:\n", model.get_feature_names())
 
@@ -1216,10 +1216,8 @@ lib = ps.ParameterizedLibrary(
     num_parameters=1,
 )
 opt = ps.STLSQ(threshold=1e-1, normalize_columns=False)
-model = ps.SINDy(
-    feature_library=lib, optimizer=opt, feature_names=["x", "r"], discrete_time=True
-)
-model.fit(xs_train, u=rs_train, t=1)
+model = ps.SINDy(feature_library=lib, optimizer=opt, discrete_time=True)
+model.fit(xs_train, u=rs_train, t=1, feature_names=["x", "r"])
 model.print()
 
 # %% [markdown]

@@ -195,10 +195,6 @@ class SINDy(_BaseSINDy):
         :class:`pysindy.differentiation_methods.base.BaseDifferentiation` class.
         The default option is centered difference.
 
-    feature_names : list of string, length n_input_features, optional
-        Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
-        ``['x0', 'x1', ...]``.
-
     discrete_time : boolean, optional (default False)
         If True, dynamical system is treated as a map. Rather than predicting
         derivatives, the right hand side functions step the system forward by
@@ -287,7 +283,6 @@ class SINDy(_BaseSINDy):
         optimizer: Optional[BaseOptimizer] = None,
         feature_library: Optional[BaseFeatureLibrary] = None,
         differentiation_method: Optional[BaseDifferentiation] = None,
-        feature_names: Optional[list[str]] = None,
         discrete_time: bool = False,
     ):
         if optimizer is None:
@@ -299,7 +294,6 @@ class SINDy(_BaseSINDy):
         if differentiation_method is None:
             differentiation_method = FiniteDifference(axis=-2)
         self.differentiation_method = differentiation_method
-        self.feature_names = feature_names
         self.discrete_time = discrete_time
 
     def fit(
@@ -308,6 +302,7 @@ class SINDy(_BaseSINDy):
         t,
         x_dot=None,
         u=None,
+        feature_names: Optional[list[str]] = None,
     ):
         """
         Fit a SINDy model.
@@ -345,6 +340,10 @@ class SINDy(_BaseSINDy):
             for each trajectory. Individual trajectories may contain different
             numbers of samples.
 
+        feature_names : list of string, length n_input_features, optional
+        Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
+        ``['x0', 'x1', ...]``.
+
         Returns
         -------
         self: a fitted :class:`SINDy` instance
@@ -370,6 +369,8 @@ class SINDy(_BaseSINDy):
         # Append control variables
         if u is not None:
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
+
+        self.feature_names = feature_names
 
         steps = [
             ("features", self.feature_library),

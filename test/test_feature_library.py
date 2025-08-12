@@ -456,10 +456,8 @@ def test_generalized_library(data_lorenz):
 
     # Repeat with feature names
     feature_names = ["x", "y", "z"]
-    model = SINDy(
-        optimizer=sindy_opt, feature_library=sindy_library, feature_names=feature_names
-    )
-    model.fit(x, t=t)
+    model = SINDy(optimizer=sindy_opt, feature_library=sindy_library)
+    model.fit(x, t=t, feature_names=feature_names)
     model.print()
     model.get_feature_names()
     assert len(model.get_feature_names()) == 24
@@ -481,10 +479,8 @@ def test_generalized_library(data_lorenz):
     sindy_library = GeneralizedLibrary(
         [poly_library, fourier_library, custom_library], tensor_array=tensor_array
     )
-    model = SINDy(
-        optimizer=sindy_opt, feature_library=sindy_library, feature_names=feature_names
-    )
-    model.fit(x, t=t)
+    model = SINDy(optimizer=sindy_opt, feature_library=sindy_library)
+    model.fit(x, t=t, feature_names=feature_names)
     model.print()
     # 24 + (9 * 6) = 54 + (9 * 9) = 81
     assert len(model.get_feature_names()) == 159
@@ -507,10 +503,8 @@ def test_generalized_library(data_lorenz):
         tensor_array=tensor_array,
         inputs_per_library=inputs_per_library,
     )
-    model = SINDy(
-        optimizer=sindy_opt, feature_library=sindy_library, feature_names=feature_names
-    )
-    model.fit(x, t=t)
+    model = SINDy(optimizer=sindy_opt, feature_library=sindy_library)
+    model.fit(x, t=t, feature_names=feature_names)
     assert len(model.get_feature_names()) == 29
 
 
@@ -624,19 +618,15 @@ def test_parameterized_library(diffuse_multiple_trajectories):
     )
 
     optimizer = STLSQ(threshold=0.5, alpha=1e-8, normalize_columns=False)
-    model = SINDy(
-        feature_library=pde_lib, optimizer=optimizer, feature_names=["u", "c"]
-    )
-    model.fit(xs, u=us, t=t)
+    model = SINDy(feature_library=pde_lib, optimizer=optimizer)
+    model.fit(xs, u=us, t=t, feature_names=["u", "c"])
     assert abs(model.coefficients()[0, 4] - 1) < 1e-1
     assert np.all(model.coefficients()[0, :4] == 0)
     assert np.all(model.coefficients()[0, 5:] == 0)
 
     optimizer = STLSQ(threshold=0.25, alpha=1e-8, normalize_columns=False)
-    model = SINDy(
-        feature_library=weak_lib, optimizer=optimizer, feature_names=["u", "c"]
-    )
-    model.fit(xs, u=us, t=t)
+    model = SINDy(feature_library=weak_lib, optimizer=optimizer)
+    model.fit(xs, u=us, t=t, feature_names=["u", "c"])
     assert abs(model.coefficients()[0, 4] - 1) < 1e-1
     assert np.all(model.coefficients()[0, :4] == 0)
     assert np.all(model.coefficients()[0, 5:] == 0)

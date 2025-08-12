@@ -918,9 +918,12 @@ def test_constrained_inequality_constraints(data_lorenz, params):
         optimizer=opt,
         feature_library=poly_lib,
         differentiation_method=FiniteDifference(drop_endpoints=True),
+    )
+    model.fit(
+        x,
+        t=t[1] - t[0],
         feature_names=feature_names,
     )
-    model.fit(x, t=t[1] - t[0])
     # This sometimes fails with L2 norm so just check the model is fitted
     check_is_fitted(model)
 
@@ -1010,9 +1013,12 @@ def test_miosr_equality_constraints(data_lorenz, params):
     model = SINDy(
         optimizer=opt,
         feature_library=poly_lib,
+    )
+    model.fit(
+        x,
+        t=t[1] - t[0],
         feature_names=feature_names,
     )
-    model.fit(x, t=t[1] - t[0])
     assert np.allclose(
         np.dot(constraint_matrix, (model.coefficients()).flatten()),
         constraint_rhs,

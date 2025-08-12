@@ -341,8 +341,8 @@ class SINDy(_BaseSINDy):
             numbers of samples.
 
         feature_names : list of string, length n_input_features, optional
-        Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
-        ``['x0', 'x1', ...]``.
+            Names for the input features (e.g. :code:`['x', 'y', 'z']`).
+            If None, will use :code:`['x0', 'x1', ...]`.
 
         Returns
         -------

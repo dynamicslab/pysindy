@@ -181,16 +181,15 @@ Benchmarking PySINDy on low dimensional chaotic systems subject to noise, follow
 
     ./16_noise_robustness/example
 
-`Parameterized pattern formation <./17_parameterized_pattern_formation/example.ipynb>`_
-----------------------------------------------------------------------------------------------
-Demonstrates the use of SINDyCP for discovery of parameterized pattern formation, following Nicolaou, Huo, Chen, Kutz, and Bruton (2023), preprint available here https://arxiv.org/abs/2301.02673.
+.. pysindy-example::
+    :key: sindy_cp
+    :title: Discover parameters for stable pattern formation using SINDy-CP.
 
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./17_parameterized_pattern_formation/example
-
+    While parameters can be considered as constant control signals for spatiotemporal
+    dynamics, combining the PDEFIND and SINDYc approaches to discover parameterized
+    spatiotemporal dynamics poses a significant challenge. Here, we develop the
+    system identification for nonlinear dynamics with control parameters (SINDyCP)
+    approach to discover such parameterized dynamics.
 
 .. pysindy-example::
     :key: stable_linear_sr3

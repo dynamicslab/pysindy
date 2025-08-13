@@ -1,13 +1,13 @@
 - name: "original"
   user: "dynamicslab"
   repo: "sindy-original-example"
-  ref: "e68efeb"
+  ref: "4d484ab"
   dir: "examples"
 
 - name: "stable_linear_sr3"
   user: "dynamicslab"
   repo: "sindy-addl-examples"
-  ref: "018b17d"
+  ref: "0fef3c8"
   dir: "examples"
 
 - name: "sbr"

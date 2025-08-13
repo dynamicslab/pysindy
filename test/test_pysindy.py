@@ -592,12 +592,12 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
     )
 
     optimizer = STLSQ(threshold=0.2, alpha=1e-5, normalize_columns=False)
-    model = SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, t=t)
+    model = SINDy(feature_library=pde_lib, optimizer=optimizer)
+    model.fit(u, t=t, feature_names=["u"])
     assert abs(model.coefficients()[0, -1] - 1) < 1e-1
     assert np.all(model.coefficients()[0, :-1] == 0)
 
-    model = SINDy(feature_library=weak_lib, optimizer=optimizer, feature_names=["u"])
-    model.fit(u, t=t)
+    model = SINDy(feature_library=weak_lib, optimizer=optimizer)
+    model.fit(u, t=t, feature_names=["u"])
     assert abs(model.coefficients()[0, -1] - 1) < 1e-1
     assert np.all(model.coefficients()[0, :-1] == 0)

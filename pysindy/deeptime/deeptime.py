@@ -61,14 +61,12 @@ class SINDyEstimator(SINDy):
         optimizer=None,
         feature_library=None,
         differentiation_method=None,
-        feature_names=None,
         discrete_time=False,
     ):
         super(SINDyEstimator, self).__init__(
             optimizer=optimizer,
             feature_library=feature_library,
             differentiation_method=differentiation_method,
-            feature_names=feature_names,
             discrete_time=discrete_time,
         )
         self._model = None
@@ -96,7 +94,6 @@ class SINDyEstimator(SINDy):
         self._model = SINDyModel(
             feature_library=self.model.steps[0][1],
             optimizer=self.model.steps[-1][1],
-            feature_names=self.feature_names,
             discrete_time=self.discrete_time,
             n_control_features_=self.n_control_features_,
         )
@@ -183,14 +180,12 @@ class SINDyModel(SINDy):
         self,
         feature_library,
         optimizer,
-        feature_names=None,
         discrete_time=False,
         n_control_features_=0,
     ):
         super(SINDyModel, self).__init__(
             feature_library=feature_library,
             optimizer=optimizer,
-            feature_names=feature_names,
             discrete_time=discrete_time,
         )
         self.n_control_features_ = n_control_features_

@@ -16,6 +16,12 @@
   ref: "eba3fdb"
   dir: "examples"
 
+- name: "cavity-flow"
+  user: "dynamicslab"
+  repo: "sindy-addl-examples"
+  ref: "2640223"
+  dir: "examples"
+
 - name: "benchmarks"
   user: "dynamicslab"
   repo: "sindy-addl-examples"

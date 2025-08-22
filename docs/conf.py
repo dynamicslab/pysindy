@@ -169,7 +169,7 @@ def _grab_external_examples(example_source: Path):
         base = f"https://raw.githubusercontent.com/{user}/{repo}/{ref}/{dir}/"
         notebooks = fetch_notebook_list(base)
         base = f"https://raw.githubusercontent.com/{user}/{repo}/{ref}/"
-        local_nbs = [(name, copy_nb(base, pth, repo)) for name, pth in notebooks]
+        local_nbs = [(name, _copy_nb(base, pth, repo, ref)) for name, pth in notebooks]
         EXTERNAL_EXAMPLES[ex_name] = local_nbs
 
 
@@ -197,7 +197,9 @@ class PysindyExample(SphinxDirective):
             RuntimeError("Unknown configuration key for external example")
         heading_text: str = self.options.get("title")
         base_repo = f"https://github.com/{this_example['user']}/{this_example['repo']}"
-        repo_ref = nodes.reference(name="Source repo", refuri=base_repo)
+        repo_ref = nodes.reference(
+            name="Source repo", refuri=f"{base_repo}/tree/{this_example['ref']}"
+        )
         ref_text = nodes.Text("Source repo")
         repo_ref += ref_text
         repo_par = nodes.paragraph()
@@ -260,15 +262,17 @@ def fetch_notebook_list(base: str) -> list[tuple[str, str]]:
     return rellinks
 
 
-def copy_nb(base: str, relpath: str, repo: str) -> str:
+def _copy_nb(base: str, relpath: str, repo: str, ref: str) -> str:
     """Create a local copy of external file, modifying relative reference"""
     example_dir = Path(__file__).parent / "examples"
     repo_local_dir = example_dir / repo
     repo_local_dir.mkdir(exist_ok=True)
+    ref_local_dir = repo_local_dir / ref
+    ref_local_dir.mkdir(exist_ok=True)
     page = requests.get(base + relpath)
     if page.status_code != 200:
         raise RuntimeError(f"Unable to locate external notebook at {base + relpath}")
-    filename = repo_local_dir / relpath.rsplit("/", 1)[1]
+    filename = ref_local_dir / relpath.rsplit("/", 1)[1]
     with open(filename, "wb") as f:
         f.write(page.content)
     return os.path.relpath(filename, start=example_dir)

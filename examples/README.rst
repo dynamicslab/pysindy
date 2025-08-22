@@ -1,10 +1,8 @@
-PySINDy Examples
-================
+Tutorial/How-To Examples
+=============================
 
-This directory showcases examples of PySINDy in action.  Not all examples are run on
-the current master branch. They serve to show what is possible with pysindy, but do
-not necessarily use the current API.
-Each is copied from another repository that contains dependency information and
+This directory showcases examples of PySINDy in action.
+Some are copied from another repository that contains dependency information and
 potentially a greater description.
 
 Some notebooks require substantial computing resources.
@@ -30,21 +28,6 @@ We recommend that people new to SINDy start here. We give a gentle introduction 
 
     ./2_introduction_to_sindy/example
 
-
-.. pysindy-example::
-    :key: original
-    :title: Original Paper
-
-    This repository recreates the results from the `original SINDy paper <https://www.pnas.org/content/pnas/113/15/3932.full.pdf>`_.
-    It applies SINDy to the following problems:
-
-    * Linear 2D ODE
-    * Cubic 2D ODE
-    * Linear 3D ODE
-    * Lorenz system
-    * Fluid wake behind a cylinder
-    * Logistic map
-    * Hopf system
 
 `Scikit-learn compatibility <./4_scikit_learn_compatibility/example.ipynb>`_
 -------------------------------------------------------------------------------------------------------------------------------
@@ -79,27 +62,6 @@ See a demonstration of PySINDy objects designed to conform to the `Deeptime <htt
     :maxdepth: 1
 
     ./6_deeptime_compatibility/example
-
-`Plasma physics <./7_plasma_examples/example.ipynb>`_
-----------------------------------------------------------------------------------------------
-Use the ``ConstrainedSR3`` optimizer to build a constrained model for the temporal POD modes of a plasma simulation.
-
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./7_plasma_examples/example
-
-`Trapping SINDy <./8_trapping_sindy_examples/example.ipynb>`_
------------------------------------------------------------------------------------------------------------
-This notebook applies the ``TrappingSR3`` optimizer to various canonical fluid systems., proposed in this paper: Kaptanoglu, Alan A., et al. "Promoting global stability in data-driven models of quadratic nonlinear dynamics." Physical Review Fluids 6.9 (2021): 094401. A preprint is found here `<https://arxiv.org/abs/2105.01843>`_.
-See as well the other examples in this folder, which explore the extension to local trapping and enstrophy in Peng, Mai et al. "Local stability guarantees for data-driven quadratically nonlinear models."
-
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./8_trapping_sindy_examples/example
 
 `SINDyPI <./9_sindypi_with_sympy/example.ipynb>`_
 ----------------------------------------------------------------------------------------------
@@ -172,14 +134,6 @@ Lectures on PySINDy usage from Alan Kaptanoglu's Youtube channel: https://www.yo
     ./15_pysindy_lectures/example
 
 .. pysindy-example::
-    :key: benchmarks
-    :title: Noise robustness benchmarking
-
-    Benchmarking PySINDy on low dimensional chaotic systems subject to noise, following
-    Kaptanoglu, Zhang, Nicolaou, Fasel, & Brunton, (2023),
-    `preprint available <https://arxiv.org/abs/2302.10787>`_.
-
-.. pysindy-example::
     :key: sindy_cp
     :title: Discover parameters for stable pattern formation using SINDy-CP.
 
@@ -202,3 +156,57 @@ Lectures on PySINDy usage from Alan Kaptanoglu's Youtube channel: https://www.yo
     :title: Post-analysis of Bayesian SINDy
 
     Demonstrates using Arviz to analyze the results of Bayesian SINDy.
+
+External Research Examples
+============================
+These examples demonstrate very specific applications of pysindy, being used to
+run experiments for research papers.
+They are copied from repositories that contain dependency information and
+potentially a greater description.  Most are meant to be run on a specific version
+of pysindy and are not necessarily kept up to date with major version bumps.
+They may require substantial computing resources.
+
+.. pysindy-example::
+    :key: original
+    :title: Original Paper
+
+    This repository recreates the results from the `original SINDy paper <https://www.pnas.org/content/pnas/113/15/3932.full.pdf>`_.
+    It applies SINDy to the following problems:
+
+    * Linear 2D ODE
+    * Cubic 2D ODE
+    * Linear 3D ODE
+    * Lorenz system
+    * Fluid wake behind a cylinder
+    * Logistic map
+    * Hopf system
+
+
+.. pysindy-example::
+    :key: plasma
+    :title: Plasma physics
+
+    Use the ``ConstrainedSR3`` optimizer to build a constrained model for the temporal
+    POD modes of a plasma simulation.
+
+.. pysindy-example::
+    :key: trapping
+    :title: Discovering stable quadratic models: ``TrappingSR3``
+
+    The Trapping SINDy notebook applies the ``TrappingSR3`` optimizer to various
+    canonical fluid systems, proposed in this paper:
+    Kaptanoglu, Alan A., et al. "Promoting global stability in data-driven models of
+    quadratic nonlinear dynamics." Physical Review Fluids 6.9 (2021): 094401.
+    A preprint is found here `<https://arxiv.org/abs/2105.01843>`_.
+    Other examples in this folder explore the extension to local trapping and enstrophy
+    in Peng, Mai et al. "Local stability guarantees for data-driven quadratically
+    nonlinear models."
+
+
+.. pysindy-example::
+    :key: benchmarks
+    :title: Noise robustness benchmarking
+
+    Benchmarking PySINDy on low dimensional chaotic systems subject to noise, following
+    Kaptanoglu, Zhang, Nicolaou, Fasel, & Brunton, (2023),
+    `preprint available <https://arxiv.org/abs/2302.10787>`_.

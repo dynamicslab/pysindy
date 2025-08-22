@@ -4,6 +4,18 @@
   ref: "30f4dcd"
   dir: "examples"
 
+- name: "plasma"
+  user: "dynamicslab"
+  repo: "sindy-addl-examples"
+  ref: "1374625"
+  dir: "examples"
+
+- name: "trapping"
+  user: "dynamicslab"
+  repo: "sindy-addl-examples"
+  ref: "eba3fdb"
+  dir: "examples"
+
 - name: "benchmarks"
   user: "dynamicslab"
   repo: "sindy-addl-examples"

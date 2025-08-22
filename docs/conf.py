@@ -198,18 +198,22 @@ class PysindyExample(SphinxDirective):
         heading_text: str = self.options.get("title")
         base_repo = f"https://github.com/{this_example['user']}/{this_example['repo']}"
         repo_ref = nodes.reference(
-            name="Source repo", refuri=f"{base_repo}/tree/{this_example['ref']}"
+            name="Source repo",
+            text=" Source repo",
+            refuri=f"{base_repo}/tree/{this_example['ref']}",
         )
-        ref_text = nodes.Text("Source repo")
-        repo_ref += ref_text
-        repo_par = nodes.paragraph()
-        repo_par += repo_ref
         normalized_text = re.sub(r"\s", "_", heading_text)
         tgt_node = nodes.target(refid=normalized_text)
         title_node = nodes.title()
         title_text = self.parse_inline(heading_text)[0]
         title_node += [*title_text, tgt_node]
         content_nodes = self.parse_content_to_nodes()
+        if isinstance(content_nodes[-1], nodes.paragraph):
+            repo_par = content_nodes[-1]
+        else:
+            repo_par = nodes.paragraph()
+            content_nodes += [repo_par]
+        repo_par += repo_ref
         toc_items = []
         for name, relpath in EXTERNAL_EXAMPLES[key]:
             if name:
@@ -229,7 +233,7 @@ class PysindyExample(SphinxDirective):
             state_machine=self.state_machine,
         ).run()
         section_node = nodes.section(ids=[heading_text], names=[heading_text])
-        section_node += [title_node, *content_nodes, *toc_nodes, repo_par]
+        section_node += [title_node, *content_nodes, *toc_nodes]
         # We need to find section level 1, and be it's child.
         parent = self.state.parent
         # If section level 1 or 2 haven't been created yet, just insert in position

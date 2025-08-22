@@ -113,16 +113,6 @@ This notebook uses sub-sampling of the data and sub-sampling of the SINDy librar
 
     ./13_ensembling/example
 
-`Cavity flow <./14_cavity_flow/example.ipynb>`_
-----------------------------------------------------------------------------------------------
-Demonstrates the use of SINDy to learn a model for the quasiperiodic dynamics in a shear-driven cavity at Re=7500, following Callaham, Brunton, and Loiseau (2021), preprint available here `<https://arxiv.org/pdf/2106.02409>`_.
-
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./14_cavity_flow/example
-
 `PySINDy lectures <./15_pysindy_lectures/example.ipynb>`_
 ----------------------------------------------------------------------------------------------
 Lectures on PySINDy usage from Alan Kaptanoglu's Youtube channel: https://www.youtube.com/playlist?list=PLN90bHJU-JLoOfEk0KyBs2qLTV7OkMZ25.
@@ -202,6 +192,13 @@ They may require substantial computing resources.
     in Peng, Mai et al. "Local stability guarantees for data-driven quadratically
     nonlinear models."
 
+.. pysindy-example::
+    :key: cavity-flow
+    :title: Cavity flow
+
+    Demonstrates the use of SINDy to learn a model for the quasiperiodic dynamics in a
+    shear-driven cavity at Re=7500, following Callaham, Brunton, and Loiseau (2021),
+    preprint available here `<https://arxiv.org/pdf/2106.02409>`_.
 
 .. pysindy-example::
     :key: benchmarks

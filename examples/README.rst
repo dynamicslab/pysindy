@@ -171,15 +171,13 @@ Lectures on PySINDy usage from Alan Kaptanoglu's Youtube channel: https://www.yo
 
     ./15_pysindy_lectures/example
 
-`Noise robustness benchmarking <./16_noise_robustness/example.ipynb>`_
-----------------------------------------------------------------------------------------------
-Benchmarking PySINDy on low dimensional chaotic systems subject to noise, following Kaptanoglu, Zhang, Nicolaou, Fasel, & Brunton, (2023), preprint available here https://arxiv.org/abs/2302.10787.
+.. pysindy-example::
+    :key: benchmarks
+    :title: Noise robustness benchmarking
 
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./16_noise_robustness/example
+    Benchmarking PySINDy on low dimensional chaotic systems subject to noise, following
+    Kaptanoglu, Zhang, Nicolaou, Fasel, & Brunton, (2023),
+    `preprint available <https://arxiv.org/abs/2302.10787>`_.
 
 .. pysindy-example::
     :key: sindy_cp
@@ -204,14 +202,3 @@ Benchmarking PySINDy on low dimensional chaotic systems subject to noise, follow
     :title: Post-analysis of Bayesian SINDy
 
     Demonstrates using Arviz to analyze the results of Bayesian SINDy.
-
-
-
-`All examples including examples under development`_
-----------------------------------------------------------------------------------------------
-
-.. toctree::
-    :glob:
-    :maxdepth: 1
-
-    **

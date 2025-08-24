@@ -8,8 +8,9 @@ description = "Sparse Identification of Nonlinear Dynamics"
 authors = [
     {name="Brian de Silva", email="bdesilva@uw.edu"},
     {name="Kathleen Champion", email="kpchamp@uw.edu"},
+    {name="Jacob Stevens-Haas", email="jacob.stevens.haas@gmail.com"},
     {name="Markus Quade", email="info@markusqua.de"},
-    {name="Alan Kaptanoglu", email="akaptano@uw.edu"}
+    {name="Alan Kaptanoglu", email="akaptano@uw.edu"},
 ]
 license = {text = "MIT"}
 requires-python = ">=3.10"

@@ -98,64 +98,19 @@ PySINDy provides numerous other features not shown here. We recommend the `featu
 Installation
 ------------
 
-Installing with pip
-^^^^^^^^^^^^^^^^^^^
+The preferred way to install is with pip or conda e.g. ``pip install pysindy``
 
-If you are using Linux or macOS you can install PySINDy with pip:
+You may have to add ``--user`` option to the above lines.
+Pysindy also provides several extras:
 
-.. code-block:: bash
+cvxpy
+  Convex optimizer ``SR3`` and subclasses
 
-  pip install pysindy
+miosr
+  Branch-and-bound optimizer for L0-constraint, ``MIOSR``
 
-Installing from source
-^^^^^^^^^^^^^^^^^^^^^^
-First clone this repository:
-
-.. code-block:: bash
-
-  git clone https://github.com/dynamicslab/pysindy.git
-
-Then, to install the package, run
-
-.. code-block:: bash
-
-  pip install .
-
-If you do not have root access, you should add the ``--user`` option to the above lines.
-
-Caveats
-^^^^^^^
-
-To run the unit tests, or example notebooks, you should install the dev-dependencies with:
-
-.. code-block:: bash
-
-  pip install pysindy[dev]
-
-or if you are installing from a local copy
-
-.. code-block:: bash
-
-  pip install .[dev]
-
-To build a local copy of the documentation, you should install the docs-dependencies with:
-
-.. code-block:: bash
-
-  pip install pysindy[docs]
-
-If you are looking to use convex optimization provided by `cvxpy <https://github.com/cvxpy/cvxpy>`__, then you have to install
-
-.. code-block:: bash
-
-    pip install pysindy[cvxpy]
-
-to utilize Mixed-Integer Optimized Sparse Regression (MIOSR) via `GurobiPy <https://pypi.org/project/gurobipy/>`__, you
-require
-
-.. code-block:: bash
-
-    pip install pysindy[miosr]
+sbr
+  Bayesian regression optimizer yielding posteriors, ``SBR``.
 
 
 Documentation
@@ -171,95 +126,9 @@ This flow chart summarizes how ``PySINDy`` users can start with a dataset and sy
 Community guidelines
 --------------------
 
-Contributing examples
+Contributing
 ^^^^^^^^^^^^^^^^^^^^^
-We love seeing examples of PySINDy being used to solve interesting problems! If you would like to contribute an example to the documentation, reach out to us by creating an issue.
-
-Examples are external repositories that
-`follow a structure <https://github.com/dynamicslab/pysindy-example>`_ that pysindy
-knows how to incorporate into its documentation build.  They tend to be pinned to
-a set of dependencies and may not be kept up to date with breaking API changes.
-
-The linked repository has information on how to set up your example.  To PR the example
-into this repository, (a) edit examples/external.yml and examples/README.rst with your
-repository information and (b) verify your own build passes in your repository,
-including publishing on github pages.  If you want to keep your example up to date with
-the pysindy main branch, (c) add your repository information to the ``notify-experiments``
-workflow so that pysindy will trigger your notebooks to be run in CI in your own repo.
-This will require adding a
-`fine-grained PAT <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>`_
-with the permissions ``contents: read & write`` and ``metadata: read only`` to the
-pysindy GH secrets. Alternatively, you can just trigger your builds based on cron timing.
-See the pysindy experiments repo for more information.
-
-
-Contributing code
-^^^^^^^^^^^^^^^^^
-We welcome contributions to PySINDy. To contribute a new feature please submit a pull request. To get started we recommend installing an editable ``dev`` version from a local clone via
-
-.. code-block:: bash
-
-    pip install -e .[dev]
-
-This will allow you to run unit tests and automatically format your code. To be accepted your code should conform to PEP8 and pass all unit tests. Code can be tested by invoking
-
-.. code-block:: bash
-
-    pytest
-
-We recommend using ``pre-commit`` to format your code. The easiest approach is to install pre-commit via
-
-.. code-block:: bash
-
-    pre-commit install
-
-After which pre-commit will automatically check all future commits. Once you have staged changes to commit
-
-.. code-block:: bash
-
-    git add path/to/changed/file.py
-
-Pre-commit will then automatically run all checks against your committed code. If you want to trigger this manually, you can run the following to automatically reformat your staged code
-
-.. code-block:: bash
-
-    pre-commit
-
-Note that you will then need to re-stage any changes ``pre-commit`` made to your code.
-
-Building documentation requires the ``docs`` dependencies, which can be installed with either
-
-.. code-block:: bash
-
-    pip install pysindy[docs]
-
-or with
-
-.. code-block:: bash
-
-    pip install .[docs]
-
-for a local clone of the repository. Once installed, run
-
-.. code-block:: bash
-
-    python -m sphinx -TEb html -d _build/doctrees -D language=en . ./build
-
-Or check the build step in the most recent CI run or [RTD build](https://readthedocs.org/projects/pysindy/builds/).
-
-There are a number of SINDy variants and advanced functionality that would be great to implement in future releases:
-
-1. Bayesian SINDy, for instance that from Hirsh, Seth M., David A. Barajas-Solano, and J. Nathan Kutz. "Sparsifying Priors for Bayesian Uncertainty Quantification in Model Discovery." arXiv preprint arXiv:2107.02107 (2021).
-
-2. Tensor SINDy, using the methods in Gelß, Patrick, et al. "Multidimensional approximation of nonlinear dynamical systems." Journal of Computational and Nonlinear Dynamics 14.6 (2019).
-
-3. Stochastic SINDy, using the methods in Brückner, David B., Pierre Ronceray, and Chase P. Broedersz. "Inferring the dynamics of underdamped stochastic systems." Physical review letters 125.5 (2020): 058103.
-
-4. Integration of PySINDy with a Python model-predictive control (MPC) code.
-
-5. The PySINDy weak formulation is based on the work in Reinbold, Patrick AK, Daniel R. Gurevich, and Roman O. Grigoriev. "Using noisy or incomplete data to discover models of spatiotemporal dynamics." Physical Review E 101.1 (2020): 010203. It might be useful to additionally implement the weak formulation from Messenger, Daniel A., and David M. Bortz. "Weak SINDy for partial differential equations." Journal of Computational Physics (2021): 110525. The weak formulation in PySINDy is also fairly slow and computationally intensive, so finding ways to speed up the code would be great.
-
-6. The blended conditional gradients (BCG) algorithm for solving the constrained LASSO problem, Carderera, Alejandro, et al. "CINDy: Conditional gradient-based Identification of Non-linear Dynamics--Noise-robust recovery." arXiv preprint arXiv:2101.02630 (2021).
+See `Contributor guide <https://pysindy.readthedocs.io/en/latest/contributing.html>`_
 
 Reporting issues or bugs
 ^^^^^^^^^^^^^^^^^^^^^^^^

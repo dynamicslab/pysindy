@@ -1,5 +1,3 @@
-
-
 Contributing to pysindy
 ================================
 We welcome all sorts of contributions!
@@ -15,17 +13,17 @@ Three types of contributions
 --------------------------------
 The pysindy repository combines several different types of users and use cases:
 
-* You want to discover an ODE for your particular data, potentially as a research paper
-* You want to publish a new methods of learning differential equations from data,
+*   You want to discover an ODE for your particular data, potentially as a research paper
+*   You want to publish a new methods of learning differential equations from data,
     making it available to other users
-* You are learning about equation discovery from reading papers, and this repo is
+*   You are learning about equation discovery from reading papers, and this repo is
     an educational supplement to existing papers/textbooks.
 
 There are several different ways people contribute:
 
-* Sharing a novel use case/research notebook with the wider public
-* Adding features or fixing bugs
-* Improving documentation.
+*   Sharing a novel use case/research notebook with the wider public
+*   Adding features or fixing bugs
+*   Improving documentation.
 
 Contributing examples
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -110,11 +108,12 @@ Contributing code
 Similar to other open-source projects, most contributions start with a github issue
 in order to solicit concurrence from project maintainers.
 Then, the general process is:
+
 1. Fork the repository
-1. Step through the `Set up development environment`_.
-1. Hack Hack Hack according to `Coding Guidelines`_.
-1. Open a pull request
-1. Respond to reviews
+2. Step through the `Set up development environment`_.
+3. Hack Hack Hack according to `Coding Guidelines`_.
+4. Open a pull request
+5. Respond to reviews
 
 A good place to get started learning this process is to follow one of the issues labeled
 `good first issue`_.
@@ -134,7 +133,14 @@ Install the project in an editable way with all optional dependencies, e.g.
 
     pip install -e .[dev,miosr,cvxpy,docs,sbr]
 
-This will allow you to run unit tests and automatically format your code.
+This will allow you to run unit tests and use code-formatting tools.
+
+Install our pre-commit script via
+
+.. code-block:: bash
+
+    pre-commit install
+
 To be accepted your code should conform to PEP8 and pass all unit tests.
 Code can be tested by invoking
 
@@ -142,13 +148,7 @@ Code can be tested by invoking
 
     pytest
 
-We recommend using ``pre-commit`` to format your code. The easiest approach is to install pre-commit via
-
-.. code-block:: bash
-
-    pre-commit install
-
-After which pre-commit will automatically check all future commits.
+Pre-commit will automatically check all future commits for code style.
 
 
 
@@ -194,23 +194,32 @@ With all optional dependencies installed, run:
 
 .. code-block:: bash
 
-    python -m sphinx -TEWb html -d _build/doctrees -D language=en docs docs/_build
+    python -m sphinx -TEWb html docs docs/_build
 
 Or check the build step in the most recent CI run or [RTD build](https://readthedocs.org/projects/pysindy/builds/).
+
+Community
+------------
+This repository is a fork from `original work <https://github.com/Ohjeah/sparsereg>`_ by `Markus Quade <https://github.com/Ohjeah>`_.
+
+Thanks to the members of the community who have contributed to PySINDy!
 
 Desired changes
 -----------------------
 
+Major changes that will affect the `type system <object model>`_ include:
+
+1. Promoting weak and discrete SINDy into subclasses of ``_BaseSINDy``.  This will remove the need for feature libraries to do so much, and prevent incompatibility errors.
+2. Making feature libraries array-implementation agnostic in order to be compatible with sympy, jax, cvxpy.
+3. Standardize the differentiation API, so that order & axis behave the same for each method, so that the smoothed trajectory is also returned, and so that smoothing can be consistent across multiple spatial dimensions.
+4. Add support for single-step methods that do differentiation and fitting the dynamics at the same time.
+5. Make the statistical optimizers (``EnsembleOptimizer``, ``SBR``) a separate type so that they can be more easily compared (and prevent the incompatible wrapping of one with the other).
+
 There are a number of SINDy variants and advanced functionality that would be great to implement in future releases:
 
 1. Bayesian SINDy, for instance that from Hirsh, Seth M., David A. Barajas-Solano, and J. Nathan Kutz. "Sparsifying Priors for Bayesian Uncertainty Quantification in Model Discovery." arXiv preprint arXiv:2107.02107 (2021).
-
 2. Tensor SINDy, using the methods in Gelß, Patrick, et al. "Multidimensional approximation of nonlinear dynamical systems." Journal of Computational and Nonlinear Dynamics 14.6 (2019).
-
 3. Stochastic SINDy, using the methods in Brückner, David B., Pierre Ronceray, and Chase P. Broedersz. "Inferring the dynamics of underdamped stochastic systems." Physical review letters 125.5 (2020): 058103.
-
 4. Integration of PySINDy with a Python model-predictive control (MPC) code.
-
 5. The PySINDy weak formulation is based on the work in Reinbold, Patrick AK, Daniel R. Gurevich, and Roman O. Grigoriev. "Using noisy or incomplete data to discover models of spatiotemporal dynamics." Physical Review E 101.1 (2020): 010203. It might be useful to additionally implement the weak formulation from Messenger, Daniel A., and David M. Bortz. "Weak SINDy for partial differential equations." Journal of Computational Physics (2021): 110525. The weak formulation in PySINDy is also fairly slow and computationally intensive, so finding ways to speed up the code would be great.
-
 6. The blended conditional gradients (BCG) algorithm for solving the constrained LASSO problem, Carderera, Alejandro, et al. "CINDy: Conditional gradient-based Identification of Non-linear Dynamics--Noise-robust recovery." arXiv preprint arXiv:2101.02630 (2021).

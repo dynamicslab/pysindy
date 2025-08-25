@@ -9,6 +9,7 @@
    Examples <examples/index>
    Practical tips <tips>
    Contributing <contributing>
+   Using pysindy in academia <academic>
 
 .. toctree::
    :maxdepth: 1

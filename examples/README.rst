@@ -5,6 +5,7 @@ This directory showcases examples of PySINDy in action.
 Some are copied from another repository that contains dependency information and
 potentially a greater description.
 
+Tutorials in the pysindy repo are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`_.
 Some notebooks require substantial computing resources.
 
 `Feature overview <./1_feature_overview/example.ipynb>`_

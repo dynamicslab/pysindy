@@ -131,7 +131,10 @@ class BaseFeatureLibrary(TransformerMixin, BaseEstimator):
         return ConcatLibrary([self, other])
 
     def __mul__(self, other):
-        return TensoredLibrary([self, other])
+        if isinstance(self, TensoredLibrary):
+            return TensoredLibrary(self.libraries + [other])
+        else:
+            return TensoredLibrary([self, other])
 
     def __rmul__(self, other):
         return TensoredLibrary([self, other])
@@ -451,7 +454,7 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            xp = []
+            xp = None
             for i in range(len(self.libraries)):
                 lib_i = self.libraries[i]
                 if self.inputs_per_library is None:
@@ -461,16 +464,11 @@ class TensoredLibrary(BaseFeatureLibrary):
                         [x[..., _unique(self.inputs_per_library[i])]]
                     )[0]
 
-                for j in range(i + 1, len(self.libraries)):
-                    lib_j = self.libraries[j]
-                    xp_j = lib_j.transform(
-                        [x[..., _unique(self.inputs_per_library[j])]]
-                    )[0]
+                if xp is None:
+                    xp = xp_i
+                else:
+                    xp = self._combinations(xp, xp_i)
 
-                    xp.append(self._combinations(xp_i, xp_j))
-
-            xp = np.concatenate(xp, axis=xp[0].ax_coord)
-            xp = AxesArray(xp, comprehend_axes(xp))
             xp_full.append(xp)
         return xp_full
 
@@ -499,20 +497,12 @@ class TensoredLibrary(BaseFeatureLibrary):
                     _unique(self.inputs_per_library[i])
                 ].tolist()
             lib_i_feat_names = lib_i.get_feature_names(input_features_i)
-            for j in range(i + 1, len(self.libraries)):
-                lib_j = self.libraries[j]
-                if input_features is None:
-                    input_features_j = [
-                        "x%d" % k for k in _unique(self.inputs_per_library[j])
-                    ]
-                else:
-                    input_features_j = np.asarray(input_features)[
-                        _unique(self.inputs_per_library[j])
-                    ].tolist()
-                lib_j_feat_names = lib_j.get_feature_names(input_features_j)
-                feature_names += self._name_combinations(
-                    lib_i_feat_names, lib_j_feat_names
-                )
+
+            if len(feature_names) == 0:
+                feature_names = lib_i_feat_names
+            else:
+                feature_names = self._name_combinations(feature_names, lib_i_feat_names)
+
         return feature_names
 
     def calc_trajectory(self, diff_method, x, t):

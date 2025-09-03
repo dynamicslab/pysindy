@@ -1,12 +1,40 @@
-Tutorial/How-To Examples
+Tutorials
 =============================
-
-This directory showcases examples of PySINDy in action.
-Some are copied from another repository that contains dependency information and
-potentially a greater description.
-
+These are introductory guides to get familiar with how to use pysindy in your project.
 Tutorials in the pysindy repo are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`_.
-Some notebooks require substantial computing resources.
+
+
+`Getting Started fitting a model <./tutorial_1/example.ipynb>`_
+---------------------------------------------------------------------------------------------------------------------
+We recommend that people new to SINDy start here.
+We show how to use PySINDy to learn a model for a simple linear differential equation.
+
+.. toctree::
+    :hidden:
+    :maxdepth: 1
+
+    ./tutorial_1/example
+
+`Evaluating a model fit <./tutorial_2/example.ipynb>`_
+---------------------------------------------------------------------------------------------------------------------
+
+.. toctree::
+    :hidden:
+    :maxdepth: 1
+
+    ./tutorial_2/example
+
+
+`Choosing model components <./tutorial_3/example.ipynb>`_
+---------------------------------------------------------------------------------------------------------------------
+
+
+.. toctree::
+    :hidden:
+    :maxdepth: 1
+
+    ./tutorial_3/example
+
 
 `Feature overview <./1_feature_overview/example.ipynb>`_
 -----------------------------------------------------------------------------------------------------------
@@ -19,15 +47,12 @@ This notebook gives an almost exhaustive overview of the different features avai
     ./1_feature_overview/example
 
 
-`Introduction to SINDy <./2_introduction_to_sindy/example.ipynb>`_
----------------------------------------------------------------------------------------------------------------------
-We recommend that people new to SINDy start here. We give a gentle introduction to the SINDy method and how different steps in the algorithm are represented in PySINDy. We also show how to use PySINDy to learn a model for a simple linear differential equation.
+How-To Guides
+==========================================
+The following examples are both more specific and more advanced.
+Some are copied from another repository that contains dependency information and
+potentially a greater description.
 
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./2_introduction_to_sindy/example
 
 
 `Scikit-learn compatibility <./4_scikit_learn_compatibility/example.ipynb>`_

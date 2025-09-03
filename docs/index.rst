@@ -6,12 +6,13 @@
    :hidden:
    :caption: User Guide
 
-   API Documentation <api/pysindy>
+   What is SINDy? <summary>
    Examples <examples/index>
    Practical tips <tips>
    Contributing <contributing>
    Using pysindy in academia <academic>
    Object Model <objects>
+   API Documentation <api/pysindy>
 
 .. toctree::
    :maxdepth: 1

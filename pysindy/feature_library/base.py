@@ -393,40 +393,6 @@ class TensoredLibrary(BaseFeatureLibrary):
         """
         self.inputs_per_library = inputs_per_library
 
-    def _transform_at(self, idx: int, x: AxesArray) -> AxesArray:
-        """
-        Apply `transform` to the `idx`-th library in `libraries`,
-        using the inputs specified by `inputs_per_library[idx]`.
-        """
-        n_features = x.shape[1]
-
-        inputs_per_library = self.inputs_per_library
-        if inputs_per_library is None:
-            inputs_per_library = list(np.arange(n_features)) * len(self.libraries)
-
-        res = self.libraries[idx].transform([x[..., _unique(inputs_per_library[idx])]])[
-            0
-        ]
-
-        return res
-
-    def _feature_names_at(
-        self, idx: int, input_features: list[str] | None
-    ) -> list[str]:
-        """
-        Apply `get_feature_names` to the `idx`-th library in `libraries`,
-        using the inputs specified by `inputs_per_library[idx]`.
-        """
-        if input_features is None:
-            max_idx = max(map(max, self.inputs_per_library))
-            input_features = [f"x{k}" for k in np.arange(max_idx + 1)]
-
-        cur_input_features = np.asarray(input_features)[
-            _unique(self.inputs_per_library[idx])
-        ].tolist()
-
-        return self.libraries[idx].get_feature_names(cur_input_features)
-
     @x_sequence_or_item
     def fit(self, x_full, y=None):
         """
@@ -488,9 +454,13 @@ class TensoredLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
-            xp = self._transform_at(0, x)
+            xp = self.libraries[0].transform(
+                [x[..., _unique(self.inputs_per_library[0])]]
+            )[0]
             for i in range(1, len(self.libraries)):
-                xp_i = self._transform_at(i, x)
+                xp_i = self.libraries[i].transform(
+                    [x[..., _unique(self.inputs_per_library[i])]]
+                )[0]
                 xp = self._combinations(xp, xp_i)
 
             xp_full.append(xp)
@@ -509,9 +479,20 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         output_feature_names : list of string, length n_output_features
         """
-        feature_names = self._feature_names_at(0, input_features)
+        check_is_fitted(self)
+
+        if input_features is None:
+            input_features = ["x%d" % i for i in range(self.n_features_in_)]
+
+        feature_names = self.libraries[0].get_feature_names(
+            np.asarray(input_features)[_unique(self.inputs_per_library[0])].tolist()
+        )
+
         for i in range(1, len(self.libraries)):
-            lib_i_feat_names = self._feature_names_at(i, input_features)
+            cur_input_features = np.asarray(input_features)[
+                _unique(self.inputs_per_library[i])
+            ].tolist()
+            lib_i_feat_names = self.libraries[i].get_feature_names(cur_input_features)
             feature_names = self._name_combinations(feature_names, lib_i_feat_names)
 
         return feature_names

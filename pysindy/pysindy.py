@@ -876,13 +876,14 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
     if u is not None:
         reshape_control = False
         for i in range(len(x)):
-            if len(x[i].shape) != len(np.array(u[i]).shape):
+            if len(np.array(x[i]).shape) != len(np.array(u[i]).shape):
                 reshape_control = True
         if reshape_control:
             try:
-                shape = np.array(x[0].shape)
-                shape[x[0].ax_coord] = -1
-                u = [np.reshape(u[i], shape) for i in range(len(x))]
+                shape = [list(np.array(xi).shape) for xi in x]
+                for i in range(len(shape)):
+                    shape[i][x[i].ax_coord] = -1
+                u = [np.reshape(u[i], shape[i]) for i in range(len(x))]
             except Exception:
                 try:
                     if np.isscalar(u[0]):

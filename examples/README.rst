@@ -18,22 +18,15 @@ We show how to use PySINDy to learn a model for a simple linear differential equ
 `Evaluating a model fit <./tutorial_2/example.ipynb>`_
 ---------------------------------------------------------------------------------------------------------------------
 
+It can be tricky to evaluate how well a model is fit.
+This tutorial shows different ways to evaluate and visualize a model,
+depending on the use case.
+
 .. toctree::
     :hidden:
     :maxdepth: 1
 
     ./tutorial_2/example
-
-
-`Choosing model components <./tutorial_3/example.ipynb>`_
----------------------------------------------------------------------------------------------------------------------
-
-
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./tutorial_3/example
 
 
 `Feature overview <./1_feature_overview/example.ipynb>`_

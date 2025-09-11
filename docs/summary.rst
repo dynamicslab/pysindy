@@ -115,7 +115,7 @@ Structure of PySINDy
 The submodules of PySINDy are each aligned with one of the terms in
 the aforementioned approximation equation, :math:`\dot X \approx \Theta(X)\Xi.`
 
- * ``pysindy.differentiate`` performs numerical differentiation to compute :math:`\dot X` from :math:`X`;
+ * ``pysindy.differentiation`` performs numerical differentiation to compute :math:`\dot X` from :math:`X`;
  * ``pysindy.feature_library`` allows the user to specify a set of library functions and handles the formation of :math:`\Theta(X)`;
  * ``pysindy.optimizers`` provides a set of sparse regression solvers for determining :math:`\Xi`.
 

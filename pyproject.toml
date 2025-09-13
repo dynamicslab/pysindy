@@ -93,7 +93,7 @@ addopts = '-m "not slow and not notebooks"'
 markers = ["slow", "notebooks"]
 
 [tool.codespell]
-ignore-words-list = "pres,nd,hist"
+ignore-words-list = "pres,nd,hist,wit"
 
 [tool.setuptools]
 packages = ["pysindy"]

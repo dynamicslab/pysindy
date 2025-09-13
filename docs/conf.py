@@ -14,26 +14,20 @@ from sphinx.directives.other import TocTree
 from sphinx.util.docutils import SphinxDirective
 
 author = "dynamicslab"
-project = "pysindy"  # package name
-
-
-# no need to edit below this line
-
+project = "pysindy"
 copyright = f"2020, {author}"
-
 module = importlib.import_module(project)
 version = release = getattr(module, "__version__")
 
 master_doc = "index"
 
 extensions = [
-    "nbsphinx",
-    "sphinxcontrib.apidoc",
     "sphinx.ext.autodoc",
-    "sphinx.ext.todo",
-    "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
+    "nbsphinx",
+    "sphinx.ext.todo",
     "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "IPython.sphinxext.ipython_console_highlighting",
@@ -41,13 +35,11 @@ extensions = [
 
 nb_execution_mode = "off"
 
-apidoc_module_dir = f"../{project}"
-apidoc_excluded_paths = ["tests"]
-apidoc_toc_file = False
+templates_path = ["templates"]
+autosummary_generate = True
+autosummary_ignore_module_all = False
 
-autodoc_default_options = {"members": True}
-autodoc_member_order = "bysource"
-autoclass_content = "init"
+autoclass_content = "both"
 
 language = "en"
 
@@ -69,9 +61,21 @@ default_role = "any"
 html_sourcelink_suffix = ""
 
 intersphinx_mapping = {
-    "derivative": ("https://derivative.readthedocs.io/en/latest/", None),
-    "sklearn": ("https://scikit-learn.org/stable/", None),
+    "derivative": ("https://derivative.readthedocs.io/en/latest", None),
+    "sklearn": ("https://scikit-learn.org/stable", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
 }
+
+show_warning_types = True
+suppress_warnings = [
+    "ref.python",
+    "ref.exc",
+    "ref.class",
+    "ref.obj",
+    "ref.meth",
+    "ref.any",
+    "ref",
+]
 
 # -- Extensions to the  Napoleon GoogleDocstring class ---------------------
 # michaelgoerz.net/notes/extending-sphinx-napoleon-docstring-sections.html

@@ -12,7 +12,7 @@
    Contributing <contributing>
    Using pysindy in academia <academic>
    Object Model <objects>
-   API Documentation <api/pysindy>
+   API Documentation <generated/pysindy>
 
 .. toctree::
    :maxdepth: 1

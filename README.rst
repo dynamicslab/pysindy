@@ -73,7 +73,7 @@ which correctly results in
   y' = 1.000 y
 
 PySINDy provides numerous other features not shown here. We have a variety of tutorials and examples, starting with
-`feature overview <https://pysindy.readthedocs.io/en/latest/examples/1_feature_overview/example.html>`_.
+`generating data and fitting models <examples/tutorial_1/example.html>`_.
 
 
 Getting Help

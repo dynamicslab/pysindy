@@ -148,7 +148,7 @@ class _AxisMapping:
         removed and all greater axes decremented.  This can be passed to
         the constructor to create a new _AxisMapping
 
-        Arguments:
+        Parameters:
             axis: the axis index or axes indexes to remove.  By numpy
             ufunc convention, axis=None (default) removes _all_ axes.
         """
@@ -177,7 +177,7 @@ class _AxisMapping:
         """Create an axes dict from self with specified axis or axes
         added and all greater axes incremented.
 
-        Arguments:
+        Parameters:
             axis: the axis index or axes indexes to add.
 
         Todo:
@@ -213,7 +213,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
     * Not all numpy functions, such as ``np.flatten()``, have an
       implementation for ``AxesArray``.  In such cases a regular numpy array
       is returned.
-    * For functions that are implemented for `AxesArray`, such as
+    * For functions that are implemented for ``AxesArray``, such as
       ``np.reshape()``, use the numpy function rather than the bound
       method (e.g. ``arr.reshape``)
     * Such functions may raise ``ValueError`` where numpy would not, when
@@ -239,7 +239,7 @@ class AxesArray(np.lib.mixins.NDArrayOperatorsMixin, np.ndarray):
     Parameters:
         input_array: the data to create the array.
         axes: A dictionary of axis labels to shape indices.  Axes labels must
-            be of the format "ax_name".  indices can be either an int or a
+            be of the format ``"ax_name"``.  indices can be either an int or a
             list of ints.
 
     Attributes:

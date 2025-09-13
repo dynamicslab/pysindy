@@ -4,8 +4,8 @@
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
-from ..pysindy import SINDy
-from ..utils import SampleConcatter
+from ._core import SINDy
+from .utils import SampleConcatter
 
 
 class SINDyEstimator(SINDy):

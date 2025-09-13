@@ -11,8 +11,8 @@ from . import feature_library
 from . import optimizers
 from . import deeptime
 from . import utils
-from .pysindy import SINDy
-from .pysindy import AxesArray
+from ._core import SINDy
+from ._core import AxesArray
 from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
 from .differentiation import SpectralDerivative
@@ -63,9 +63,11 @@ except (ImportError, NameError):
     pass
 
 
-__all__ = ["SINDy", "AxesArray"]
-__all__.extend(differentiation.__all__)
-__all__.extend(feature_library.__all__)
-__all__.extend(optimizers.__all__)
-__all__.extend(["utils"])
-__all__.extend(["deeptime"])
+__all__ = [
+    "SINDy",
+    "differentiation",
+    "feature_library",
+    "optimizers",
+    "deeptime",
+    "utils",
+]

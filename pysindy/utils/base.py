@@ -10,7 +10,7 @@ from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
 
-from .axes import AxesArray
+from ._axes import AxesArray
 
 # Define a special object for the default value of t in
 # validate_input. Normally we would set the default

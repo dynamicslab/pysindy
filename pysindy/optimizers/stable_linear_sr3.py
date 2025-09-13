@@ -15,7 +15,7 @@ from scipy.linalg import cho_factor
 from sklearn.exceptions import ConvergenceWarning
 
 from ..utils import reorder_constraints
-from .constrained_sr3 import ConstrainedSR3
+from ._constrained_sr3 import ConstrainedSR3
 
 
 class StableLinearSR3(ConstrainedSR3):

@@ -23,10 +23,10 @@ from .._typing import Int1D
 from ..feature_library.polynomial_library import n_poly_features
 from ..feature_library.polynomial_library import PolynomialLibrary
 from ..utils import reorder_constraints
+from ._constrained_sr3 import ConstrainedSR3
 from .base import FloatDType
 from .base import NFeat
 from .base import NTarget
-from .constrained_sr3 import ConstrainedSR3
 
 
 class EnstrophyMat:

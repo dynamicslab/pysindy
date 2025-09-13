@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+title: pysindy
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Alan
+    family-names: Kaptanoglu
+    email: alanakaptanoglu@gmail.com
+    affiliation: New York University
+  - given-names: Jacob
+    family-names: Stevens-Haas
+    email: jacob.stevens.haas@gmail.com
+    affiliation: University of Washington
+    orcid: 'https://orcid.org/0000-0003-4142-5550'
+  - given-names: Kathleen
+    family-names: Champion
+    email: kpchamp@uw.edu
+  - given-names: Brian
+    family-names: de Silva
+    email: bdesilva@uw.edu
+  - given-names: Markus
+    family-names: Quade
+    email: info@markusqua.de
+repository-code: 'https://github.com/dynamicslab/pysindy'
+url: 'https://pysindy.readthedocs.org/'
+abstract: >-
+  PySINDy is a sparse regression package with several
+  implementations for the Sparse Identification of Nonlinear
+  Dynamical systems (SINDy) method introduced in Brunton et
+  al. (2016).
+license: MIT

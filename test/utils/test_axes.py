@@ -6,9 +6,9 @@ from numpy.testing import assert_equal
 from numpy.testing import assert_raises
 
 from pysindy import AxesArray
-from pysindy.utils import axes
-from pysindy.utils.axes import _AxisMapping
-from pysindy.utils.axes import AxesWarning
+from pysindy.utils import _axes
+from pysindy.utils._axes import _AxisMapping
+from pysindy.utils._axes import AxesWarning
 
 
 def test_axesarray_create():
@@ -311,11 +311,11 @@ def test_adv_indexing_adds_axes():
 
 def test_standardize_basic_indexer():
     arr = np.arange(6).reshape(2, 3)
-    result_indexer, result_fancy = axes._standardize_indexer(arr, Ellipsis)
+    result_indexer, result_fancy = _axes._standardize_indexer(arr, Ellipsis)
     assert result_indexer == [slice(None), slice(None)]
     assert result_fancy == ()
 
-    result_indexer, result_fancy = axes._standardize_indexer(
+    result_indexer, result_fancy = _axes._standardize_indexer(
         arr, (np.newaxis, 1, 1, Ellipsis)
     )
     assert result_indexer == [None, 1, 1]
@@ -324,11 +324,11 @@ def test_standardize_basic_indexer():
 
 def test_standardize_advanced_indexer():
     arr = np.arange(6).reshape(2, 3)
-    result_indexer, result_fancy = axes._standardize_indexer(arr, [1])
+    result_indexer, result_fancy = _axes._standardize_indexer(arr, [1])
     assert result_indexer == [np.ones(1), slice(None)]
     assert result_fancy == (0,)
 
-    result_indexer, result_fancy = axes._standardize_indexer(
+    result_indexer, result_fancy = _axes._standardize_indexer(
         arr, (np.newaxis, [1], 1, Ellipsis)
     )
     assert result_indexer == [None, np.ones(1), 1]
@@ -337,7 +337,7 @@ def test_standardize_advanced_indexer():
 
 def test_standardize_bool_indexer():
     arr = np.ones((1, 2))
-    result, result_adv = axes._standardize_indexer(arr, [[True, True]])
+    result, result_adv = _axes._standardize_indexer(arr, [[True, True]])
     assert_equal(result, [[0, 0], [0, 1]])
     assert result_adv == (0, 1)
 
@@ -493,35 +493,35 @@ def test_insert_misordered_AxisMapping():
 
 def test_determine_adv_broadcasting():
     indexers = (1, np.ones(1), np.ones((4, 1)), np.ones(3))
-    res_nd, res_start = axes._determine_adv_broadcasting(indexers, [1, 2, 3])
+    res_nd, res_start = _axes._determine_adv_broadcasting(indexers, [1, 2, 3])
     assert res_nd == 2
     assert res_start == 1
 
     indexers = (None, np.ones(1), 2, np.ones(3))
-    res_nd, res_start = axes._determine_adv_broadcasting(indexers, [1, 3])
+    res_nd, res_start = _axes._determine_adv_broadcasting(indexers, [1, 3])
     assert res_nd == 1
     assert res_start == 0
 
-    res_nd, res_start = axes._determine_adv_broadcasting(indexers, [])
+    res_nd, res_start = _axes._determine_adv_broadcasting(indexers, [])
     assert res_nd == 0
     assert res_start is None
 
 
 def test_replace_ellipsis():
     key = [..., 0]
-    result = axes._expand_indexer_ellipsis(key, 2)
+    result = _axes._expand_indexer_ellipsis(key, 2)
     expected = [slice(None), 0]
     assert result == expected
 
 
 def test_strip_ellipsis():
     key = [1, ...]
-    result = axes._expand_indexer_ellipsis(key, 1)
+    result = _axes._expand_indexer_ellipsis(key, 1)
     expected = [1]
     assert result == expected
 
     key = [..., 1]
-    result = axes._expand_indexer_ellipsis(key, 1)
+    result = _axes._expand_indexer_ellipsis(key, 1)
     expected = [1]
     assert result == expected
 
@@ -586,7 +586,7 @@ def test_linalg_solve_incompatible_left():
 
 
 def test_ts_to_einsum_int_axes():
-    a_str, b_str = axes._tensordot_to_einsum(3, 3, 2).split(",")
+    a_str, b_str = _axes._tensordot_to_einsum(3, 3, 2).split(",")
     # expecting 'abc,bcf
     assert a_str[0] not in b_str
     assert b_str[-1] not in a_str
@@ -594,7 +594,7 @@ def test_ts_to_einsum_int_axes():
 
 
 def test_ts_to_einsum_list_axes():
-    a_str, b_str = axes._tensordot_to_einsum(3, 3, [[1], [2]]).split(",")
+    a_str, b_str = _axes._tensordot_to_einsum(3, 3, [[1], [2]]).split(",")
     # expecting 'abcd,efbh
     assert a_str[1] == b_str[2]
     assert a_str[0] not in b_str

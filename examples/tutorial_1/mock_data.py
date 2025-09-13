@@ -14,4 +14,6 @@ def gen_data2():
     t_test = np.linspace(0, 0.1, 10)
     x_test = x0 * np.exp(-2 * t_test)
     y_test = y0 * np.exp(t_test)
-    return x0, y0, t_test, x_test, y_test
+    x_dot_test = x_test
+    y_dot_test = y_test
+    return x0, y0, t_test, x_test, y_test, x_dot_test, y_dot_test

@@ -7,7 +7,7 @@ from .stlsq import STLSQ
 from .wrapped_optimizer import WrappedOptimizer
 
 try:
-    from .constrained_sr3 import ConstrainedSR3
+    from ._constrained_sr3 import ConstrainedSR3
 except (ImportError, NameError):
     pass
 try:

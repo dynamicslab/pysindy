@@ -141,15 +141,16 @@ Install our pre-commit script via
 
     pre-commit install
 
+Pre-commit will automatically check all future commits for code style.
 To be accepted your code should conform to PEP8 and pass all unit tests.
 Code can be tested by invoking
 
 .. code-block:: bash
 
-    pytest
+    pytest --jax-pcc
 
-Pre-commit will automatically check all future commits for code style.
-
+The ``jax-pcc`` flag is optional and will speed up the jax tests on repeated runs
+by caching compiled functions to disk.
 
 
 Coding Guidelines

@@ -70,8 +70,6 @@ from typing import Union
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.utils._metadata_requests import MetadataRequester
-
 
 HANDLED_FUNCTIONS = {}
 
@@ -828,7 +826,7 @@ def comprehend_axes(x):
     return axes
 
 
-class SampleConcatter(BaseEstimator, TransformerMixin, MetadataRequester):
+class SampleConcatter(BaseEstimator, TransformerMixin):
     def __init__(self):
         pass
 

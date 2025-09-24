@@ -942,42 +942,28 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
     return x, x_dot, u
 
+
 def _expand_sample_weights(sample_weight, trajectories):
-    """Expand trajectory-level weights to per-sample weights.
-
-    Parameters
-    ----------
-    sample_weight : array-like of shape (n_trajectories,) or (n_samples,), default=None
-        If length == n_trajectories, each trajectory weight is expanded to cover
-        all samples in that trajectory.
-        If length == n_samples, interpreted as per-sample weights directly.
-        If None, uniform weighting is applied.
-
-    trajectories : list of array-like
-        The list of input trajectories, each shape (n_samples_i, n_features).
-
-    Returns
-    -------
-    sample_weight : ndarray of shape (sum_i n_samples_i,)
-        Per-sample weights, ready to use in metrics.
-    """
     if sample_weight is None:
         return None
 
-    sample_weight = np.asarray(sample_weight)
+    # Case: list of arrays, one per trajectory
+    if isinstance(sample_weight, (list, tuple)):
+        if len(sample_weight) != len(trajectories):
+            raise ValueError(
+                f"Expected {len(trajectories)} weight blocks, got {len(sample_weight)}"
+            )
+        return np.concatenate([np.asarray(w) for w in sample_weight])
 
-    n_traj = len(trajectories)
-    n_samples_total = sum(len(traj) for traj in trajectories)
-
-    if sample_weight.ndim == 1 and len(sample_weight) == n_traj:
-        # Efficient expansion using np.repeat
-        traj_lengths = [len(traj) for traj in trajectories]
-        return np.repeat(sample_weight, traj_lengths)
-
-    if sample_weight.ndim == 1 and len(sample_weight) == n_samples_total:
-        return sample_weight
+    # Case: already concatenated 1D array
+    w = np.asarray(sample_weight)
+    total = sum(len(traj) for traj in trajectories)
+    if w.ndim == 1 and w.shape[0] == total:
+        return w
 
     raise ValueError(
-        f"sample_weight must be length {n_traj} (per trajectory) or "
-        f"{n_samples_total} (per sample), got {len(sample_weight)}"
+        f"sample_weight must be list of arrays or shape ({total},), "
+        f"got {w.shape}"
     )
+
+

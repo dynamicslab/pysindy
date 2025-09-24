@@ -130,7 +130,7 @@ def data(request):
     ],
     ids=lambda param: type(param),
 )
-def test_fit(data_derivative_1d, optimizer):
+def test_fit(data_derivative_1d, optimizer, set_jax_pcc_env):
     x, x_dot = data_derivative_1d
     if len(x.shape) == 1:
         x = x.reshape(-1, 1)
@@ -168,7 +168,7 @@ def test_not_fitted(optimizer):
     ],
     ids=type,
 )
-def test_complexity_not_fitted(optimizer, data_derivative_2d):
+def test_complexity_not_fitted(optimizer, data_derivative_2d, set_jax_pcc_env):
     with pytest.raises(NotFittedError):
         optimizer.complexity
 
@@ -389,7 +389,7 @@ def test_sbr_bad_parameters(params):
         SBR(**params)
 
 
-def test_sbr_accurate():
+def test_sbr_accurate(set_jax_pcc_env):
     # It's really hard to tune SBR to get desired shrinkage
     # This just tests that SBR fits "close" to unregularized regression
     x = np.tile(np.eye(2), 4).reshape((-1, 2))
@@ -1193,7 +1193,7 @@ def test_remove_and_decrement():
         (TrappingSR3, {"_n_tgts": 3, "_include_bias": True}),
     ),
 )
-def test_pickle(data_lorenz, opt_cls, opt_args):
+def test_pickle(data_lorenz, opt_cls, opt_args, set_jax_pcc_env):
     x, t = data_lorenz
     y = PolynomialLibrary(degree=2).fit_transform(x)
     opt = opt_cls(**opt_args).fit(y, x)

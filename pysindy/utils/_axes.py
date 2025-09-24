@@ -839,6 +839,9 @@ class SampleConcatter(TransformerMixin):
     def transform(self, x_list):
         return concat_sample_axis(x_list)
 
+    def get_metadata_routing(self):
+        return self._get_metadata_routing()
+
 
 def concat_sample_axis(x_list: List[AxesArray]):
     """Concatenate all trajectories and axes used to create samples."""

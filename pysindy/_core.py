@@ -298,6 +298,7 @@ class SINDy(_BaseSINDy):
         self.discrete_time = discrete_time
         self.set_fit_request(sample_weight=True)
         self.set_score_request(sample_weight=True)
+        self.optimizer.set_fit_request(sample_weight=True)
 
     def fit(
         self,

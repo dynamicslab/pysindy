@@ -1,6 +1,4 @@
 import warnings
-from sklearn import set_config
-set_config(enable_metadata_routing=True)
 
 from abc import ABC
 from abc import abstractmethod
@@ -18,6 +16,8 @@ from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
+from sklearn import set_config
+set_config(enable_metadata_routing=True)
 from typing_extensions import Self
 
 from .differentiation import BaseDifferentiation

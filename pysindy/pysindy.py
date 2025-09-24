@@ -294,6 +294,8 @@ class SINDy(_BaseSINDy):
             differentiation_method = FiniteDifference(axis=-2)
         self.differentiation_method = differentiation_method
         self.discrete_time = discrete_time
+        self.set_fit_request(sample_weight=True)
+        self.set_score_request(sample_weight=True)
 
     def fit(
         self,
@@ -302,6 +304,7 @@ class SINDy(_BaseSINDy):
         x_dot=None,
         u=None,
         feature_names: Optional[list[str]] = None,
+        sample_weight=None,
     ):
         """
         Fit a SINDy model.
@@ -342,6 +345,11 @@ class SINDy(_BaseSINDy):
         feature_names : list of string, length n_input_features, optional
             Names for the input features (e.g. :code:`['x', 'y', 'z']`).
             If None, will use :code:`['x0', 'x1', ...]`.
+            
+        sample_weight : float or array-like of shape (n_samples,), optional
+            Per-sample weights for the regression. Passed internally to
+            the optimizer (e.g. STLSQ). Supports compatibility with
+            scikit-learn tools such as GridSearchCV when using weighted data.
 
         Returns
         -------
@@ -371,6 +379,10 @@ class SINDy(_BaseSINDy):
 
         self.feature_names = feature_names
 
+        # User may give one weight per trajectory or one weight per sample
+        if sample_weight is not None:
+            sample_weight = _expand_sample_weights(sample_weight, x)
+                                           
         steps = [
             ("features", self.feature_library),
             ("shaping", SampleConcatter()),
@@ -378,7 +390,7 @@ class SINDy(_BaseSINDy):
         ]
         x_dot = concat_sample_axis(x_dot)
         self.model = Pipeline(steps)
-        self.model.fit(x, x_dot)
+        self.model.fit(x, x_dot, model__sample_weight=sample_weight)
         self._fit_shape()
 
         return self
@@ -412,6 +424,7 @@ class SINDy(_BaseSINDy):
         x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
 
         check_is_fitted(self, "model")
+        
         if self.n_control_features_ > 0 and u is None:
             raise TypeError("Model was fit using control variables, so u is required")
         if self.n_control_features_ == 0 and u is not None:
@@ -467,7 +480,7 @@ class SINDy(_BaseSINDy):
                 names = f"{lhs[i]}"
             print(f"{names} = {eqn}", **kwargs)
 
-    def score(self, x, t, x_dot=None, u=None, metric=r2_score, **metric_kws):
+    def score(self, x, t, x_dot=None, u=None, metric=r2_score, sample_weight=None, **metric_kws):
         """
         Returns a score for the time derivative prediction produced by the model.
 
@@ -500,9 +513,14 @@ class SINDy(_BaseSINDy):
             See `Scikit-learn \
             <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
             for more options.
+        
+        sample_weight : array-like of shape (n_samples,), optional
+            Per-sample weights passed directly to the metric. This is the
+            preferred way to supply weights.
 
         metric_kws: dict, optional
             Optional keyword arguments to pass to the metric function.
+            
 
         Returns
         -------
@@ -523,10 +541,21 @@ class SINDy(_BaseSINDy):
 
         x, x_dot = self._process_trajectories(x, t, x_dot)
 
+        if sample_weight is not None:
+            sample_weight = _expand_sample_weights(sample_weight, x)
+    
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)
 
-        x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
+        if sample_weight is not None:
+            x_dot, x_dot_predict, good_idx = drop_nan_samples(
+                x_dot, x_dot_predict, return_indices=True
+            )
+            sample_weight = sample_weight[good_idx]
+            metric_kws = {**metric_kws, "sample_weight": sample_weight}  
+        else:
+            x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
+
         return metric(x_dot, x_dot_predict, **metric_kws)
 
     def _process_trajectories(self, x, t, x_dot):
@@ -910,3 +939,43 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
             )
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
     return x, x_dot, u
+
+def _expand_sample_weights(sample_weight, trajectories):
+    """Expand trajectory-level weights to per-sample weights.
+
+    Parameters
+    ----------
+    sample_weight : array-like of shape (n_trajectories,) or (n_samples,), default=None
+        If length == n_trajectories, each trajectory weight is expanded to cover
+        all samples in that trajectory.
+        If length == n_samples, interpreted as per-sample weights directly.
+        If None, uniform weighting is applied.
+
+    trajectories : list of array-like
+        The list of input trajectories, each shape (n_samples_i, n_features).
+
+    Returns
+    -------
+    sample_weight : ndarray of shape (sum_i n_samples_i,)
+        Per-sample weights, ready to use in metrics.
+    """
+    if sample_weight is None:
+        return None
+
+    sample_weight = np.asarray(sample_weight)
+
+    n_traj = len(trajectories)
+    n_samples_total = sum(len(traj) for traj in trajectories)
+
+    if sample_weight.ndim == 1 and len(sample_weight) == n_traj:
+        # Efficient expansion using np.repeat
+        traj_lengths = [len(traj) for traj in trajectories]
+        return np.repeat(sample_weight, traj_lengths)
+
+    if sample_weight.ndim == 1 and len(sample_weight) == n_samples_total:
+        return sample_weight
+
+    raise ValueError(
+        f"sample_weight must be length {n_traj} (per trajectory) or "
+        f"{n_samples_total} (per sample), got {len(sample_weight)}"
+    )

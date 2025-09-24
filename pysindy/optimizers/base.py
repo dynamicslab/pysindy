@@ -173,6 +173,32 @@ class BaseOptimizer(LinearRegression, _BaseOptimizer):
         x_, y = drop_nan_samples(x_, y)
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
+        # The next scope is for when the sample weights 
+        # are different for each output component
+        if sample_weight is not None:
+            sample_weight = np.asarray(sample_weight)
+            if sample_weight.shape == y.shape:
+                # Fit separately per target with its own weights, then combine
+                coefs, histories = [], []
+                for j in range(y.shape[1]):
+                    sw_j = sample_weight[:, j]
+                    # recursive call on 1D y[:, j]
+                    sub = self.__class__(
+                        alpha=self.alpha,
+                        threshold=self.threshold,
+                        normalize_columns=self.normalize_columns,
+                        unbias=self.unbias,
+                        max_iter=self.max_iter,
+                        copy_X=self.copy_X,
+                        initial_guess=None,
+                    )
+                    sub.fit(x_, y[:, j], sample_weight=sw_j, **reduce_kws)
+                    coefs.append(sub.coef_.ravel())
+                    histories.append(sub.history_)
+                self.coef_ = np.column_stack(coefs)
+                self.history_ = histories
+                return self
+            
         x, y, X_offset, y_offset, X_scale = _preprocess_data(
             x_,
             y,

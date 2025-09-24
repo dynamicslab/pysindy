@@ -69,7 +69,9 @@ from typing import Union
 
 import numpy as np
 from numpy.typing import NDArray
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.metadata_routing import MetadataRequester
+
 
 HANDLED_FUNCTIONS = {}
 
@@ -826,7 +828,7 @@ def comprehend_axes(x):
     return axes
 
 
-class SampleConcatter(TransformerMixin):
+class SampleConcatter(BaseEstimator, TransformerMixin, MetadataRequester):
     def __init__(self):
         pass
 
@@ -838,10 +840,6 @@ class SampleConcatter(TransformerMixin):
 
     def transform(self, x_list):
         return concat_sample_axis(x_list)
-
-    def get_metadata_routing(self):
-        return self._get_metadata_routing()
-
 
 def concat_sample_axis(x_list: List[AxesArray]):
     """Concatenate all trajectories and axes used to create samples."""

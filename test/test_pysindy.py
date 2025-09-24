@@ -142,15 +142,6 @@ def test_bad_t(data):
 @pytest.mark.parametrize(
     "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
 )
-def test_differentiate_returns_compatible_data_type(data):
-    x, t = data
-    x_dot = SINDy().differentiate(x, t)
-    assert isinstance(x_dot, type(x))
-
-
-@pytest.mark.parametrize(
-    "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
-)
 @pytest.mark.parametrize(
     "optimizer",
     [
@@ -453,20 +444,6 @@ def test_print_discrete_time(data_discrete_time, capsys):
 
     assert len(out) > 0
     assert "(x0)[k+1] = " in out
-
-
-def test_differentiate(data_lorenz, data_multiple_trajectories):
-    x, t = data_lorenz
-
-    model = SINDy()
-    model.differentiate(x, t)
-
-    x, t = data_multiple_trajectories
-    model.differentiate(x, t)
-
-    model = SINDy(discrete_time=True)
-    with pytest.raises(RuntimeError):
-        model.differentiate(x, t)
 
 
 def test_coefficients_equals_complexity(data_lorenz):

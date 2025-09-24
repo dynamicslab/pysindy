@@ -1,4 +1,7 @@
 import warnings
+from sklearn import set_config
+set_config(enable_metadata_routing=True)
+
 from abc import ABC
 from abc import abstractmethod
 from itertools import product

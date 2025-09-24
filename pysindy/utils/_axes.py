@@ -70,7 +70,6 @@ from typing import Union
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.utils.metadata_routing import MetadataRequester
 from sklearn.utils._metadata_requests import MetadataRequester
 
 

@@ -48,7 +48,6 @@ class _BaseSINDy(BaseEstimator, ABC):
 
     feature_library: BaseFeatureLibrary
     optimizer: _BaseOptimizer
-    discrete_time: bool
     model: Pipeline
     # Hacks to remove later
     feature_names: Optional[list[str]]
@@ -178,23 +177,23 @@ class SINDy(_BaseSINDy):
 
     Parameters
     ----------
-    optimizer : optimizer object, optional
+    optimizer
         Optimization method used to fit the SINDy model. This must be a class
         extending :class:`pysindy.optimizers.BaseOptimizer`.
-        The default is :class:`STLSQ`.
+        The default is :class:`pysindy.optimizers.STLSQ`.
 
-    feature_library : feature library object, optional
+    feature_library
         Feature library object used to specify candidate right-hand side features.
         This must be a class extending
         :class:`pysindy.feature_library.base.BaseFeatureLibrary`.
-        The default option is :class:`PolynomialLibrary`.
+        The default option is :class:`pysindy.feature_library.PolynomialLibrary`.
 
-    differentiation_method : differentiation object, optional
+    differentiation_method
         Method for differentiating the data. This must be a class extending
-        :class:`pysindy.differentiation_methods.base.BaseDifferentiation` class.
+        :class:`pysindy.differentiation.base.BaseDifferentiation` class.
         The default option is centered difference.
 
-    discrete_time : boolean, optional (default False)
+    discrete_time
         If True, dynamical system is treated as a map. Rather than predicting
         derivatives, the right hand side functions step the system forward by
         one time step. If False, dynamical system is assumed to be a flow
@@ -202,7 +201,7 @@ class SINDy(_BaseSINDy):
 
     Attributes
     ----------
-    model : ``sklearn.multioutput.MultiOutputRegressor`` object
+    model : ``sklearn.multioutput.MultiOutputRegressor``
         The fitted SINDy model.
 
     n_input_features_ : int

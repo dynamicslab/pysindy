@@ -1,3 +1,4 @@
+from . import base
 from .base import ConcatLibrary
 from .base import TensoredLibrary
 from .custom_library import CustomLibrary
@@ -22,4 +23,5 @@ __all__ = [
     "WeakPDELibrary",
     "SINDyPILibrary",
     "ParameterizedLibrary",
+    "base",
 ]

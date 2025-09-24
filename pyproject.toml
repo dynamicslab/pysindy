@@ -8,8 +8,9 @@ description = "Sparse Identification of Nonlinear Dynamics"
 authors = [
     {name="Brian de Silva", email="bdesilva@uw.edu"},
     {name="Kathleen Champion", email="kpchamp@uw.edu"},
+    {name="Jacob Stevens-Haas", email="jacob.stevens.haas@gmail.com"},
     {name="Markus Quade", email="info@markusqua.de"},
-    {name="Alan Kaptanoglu", email="akaptano@uw.edu"}
+    {name="Alan Kaptanoglu", email="akaptano@uw.edu"},
 ]
 license = {text = "MIT"}
 requires-python = ">=3.10"
@@ -56,7 +57,7 @@ docs = [
     "pandoc",
     "requests",
     "sphinx-rtd-theme",
-    "sphinx==7.4.7",
+    "sphinx==8.2.3",
     "pyyaml",
     "sphinxcontrib-apidoc",
 ]
@@ -92,7 +93,7 @@ addopts = '-m "not slow and not notebooks"'
 markers = ["slow", "notebooks"]
 
 [tool.codespell]
-ignore-words-list = "pres,nd,hist"
+ignore-words-list = "pres,nd,hist,wit"
 
 [tool.setuptools]
 packages = ["pysindy"]

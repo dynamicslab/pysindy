@@ -943,28 +943,64 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
     return x, x_dot, u
 
-
 def _expand_sample_weights(sample_weight, trajectories):
+    """Expand trajectory-level weights to per-sample or per-component weights.
+
+    Parameters
+    ----------
+    sample_weight : array-like
+        Can be
+        - None
+        - scalar
+        - shape (n_traj,)                : one weight per trajectory
+        - shape (n_samples_total,)       : one weight per sample
+        - shape (n_samples_total, n_tgt) : per-sample, per-target weights
+        - shape (n_traj, n_tgt)          : one weight per trajectory, per target
+
+    trajectories : list of arrays
+        Each trajectory, shape (n_samples_i, n_features).
+
+    Returns
+    -------
+    ndarray
+        Expanded weights:
+        - (n_samples_total,)
+        - (n_samples_total, n_tgt)
+    """
     if sample_weight is None:
         return None
 
-    # Case: list of arrays, one per trajectory
-    if isinstance(sample_weight, (list, tuple)):
-        if len(sample_weight) != len(trajectories):
-            raise ValueError(
-                f"Expected {len(trajectories)} weight blocks, got {len(sample_weight)}"
-            )
-        return np.concatenate([np.asarray(w) for w in sample_weight])
+    sample_weight = np.asarray(sample_weight)
+    n_traj = len(trajectories)
+    n_samples_total = sum(len(traj) for traj in trajectories)
 
-    # Case: already concatenated 1D array
-    w = np.asarray(sample_weight)
-    total = sum(len(traj) for traj in trajectories)
-    if w.ndim == 1 and w.shape[0] == total:
-        return w
+    # case: one weight per trajectory
+    if sample_weight.ndim == 1 and len(sample_weight) == n_traj:
+        expanded = []
+        for w, traj in zip(sample_weight, trajectories):
+            expanded.extend([w] * len(traj))
+        return np.asarray(expanded)
+
+    # case: one weight per sample
+    if sample_weight.ndim == 1 and len(sample_weight) == n_samples_total:
+        return sample_weight
+
+    # case: per-sample, per-target
+    if sample_weight.ndim == 2 and sample_weight.shape[0] == n_samples_total:
+        return sample_weight
+
+    # case: per-trajectory, per-target
+    if sample_weight.ndim == 2 and sample_weight.shape[0] == n_traj:
+        expanded = []
+        for w_vec, traj in zip(sample_weight, trajectories):
+            n = len(traj)
+            expanded.append(np.tile(w_vec, (n, 1)))  # repeat per sample in that traj
+        return np.vstack(expanded)
 
     raise ValueError(
-        f"sample_weight must be list of arrays or shape ({total},), "
-        f"got {w.shape}"
+        f"sample_weight must be length {n_traj} (per trajectory), "
+        f"{n_samples_total} (per sample), "
+        f"({n_samples_total}, n_targets) (per sample/target), or "
+        f"({n_traj}, n_targets) (per trajectory/target). "
+        f"Got {sample_weight.shape}"
     )
-
-

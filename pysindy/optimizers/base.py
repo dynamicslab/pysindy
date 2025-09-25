@@ -16,6 +16,7 @@ from sklearn.linear_model._base import _preprocess_data
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
+from sklearn.base import clone
 
 from .._typing import Float2D
 from .._typing import FloatDType
@@ -175,29 +176,19 @@ class BaseOptimizer(LinearRegression, _BaseOptimizer):
 
         # The next scope is for when the sample weights 
         # are different for each output component
-        if sample_weight is not None:
-            sample_weight = np.asarray(sample_weight)
-            if sample_weight.shape == y.shape:
-                # Fit separately per target with its own weights, then combine
-                coefs, histories = [], []
-                for j in range(y.shape[1]):
-                    sw_j = sample_weight[:, j]
-                    # recursive call on 1D y[:, j]
-                    sub = self.__class__(
-                        alpha=self.alpha,
-                        threshold=self.threshold,
-                        normalize_columns=self.normalize_columns,
-                        unbias=self.unbias,
-                        max_iter=self.max_iter,
-                        copy_X=self.copy_X,
-                        initial_guess=None,
-                    )
-                    sub.fit(x_, y[:, j], sample_weight=sw_j, **reduce_kws)
-                    coefs.append(sub.coef_.ravel())
-                    histories.append(sub.history_)
-                self.coef_ = np.column_stack(coefs)
-                self.history_ = histories
-                return self
+        # we select the weights of the each output component and 
+        # recursively fit
+        if sample_weight.shape == y.shape:
+            coefs, histories = [], []
+            for j in range(y.shape[1]):
+                sw_j = sample_weight[:, j]
+                sub = clone(self)
+                sub.fit(x_, y[:, j], sample_weight=sw_j, **reduce_kws)
+                coefs.append(sub.coef_.ravel())
+                histories.append(sub.history_)
+            self.coef_ = np.column_stack(coefs)
+            self.history_ = histories
+            return self
             
         x, y, X_offset, y_offset, X_scale = _preprocess_data(
             x_,

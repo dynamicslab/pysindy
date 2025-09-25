@@ -51,21 +51,6 @@ class BaseFeatureLibrary(TransformerMixin, BaseEstimator):
             },
         )
 
-    def correct_shape(self, x: AxesArray):
-        """Correct the shape of x, given what we know of the problem"""
-        if len(x.shape) == 1:
-            data = np.asarray(x).reshape((-1, 1))
-            return AxesArray(data, {"ax_time": 0, "ax_coord": 1})
-        elif len(x.shape) > 2 and type(self) is BaseFeatureLibrary:
-            warnings.warn(
-                "Data shapes with more than 2 axes are "
-                "deprecated for the default problem.  We assume that time "
-                "axis comes first, then coordinate axis, then all other "
-                "axes continue the time axis.",
-                DeprecationWarning,
-            )
-        return x
-
     def calc_trajectory(self, diff_method, x, t):
         x_dot = diff_method(x, t=t)
         x = AxesArray(diff_method.smoothed_x_, x.axes)

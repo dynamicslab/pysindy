@@ -39,28 +39,28 @@ def test_improper_shape_input(data_1d):
 
     # Ensure model successfully handles different data shapes
     model = SINDy()
-    model.fit(x.flatten(), u=u, t=t)
-    check_is_fitted(model)
+    with pytest.raises(TypeError, match="Most arrays must"):
+        model.fit(x.flatten(), u=u, t=t)
 
     model = SINDy()
-    model.fit(x.flatten(), u=u, t=t, x_dot=x.flatten())
-    check_is_fitted(model)
+    with pytest.raises(TypeError, match="Most arrays must"):
+        model.fit(x.flatten(), u=u, t=t, x_dot=x.flatten())
 
     model = SINDy()
-    model.fit(x, u=u, t=t, x_dot=x.flatten())
-    check_is_fitted(model)
+    with pytest.raises(TypeError, match="Most arrays must"):
+        model.fit(x, u=u, t=t, x_dot=x.flatten())
 
     model = SINDy()
-    model.fit(x.flatten(), u=u.flatten(), t=t)
-    check_is_fitted(model)
+    with pytest.raises(TypeError, match="Most arrays must"):
+        model.fit(x.flatten(), u=u.flatten(), t=t)
 
     model = SINDy()
-    model.fit(x.flatten(), u=u.flatten(), t=t, x_dot=x.flatten())
-    check_is_fitted(model)
+    with pytest.raises(TypeError, match="Most arrays must"):
+        model.fit(x.flatten(), u=u.flatten(), t=t, x_dot=x.flatten())
 
     model = SINDy()
-    model.fit(x, u=u.flatten(), t=t, x_dot=x.flatten())
-    check_is_fitted(model)
+    with pytest.raises(TypeError, match="Most arrays must"):
+        model.fit(x, u=u.flatten(), t=t, x_dot=x.flatten())
 
     # Should fail if x and u have incompatible numbers of rows
     with pytest.raises(ValueError):
@@ -101,7 +101,7 @@ def test_bad_t(data):
     model = SINDy()
 
     # Wrong type
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         model.fit(x, u=u, t="1")
 
     # Invalid value of t
@@ -109,7 +109,7 @@ def test_bad_t(data):
         model.fit(x, u=u, t=-1)
 
     # t is a list
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         model.fit(x, u=u, t=list(t))
 
     # Wrong number of time points

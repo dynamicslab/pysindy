@@ -1,4 +1,3 @@
-import warnings
 from itertools import product as iproduct
 from typing import Optional
 
@@ -138,13 +137,10 @@ class WeakPDELibrary(BaseFeatureLibrary):
         K=100,
         H_xt=None,
         p=4,
-        num_pts_per_domain=None,
         implicit_terms=False,
         multiindices=None,
         differentiation_method=FiniteDifference,
         diff_kwargs={},
-        is_uniform=None,
-        periodic=None,
     ):
         self.function_library = function_library
         self.derivative_order = derivative_order
@@ -166,18 +162,6 @@ class WeakPDELibrary(BaseFeatureLibrary):
             raise ValueError(
                 "Spatiotemporal grid was not passed, and at least a 1D"
                 " grid is required, corresponding to the time base."
-            )
-        if num_pts_per_domain is not None:
-            warnings.warn(
-                "The parameter num_pts_per_domain is now deprecated. This "
-                "value will be ignored by the library."
-            )
-        if is_uniform is not None or periodic is not None:
-            # DeprecationWarning are ignored by default...
-            warnings.warn(
-                "is_uniform and periodic have been deprecated."
-                "in favor of differetiation_method and diff_kwargs.",
-                UserWarning,
             )
         # Weak form checks and setup
         self._weak_form_setup()
@@ -204,7 +188,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
         else:
             self.ind_range = len(dims) - 1
 
-        for i in range(self.ind_range):
+        for _ in range(self.ind_range):
             indices = indices + (range(self.derivative_order + 1),)
 
         if self.multiindices is None:
@@ -866,7 +850,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                     d=self.multiindices[j][axis],
                                     axis=axis,
                                     **self.diff_kwargs,
-                                )._differentiate(
+                                )(
                                     funcs_derivs[j + 1],
                                     self.spatiotemporal_grid[tuple(s)],
                                 )
@@ -877,9 +861,7 @@ class WeakPDELibrary(BaseFeatureLibrary):
                                     d=self.multiindices[j][axis],
                                     axis=axis,
                                     **self.diff_kwargs,
-                                )._differentiate(
-                                    x_derivs[j + 1], self.spatiotemporal_grid[tuple(s)]
-                                )
+                                )(x_derivs[j + 1], self.spatiotemporal_grid[tuple(s)])
 
                     # Extract the function and feature derivatives on the domains
                     self.dx_k_j = [

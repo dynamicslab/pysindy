@@ -2,6 +2,7 @@ import warnings
 from abc import ABC
 from abc import abstractmethod
 from itertools import product
+from typing import cast
 from typing import Optional
 from typing import Sequence
 from typing import TypeVar
@@ -50,9 +51,20 @@ class _BaseSINDy(BaseEstimator, ABC):
     optimizer: _BaseOptimizer
     model: Pipeline
     # Hacks to remove later
-    feature_names: Optional[list[str]]
     discrete_time: bool = False
     n_control_features_: int = 0
+
+    def __init__(
+        self,
+        feature_library: Optional[BaseFeatureLibrary],
+        optimizer: Optional[BaseOptimizer],
+    ):
+        if optimizer is None:
+            optimizer = STLSQ()
+        self.optimizer = optimizer
+        if feature_library is None:
+            feature_library = PolynomialLibrary()
+        self.feature_library = feature_library
 
     @abstractmethod
     def fit(self, x: TrajectoryType, t: TrajectoryType, *args, **kwargs) -> Self:
@@ -76,13 +88,13 @@ class _BaseSINDy(BaseEstimator, ABC):
         """Assign shape attributes for the system that are used post-fit"""
         self.n_features_in_ = self.feature_library.n_features_in_
         self.n_output_features_ = self.feature_library.n_output_features_
-        if self.feature_names is None:
+        if self.feature_names_ is None:
             feature_names = []
             for i in range(self.n_features_in_ - self.n_control_features_):
                 feature_names.append("x" + str(i))
             for i in range(self.n_control_features_):
                 feature_names.append("u" + str(i))
-            self.feature_names = feature_names
+            self.feature_names_ = feature_names
 
     def coefficients(self):
         """
@@ -113,11 +125,11 @@ class _BaseSINDy(BaseEstimator, ABC):
             List of strings representing the SINDy model equations for each
             input feature.
         """
-        check_is_fitted(self, "model")
+        check_is_fitted(self)
         if self.discrete_time:
-            sys_coord_names = [name + "[k]" for name in self.feature_names]
+            sys_coord_names = [name + "[k]" for name in self.feature_names_]
         else:
-            sys_coord_names = self.feature_names
+            sys_coord_names = self.feature_names_
         feat_names = self.feature_library.get_feature_names(sys_coord_names)
 
         def term(c, name):
@@ -152,7 +164,7 @@ class _BaseSINDy(BaseEstimator, ABC):
         **kwargs: Additional keyword arguments passed to the builtin print function
         """
         eqns = self.equations(precision)
-        for name, eqn in zip(self.feature_names, eqns, strict=True):
+        for name, eqn in zip(self.feature_names_, eqns, strict=True):
             lhs = f"({name})'"
             print(f"{lhs} = {eqn}", **kwargs)
 
@@ -166,8 +178,10 @@ class _BaseSINDy(BaseEstimator, ABC):
             A list of strings giving the names of the features in the feature
             library, :code:`self.feature_library`.
         """
-        check_is_fitted(self, "model")
-        return self.feature_library.get_feature_names(input_features=self.feature_names)
+        check_is_fitted(self)
+        return self.feature_library.get_feature_names(
+            input_features=self.feature_names_
+        )
 
 
 class SINDy(_BaseSINDy):
@@ -283,12 +297,7 @@ class SINDy(_BaseSINDy):
         differentiation_method: Optional[BaseDifferentiation] = None,
         discrete_time: bool = False,
     ):
-        if optimizer is None:
-            optimizer = STLSQ()
-        self.optimizer = optimizer
-        if feature_library is None:
-            feature_library = PolynomialLibrary()
-        self.feature_library = feature_library
+        super().__init__(feature_library, optimizer)
         if differentiation_method is None:
             differentiation_method = FiniteDifference(axis=-2)
         self.differentiation_method = differentiation_method
@@ -297,7 +306,7 @@ class SINDy(_BaseSINDy):
     def fit(
         self,
         x,
-        t,
+        t: float | np.ndarray | Sequence[np.ndarray],
         x_dot=None,
         u=None,
         feature_names: Optional[list[str]] = None,
@@ -347,11 +356,17 @@ class SINDy(_BaseSINDy):
         self: a fitted :class:`SINDy` instance
         """
 
-        if not _check_multiple_trajectories(x, x_dot, u):
+        if not _check_multiple_trajectories(x, t, x_dot, u):
             x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
-        x, x_dot, u = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library
-        )
+        if isinstance(t, np.ScalarType):
+            t = [np.arange(0, xi.shape[-2] * t, t) for xi in x]
+        _validate_inputs(x, t, x_dot, u)
+        x = [standardize_shape(xi) for xi in x]
+        t = [standardize_shape(ti) for ti in t]
+        if x_dot is not None:
+            x_dot = [standardize_shape(xdoti) for xdoti in x_dot]
+        if u is not None:
+            u = [standardize_shape(ui) for ui in u]
 
         if u is None:
             self.n_control_features_ = 0
@@ -361,14 +376,14 @@ class SINDy(_BaseSINDy):
                 u,
                 trim_last_point=(self.discrete_time and x_dot is None),
             )
-            self.n_control_features_ = u[0].shape[u[0].ax_coord]
+            self.n_control_features_ = cast(int, u[0].n_coord)
         x, x_dot = self._process_trajectories(x, t, x_dot)
 
         # Append control variables
         if u is not None:
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
-        self.feature_names = feature_names
+        self.feature_names_ = feature_names
 
         steps = [
             ("features", self.feature_library),
@@ -402,15 +417,18 @@ class SINDy(_BaseSINDy):
         x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
             Predicted time derivatives
         """
-        if not _check_multiple_trajectories(x, None, u):
-            x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
+        if not _check_multiple_trajectories(x, 1, None, u):
+            x, _, _, u = _adapt_to_multiple_trajectories(x, 1, None, u)
             multiple_trajectories = False
         else:
             multiple_trajectories = True
+        x = [standardize_shape(xi) for xi in x]
+        if u is not None:
+            u = [standardize_shape(ui) for ui in u]
 
-        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
+        _validate_inputs(x, 1, None, u)
 
-        check_is_fitted(self, "model")
+        check_is_fitted(self)
         if self.n_control_features_ > 0 and u is None:
             raise TypeError("Model was fit using control variables, so u is required")
         if self.n_control_features_ == 0 and u is not None:
@@ -453,7 +471,7 @@ class SINDy(_BaseSINDy):
         if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
             feature_names = self.get_feature_names()
         else:
-            feature_names = self.feature_names
+            feature_names = self.feature_names_
         for i, eqn in enumerate(eqns):
             if self.discrete_time:
                 names = f"({feature_names[i]})[k+1]"
@@ -509,11 +527,19 @@ class SINDy(_BaseSINDy):
             Metric function value for the model prediction of x_dot.
         """
 
-        if not _check_multiple_trajectories(x, x_dot, u):
+        if not _check_multiple_trajectories(x, t, x_dot, u):
             x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
-        x, x_dot, u = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library
-        )
+        x = [standardize_shape(xi) for xi in x]
+        if isinstance(t, np.ScalarType):
+            t = [np.arange(0, xi.shape[-2] * t, t) for xi in x]
+        t = [standardize_shape(ti) for ti in t]
+
+        if x_dot is not None:
+            x_dot = [standardize_shape(xdoti) for xdoti in x_dot]
+        if u is not None:
+            u = [standardize_shape(ui) for ui in u]
+
+        _validate_inputs(x, t, x_dot, u)
 
         x_dot_predict = self.predict(x, u)
 
@@ -528,7 +554,9 @@ class SINDy(_BaseSINDy):
         x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
         return metric(x_dot, x_dot_predict, **metric_kws)
 
-    def _process_trajectories(self, x, t, x_dot):
+    def _process_trajectories(
+        self, x: list[AxesArray], t: list[AxesArray], x_dot: Optional[list[AxesArray]]
+    ):
         """
         Calculate derivatives of input data, iterating through trajectories.
 
@@ -566,14 +594,16 @@ class SINDy(_BaseSINDy):
                 x_dot = [xi[1:] for xi in x]
                 x = [xi[:-1] for xi in x]
             else:
-                x, x_dot = zip(
-                    *[
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, ti
-                        )
-                        for xi, ti in _zip_like_sequence(x, t)
-                    ]
-                )
+                x, x_dot = list(
+                    zip(
+                        *[
+                            self.feature_library.calc_trajectory(
+                                self.differentiation_method, xi, ti
+                            )
+                            for xi, ti in zip(x, t)
+                        ]
+                    )
+                )  # type: ignore  (It's cause zip loses types)
         return x, x_dot
 
     def simulate(
@@ -637,7 +667,7 @@ class SINDy(_BaseSINDy):
         x: numpy array, shape (n_samples, n_features)
             Simulation results
         """
-        check_is_fitted(self, "model")
+        check_is_fitted(self)
         if u is None and self.n_control_features_ > 0:
             raise TypeError("Model was fit using control variables, so u is required")
 
@@ -756,11 +786,12 @@ def _zip_like_sequence(x, t):
         return product(x, [t])
 
 
-def _check_multiple_trajectories(x, x_dot, u) -> bool:
+def _check_multiple_trajectories(x, st_grid, x_dot, u) -> bool:
     """Determine if data contains multiple trajectories
 
     Args:
         x: Samples from which to make predictions.
+        st_grid: time points or spatiotemporal grid
         x_dot: Pre-computed derivatives of the samples.
         u: Control variables
 
@@ -775,7 +806,13 @@ def _check_multiple_trajectories(x, x_dot, u) -> bool:
     SequenceOrNone = Union[Sequence, None]
     mixed_trajectories = (
         isinstance(x, Sequence)
-        and (not isinstance(x_dot, SequenceOrNone) or not isinstance(u, SequenceOrNone))
+        and (
+            not isinstance(x_dot, SequenceOrNone)
+            or not isinstance(u, SequenceOrNone)
+            or not isinstance(st_grid, (Sequence, float, int))
+        )
+        or isinstance(st_grid, Sequence)
+        and not isinstance(x, Sequence)
         or isinstance(x_dot, Sequence)
         and not isinstance(x, Sequence)
         or isinstance(u, Sequence)
@@ -783,8 +820,8 @@ def _check_multiple_trajectories(x, x_dot, u) -> bool:
     )
     if mixed_trajectories:
         raise TypeError(
-            "If x, x_dot, or u are a Sequence of trajectories, each must be a Sequence"
-            " of trajectories or None."
+            "If x, t, x_dot, or u are a Sequence of trajectories, each must be a"
+            " Sequence of trajectories or None."
         )
     if isinstance(x, Sequence):
         matching_lengths = (x_dot is None or len(x) == len(x_dot)) and (
@@ -796,7 +833,17 @@ def _check_multiple_trajectories(x, x_dot, u) -> bool:
     return False
 
 
-def _adapt_to_multiple_trajectories(x, t, x_dot, u) -> tuple:
+def _adapt_to_multiple_trajectories(
+    x: np.ndarray,
+    t: float | np.ndarray,
+    x_dot: Optional[np.ndarray],
+    u: Optional[np.ndarray],
+) -> tuple[
+    list[np.ndarray],
+    list[np.ndarray],
+    Optional[list[np.ndarray]],
+    Optional[list[np.ndarray]],
+]:
     """Adapt model data to that multiple_trajectories.
 
     Args:
@@ -808,65 +855,39 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u) -> tuple:
     Returns:
         Tuple of updated x, t, x_dot, u
     """
-    x = [x]
-    # if t is not a dt
+    lx = [x]
+    if isinstance(t, np.ScalarType):
+        dt = t
+        if x.ndim < 2:
+            raise TypeError(
+                "Most arrays must be at least 2d."
+                "See the tutorial for array shape conventions"
+            )
+        nt = x.shape[-2]
+        lt = [np.arange(0, dt * nt, dt)]
     if not isinstance(t, np.ScalarType):
-        t = [t]
-    if x_dot is not None:
-        x_dot = [x_dot]
-    if u is not None:
-        u = [u]
-    return x, t, x_dot, u
+        lt = cast(list[np.ndarray], [t])
+    lx_dot = [x_dot] if x_dot is not None else None
+    lu = [u] if u is not None else None
+    return lx, lt, lx_dot, lu
 
 
-def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
+def standardize_shape(arr: np.ndarray) -> AxesArray:
+    """Apply package-widestandard shape conventions"""
+    if arr.ndim == 1:
+        arr = np.reshape(arr, (-1, 1))
+    arr = AxesArray(arr, comprehend_axes(arr))
+    return arr
+
+
+def _validate_inputs(x, t, x_dot, u) -> None:
     """Validate input types, reshape arrays, and label axes"""
 
-    def comprehend_and_validate(arr, t):
-        arr = AxesArray(arr, comprehend_axes(arr))
-        arr = feature_library.correct_shape(arr)
-        return validate_no_reshape(arr, t)
-
-    x = [comprehend_and_validate(xi, ti) for xi, ti in _zip_like_sequence(x, t)]
+    for xi, ti in _zip_like_sequence(x, t):
+        validate_no_reshape(xi, ti)
     if x_dot is not None:
-        x_dot = [
-            comprehend_and_validate(xdoti, ti)
-            for xdoti, ti in _zip_like_sequence(x_dot, t)
-        ]
+        for xdoti, ti in _zip_like_sequence(x_dot, t):
+            validate_no_reshape(xdoti, ti)
     if u is not None:
-        reshape_control = False
-        for i in range(len(x)):
-            if len(x[i].shape) != len(np.array(u[i]).shape):
-                reshape_control = True
-        if reshape_control:
-            try:
-                shape = np.array(x[0].shape)
-                shape[x[0].ax_coord] = -1
-                u = [np.reshape(u[i], shape) for i in range(len(x))]
-            except Exception:
-                try:
-                    if np.isscalar(u[0]):
-                        shape[x[0].ax_coord] = 1
-                    else:
-                        shape[x[0].ax_coord] = len(u[0])
-                    u = [np.broadcast_to(u[i], shape) for i in range(len(x))]
-                except Exception:
-                    raise (
-                        ValueError(
-                            "Could not reshape control input to match the input data."
-                        )
-                    )
-        correct_shape = True
-        for i in range(len(x)):
-            for axis in range(x[i].ndim):
-                if (
-                    axis != x[i].ax_coord
-                    and x[i].shape[axis] != np.array(u[i]).shape[axis]
-                ):
-                    correct_shape = False
-        if not correct_shape:
-            raise (
-                ValueError("Could not reshape control input to match the input data.")
-            )
-        u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
-    return x, x_dot, u
+        for ui, ti in _zip_like_sequence(u, t):
+            validate_no_reshape(ui, ti)

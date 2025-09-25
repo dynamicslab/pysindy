@@ -344,7 +344,7 @@ class PDELibrary(BaseFeatureLibrary):
                             d=multiindex[axis],
                             axis=axis,
                             **self.diff_kwargs,
-                        )._differentiate(derivs, self.spatiotemporal_grid[tuple(s)])
+                        )(derivs, self.spatiotemporal_grid[tuple(s)])
                 library_derivatives[
                     ..., library_idx : library_idx + n_features
                 ] = derivs

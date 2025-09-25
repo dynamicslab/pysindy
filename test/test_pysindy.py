@@ -65,29 +65,11 @@ def test_not_fitted(data_1d):
         model.simulate(x[0], t)
 
 
-def test_improper_shape_input(data_1d):
-    x, t = data_1d
-
-    # Ensure model successfully handles different data shapes
-    model = SINDy()
-    model.fit(x.flatten(), t)
-    check_is_fitted(model)
-
-    model = SINDy()
-    model.fit(x.flatten(), t, x_dot=x.flatten())
-    check_is_fitted(model)
-
-    model = SINDy()
-    model.fit(x, t, x_dot=x.flatten())
-    check_is_fitted(model)
-
-
 @pytest.mark.parametrize(
     "data",
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape"),
     ],
 )
 def test_mixed_inputs(data):
@@ -111,15 +93,15 @@ def test_bad_t(data):
     model = SINDy()
 
     # Wrong type
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         model.fit(x, t="1")
 
     # Invalid value of t
     with pytest.raises(ValueError):
         model.fit(x, t=-1)
 
-    # t is a list
-    with pytest.raises(ValueError):
+    # t is a list of floats, not list of array
+    with pytest.raises(TypeError):
         model.fit(x, list(t))
 
     # Wrong number of time points
@@ -166,7 +148,6 @@ def test_predict(data, optimizer):
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape"),
     ],
 )
 def test_simulate(data):
@@ -234,7 +215,6 @@ def test_integration_derivative_methods(data_lorenz, derivative_kws):
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape"),
     ],
 )
 def test_score(data):
@@ -366,9 +346,11 @@ def test_score_discrete_time(data_discrete_time):
 def test_bad_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
     with pytest.raises(TypeError):
-        _core._check_multiple_trajectories(x, x_dot=x[0], u=None)
+        _core._check_multiple_trajectories(x, 1, x_dot=x[0], u=None)
+    with pytest.raises(TypeError):
+        _core._check_multiple_trajectories(x, st_grid=x[0], x_dot=None, u=None)
     with pytest.raises(ValueError):
-        _core._check_multiple_trajectories(x, x_dot=x[:-1], u=None)
+        _core._check_multiple_trajectories(x, 1, x_dot=x[:-1], u=None)
 
 
 def test_fit_discrete_time_multiple_trajectories(
@@ -415,7 +397,6 @@ def test_score_discrete_time_multiple_trajectories(
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape"),
     ],
 )
 def test_equations(data, capsys):
@@ -536,9 +517,7 @@ def test_linear_constraints(data_lorenz):
 def test_data_shapes():
     model = SINDy()
     n = 10
-    x = np.ones(n)
     t = 1
-    model.fit(x, t)
     x = np.ones((n, 2))
     model.fit(x, t)
     x = np.ones((n, n, 2))

@@ -140,10 +140,7 @@ def test_fit(data_derivative_1d, optimizer, set_jax_pcc_env):
 
     check_is_fitted(opt)
     assert opt.complexity >= 0
-    if len(x_dot.shape) > 1:
-        assert opt.coef_.shape == (x.shape[1], x_dot.shape[1])
-    else:
-        assert opt.coef_.shape == (1, x.shape[1])
+    assert opt.coef_.shape == (x_dot.shape[1], x.shape[1])
 
 
 @pytest.mark.parametrize(

@@ -3,9 +3,10 @@ Wrapper classes for differentiation methods from the :doc:`derivative:index` pac
 
 Some default values used here may differ from those used in :doc:`derivative:index`.
 """
+import numpy as np
 from derivative import methods
-from numpy import arange
 
+from ..utils import AxesArray
 from .base import BaseDifferentiation
 
 
@@ -69,14 +70,10 @@ class SINDyDerivative(BaseDifferentiation):
         return params
 
     def _differentiate(self, x, t=1):
-        if isinstance(t, (int, float)):
-            if t < 0:
-                raise ValueError("t must be a positive constant or an array")
-            t = arange(x.shape[0]) * t
-
         differentiator = methods[self.kwargs["kind"]](
             **{k: v for k, v in self.kwargs.items() if k != "kind"}
         )
+        t = AxesArray(np.take(t, indices=0, axis=-1), {"ax_time": 0})
         x_dot = differentiator.d(x, t, axis=self.axis)
         if self.save_smooth:
             self.smoothed_x_ = differentiator.x(x, t, axis=self.axis)

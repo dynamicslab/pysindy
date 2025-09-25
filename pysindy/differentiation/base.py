@@ -2,8 +2,17 @@
 Base class for numerical differentiation methods
 """
 import abc
+from typing import cast
+from typing import TypeVar
 
+import numpy as np
 from sklearn.base import BaseEstimator
+
+from .._typing import FloatND
+from ..utils import AxesArray
+from ..utils import comprehend_axes
+
+FloatArray = TypeVar("FloatArray", bound=FloatND)
 
 
 class BaseDifferentiation(BaseEstimator):
@@ -23,17 +32,20 @@ class BaseDifferentiation(BaseEstimator):
 
     # Force subclasses to implement this
     @abc.abstractmethod
-    def _differentiate(self, x, t=1):
+    def _differentiate(self, x, t: AxesArray):
+        raise NotImplementedError
+
+    def __call__(self, x: FloatArray, t: FloatND | float = 1.0) -> FloatArray:
         """
         Numerically differentiate data.
 
         Parameters
         ----------
-        x: array-like, shape (n_samples, n_input_features)
+        x: array-like, shape (*n_spatial, n_samples, n_input_features)
             Data to be differentiated. Rows of x should correspond to the same
             point in time.
 
-        t: float or numpy array of shape (n_samples,)
+        t: float or numpy array of shape (n_samples,) or (n_samples, 1)
             If t is a float, it is interpreted as the timestep between
             samples in x.
             If t is a numpy array, it specifies the times corresponding
@@ -43,11 +55,20 @@ class BaseDifferentiation(BaseEstimator):
 
         Returns
         -------
-        x_dot: array-like, shape (n_samples, n_input_features)
+        x_dot: array-like
             Numerical time derivative of x. Entries where derivatives were
             not computed will have the value np.nan.
         """
-        raise NotImplementedError
-
-    def __call__(self, x, t=1):
+        if isinstance(t, np.ScalarType):
+            if t < 0:
+                raise ValueError(
+                    "if t is passed as a scalar to represent dt, "
+                    f"it must be >0.  Received {t}"
+                )
+            nt = x.shape[-2]
+            t = np.arange(0, t * nt, t).reshape((-1, 1))
+        t = cast(FloatND, t)
+        if t.ndim == 1:
+            t = t[:, np.newaxis]
+        t = AxesArray(t, comprehend_axes(t))
         return self._differentiate(x, t)

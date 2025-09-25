@@ -75,13 +75,6 @@ def data_1d():
 
 
 @pytest.fixture(scope="session")
-def data_1d_bad_shape():
-    t = np.linspace(0, 5, 10)
-    x = 2 * t
-    return x, t
-
-
-@pytest.fixture(scope="session")
 def data_lorenz():
     t = np.linspace(0, 1, 12)
     x0 = [8, 27, -7]
@@ -112,8 +105,8 @@ def data_multiple_trajectories():
 @pytest.fixture(scope="session")
 def diffuse_multiple_trajectories():
     def diffuse(t, u, dx, nx):
-        u = np.reshape(u, nx)
-        du = SpectralDerivative(d=2, axis=0)._differentiate(u, dx)
+        u = np.reshape(u, (nx, 1))
+        du = SpectralDerivative(d=2, axis=0)(u, dx)
         return np.reshape(u * du, nx)
 
     # Required for accurate solve_ivp results
@@ -136,7 +129,7 @@ def diffuse_multiple_trajectories():
         diffuse, (t[0], t[-1]), y0=y0, t_eval=t, args=(dx, N), **integrator_keywords
     )
     u = [np.reshape(sol1.y, (N, N, 1))]
-    return t, x, u
+    return [t], x, u
 
 
 @pytest.fixture(scope="session")
@@ -148,7 +141,7 @@ def data_discrete_time():
     for i in range(1, n_steps):
         x[i] = logistic_map(x[i - 1], mu)
 
-    return x
+    return x.reshape((-1, 1))
 
 
 @pytest.fixture(scope="session")
@@ -161,7 +154,7 @@ def data_discrete_time_multiple_trajectories():
         for k in range(1, n_steps):
             x[i][k] = logistic_map(x[i][k - 1], mu)
 
-    return x
+    return [xi.reshape((-1, 1)) for xi in x]
 
 
 @pytest.fixture(scope="session")
@@ -171,7 +164,7 @@ def data_1d_random_pde():
     dt = t[1] - t[0]
     x = np.linspace(0, 10, n)
     u = np.random.randn(n, n, 1)
-    u_dot = FiniteDifference(axis=1)._differentiate(u, t=dt)
+    u_dot = FiniteDifference(axis=1)(u, t=dt)
     return t, x, u, u_dot
 
 
@@ -185,7 +178,7 @@ def data_2d_random_pde():
     X, Y = np.meshgrid(x, y)
     spatial_grid = np.asarray([X, Y]).T
     u = np.random.randn(n, n, n, 2)
-    u_dot = FiniteDifference(axis=2)._differentiate(u, t=dt)
+    u_dot = FiniteDifference(axis=2)(u, t=dt)
     return spatial_grid, u, u_dot
 
 
@@ -205,7 +198,7 @@ def data_3d_random_pde():
     spatial_grid = np.asarray([X, Y, Z])
     spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 0])
     u = np.random.randn(n, n, n, n, 2)
-    u_dot = FiniteDifference(axis=3)._differentiate(u, t=dt)
+    u_dot = FiniteDifference(axis=3)(u, t=dt)
     return spatial_grid, u, u_dot
 
 
@@ -223,7 +216,7 @@ def data_5d_random_pde():
     spatial_grid = np.asarray([V, W, X, Y, Z])
     spatial_grid = np.transpose(spatial_grid, axes=[1, 2, 3, 4, 5, 0])
     u = np.random.randn(n, n, n, n, n, n, 2)
-    u_dot = FiniteDifference(axis=5)._differentiate(u, t=dt)
+    u_dot = FiniteDifference(axis=5)(u, t=dt)
     return spatial_grid, u, u_dot
 
 
@@ -238,14 +231,14 @@ def data_2d_resolved_pde():
     X, Y = np.meshgrid(x, y)
     spatial_grid = np.asarray([X, Y]).T
     u = np.random.randn(n, n, nt, 2)
-    u_dot = FiniteDifference(axis=-2)._differentiate(u, t=dt)
+    u_dot = FiniteDifference(axis=-2)(u, t=dt)
     return spatial_grid, u, u_dot
 
 
 @pytest.fixture(scope="session")
 def data_derivative_1d():
-    x = 2 * np.linspace(1, 100, 100)
-    x_dot = 2 * np.ones(100)
+    x = 2 * np.linspace(1, 100, 100).reshape((-1, 1))
+    x_dot = 2 * np.ones(100).reshape((-1, 1))
     return x, x_dot
 
 
@@ -450,7 +443,7 @@ def data_discrete_time_c():
     for i in range(1, n_steps):
         x[i] = logistic_map_control(x[i - 1], mu, u[i - 1])
 
-    return x, u
+    return x.reshape((-1, 1)), u.reshape((-1, 1))
 
 
 @pytest.fixture(scope="session")
@@ -466,7 +459,7 @@ def data_discrete_time_c_multivariable():
     for i in range(1, n_steps):
         x[i] = logistic_map_multicontrol(x[i - 1], mu, u[i - 1])
 
-    return x, u
+    return x.reshape((-1, 1)), u
 
 
 @pytest.fixture(scope="session")
@@ -474,10 +467,10 @@ def data_discrete_time_multiple_trajectories_c():
     n_steps = 100
     mus = [1, 2.3, 3.6]
     u = [0.001 * np.random.randn(n_steps) for mu in mus]
-    x = [np.zeros((n_steps)) for mu in mus]
+    x = [np.zeros((n_steps, 1)) for mu in mus]
     for i, mu in enumerate(mus):
         x[i][0] = 0.5
         for k in range(1, n_steps):
             x[i][k] = logistic_map_control(x[i][k - 1], mu, u[i][k - 1])
 
-    return x, u
+    return [xi.reshape((-1, 1)) for xi in x], [ui.reshape((-1, 1)) for ui in u]

@@ -382,7 +382,6 @@ class SINDy(_BaseSINDy):
 
         self.feature_names = feature_names
 
-        # User may give one weight per trajectory or one weight per sample
         if sample_weight is not None:
             sample_weight = _expand_sample_weights(sample_weight, x)
                                            
@@ -943,57 +942,103 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
     return x, x_dot, u
 
-def _expand_sample_weights(sample_weight, trajectories):
-    """Expand trajectory-level weights to per-sample or per-component weights."""
+def _assert_sample_weights(sample_weight, trajectories):
+    """Validate per-trajectory sample_weight input.
+
+    Requirements enforced:
+    - `sample_weight` must be a Python sequence (e.g., list or tuple), not a scalar
+      and not a single numpy array.
+    - Length of the sequence must equal the number of trajectories.
+    - Each element must be array-like with first axis length equal to the
+      corresponding trajectory's `n_time`.
+    - If an element is 2D, its second dimension must be 1 (broadcast) or equal
+      to the trajectory coordinate count `n_coord`.
+
+    Returns
+    -------
+    validated_list : list of numpy arrays
+        The per-trajectory arrays (not concatenated).
+    """
 
     if sample_weight is None:
         return None
 
-    sample_weight = np.asarray(sample_weight)
-    n_traj = len(trajectories)
-    n_samples_total = sum(len(traj) for traj in trajectories)
+    if not (isinstance(sample_weight, Sequence) and not isinstance(sample_weight, np.ndarray)):
+        raise ValueError(
+            "sample_weight must be a sequence (e.g. list or tuple) with one entry per trajectory. "
+            "Do not pass a scalar or a single numpy array here."
+        )
 
-    # (1) trajectory-level
-    if sample_weight.ndim == 1 and sample_weight.shape[0] == n_traj:
-        expanded = []
-        for w, traj in zip(sample_weight, trajectories):
-            expanded.extend([w] * len(traj))
-        return np.asarray(expanded)
+    if len(sample_weight) != len(trajectories):
+        raise ValueError(
+            f"When passing a sequence of sample_weight, its length ({len(sample_weight)}) must equal the number of trajectories ({len(trajectories)})"
+        )
 
-    # (2) sample-level
-    if sample_weight.ndim == 1 and sample_weight.shape[0] == n_samples_total:
-        return sample_weight
+    validated = []
+    for sw, traj in zip(sample_weight, trajectories):
+        a = np.asarray(sw)
+        if a.ndim == 0:
+            raise ValueError(
+                "Each element of sample_weight must be array-like with length equal to the trajectory time dimension"
+            )
+        if a.shape[0] != traj.n_time:
+            raise ValueError(
+                f"sample_weight entry length ({a.shape[0]}) does not match trajectory length ({traj.n_time})"
+            )
+        if a.ndim == 2 and a.shape[1] not in (1, traj.n_coord):
+            raise ValueError(
+                f"sample_weight entry second dimension ({a.shape[1]}) must be 1 or equal to the number of coordinates ({traj.n_coord})"
+            )
+        validated.append(a)
+    return validated
 
-    # (3) per-sample, per-target
-    if sample_weight.ndim == 2 and sample_weight.shape[0] == n_samples_total:
-        return sample_weight
 
-    # (4) per-trajectory, per-target
-    if sample_weight.ndim == 2 and sample_weight.shape[0] == n_traj:
-        expanded = []
-        for w_vec, traj in zip(sample_weight, trajectories):
-            expanded.append(np.tile(w_vec, (len(traj), 1)))
-        return np.vstack(expanded)
+def _expand_sample_weights(sample_weight, trajectories):
+    """Concatenate per-trajectory sample weights into final array for estimators.
 
-    # (5) per-trajectory, per-time-step, per-target
-    if sample_weight.ndim == 3 and sample_weight.shape[0] == n_traj:
-        expanded = []
-        for w_block, traj in zip(sample_weight, trajectories):
-            n = len(traj)
-            if w_block.shape[0] != n:
-                raise ValueError(
-                    f"sample_weight time dimension {w_block.shape[0]} "
-                    f"does not match trajectory length {n}"
-                )
-            expanded.append(w_block)  # shape (n, n_targets)
-        return np.vstack(expanded)
+    Expects `sample_weight` to be a sequence (validated by _assert_sample_weights).
+    Returns either:
+    - 1D array of shape (N_total_samples,) when weights are per-sample scalars, or
+    - 2D array of shape (N_total_samples, n_coord) when per-sample-per-coordinate weights
+      are provided (or when 1D weights are promoted to match n_coord).
+    """
 
-    raise ValueError(
-        f"sample_weight must be one of:\n"
-        f"  (n_traj,), (n_samples_total,), "
-        f"  (n_samples_total, n_targets), "
-        f"  (n_traj, n_targets), "
-        f"  (n_traj, n_time, n_targets).\n"
-        f"Got {sample_weight.shape}."
-    )
+    sw_list = _assert_sample_weights(sample_weight, trajectories)
+
+    if sw_list is None:
+        return None
+
+    # Determine common coordinate count
+    n_coords = {int(t.n_coord) for t in trajectories}
+    if len(n_coords) != 1:
+        raise ValueError("All trajectories must have the same number of coordinate components")
+    n_coord = next(iter(n_coords))
+
+    arrs = []
+    dims = []
+    for a in sw_list:
+        a = np.asarray(a)
+        if a.ndim == 1:
+            arrs.append(a)
+            dims.append(1)
+        else:  # a.ndim == 2
+            if a.shape[1] == 1:
+                arrs.append(a[:, 0])
+                dims.append(1)
+            else:
+                arrs.append(a)
+                dims.append(n_coord)
+
+    # All 1D -> concatenate to 1D
+    if all(d == 1 for d in dims):
+        return np.concatenate([a.reshape(-1) for a in arrs], axis=0)
+
+    # Otherwise promote 1D arrays to 2D and concatenate
+    promoted = []
+    for a, d in zip(arrs, dims):
+        if d == 1:
+            promoted.append(np.broadcast_to(a.reshape(-1, 1), (a.shape[0], n_coord)))
+        else:
+            promoted.append(a)
+    return np.concatenate(promoted, axis=0)
 

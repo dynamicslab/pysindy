@@ -99,7 +99,7 @@ class _BaseSINDy(BaseEstimator, ABC):
         check_is_fitted(self)
         return self.optimizer.coef_
 
-    def equations(self, precision: int = 3) -> list[str]:
+    def equations(self, precision: int = 3, discrete_time=False) -> list[str]:
         """
         Get the right hand sides of the SINDy model equations.
 
@@ -116,7 +116,7 @@ class _BaseSINDy(BaseEstimator, ABC):
             input feature.
         """
         check_is_fitted(self, "model")
-        if self.discrete_time:
+        if discrete_time:
             sys_coord_names = [name + "[k]" for name in self.feature_names]
         else:
             sys_coord_names = self.feature_names
@@ -194,12 +194,6 @@ class SINDy(_BaseSINDy):
         Method for differentiating the data. This must be a class extending
         :class:`pysindy.differentiation_methods.base.BaseDifferentiation` class.
         The default option is centered difference.
-
-    discrete_time : boolean, optional (default False)
-        If True, dynamical system is treated as a map. Rather than predicting
-        derivatives, the right hand side functions step the system forward by
-        one time step. If False, dynamical system is assumed to be a flow
-        (right-hand side functions predict continuous time derivatives).
 
     Attributes
     ----------
@@ -283,7 +277,6 @@ class SINDy(_BaseSINDy):
         optimizer: Optional[BaseOptimizer] = None,
         feature_library: Optional[BaseFeatureLibrary] = None,
         differentiation_method: Optional[BaseDifferentiation] = None,
-        discrete_time: bool = False,
     ):
         if optimizer is None:
             optimizer = STLSQ()
@@ -294,7 +287,6 @@ class SINDy(_BaseSINDy):
         if differentiation_method is None:
             differentiation_method = FiniteDifference(axis=-2)
         self.differentiation_method = differentiation_method
-        self.discrete_time = discrete_time
 
     def fit(
         self,
@@ -355,19 +347,14 @@ class SINDy(_BaseSINDy):
             x, t, x_dot, u, self.feature_library
         )
 
+        x, x_dot = self._process_trajectories(x, t, x_dot)
+
         if u is None:
             self.n_control_features_ = 0
         else:
-            u = validate_control_variables(
-                x,
-                u,
-                trim_last_point=(self.discrete_time and x_dot is None),
-            )
-            self.n_control_features_ = u[0].shape[u[0].ax_coord]
-        x, x_dot = self._process_trajectories(x, t, x_dot)
+            u = validate_control_variables(x, u)
+            self.n_control_features_ = u[0].n_coord
 
-        # Append control variables
-        if u is not None:
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
         self.feature_names = feature_names
@@ -421,8 +408,6 @@ class SINDy(_BaseSINDy):
                 " not used when the model was fit"
             )
             u = None
-        if self.discrete_time:
-            x = [validate_input(xi) for xi in x]
         if u is not None:
             u = validate_control_variables(x, u)
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
@@ -457,9 +442,7 @@ class SINDy(_BaseSINDy):
         else:
             feature_names = self.feature_names
         for i, eqn in enumerate(eqns):
-            if self.discrete_time:
-                names = f"({feature_names[i]})[k+1]"
-            elif lhs is None:
+            if lhs is None:
                 if not sindy_pi_flag or not isinstance(self.optimizer, SINDyPI):
                     names = f"({feature_names[i]})'"
                 else:
@@ -519,9 +502,6 @@ class SINDy(_BaseSINDy):
 
         x_dot_predict = self.predict(x, u)
 
-        if self.discrete_time and x_dot is None:
-            x_dot_predict = [xd[:-1] for xd in x_dot_predict]
-
         x, x_dot = self._process_trajectories(x, t, x_dot)
 
         x_dot = concat_sample_axis(x_dot)
@@ -563,19 +543,14 @@ class SINDy(_BaseSINDy):
             will be an np.ndarray of concatenated trajectories.
             If False, x_out will be a list.
         """
-        if x_dot is None:
-            if self.discrete_time:
-                x_dot = [xi[1:] for xi in x]
-                x = [xi[:-1] for xi in x]
-            else:
-                x, x_dot = zip(
-                    *[
-                        self.feature_library.calc_trajectory(
-                            self.differentiation_method, xi, ti
-                        )
-                        for xi, ti in _zip_like_sequence(x, t)
-                    ]
+        x, x_dot = zip(
+            *[
+                self.feature_library.calc_trajectory(
+                    self.differentiation_method, xi, ti
                 )
+                for xi, ti in _zip_like_sequence(x, t)
+            ]
+        )
         return x, x_dot
 
     def differentiate(self, x, t):
@@ -623,7 +598,6 @@ class SINDy(_BaseSINDy):
         t,
         u=None,
         integrator="solve_ivp",
-        stop_condition=None,
         interpolator=None,
         integrator_kws={"method": "LSODA", "rtol": 1e-12, "atol": 1e-12},
         interpolator_kws={},
@@ -636,32 +610,22 @@ class SINDy(_BaseSINDy):
         x0: numpy array, size [n_features]
             Initial condition from which to simulate.
 
-        t: int or numpy array of size [n_samples]
-            If the model is in continuous time, t must be an array of time
-            points at which to simulate. If the model is in discrete time,
-            t must be an integer indicating how many steps to predict.
+        t: numpy array of size [n_samples]
+            Array of time points at which to simulate. 
 
         u: function from R^1 to R^{n_control_features} or list/array, optional \
             (default None)
             Control inputs.
-            If the model is continuous time, i.e. ``self.discrete_time == False``,
-            this function should take in a time and output the values of each of
+            ``u`` can be a function that would take time as input and output the values of each of
             the n_control_features control features as a list or numpy array.
-            Alternatively, if the model is continuous time, ``u`` can also be an
-            array of control inputs at each time step. In this case the array is
-            fit with the interpolator specified by ``interpolator``.
-            If the model is discrete time, i.e. ``self.discrete_time == True``,
-            u should be a list (with ``len(u) == t``) or array (with
-            ``u.shape[0] == 1``) giving the control inputs at each step.
-
+            Alternatively, ``u`` can also be an array of control inputs at each time 
+            step. In this case, the array is fit with the interpolator specified 
+            by ``interpolator``.
+            
         integrator: string, optional (default ``solve_ivp``)
             Function to use to integrate the system.
             Default is ``scipy.integrate.solve_ivp``. The only options
             currently supported are solve_ivp and odeint.
-
-        stop_condition: function object, optional
-            If model is in discrete time, optional function that gives a
-            stopping condition for stepping the simulation forward.
 
         interpolator: callable, optional (default ``interp1d``)
             Function used to interpolate control inputs if ``u`` is an array.
@@ -682,101 +646,64 @@ class SINDy(_BaseSINDy):
         if u is None and self.n_control_features_ > 0:
             raise TypeError("Model was fit using control variables, so u is required")
 
-        if self.discrete_time:
-            if not isinstance(t, int) or t <= 0:
-                raise ValueError(
-                    "For discrete time model, t must be an integer (indicating"
-                    "the number of steps to predict)"
+        if np.isscalar(t):
+            raise ValueError(
+                "For continuous time model, t must be an array of time"
+                " points at which to simulate"
+            )
+
+        if u is None or self.n_control_features_ == 0:
+            if u is not None:
+                warnings.warn(
+                    "Control variables u were ignored because control "
+                    "variables were not used when the model was fit"
                 )
 
-            if stop_condition is not None:
+            def rhs(t, x):
+                return self.predict(x[np.newaxis, :])[0]
 
-                def check_stop_condition(xi):
-                    return stop_condition(xi)
-
-            else:
-
-                def check_stop_condition(xi):
-                    pass
-
-            x = np.zeros((t, self.n_features_in_ - self.n_control_features_))
-            x[0] = x0
-
-            if u is None or self.n_control_features_ == 0:
-                if u is not None:
-                    warnings.warn(
-                        "Control variables u were ignored because control "
-                        "variables were not used when the model was fit"
-                    )
-                for i in range(1, t):
-                    x[i] = self.predict(x[i - 1 : i])
-                    if check_stop_condition(x[i]):
-                        return x[: i + 1]
-            else:
-                for i in range(1, t):
-                    x[i] = self.predict(x[i - 1 : i], u=u[i - 1, np.newaxis])
-                    if check_stop_condition(x[i]):
-                        return x[: i + 1]
-            return x
         else:
-            if np.isscalar(t):
-                raise ValueError(
-                    "For continuous time model, t must be an array of time"
-                    " points at which to simulate"
-                )
-
-            if u is None or self.n_control_features_ == 0:
-                if u is not None:
-                    warnings.warn(
-                        "Control variables u were ignored because control "
-                        "variables were not used when the model was fit"
+            if not callable(u):
+                if interpolator is None:
+                    u_fun = interp1d(
+                        t, u, axis=0, kind="cubic", fill_value="extrapolate"
                     )
+                else:
+                    u_fun = interpolator(t, u, **interpolator_kws)
+
+                t = t[:-1]
+                warnings.warn(
+                    "Last time point dropped in simulation because "
+                    "interpolation of control input was used. To avoid "
+                    "this, pass in a callable for u."
+                )
+            else:
+                u_fun = u
+
+            if u_fun(t[0]).ndim == 1:
 
                 def rhs(t, x):
-                    return self.predict(x[np.newaxis, :])[0]
+                    return self.predict(x[np.newaxis, :], u_fun(t).reshape(1, -1))[
+                        0
+                    ]
 
             else:
-                if not callable(u):
-                    if interpolator is None:
-                        u_fun = interp1d(
-                            t, u, axis=0, kind="cubic", fill_value="extrapolate"
-                        )
-                    else:
-                        u_fun = interpolator(t, u, **interpolator_kws)
 
-                    t = t[:-1]
-                    warnings.warn(
-                        "Last time point dropped in simulation because "
-                        "interpolation of control input was used. To avoid "
-                        "this, pass in a callable for u."
-                    )
-                else:
-                    u_fun = u
+                def rhs(t, x):
+                    return self.predict(x[np.newaxis, :], u_fun(t))[0]
 
-                if u_fun(t[0]).ndim == 1:
-
-                    def rhs(t, x):
-                        return self.predict(x[np.newaxis, :], u_fun(t).reshape(1, -1))[
-                            0
-                        ]
-
-                else:
-
-                    def rhs(t, x):
-                        return self.predict(x[np.newaxis, :], u_fun(t))[0]
-
-            # Need to hard-code below, because odeint and solve_ivp
-            # have different syntax and integration options.
-            if integrator == "solve_ivp":
-                return (
-                    (solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)).y
-                ).T
-            elif integrator == "odeint":
-                if integrator_kws.get("method") == "LSODA":
-                    integrator_kws = {}
-                return odeint(rhs, x0, t, tfirst=True, **integrator_kws)
-            else:
-                raise ValueError("Integrator not supported, exiting")
+        # Need to hard-code below, because odeint and solve_ivp
+        # have different syntax and integration options.
+        if integrator == "solve_ivp":
+            return (
+                (solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)).y
+            ).T
+        elif integrator == "odeint":
+            if integrator_kws.get("method") == "LSODA":
+                integrator_kws = {}
+            return odeint(rhs, x0, t, tfirst=True, **integrator_kws)
+        else:
+            raise ValueError("Integrator not supported, exiting")
 
     @property
     def complexity(self):
@@ -785,6 +712,308 @@ class SINDy(_BaseSINDy):
         """
         return self.optimizer.complexity
 
+
+class DiscreteSINDy(_BaseSINDy):
+    """
+    discrete_time : boolean, optional (default False)
+        If True, dynamical system is treated as a map. Rather than predicting
+        derivatives, the right hand side functions step the system forward by
+        one time step. If False, dynamical system is assumed to be a flow
+        (right-hand side functions predict continuous time derivatives).
+    """
+
+    def __init__(
+        self,
+        optimizer: Optional[BaseOptimizer] = None,
+        feature_library: Optional[BaseFeatureLibrary] = None,
+        differentiation_method: Optional[BaseDifferentiation] = None,
+    ):
+        if optimizer is None:
+            optimizer = STLSQ()
+        self.optimizer = optimizer
+        if feature_library is None:
+            feature_library = PolynomialLibrary()
+        self.feature_library = feature_library
+        if differentiation_method is None:
+            differentiation_method = FiniteDifference(axis=-2)
+        self.differentiation_method = differentiation_method
+
+    def fit(
+        self,
+        x,
+        t,
+        u=None,
+        feature_names: Optional[list[str]] = None,
+    ):
+        """
+        Fit a DiscreteSINDy model.
+
+        Parameters
+        ----------
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Training data. If training data contains multiple trajectories,
+            x should be a list containing data for each trajectory. Individual
+            trajectories may contain different numbers of samples.
+
+        t: float, numpy array of shape (n_samples,), or list of numpy arrays
+            If t is a float, it specifies the timestep between each sample.
+            If array-like, it specifies the time at which each sample was
+            collected.
+            In this case the values in t must be strictly increasing.
+            In the case of multi-trajectory training data, t may also be a list
+            of arrays containing the collection times for each individual
+            trajectory.
+
+        u: array-like or list of array-like, shape (n_samples, n_control_features), \
+                optional (default None)
+            Control variables/inputs. Include this variable to use sparse
+            identification for nonlinear dynamical systems for control (SINDYc).
+            If training data contains multiple trajectories (i.e. if x is a list of
+            array-like), then u should be a list containing control variable data
+            for each trajectory. Individual trajectories may contain different
+            numbers of samples.
+
+        feature_names : list of string, length n_input_features, optional
+            Names for the input features (e.g. :code:`['x', 'y', 'z']`).
+            If None, will use :code:`['x0', 'x1', ...]`.
+
+        Returns
+        -------
+        self: a fitted :class:`DiscreteSINDy` instance
+        """
+
+        if not _check_multiple_trajectories(x, None, u):
+            x, t, _, u = _adapt_to_multiple_trajectories(x, t, None, u)
+        x, _, u = _comprehend_and_validate_inputs(
+            x, t, None, u, self.feature_library
+        )
+
+        x_next = [xi[1:] for xi in x]
+        x = [xi[:-1] for xi in x]
+
+        # Append control variables
+        if u is None:
+            self.n_control_features_ = 0
+        else:
+            u = validate_control_variables(x, u)
+            u = u[:-1]
+            self.n_control_features_ = u[0].n_coord
+
+            x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
+
+        self.feature_names = feature_names
+
+        steps = [
+            ("features", self.feature_library),
+            ("shaping", SampleConcatter()),
+            ("model", self.optimizer),
+        ]
+        x_next = concat_sample_axis(x_next)
+        self.model = Pipeline(steps)
+        self.model.fit(x, x_next)
+        self._fit_shape()
+
+        return self
+
+    def predict(self, x, u=None):
+        """
+        Predict the time derivatives using the DiscreteSINDy model.
+
+        Parameters
+        ----------
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Samples.
+
+        u: array-like or list of array-like, shape(n_samples, n_control_features), \
+                (default None)
+            Control variables. If ``multiple_trajectories==True`` then u
+            must be a list of control variable data from each trajectory. If the
+            model was fit with control variables then u is not optional.
+
+        Returns
+        -------
+        x_next: array-like or list of array-like, shape (n_samples, n_input_features)
+            Predicted next state of the system
+        """
+        if not _check_multiple_trajectories(x, None, u):
+            x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
+            multiple_trajectories = False
+        else:
+            multiple_trajectories = True
+
+        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
+
+        check_is_fitted(self, "model")
+        if self.n_control_features_ > 0 and u is None:
+            raise TypeError("Model was fit using control variables, so u is required")
+        if self.n_control_features_ == 0 and u is not None:
+            warnings.warn(
+                "Control variables u were ignored because control variables were"
+                " not used when the model was fit"
+            )
+            u = None
+        x = [validate_input(xi) for xi in x]
+        if u is not None:
+            u = validate_control_variables(x, u)
+            x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
+        result = [self.model.predict([xi]) for xi in x]
+        result = [
+            self.feature_library.reshape_samples_to_spatial_grid(pred)
+            for pred in result
+        ]
+
+        # Kept for backwards compatibility.
+        if not multiple_trajectories:
+            return result[0]
+        return result
+
+    def print(self, precision=3, **kwargs):
+        """Print the DiscreteSINDy model equations.
+
+        Parameters
+        ----------
+        precision: int, optional (default 3)
+            Precision to be used when printing out model coefficients.
+
+        **kwargs: Additional keyword arguments passed to the builtin print function
+        """
+        eqns = self.equations(precision, discrete_time=True)
+        if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
+            feature_names = self.get_feature_names()
+        else:
+            feature_names = self.feature_names
+        for i, eqn in enumerate(eqns):
+            names = f"({feature_names[i]})[k+1]"
+            print(f"{names} = {eqn}", **kwargs)
+
+    def score(self, x, t, u=None, metric=r2_score, **metric_kws):
+        """
+        Returns a score for the next state prediction produced by the model.
+
+        Parameters
+        ----------
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Samples from which to make predictions.
+
+        t: float, numpy array of shape (n_samples,), or list of numpy arrays
+            Time step between samples or array of collection times. Optional,
+            used to compute the time derivatives of the samples if x_dot is not
+            provided.
+
+        u: array-like or list of array-like, shape(n_samples, n_control_features), \
+                optional (default None)
+            Control variables. If ``multiple_trajectories==True`` then u
+            must be a list of control variable data from each trajectory.
+            If the model was fit with control variables then u is not optional.
+
+        metric: callable, optional
+            Metric function with which to score the prediction. Default is the
+            R^2 coefficient of determination.
+            See `Scikit-learn \
+            <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
+            for more options.
+
+        metric_kws: dict, optional
+            Optional keyword arguments to pass to the metric function.
+
+        Returns
+        -------
+        score: float
+            Metric function value for the model prediction of x_next.
+        """
+
+        if not _check_multiple_trajectories(x, None, u):
+            x, t, _, u = _adapt_to_multiple_trajectories(x, t, None, u)
+        x, _, u = _comprehend_and_validate_inputs(
+            x, t, None, u, self.feature_library
+        )
+
+        x_next_predict = self.predict(x, u)
+        x_next_predict = [xd[:-1] for xd in x_next_predict]
+
+        x_next = [xi[1:] for xi in x]
+        x = [xi[:-1] for xi in x]
+
+        x_next = concat_sample_axis(x_next)
+        x_next_predict = concat_sample_axis(x_next_predict)
+
+        x_next, x_next_predict = drop_nan_samples(x_next, x_next_predict)
+        return metric(x_next, x_next_predict, **metric_kws)
+
+    def simulate(
+        self,
+        x0,
+        t,
+        u=None,
+        stop_condition=None,
+    ):
+        """
+        Simulate the SINDy model forward in time.
+
+        Parameters
+        ----------
+        x0: numpy array, size [n_features]
+            Initial condition from which to simulate.
+
+        t: int
+            Number of time steps to predict.
+
+        u: list/array, optional (default None)
+            Control inputs.
+            A list (with ``len(u) == t``) or array (with ``u.shape[0] == 1``) 
+            giving the control inputs at each step.
+
+        integrator: string, optional (default ``solve_ivp``)
+            Function to use to integrate the system.
+            Default is ``scipy.integrate.solve_ivp``. The only options
+            currently supported are solve_ivp and odeint.
+
+        stop_condition: function object, optional
+            If model is in discrete time, optional function that gives a
+            stopping condition for stepping the simulation forward.
+
+        Returns
+        -------
+        x: numpy array, shape (n_samples, n_features)
+            Simulation results
+        """
+        check_is_fitted(self, "model")
+        if u is None and self.n_control_features_ > 0:
+            raise TypeError("Model was fit using control variables, so u is required")
+
+        if not isinstance(t, int) or t <= 0:
+            raise ValueError(
+                " t must be an integer"
+            )
+
+        if stop_condition is not None:
+            def check_stop_condition(xi):
+                return stop_condition(xi)
+
+        else:
+            def check_stop_condition(xi):
+                pass
+
+        x = np.zeros((t, self.n_features_in_ - self.n_control_features_))
+        x[0] = x0
+
+        if u is None or self.n_control_features_ == 0:
+            if u is not None:
+                warnings.warn(
+                    "Control variables u were ignored because control "
+                    "variables were not used when the model was fit"
+                )
+            for i in range(1, t):
+                x[i] = self.predict(x[i - 1 : i])
+                if check_stop_condition(x[i]):
+                    return x[: i + 1]
+        else:
+            for i in range(1, t):
+                x[i] = self.predict(x[i - 1 : i], u=u[i - 1, np.newaxis])
+                if check_stop_condition(x[i]):
+                    return x[: i + 1]
+        return x
+            
 
 def _zip_like_sequence(x, t):
     """Create an iterable like zip(x, t), but works if t is scalar.

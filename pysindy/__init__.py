@@ -12,6 +12,7 @@ from . import optimizers
 from . import deeptime
 from . import utils
 from .pysindy import SINDy
+from .pysindy import DiscreteSINDy
 from .pysindy import AxesArray
 from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
@@ -63,7 +64,7 @@ except (ImportError, NameError):
     pass
 
 
-__all__ = ["SINDy", "AxesArray"]
+__all__ = ["SINDy", "DiscreteSINDy", "AxesArray"]
 __all__.extend(differentiation.__all__)
 __all__.extend(feature_library.__all__)
 __all__.extend(optimizers.__all__)

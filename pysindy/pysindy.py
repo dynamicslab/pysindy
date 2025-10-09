@@ -726,7 +726,6 @@ class DiscreteSINDy(_BaseSINDy):
         self,
         optimizer: Optional[BaseOptimizer] = None,
         feature_library: Optional[BaseFeatureLibrary] = None,
-        differentiation_method: Optional[BaseDifferentiation] = None,
     ):
         if optimizer is None:
             optimizer = STLSQ()
@@ -734,15 +733,13 @@ class DiscreteSINDy(_BaseSINDy):
         if feature_library is None:
             feature_library = PolynomialLibrary()
         self.feature_library = feature_library
-        if differentiation_method is None:
-            differentiation_method = FiniteDifference(axis=-2)
-        self.differentiation_method = differentiation_method
 
     def fit(
         self,
         x,
         t,
         u=None,
+        x_next=None,
         feature_names: Optional[list[str]] = None,
     ):
         """
@@ -782,21 +779,23 @@ class DiscreteSINDy(_BaseSINDy):
         self: a fitted :class:`DiscreteSINDy` instance
         """
 
-        if not _check_multiple_trajectories(x, None, u):
-            x, t, _, u = _adapt_to_multiple_trajectories(x, t, None, u)
-        x, _, u = _comprehend_and_validate_inputs(
-            x, t, None, u, self.feature_library
+        if not _check_multiple_trajectories(x, x_next, u):
+            x, t, x_next, u = _adapt_to_multiple_trajectories(x, t, x_next, u)
+        x, x_next, u = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library
         )
 
-        x_next = [xi[1:] for xi in x]
-        x = [xi[:-1] for xi in x]
+        if x_next is None:
+            x_next = [xi[1:] for xi in x]
+            x = [xi[:-1] for xi in x]
+            if u is not None:
+                u = [ui[:-1] for ui in u]
 
         # Append control variables
         if u is None:
             self.n_control_features_ = 0
         else:
             u = validate_control_variables(x, u)
-            u = u[:-1]
             self.n_control_features_ = u[0].n_coord
 
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
@@ -886,7 +885,7 @@ class DiscreteSINDy(_BaseSINDy):
             names = f"({feature_names[i]})[k+1]"
             print(f"{names} = {eqn}", **kwargs)
 
-    def score(self, x, t, u=None, metric=r2_score, **metric_kws):
+    def score(self, x, t, u=None, x_next=None, metric=r2_score, **metric_kws):
         """
         Returns a score for the next state prediction produced by the model.
 
@@ -922,17 +921,18 @@ class DiscreteSINDy(_BaseSINDy):
             Metric function value for the model prediction of x_next.
         """
 
-        if not _check_multiple_trajectories(x, None, u):
-            x, t, _, u = _adapt_to_multiple_trajectories(x, t, None, u)
-        x, _, u = _comprehend_and_validate_inputs(
-            x, t, None, u, self.feature_library
+        if not _check_multiple_trajectories(x, x_next, u):
+            x, t, x_next, u = _adapt_to_multiple_trajectories(x, t, x_next, u)
+        x, x_next, u = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library
         )
 
         x_next_predict = self.predict(x, u)
-        x_next_predict = [xd[:-1] for xd in x_next_predict]
 
-        x_next = [xi[1:] for xi in x]
-        x = [xi[:-1] for xi in x]
+        if x_next is None:
+            x_next_predict = [xd[:-1] for xd in x_next_predict]
+            x_next = [xi[1:] for xi in x]
+            x = [xi[:-1] for xi in x]
 
         x_next = concat_sample_axis(x_next)
         x_next_predict = concat_sample_axis(x_next_predict)
@@ -962,11 +962,6 @@ class DiscreteSINDy(_BaseSINDy):
             Control inputs.
             A list (with ``len(u) == t``) or array (with ``u.shape[0] == 1``) 
             giving the control inputs at each step.
-
-        integrator: string, optional (default ``solve_ivp``)
-            Function to use to integrate the system.
-            Default is ``scipy.integrate.solve_ivp``. The only options
-            currently supported are solve_ivp and odeint.
 
         stop_condition: function object, optional
             If model is in discrete time, optional function that gives a

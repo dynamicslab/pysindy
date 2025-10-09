@@ -103,7 +103,6 @@ def validate_control_variables(
     Args:
         x: trajectories of system variables
         u: trajectories of control variables
-        trim_last_point: whether to remove last time point of controls
     """
     if not isinstance(x, Sequence):
         raise ValueError("x must be a Sequence")

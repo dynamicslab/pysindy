@@ -23,7 +23,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import pysindy
-from pysindy import SINDy
+from pysindy import SINDy, DiscreteSINDy
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
@@ -331,18 +331,18 @@ def test_score_multiple_trajectories(data_multiple_trajectories):
 def test_fit_discrete_time(data_discrete_time):
     x = data_discrete_time
 
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, t=1)
     check_is_fitted(model)
 
-    model = SINDy(discrete_time=True)
-    model.fit(x[:-1], x_dot=x[1:], t=1)
+    model = DiscreteSINDy()
+    model.fit(x[:-1], x_next=x[1:], t=1)
     check_is_fitted(model)
 
 
 def test_simulate_discrete_time(data_discrete_time):
     x = data_discrete_time
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, t=1)
     n_steps = x.shape[0]
     x1 = model.simulate(x[0], n_steps)
@@ -359,17 +359,17 @@ def test_simulate_discrete_time(data_discrete_time):
 
 def test_predict_discrete_time(data_discrete_time):
     x = data_discrete_time
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, t=1)
     assert len(model.predict(x)) == len(x)
 
 
 def test_score_discrete_time(data_discrete_time):
     x = data_discrete_time
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, t=1)
     assert model.score(x, t=1) > 0.75
-    assert model.score(x, x_dot=x, t=1) < 1
+    assert model.score(x, x_next=x, t=1) < 1
 
 
 def test_bad_multiple_trajectories(data_multiple_trajectories):
@@ -384,12 +384,12 @@ def test_fit_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories,
 ):
     x = data_discrete_time_multiple_trajectories
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, t=1)
     check_is_fitted(model)
 
-    model = SINDy(discrete_time=True)
-    model.fit(x, x_dot=x, t=1)
+    model = DiscreteSINDy()
+    model.fit(x, x_next=x, t=1)
     check_is_fitted(model)
 
 
@@ -397,7 +397,7 @@ def test_predict_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories,
 ):
     x = data_discrete_time_multiple_trajectories
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, t=1)
 
     y = model.predict(x)
@@ -408,14 +408,14 @@ def test_score_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories,
 ):
     x = data_discrete_time_multiple_trajectories
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, t=1)
 
     s = model.score(x, t=1)
     assert s > 0.75
 
     # x is not its own derivative, so we expect bad performance here
-    s = model.score(x, x_dot=x, t=1)
+    s = model.score(x, x_next=x, t=1)
     assert s < 1
 
 
@@ -445,7 +445,7 @@ def test_equations(data, capsys):
 
 def test_print_discrete_time(data_discrete_time, capsys):
     x = data_discrete_time
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, t=1)
     model.print()
 
@@ -453,20 +453,6 @@ def test_print_discrete_time(data_discrete_time, capsys):
 
     assert len(out) > 0
     assert "(x0)[k+1] = " in out
-
-
-def test_differentiate(data_lorenz, data_multiple_trajectories):
-    x, t = data_lorenz
-
-    model = SINDy()
-    model.differentiate(x, t)
-
-    x, t = data_multiple_trajectories
-    model.differentiate(x, t)
-
-    model = SINDy(discrete_time=True)
-    with pytest.raises(RuntimeError):
-        model.differentiate(x, t)
 
 
 def test_coefficients_equals_complexity(data_lorenz):
@@ -486,15 +472,15 @@ def test_simulate_errors(data_lorenz):
     with pytest.raises(ValueError):
         model.simulate(x[0], t=1)
 
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     with pytest.raises(ValueError):
         model.simulate(x[0], t=[1, 2])
 
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     with pytest.raises(ValueError):
         model.simulate(x[0], t=-1)
 
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     with pytest.raises(ValueError):
         model.simulate(x[0], t=0.5)
 

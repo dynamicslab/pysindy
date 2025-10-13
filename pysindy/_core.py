@@ -383,12 +383,10 @@ class SINDy(_BaseSINDy):
         self.feature_names = feature_names
 
         if sample_weight is not None:
-            # Choose appropriate expansion depending on the library type
-            lib = self.feature_library.__class__.__name__
-            if lib in ("WeakPDELibrary", "WeightedWeakPDELibrary"):
-                sample_weight = _expand_weak_sample_weights(sample_weight, x, self.feature_library)
-            else:
-                sample_weight = _expand_sample_weights(sample_weight, x)
+            mode = "weak" if "Weak" in self.feature_library.__class__.__name__ else "standard"
+            sample_weight = _expand_sample_weights(
+                sample_weight, x, feature_library=self.feature_library, mode=mode
+            )
                                            
         steps = [
             ("features", self.feature_library),
@@ -947,137 +945,78 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
     return x, x_dot, u
 
-def _assert_sample_weights(sample_weight, trajectories):
-    """Validate per-trajectory sample_weight input.
+def _expand_sample_weights(sample_weight, trajectories, feature_library=None, mode="standard"):
+    """Expand per-trajectory sample weights for estimators or weak-form libraries.
 
-    Requirements enforced:
-    - `sample_weight` must be a Python sequence (e.g., list or tuple), not a scalar
-      and not a single numpy array.
-    - Length of the sequence must equal the number of trajectories.
-    - Each element must be array-like with first axis length equal to the
-      corresponding trajectory's `n_time`.
-    - If an element is 2D, its second dimension must be 1 (broadcast) or equal
-      to the trajectory coordinate count `n_coord`.
+    Parameters
+    ----------
+    sample_weight : sequence of array-like or None
+        Per-trajectory sample weights. Each element corresponds to one trajectory.
+    trajectories : sequence
+        Sequence of trajectory objects, each with attributes `n_time` and `n_coord`.
+    feature_library : object, optional
+        Library instance, required when mode='weak'.
+    mode : {'standard', 'weak'}, default='standard'
+        Expansion mode:
+        - 'standard' : Concatenate weights per sample or per coordinate.
+        - 'weak'     : Expand weights for weak-form (integral) test functions.
 
     Returns
     -------
-    validated_list : list of numpy arrays
-        The per-trajectory arrays (not concatenated).
+    np.ndarray or None
+        Concatenated and expanded sample weights, or None if no weights are given.
     """
-
     if sample_weight is None:
         return None
 
     if not (isinstance(sample_weight, Sequence) and not isinstance(sample_weight, np.ndarray)):
-        raise ValueError(
-            "sample_weight must be a sequence (e.g. list or tuple) with one entry per trajectory. "
-            "Do not pass a scalar or a single numpy array here."
-        )
+        raise ValueError("sample_weight must be a list or tuple, not a scalar or numpy array.")
 
     if len(sample_weight) != len(trajectories):
-        raise ValueError(
-            f"When passing a sequence of sample_weight, its length ({len(sample_weight)}) must equal the number of trajectories ({len(trajectories)})"
-        )
+        raise ValueError("sample_weight length must match number of trajectories.")
 
+    # --- Validate shape consistency ---
     validated = []
     for sw, traj in zip(sample_weight, trajectories):
-        a = np.asarray(sw)
-        if a.ndim == 0:
-            validated.append(a)
+        arr = np.asarray(sw)
+        if arr.ndim == 0:
+            validated.append(arr)
             continue
-        if a.shape[0] != traj.n_time:
-            raise ValueError(
-                f"sample_weight entry length ({a.shape[0]}) does not match trajectory length ({traj.n_time})"
-            )
-        if a.ndim == 2 and a.shape[1] not in (1, traj.n_coord):
-            raise ValueError(
-                f"sample_weight entry second dimension ({a.shape[1]}) must be 1 or equal to the number of coordinates ({traj.n_coord})"
-            )
-        validated.append(a)
-    return validated
+        if arr.shape[0] != traj.n_time:
+            raise ValueError("sample_weight entry length does not match trajectory length.")
+        if arr.ndim == 2 and arr.shape[1] not in (1, traj.n_coord):
+            raise ValueError("sample_weight 2D second dim must be 1 or equal to n_coord.")
+        validated.append(arr)
 
+    # --- Weak-form expansion ---
+    if mode == "weak":
+        n_funcs = getattr(feature_library, "K", 1)
+        if n_funcs is None:
+            warnings.warn("feature_library missing 'K'; assuming 1 test function.")
+            n_funcs = 1
+        return np.concatenate([np.repeat(np.asarray(sw), n_funcs, axis=0) for sw in validated])
 
-def _expand_sample_weights(sample_weight, trajectories):
-    """Concatenate per-trajectory sample weights into final array for estimators.
-
-    Expects `sample_weight` to be a sequence (validated by _assert_sample_weights).
-    Returns either:
-    - 1D array of shape (N_total_samples,) when weights are per-sample scalars, or
-    - 2D array of shape (N_total_samples, n_coord) when per-sample-per-coordinate weights
-      are provided (or when 1D weights are promoted to match n_coord).
-    """
-
-    sw_list = _assert_sample_weights(sample_weight, trajectories)
-
-    if sw_list is None:
-        return None
-
-    # Determine common coordinate count
+    # --- Standard expansion ---
     n_coords = {int(t.n_coord) for t in trajectories}
     if len(n_coords) != 1:
-        raise ValueError("All trajectories must have the same number of coordinate components")
-    n_coord = next(iter(n_coords))
+        raise ValueError("All trajectories must have the same n_coord.")
+    n_coord = n_coords.pop()
 
-    arrs = []
-    dims = []
-    for a in sw_list:
-        a = np.asarray(a)
-        if a.ndim == 1:
-            arrs.append(a)
-            dims.append(1)
-        else:  # a.ndim == 2
-            if a.shape[1] == 1:
-                arrs.append(a[:, 0])
-                dims.append(1)
-            else:
-                arrs.append(a)
-                dims.append(n_coord)
+    processed = []
+    for arr in validated:
+        arr = np.asarray(arr)
+        if arr.ndim == 1:
+            arr = arr.reshape(-1, 1)
+        elif arr.ndim == 2 and arr.shape[1] == 1:
+            pass  # already correct shape
+        processed.append(arr)
 
-    # All 1D -> concatenate to 1D
-    if all(d == 1 for d in dims):
-        return np.concatenate([a.reshape(-1) for a in arrs], axis=0)
-
-    # Otherwise promote 1D arrays to 2D and concatenate
-    promoted = []
-    for a, d in zip(arrs, dims):
-        if d == 1:
-            promoted.append(np.broadcast_to(a.reshape(-1, 1), (a.shape[0], n_coord)))
-        else:
-            promoted.append(a)
-    return np.concatenate(promoted, axis=0)
-
-
-def _expand_weak_sample_weights(sample_weight, trajectories, feature_library):
-    """Expand sample weights for weak-form (integral) SINDy libraries.
-
-    Each trajectory contributes multiple weak test functions (integrals).
-    This expands the sample weights to match the number of weak test functions
-    per trajectory, and concatenates across all trajectories.
-
-    Returns
-    -------
-    np.ndarray
-        Expanded weights with shape matching the number of weak test function
-        evaluations across all trajectories.
-    """
-    sw_list = _assert_sample_weights(sample_weight, trajectories)
-    if sw_list is None:
-        return None
-
-    # Number of test functions in the weak library
-    n_test_funcs = getattr(feature_library, "K", None)
-    if n_test_funcs is None:
-        warnings.warn(
-            "Weak-form feature library did not define `n_test_functions`; "
-            "assuming 1 weight per trajectory."
-        )
-        n_test_funcs = 1
-
-    expanded = []
-    for sw, traj in zip(sw_list, trajectories):
-        # Each trajectory contributes n_test_funcs weak equations
-        sw = np.asarray(sw)
-        # Expand weights by repeating for each weak test function
-        sw_expanded = np.repeat(sw, n_test_funcs, axis=0)
-        expanded.append(sw_expanded)
+    # Promote to n_coord if any arrays have multiple coordinates
+    is_scalar_weight = all(a.shape[1] == 1 for a in processed)
+    if is_scalar_weight:
+        return np.concatenate([a.ravel() for a in processed])
+    expanded = [
+        np.broadcast_to(a, (a.shape[0], n_coord)) if a.shape[1] == 1 else a
+        for a in processed
+    ]
     return np.concatenate(expanded, axis=0)

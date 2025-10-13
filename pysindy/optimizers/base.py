@@ -173,32 +173,7 @@ class BaseOptimizer(LinearRegression, _BaseOptimizer):
         y = AxesArray(np.asarray(y), y_axes)
         x_, y = drop_nan_samples(x_, y)
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
-
-        # The next scope is for when the sample weights 
-        # are different for each output component
-        # we select the weights of the each output component and 
-        # recursively fit
-        if y.ndim == 2 and sample_weight is not None and sample_weight.shape == y.shape:
-            coefs, histories, inds = [], [], []
-            n_targets = y.shape[1]
-            subs = []
-            for j in range(n_targets):
-                sw_j = sample_weight[:, j].ravel()   # flatten to 1D
-                sub = clone(self)
-                sub.fit(x_, y[:, j:j+1], sample_weight=sw_j, **reduce_kws)
-                coefs.append(sub.coef_.reshape(1, -1))
-                histories.append(sub.history_)
-                inds.append(sub.ind_.reshape(1, -1))
-                subs.append(sub)
-
-            # stack results: shape (n_targets, n_features)
-            self.coef_ = np.vstack(coefs)
-            self.ind_ = np.vstack(inds)
-            self.history_ = [self.coef_]
-            self.Theta_ = subs[0].Theta_
-            self.intercept_ = np.zeros(n_targets, dtype=self.coef_.dtype)
-            return self
-            
+          
         x, y, X_offset, y_offset, X_scale = _preprocess_data(
             x_,
             y,

@@ -69,7 +69,6 @@ class WeightedWeakPDELibrary(WeakPDELibrary):
             # corresponding weak RHS weights, flattened to 1D
             wk = np.asarray(self.fulltweights[k], dtype=float).ravel(order="C")
 
-            # ensure same length (paranoia check)
             if wk.shape[0] != lin_idx.shape[0]:
                 raise RuntimeError(
                     f"Weight/variance size mismatch on cell {k}: "
@@ -86,16 +85,14 @@ class WeightedWeakPDELibrary(WeakPDELibrary):
         for k in range(K):
             vk = val_lists[k]
             Cov[k, k] = np.dot(vk, vk)
-            # off-diagonals via set intersection of supports
             idx_k = idx_lists[k]
-            # Use a dict for fast overlap accumulation
+            
             map_k = dict(zip(idx_k.tolist(), vk.tolist()))
             for ell in range(k + 1, K):
                 s = 0.0
                 idx_e = idx_lists[ell]
                 v_e = val_lists[ell]
                 map_e = dict(zip(idx_e.tolist(), v_e.tolist()))
-                # iterate the smaller map
                 if len(map_k) <= len(map_e):
                     for j, vkj in map_k.items():
                         ve = map_e.get(j)
@@ -109,12 +106,10 @@ class WeightedWeakPDELibrary(WeakPDELibrary):
                 Cov[k, ell] = s
                 Cov[ell, k] = s
 
-        # diagonal nugget for stability
         avg_diag = np.trace(Cov) / max(K, 1)
         nugget = 1e-12 * avg_diag
         Cov.flat[:: K + 1] += nugget
 
-        # robust Cholesky with fallback if needed
         try:
             self._L_chol = np.linalg.cholesky(Cov)
         except np.linalg.LinAlgError:
@@ -126,7 +121,6 @@ class WeightedWeakPDELibrary(WeakPDELibrary):
         """Return L^{-1} A without forming L^{-1} explicitly."""
         if self._L_chol is None:
             return A
-        # solve L X = A  →  X = L^{-1} A
         return np.linalg.solve(self._L_chol, A)
 
     # ------------------------------ hooks ------------------------------

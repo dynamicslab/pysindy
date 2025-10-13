@@ -1,14 +1,15 @@
 import numpy as np
 import pytest
 from sklearn.linear_model import LinearRegression
+
 from pysindy import SINDy  # adjust import to your package path
 
 
 @pytest.fixture(scope="session")
 def simple_systems():
     """Generate two simple 2D dynamical systems:
-    System A: x' = -y, y' = x  
-    System B: x' = -2y, y' = 2x  
+    System A: x' = -y, y' = x
+    System B: x' = -2y, y' = 2x
     """
     t = np.linspace(0, 2 * np.pi, 50)
     x_a = np.stack([np.cos(t), np.sin(t)], axis=1)
@@ -58,10 +59,14 @@ def test_metadata_routing_sample_weight(simple_systems):
     #    since trajectory B had much higher weight
     # True systems differ by factor of 2
     ratio = np.mean(np.abs(coef_weighted / coef_unweighted))
-    assert ratio > 1.05, "Weighted coefficients should reflect stronger influence from system B"
+    assert (
+        ratio > 1.05
+    ), "Weighted coefficients should reflect stronger influence from system B"
 
     # 4. Convex combination logic sanity check
     # Unweighted: (A + A + B)/3 = A * 2/3 + B * 1/3
     # Weighted:   (A + A + 10*B)/(12) ≈ A * 2/12 + B * 10/12
     # So weighted coefficients should be closer to B's dynamics
-    assert np.linalg.norm(coef_weighted - 2 * coef_unweighted) < np.linalg.norm(coef_unweighted)
+    assert np.linalg.norm(coef_weighted - 2 * coef_unweighted) < np.linalg.norm(
+        coef_unweighted
+    )

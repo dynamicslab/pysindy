@@ -16,7 +16,6 @@ from sklearn.linear_model._base import _preprocess_data
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
-from sklearn.base import clone
 
 from .._typing import Float2D
 from .._typing import FloatDType
@@ -173,7 +172,7 @@ class BaseOptimizer(LinearRegression, _BaseOptimizer):
         y = AxesArray(np.asarray(y), y_axes)
         x_, y = drop_nan_samples(x_, y)
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
-          
+
         x, y, X_offset, y_offset, X_scale = _preprocess_data(
             x_,
             y,

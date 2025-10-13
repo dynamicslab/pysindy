@@ -1,53 +1,182 @@
+import warnings
+
 import numpy as np
 import pytest
-from pysindy import _expand_sample_weights
+
+from pysindy._core import _expand_sample_weights
 
 
-class DummyTraj:
-    def __init__(self, n_time, n_coord):
+class Trajectory:
+    """Minimal trajectory object with attributes matching SINDy expectations."""
+
+    def __init__(self, n_time, n_variables):
         self.n_time = n_time
-        self.n_coord = n_coord
+        self.n_coord = n_variables
 
 
-@pytest.fixture
-def dummy_trajs():
-    """Simple fixture for two dummy trajectories."""
-    return [DummyTraj(5, 2), DummyTraj(5, 2)]
+class WeakLibrary:
+    """Mock weak-form feature library with K test functions."""
+
+    def __init__(self, K=2):
+        self.K = K
 
 
-def test_scalar_weights_none(dummy_trajs):
-    assert _expand_sample_weights(None, dummy_trajs) is None
+# ---------------------------------------------------------------------
+# STANDARD MODE TESTS
+# ---------------------------------------------------------------------
 
 
-def test_1d_sample_weights(dummy_trajs):
-    """1D weights per trajectory concatenate correctly."""
-    weights = [np.ones(5), 2 * np.ones(5)]
-    out = _expand_sample_weights(weights, dummy_trajs)
-    assert out.shape == (10,)
-    assert np.all(out[:5] == 1)
-    assert np.all(out[5:] == 2)
+def test_standard_mode_with_scalar_weights():
+    """
+    Each trajectory's scalar weight should expand to one per sample.
+    """
+    trajectories = [Trajectory(4, 2), Trajectory(6, 2)]
+    weights = [1.0, 2.0]
+
+    expanded = _expand_sample_weights(weights, trajectories, mode="standard")
+
+    assert expanded.shape == (10,)  # 4 + 6 samples
+    assert np.allclose(expanded[:4], 1.0)
+    assert np.allclose(expanded[4:], 2.0)
 
 
-def test_2d_per_coord_weights(dummy_trajs):
-    """2D weights (n_time, n_coord) concatenate along samples."""
-    weights = [np.ones((5, 2)), np.full((5, 2), 2.0)]
-    out = _expand_sample_weights(weights, dummy_trajs)
-    assert out.shape == (10, 2)
-    assert np.allclose(out[:5], 1)
-    assert np.allclose(out[5:], 2)
+def test_standard_mode_with_per_sample_weights():
+    """
+    Per-sample weights should concatenate into one long 1D array.
+    """
+    trajectories = [Trajectory(3, 2), Trajectory(2, 2)]
+    weights = [np.arange(3), np.arange(10, 12)]
+
+    expanded = _expand_sample_weights(weights, trajectories, mode="standard")
+
+    expected = np.concatenate([np.arange(3), np.arange(10, 12)])
+    assert np.allclose(expanded, expected)
+    assert expanded.ndim == 1
 
 
-def test_promote_1d_to_2d(dummy_trajs):
-    """1D weights promoted to (n_time, n_coord)."""
-    weights = [np.arange(5), np.arange(5)]
-    out = _expand_sample_weights(weights, dummy_trajs)
-    assert out.ndim == 1  # still flattened because all dims == 1
+def test_standard_mode_flattens_column_vectors():
+    """Column vectors (n, 1) should flatten correctly."""
+    trajectories = [Trajectory(5, 3)]
+    weights = [np.arange(5).reshape(-1, 1)]
+
+    expanded = _expand_sample_weights(weights, trajectories, mode="standard")
+
+    assert expanded.shape == (5,)
+    assert np.allclose(expanded, np.arange(5))
 
 
-def test_weak_mode_expansion(dummy_trajs):
-    """Weak mode expands by n_test_funcs."""
-    weights = [np.ones(5), np.ones(5)]
-    class DummyLib: K = 3
-    out = _expand_sample_weights(weights, dummy_trajs, feature_library=DummyLib(), mode="weak")
-    assert out.shape == (10 * 3,)
-    assert np.allclose(np.unique(out), 1)
+def test_standard_mode_rejects_mismatched_lengths():
+    """A weight array must match the number of samples in its trajectory."""
+    trajectories = [Trajectory(4, 2)]
+    weights = [np.ones(3)]
+
+    with pytest.raises(ValueError, match="trajectory length"):
+        _expand_sample_weights(weights, trajectories, mode="standard")
+
+
+# ---------------------------------------------------------------------
+# WEAK FORM MODE TESTS
+# ---------------------------------------------------------------------
+
+
+def test_weak_mode_expands_one_weight_per_trajectory():
+    """
+    Weak mode: one scalar weight per trajectory is repeated by K test functions.
+    The total length is n_trajectories * K.
+    """
+    num_trajectories = 3
+    trajectories = [Trajectory(5, 2) for _ in range(num_trajectories)]
+    library = WeakLibrary(K=4)
+
+    weights = [1.0, 2.0, 3.0]
+
+    expanded = _expand_sample_weights(
+        weights, trajectories, feature_library=library, mode="weak"
+    )
+
+    assert expanded.shape == (num_trajectories * library.K,)
+    expected = np.repeat([1.0, 2.0, 3.0], library.K)
+    assert np.allclose(expanded, expected)
+
+
+def test_weak_mode_rejects_per_sample_weights():
+    """
+    Weak mode should not accept per-sample weights.
+    Each trajectory must have exactly one scalar weight.
+    """
+    trajectories = [Trajectory(5, 1)]
+    library = WeakLibrary(K=2)
+    weights = [np.ones(5)]  # Invalid: multiple samples
+
+    with pytest.raises(ValueError, match="one weight per trajectory"):
+        _expand_sample_weights(
+            weights, trajectories, feature_library=library, mode="weak"
+        )
+
+
+def test_weak_mode_warns_if_library_missing_K():
+    """Warn and assume K=1 if the feature library has no K attribute."""
+    trajectories = [Trajectory(2, 2)]
+
+    class LibraryWithoutK:
+        pass
+
+    library = LibraryWithoutK()
+    weights = [1.0]
+
+    with warnings.catch_warnings(record=True) as captured:
+        expanded = _expand_sample_weights(
+            weights, trajectories, feature_library=library, mode="weak"
+        )
+
+    assert expanded.shape == (1 * len(trajectories),)
+    assert any("missing 'K'" in str(warning.message) for warning in captured)
+
+
+# ---------------------------------------------------------------------
+# VALIDATION TESTS
+# ---------------------------------------------------------------------
+
+
+def test_rejects_non_list_weights():
+    """sample_weight must be a list or tuple, not a numpy array."""
+    trajectories = [Trajectory(3, 1)]
+    with pytest.raises(ValueError, match="list or tuple"):
+        _expand_sample_weights(np.ones(3), trajectories)
+
+
+def test_rejects_mismatched_number_of_trajectories():
+    """The number of weight entries must match the number of trajectories."""
+    trajectories = [Trajectory(3, 1), Trajectory(3, 1)]
+    weights = [np.ones(3)]
+    with pytest.raises(ValueError, match="length must match"):
+        _expand_sample_weights(weights, trajectories)
+
+
+# ---------------------------------------------------------------------
+# INTEGRATION TEST
+# ---------------------------------------------------------------------
+
+
+def test_expanded_weights_work_with_rescale_data():
+    """
+    Expanded weights should work seamlessly with optimizer._rescale_data.
+    """
+    from pysindy.optimizers.base import _rescale_data
+
+    num_samples, num_features = 8, 3
+    X = np.random.randn(num_samples, num_features)
+    y = np.random.randn(num_samples, 1)
+
+    trajectories = [Trajectory(8, 3)]
+    weights = [np.linspace(1.0, 2.0, 8)]
+
+    expanded = _expand_sample_weights(weights, trajectories, mode="standard")
+
+    assert expanded.shape == (8,)
+    X_scaled, y_scaled = _rescale_data(X, y, expanded)
+
+    assert X_scaled.shape == X.shape
+    assert y_scaled.shape == y.shape
+    # Check scaling for first sample
+    assert np.allclose(X_scaled[0], X[0] * np.sqrt(expanded[0]))

@@ -69,7 +69,8 @@ from typing import Union
 
 import numpy as np
 from numpy.typing import NDArray
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator
+from sklearn.base import TransformerMixin
 
 HANDLED_FUNCTIONS = {}
 
@@ -838,6 +839,7 @@ class SampleConcatter(BaseEstimator, TransformerMixin):
 
     def transform(self, x_list):
         return concat_sample_axis(x_list)
+
 
 def concat_sample_axis(x_list: List[AxesArray]):
     """Concatenate all trajectories and axes used to create samples."""

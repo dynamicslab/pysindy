@@ -78,8 +78,8 @@ class STLSQ(BaseOptimizer):
     history_ : list
         History of ``coef_``. ``history_[k]`` contains the values of
         ``coef_`` at iteration k of sequentially thresholded least-squares.
-        
-            
+
+
     Notes
     -----
     - Supports ``sample_weight`` during :meth:`fit`. Sample weights are applied

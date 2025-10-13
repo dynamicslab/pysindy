@@ -517,7 +517,8 @@ class TrappingSR3(ConstrainedSR3):
         if self.verbose and k % max(1, self.max_iter // 10) == 0:
             print(
                 f"{k:5d} ... {sindy_loss:8.3e} ... {relax_loss:8.3e} ... {L1:8.2e}"
-                f" ... {nonlin_ens_loss:8.2e} ... {cubic_ens_loss:8.2e} ... {obj:8.2e}"
+                f" ... {nonlin_ens_loss:8.2e} ... {cubic_ens_loss:8.2e}"
+                f" ... {obj:8.2e}"
             )
         return obj
 

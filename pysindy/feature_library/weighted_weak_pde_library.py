@@ -1,6 +1,7 @@
 import numpy as np
-from .weak_pde_library import WeakPDELibrary
+
 from ..utils import AxesArray
+from .weak_pde_library import WeakPDELibrary
 
 
 class WeightedWeakPDELibrary(WeakPDELibrary):
@@ -39,14 +40,15 @@ class WeightedWeakPDELibrary(WeakPDELibrary):
 
         # --- robust weight-field shape handling ---
         base_grid = np.asarray(self.spatiotemporal_grid)
-        expected = tuple(base_grid.shape[:-1])           # e.g. (Nx, Nt) for a 2D grid
+        expected = tuple(base_grid.shape[:-1])  # e.g. (Nx, Nt) for a 2D grid
         var_grid = np.asarray(self.spatiotemporal_weights)
 
         if var_grid.shape == expected + (1,):
             var_grid = var_grid[..., 0]
         elif var_grid.shape != expected:
             raise ValueError(
-                f"spatiotemporal_weights must have shape {expected} or {expected + (1,)}, "
+                f"spatiotemporal_weights must have \
+                shape {expected} or {expected + (1,)}, "
                 f"got {var_grid.shape}"
             )
 
@@ -86,7 +88,7 @@ class WeightedWeakPDELibrary(WeakPDELibrary):
             vk = val_lists[k]
             Cov[k, k] = np.dot(vk, vk)
             idx_k = idx_lists[k]
-            
+
             map_k = dict(zip(idx_k.tolist(), vk.tolist()))
             for ell in range(k + 1, K):
                 s = 0.0
@@ -133,18 +135,17 @@ class WeightedWeakPDELibrary(WeakPDELibrary):
             self._build_whitener_from_variance()
 
     def convert_u_dot_integral(self, u):
-        Vy = super().convert_u_dot_integral(u)     # (K, 1)
+        Vy = super().convert_u_dot_integral(u)  # (K, 1)
         Vy_w = self._apply_whitener(np.asarray(Vy))
         return AxesArray(Vy_w, {"ax_sample": 0, "ax_coord": 1})
 
     def transform(self, x_full):
-        VTheta_list = super().transform(x_full)    # list of (K, n_features)
+        VTheta_list = super().transform(x_full)  # list of (K, n_features)
         if self._L_chol is None:
             return VTheta_list
         out = []
         for VTheta in VTheta_list:
             A = np.asarray(VTheta)
-            A_w = self._apply_whitener(A)          # (K, m)
+            A_w = self._apply_whitener(A)  # (K, m)
             out.append(AxesArray(A_w, {"ax_sample": 0, "ax_coord": 1}))
         return out
-

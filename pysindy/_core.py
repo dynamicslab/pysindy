@@ -383,7 +383,12 @@ class SINDy(_BaseSINDy):
         self.feature_names = feature_names
 
         if sample_weight is not None:
-            sample_weight = _expand_sample_weights(sample_weight, x)
+            # Choose appropriate expansion depending on the library type
+            lib = self.feature_library.__class__.__name__
+            if lib in ("WeakPDELibrary", "WeightedWeakPDELibrary"):
+                sample_weight = _expand_weak_sample_weights(sample_weight, x, self.feature_library)
+            else:
+                sample_weight = _expand_sample_weights(sample_weight, x)
                                            
         steps = [
             ("features", self.feature_library),
@@ -978,9 +983,8 @@ def _assert_sample_weights(sample_weight, trajectories):
     for sw, traj in zip(sample_weight, trajectories):
         a = np.asarray(sw)
         if a.ndim == 0:
-            raise ValueError(
-                "Each element of sample_weight must be array-like with length equal to the trajectory time dimension"
-            )
+            validated.append(a)
+            continue
         if a.shape[0] != traj.n_time:
             raise ValueError(
                 f"sample_weight entry length ({a.shape[0]}) does not match trajectory length ({traj.n_time})"
@@ -1042,3 +1046,38 @@ def _expand_sample_weights(sample_weight, trajectories):
             promoted.append(a)
     return np.concatenate(promoted, axis=0)
 
+
+def _expand_weak_sample_weights(sample_weight, trajectories, feature_library):
+    """Expand sample weights for weak-form (integral) SINDy libraries.
+
+    Each trajectory contributes multiple weak test functions (integrals).
+    This expands the sample weights to match the number of weak test functions
+    per trajectory, and concatenates across all trajectories.
+
+    Returns
+    -------
+    np.ndarray
+        Expanded weights with shape matching the number of weak test function
+        evaluations across all trajectories.
+    """
+    sw_list = _assert_sample_weights(sample_weight, trajectories)
+    if sw_list is None:
+        return None
+
+    # Number of test functions in the weak library
+    n_test_funcs = getattr(feature_library, "K", None)
+    if n_test_funcs is None:
+        warnings.warn(
+            "Weak-form feature library did not define `n_test_functions`; "
+            "assuming 1 weight per trajectory."
+        )
+        n_test_funcs = 1
+
+    expanded = []
+    for sw, traj in zip(sw_list, trajectories):
+        # Each trajectory contributes n_test_funcs weak equations
+        sw = np.asarray(sw)
+        # Expand weights by repeating for each weak test function
+        sw_expanded = np.repeat(sw, n_test_funcs, axis=0)
+        expanded.append(sw_expanded)
+    return np.concatenate(expanded, axis=0)

@@ -280,16 +280,8 @@ def _set_up_weights(
     Sets up weights needed for the weak library. Integrals over domain cells are
     approximated as dot products of weights and the input data.
     """
-
     # Below we calculate the weights to convert integrals into dot products
     # To speed up evaluations, we proceed in several steps
-
-    # Since the grid is a tensor product grid, we calculate weights along each axis
-    # Later, we multiply the weights along each axis to produce the full weights
-
-    # Within each domain cell, we calculate the interior weights
-    # and the weights at the left and right boundaries separately,
-    # since the  expression differ at the boundaries of the domains
 
     # Extract the space-time coordinates for each domain and the indices for
     # the left-most and right-most points for each domain.
@@ -412,8 +404,8 @@ def _make_domains(
 def _time_derivative_weights(
     subdoms: SubdomainSpecs,
     grids: list[Float1D],
-    lefts: Float2D,
-    rights: Float2D,
+    left_inds: Float2D,
+    right_inds: Float2D,
     p: int,
 ) -> AxesArray:
     # Weights for the time integrals along each axis
@@ -422,7 +414,6 @@ def _time_derivative_weights(
     deriv[-1] = 1
     # Weights for the time integrals along each axis
     for i in range(subdoms.grid_ndim):
-        # weights for interior points
         weights1d = weights1d + [_linear_weights(grids[i], deriv[i], p)]
     # TODO: get rest of code to work with AxesArray.  Too unsure of
     # which axis labels to use at this point to continue
@@ -432,9 +423,10 @@ def _time_derivative_weights(
     for k in range(subdoms.n_subdomains):
         ret = np.ones(subdoms.subgrid_shapes[k])
         for i in range(subdoms.grid_ndim):
-            dims = np.ones(subdoms.grid_ndim, dtype=int)
-            dims[i] = subdoms.subgrid_shapes[k][i]
-            ret = ret * np.reshape(weights1d[i][lefts[i][k] : rights[i][k] + 1], dims)
+            dims = subdoms.subgrid_shapes[k][i]
+            ret = ret * np.reshape(
+                weights1d[i][left_inds[i][k] : right_inds[i][k] + 1], dims
+            )
 
         fullweights = fullweights + [
             ret * np.prod(subdoms.subgrid_dims[k] ** (1.0 - deriv))
@@ -464,8 +456,7 @@ def _pure_derivative_weights(
     for k in range(subdoms.n_subdomains):
         ret = np.ones(subdoms.subgrid_shapes[k])
         for i in range(subdoms.grid_ndim):
-            dims = np.ones(subdoms.grid_ndim, dtype=int)
-            dims[i] = subdoms.subgrid_shapes[k][i]
+            dims = subdoms.subgrid_shapes[k][i]
             ret = ret * np.reshape(
                 weights1d[i][left_inds[i][k] : right_inds[i][k] + 1], dims
             )
@@ -577,56 +568,23 @@ def _linear_weights(x: Float1D, d: int, p: int) -> Float1D:
     """
     ws = _phi_int(x, d, p)
     zs = _xphi_int(x, d, p)
-    return np.concatenate(
-        [
-            [
-                x[1] / (x[1] - x[0]) * (ws[1] - ws[0])
-                - 1 / (x[1] - x[0]) * (zs[1] - zs[0])
-            ],
-            x[2:] / (x[2:] - x[1:-1]) * (ws[2:] - ws[1:-1])
-            - x[:-2] / (x[1:-1] - x[:-2]) * (ws[1:-1] - ws[:-2])
-            + 1 / (x[1:-1] - x[:-2]) * (zs[1:-1] - zs[:-2])
-            - 1 / (x[2:] - x[1:-1]) * (zs[2:] - zs[1:-1]),
-            [
-                -x[-2] / (x[-1] - x[-2]) * (ws[-1] - ws[-2])
-                + 1 / (x[-1] - x[-2]) * (zs[-1] - zs[-2])
-            ],
-        ]
-    )
+    x_i = x[:-1]
+    x_plus = x[1:]
+    w_i = ws[:-1]
+    w_plus = ws[1:]
+    z_i = zs[:-1]
+    z_plus = zs[1:]
 
+    weights = np.zeros_like(x)
+    const_term1 = x_plus / (x_plus - x_i) * (w_plus - w_i)
+    const_term2 = -x_i / (x_plus - x_i) * (w_plus - w_i)
+    lin_term1 = -1 / (x_plus - x_i) * (z_plus - z_i)
+    lin_term2 = 1 / (x_plus - x_i) * (z_plus - z_i)
 
-def _left_weights(x1, x2, d, p):
-    """
-    One-dimensional weight for left-most point in integration against the dth
-    derivative of the polynomial test function (1-x**2)**p. This is derived
-    assuming the function to integrate is linear between grid points:
-    f(x)=f_i+(x-x_i)/(x_{i+1}-x_i)*(f_{i+1}-f_i)
-    so that f(x)*dphi(x) is a piecewise polynomial.
-    The piecewise components are computed analytically, and the integral is
-    expressed as a dot product of weights against the f_i.
-    """
-    w1 = _phi_int(x1, d, p)
-    w2 = _phi_int(x2, d, p)
-    z1 = _xphi_int(x1, d, p)
-    z2 = _xphi_int(x2, d, p)
-    return x2 / (x2 - x1) * (w2 - w1) - 1 / (x2 - x1) * (z2 - z1)
+    weights[:-1] += const_term1 + lin_term1
+    weights[1:] += const_term2 + lin_term2
 
-
-def _right_weights(x1, x2, d, p):
-    """
-    One-dimensional weight for right-most point in integration against the dth
-    derivative of the polynomial test function (1-x**2)**p. This is derived
-    assuming the function to integrate is linear between grid points:
-    f(x)=f_i+(x-x_i)/(x_{i+1}-x_i)*(f_{i+1}-f_i)
-    so that f(x)*dphi(x) is a piecewise polynomial.
-    The piecewise components are computed analytically, and the integral is
-    expressed as a dot product of weights against the f_i.
-    """
-    w1 = _phi_int(x1, d, p)
-    w2 = _phi_int(x2, d, p)
-    z1 = _xphi_int(x1, d, p)
-    z2 = _xphi_int(x2, d, p)
-    return -x1 / (x2 - x1) * (w2 - w1) + 1 / (x2 - x1) * (z2 - z1)
+    return weights
 
 
 def _dense_to_open_mesh(meshgrid: AxesArray) -> list[AxesArray]:

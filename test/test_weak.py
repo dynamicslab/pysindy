@@ -5,12 +5,8 @@ from numpy.testing import assert_array_equal
 from scipy.integrate import quad
 
 from pysindy._weak import _get_spatial_endpoints
-from pysindy._weak import _left_weights
 from pysindy._weak import _linear_weights
 from pysindy._weak import _phi
-from pysindy._weak import _phi_int
-from pysindy._weak import _right_weights
-from pysindy._weak import _xphi_int
 
 
 def test_get_spatial_endpoints():
@@ -67,11 +63,5 @@ def test_weak_derivative(p, d, n_grid):
     x_i = np.linspace(-1, 1, n_grid)
     f_i = true_f(x_i)
     weights = _linear_weights(x_i, d, p)
-    assert_allclose(
-        weights[0], _left_weights(np.array([x_i[0]]), np.array([x_i[1]]), d, p)
-    )
-    assert_allclose(
-        weights[-1], _right_weights(np.array([x_i[-2]]), np.array([x_i[-1]]), d, p)
-    )
     result = sum(f_i * weights)
     assert_allclose(result, expected, atol=1 / n_grid)

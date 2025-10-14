@@ -11,10 +11,13 @@ import numpy as np
 from scipy.integrate import odeint
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
+from sklearn import set_config
 from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
+
+set_config(enable_metadata_routing=True)
 from typing_extensions import Self
 
 from .differentiation import BaseDifferentiation
@@ -295,6 +298,7 @@ class SINDy(_BaseSINDy):
         self.discrete_time = discrete_time
         self.set_fit_request(sample_weight=True)
         self.set_score_request(sample_weight=True)
+        self.optimizer.set_fit_request(sample_weight=True)
 
     def fit(
         self,
@@ -344,7 +348,7 @@ class SINDy(_BaseSINDy):
         feature_names : list of string, length n_input_features, optional
             Names for the input features (e.g. :code:`['x', 'y', 'z']`).
             If None, will use :code:`['x0', 'x1', ...]`.
-            
+
         sample_weight : float or array-like of shape (n_samples,), optional
             Per-sample weights for the regression. Passed internally to
             the optimizer (e.g. STLSQ). Supports compatibility with
@@ -378,10 +382,16 @@ class SINDy(_BaseSINDy):
 
         self.feature_names = feature_names
 
-        # User may give one weight per trajectory or one weight per sample
         if sample_weight is not None:
-            sample_weight = _expand_sample_weights(sample_weight, x)
-                                           
+            mode = (
+                "weak"
+                if "Weak" in self.feature_library.__class__.__name__
+                else "standard"
+            )
+            sample_weight = _expand_sample_weights(
+                sample_weight, x, feature_library=self.feature_library, mode=mode
+            )
+
         steps = [
             ("features", self.feature_library),
             ("shaping", SampleConcatter()),
@@ -389,7 +399,7 @@ class SINDy(_BaseSINDy):
         ]
         x_dot = concat_sample_axis(x_dot)
         self.model = Pipeline(steps)
-        self.model.fit(x, x_dot, model__sample_weight=sample_weight)
+        self.model.fit(x, x_dot, sample_weight=sample_weight)
         self._fit_shape()
 
         return self
@@ -423,7 +433,7 @@ class SINDy(_BaseSINDy):
         x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
 
         check_is_fitted(self, "model")
-        
+
         if self.n_control_features_ > 0 and u is None:
             raise TypeError("Model was fit using control variables, so u is required")
         if self.n_control_features_ == 0 and u is not None:
@@ -479,7 +489,16 @@ class SINDy(_BaseSINDy):
                 names = f"{lhs[i]}"
             print(f"{names} = {eqn}", **kwargs)
 
-    def score(self, x, t, x_dot=None, u=None, metric=r2_score, sample_weight=None, **metric_kws):
+    def score(
+        self,
+        x,
+        t,
+        x_dot=None,
+        u=None,
+        metric=r2_score,
+        sample_weight=None,
+        **metric_kws,
+    ):
         """
         Returns a score for the time derivative prediction produced by the model.
 
@@ -512,14 +531,14 @@ class SINDy(_BaseSINDy):
             See `Scikit-learn \
             <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
             for more options.
-        
+
         sample_weight : array-like of shape (n_samples,), optional
             Per-sample weights passed directly to the metric. This is the
             preferred way to supply weights.
 
         metric_kws: dict, optional
             Optional keyword arguments to pass to the metric function.
-            
+
 
         Returns
         -------
@@ -542,7 +561,7 @@ class SINDy(_BaseSINDy):
 
         if sample_weight is not None:
             sample_weight = _expand_sample_weights(sample_weight, x)
-    
+
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)
 
@@ -551,7 +570,7 @@ class SINDy(_BaseSINDy):
                 x_dot, x_dot_predict, return_indices=True
             )
             sample_weight = sample_weight[good_idx]
-            metric_kws = {**metric_kws, "sample_weight": sample_weight}  
+            metric_kws = {**metric_kws, "sample_weight": sample_weight}
         else:
             x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
 
@@ -939,42 +958,115 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
     return x, x_dot, u
 
-def _expand_sample_weights(sample_weight, trajectories):
-    """Expand trajectory-level weights to per-sample weights.
+
+def _expand_sample_weights(
+    sample_weight, trajectories, feature_library=None, mode="standard"
+):
+    """
+    Expand per-trajectory or per-sample weights for use in SINDy estimators.
 
     Parameters
     ----------
-    sample_weight : array-like of shape (n_trajectories,) or (n_samples,), default=None
-        If length == n_trajectories, each trajectory weight is expanded to cover
-        all samples in that trajectory.
-        If length == n_samples, interpreted as per-sample weights directly.
-        If None, uniform weighting is applied.
+    sample_weight : sequence of scalars or array-like
+        Weights for each trajectory. In "standard" mode, each entry can be:
+          - a scalar weight (applied to all samples in that trajectory), or
+          - an array of length equal to the number of samples (n_time) for that
+          trajectory.
+        In "weak" mode, each entry must be a single scalar weight per trajectory.
 
-    trajectories : list of array-like
-        The list of input trajectories, each shape (n_samples_i, n_features).
+    trajectories : sequence
+        Sequence of trajectory-like objects, each having attributes `n_time` and
+        `n_coord`.
+
+    feature_library : object, optional
+        Library instance used in weak-form mode. Must define attribute `K`
+        (the number of weak test functions). If missing, assumes K=1 with a warning.
+
+    mode : {'standard', 'weak'}, default='standard'
+        - "standard": Expand per-sample weights to match concatenated samples.
+        - "weak": Repeat each trajectory’s single scalar weight `K` times.
 
     Returns
     -------
-    sample_weight : ndarray of shape (sum_i n_samples_i,)
-        Per-sample weights, ready to use in metrics.
+    np.ndarray or None
+        A 1D numpy array of concatenated and expanded sample weights,
+        or None if `sample_weight` is None.
     """
+    # -------------------------------------------------------------
+    # Early exit for None
+    # -------------------------------------------------------------
     if sample_weight is None:
         return None
 
-    sample_weight = np.asarray(sample_weight)
+    if not (
+        isinstance(sample_weight, Sequence)
+        and not isinstance(sample_weight, np.ndarray)
+    ):
+        raise ValueError(
+            "sample_weight must be a list or tuple, not a scalar or numpy array."
+        )
 
-    n_traj = len(trajectories)
-    n_samples_total = sum(len(traj) for traj in trajectories)
+    if len(sample_weight) != len(trajectories):
+        raise ValueError("sample_weight length must match number of trajectories.")
 
-    if sample_weight.ndim == 1 and len(sample_weight) == n_traj:
-        # Efficient expansion using np.repeat
-        traj_lengths = [len(traj) for traj in trajectories]
-        return np.repeat(sample_weight, traj_lengths)
+    # -------------------------------------------------------------
+    # Weak mode: one weight per trajectory, repeated K times
+    # -------------------------------------------------------------
+    if mode == "weak":
+        if feature_library is None:
+            raise ValueError("feature_library is required in weak mode.")
 
-    if sample_weight.ndim == 1 and len(sample_weight) == n_samples_total:
-        return sample_weight
+        K = getattr(feature_library, "K", None)
+        if K is None:
+            warnings.warn("feature_library missing 'K'; assuming K=1.", UserWarning)
+            K = 1
 
-    raise ValueError(
-        f"sample_weight must be length {n_traj} (per trajectory) or "
-        f"{n_samples_total} (per sample), got {len(sample_weight)}"
-    )
+        validated = []
+        for w, traj in zip(sample_weight, trajectories):
+            arr = np.asarray(w)
+            if arr.ndim > 0 and arr.size > 1:
+                raise ValueError(
+                    "Weak mode expects exactly one weight per trajectory (scalar), "
+                    f"but got shape {arr.shape} for trajectory with {traj.n_time}"
+                    f"samples."
+                )
+            validated.append(float(arr))
+        return np.repeat(validated, K)
+
+    # -------------------------------------------------------------
+    # Standard mode: expand scalars or per-sample arrays
+    # -------------------------------------------------------------
+    expanded = []
+    for w, traj in zip(sample_weight, trajectories):
+        arr = np.asarray(w)
+
+        # Scalar → expand to all samples in trajectory
+        if arr.ndim == 0:
+            arr = np.full(traj.n_time, arr, dtype=float)
+
+        # 1D array → must match number of samples
+        elif arr.ndim == 1:
+            if arr.shape[0] != traj.n_time:
+                raise ValueError(
+                    f"sample_weight length {arr.shape[0]} does"
+                    f" not match trajectory length {traj.n_time}."
+                )
+
+        # 2D array → only (n,1) allowed
+        elif arr.ndim == 2:
+            if arr.shape[1] != 1:
+                raise ValueError(
+                    "sample_weight 2D arrays must have second dimension = 1."
+                )
+            if arr.shape[0] != traj.n_time:
+                raise ValueError(
+                    "sample_weight 2D array length does not match trajectory length."
+                )
+            arr = arr.ravel()
+
+        else:
+            raise ValueError("Invalid sample_weight shape.")
+
+        expanded.append(arr.ravel())
+
+    return np.concatenate(expanded)

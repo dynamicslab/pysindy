@@ -82,6 +82,59 @@ class _BaseSINDy(BaseEstimator, ABC):
                 feature_names.append("u" + str(i))
             self.feature_names = feature_names
 
+    def predict(self, x, u=None):
+        """
+        Predict the time derivatives if it is a SINDy model.
+        Predict the next state of the system if it is a DiscreteSINDy model.
+
+
+        Parameters
+        ----------
+        x: array-like or list of array-like, shape (n_samples, n_input_features)
+            Samples.
+
+        u: array-like or list of array-like, shape(n_samples, n_control_features), \
+                (default None)
+            Control variables. If ``multiple_trajectories==True`` then u
+            must be a list of control variable data from each trajectory. If the
+            model was fit with control variables then u is not optional.
+
+        Returns
+        -------
+        x_next: array-like or list of array-like, shape (n_samples, n_input_features)
+            Predicted next state of the system
+        """
+        if not _check_multiple_trajectories(x, None, u):
+            x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
+            multiple_trajectories = False
+        else:
+            multiple_trajectories = True
+
+        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
+
+        check_is_fitted(self, "model")
+        if self.n_control_features_ > 0 and u is None:
+            raise TypeError("Model was fit using control variables, so u is required")
+        if self.n_control_features_ == 0 and u is not None:
+            warnings.warn(
+                "Control variables u were ignored because control variables were"
+                " not used when the model was fit"
+            )
+            u = None
+        if u is not None:
+            u = validate_control_variables(x, u)
+            x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
+        result = [self.model.predict([xi]) for xi in x]
+        result = [
+            self.feature_library.reshape_samples_to_spatial_grid(pred)
+            for pred in result
+        ]
+
+        # Kept for backwards compatibility.
+        if not multiple_trajectories:
+            return result[0]
+        return result
+
     def coefficients(self):
         """
         Get an array of the coefficients learned by SINDy model.
@@ -366,57 +419,6 @@ class SINDy(_BaseSINDy):
         self._fit_shape()
 
         return self
-
-    def predict(self, x, u=None):
-        """
-        Predict the time derivatives using the SINDy model.
-
-        Parameters
-        ----------
-        x: array-like or list of array-like, shape (n_samples, n_input_features)
-            Samples.
-
-        u: array-like or list of array-like, shape(n_samples, n_control_features), \
-                (default None)
-            Control variables. If ``multiple_trajectories==True`` then u
-            must be a list of control variable data from each trajectory. If the
-            model was fit with control variables then u is not optional.
-
-        Returns
-        -------
-        x_dot: array-like or list of array-like, shape (n_samples, n_input_features)
-            Predicted time derivatives
-        """
-        if not _check_multiple_trajectories(x, None, u):
-            x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
-            multiple_trajectories = False
-        else:
-            multiple_trajectories = True
-
-        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
-
-        check_is_fitted(self, "model")
-        if self.n_control_features_ > 0 and u is None:
-            raise TypeError("Model was fit using control variables, so u is required")
-        if self.n_control_features_ == 0 and u is not None:
-            warnings.warn(
-                "Control variables u were ignored because control variables were"
-                " not used when the model was fit"
-            )
-            u = None
-        if u is not None:
-            u = validate_control_variables(x, u)
-            x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
-        result = [self.model.predict([xi]) for xi in x]
-        result = [
-            self.feature_library.reshape_samples_to_spatial_grid(pred)
-            for pred in result
-        ]
-
-        # Kept for backwards compatibility.
-        if not multiple_trajectories:
-            return result[0]
-        return result
 
     def print(self, lhs=None, precision=3, **kwargs):
         """Print the SINDy model equations.
@@ -884,58 +886,6 @@ class DiscreteSINDy(_BaseSINDy):
         self._fit_shape()
 
         return self
-
-    def predict(self, x, u=None):
-        """
-        Predict the time derivatives using the DiscreteSINDy model.
-
-        Parameters
-        ----------
-        x: array-like or list of array-like, shape (n_samples, n_input_features)
-            Samples.
-
-        u: array-like or list of array-like, shape(n_samples, n_control_features), \
-                (default None)
-            Control variables. If ``multiple_trajectories==True`` then u
-            must be a list of control variable data from each trajectory. If the
-            model was fit with control variables then u is not optional.
-
-        Returns
-        -------
-        x_next: array-like or list of array-like, shape (n_samples, n_input_features)
-            Predicted next state of the system
-        """
-        if not _check_multiple_trajectories(x, None, u):
-            x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
-            multiple_trajectories = False
-        else:
-            multiple_trajectories = True
-
-        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
-
-        check_is_fitted(self, "model")
-        if self.n_control_features_ > 0 and u is None:
-            raise TypeError("Model was fit using control variables, so u is required")
-        if self.n_control_features_ == 0 and u is not None:
-            warnings.warn(
-                "Control variables u were ignored because control variables were"
-                " not used when the model was fit"
-            )
-            u = None
-        x = [validate_input(xi) for xi in x]
-        if u is not None:
-            u = validate_control_variables(x, u)
-            x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
-        result = [self.model.predict([xi]) for xi in x]
-        result = [
-            self.feature_library.reshape_samples_to_spatial_grid(pred)
-            for pred in result
-        ]
-
-        # Kept for backwards compatibility.
-        if not multiple_trajectories:
-            return result[0]
-        return result
 
     def print(self, precision=3, **kwargs):
         """Print the DiscreteSINDy model equations.

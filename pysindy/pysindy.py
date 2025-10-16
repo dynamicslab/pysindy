@@ -61,10 +61,6 @@ class _BaseSINDy(BaseEstimator, ABC):
         ...
 
     @abstractmethod
-    def predict(self, x: np.ndarray) -> np.ndarray:
-        ...
-
-    @abstractmethod
     def simulate(self, x0: np.ndarray, t: np.ndarray) -> np.ndarray:
         ...
 
@@ -534,14 +530,10 @@ class SINDy(_BaseSINDy):
         Returns
         -------
         x_out: np.ndarray or list
-            Validated version of x. If return_array is True, x_out will be an
-            np.ndarray of concatenated trajectories. If False, x_out will be
-            a list.
+            Validated version of x.
 
         x_dot_out: np.ndarray or list
-            Validated derivative measurements.If return_array is True, x_dot_out
-            will be an np.ndarray of concatenated trajectories.
-            If False, x_out will be a list.
+            Validated derivative measurements
         """
         x, x_dot = zip(
             *[
@@ -715,11 +707,83 @@ class SINDy(_BaseSINDy):
 
 class DiscreteSINDy(_BaseSINDy):
     """
-    discrete_time : boolean, optional (default False)
-        If True, dynamical system is treated as a map. Rather than predicting
-        derivatives, the right hand side functions step the system forward by
-        one time step. If False, dynamical system is assumed to be a flow
-        (right-hand side functions predict continuous time derivatives).
+    Sparse Identification of Nonlinear Dynamical Systems (SINDy) for discrete time systems.
+
+    Parameters
+    ----------
+    optimizer : optimizer object, optional
+        Optimization method used to fit the SINDy model. This must be a class
+        extending :class:`pysindy.optimizers.BaseOptimizer`.
+        The default is :class:`STLSQ`.
+
+    feature_library : feature library object, optional
+        Feature library object used to specify candidate right-hand side features.
+        This must be a class extending
+        :class:`pysindy.feature_library.base.BaseFeatureLibrary`.
+        The default option is :class:`PolynomialLibrary`.
+
+    Attributes
+    ----------
+    model : ``sklearn.multioutput.MultiOutputRegressor`` object
+        The fitted SINDy model.
+
+    n_input_features_ : int
+        The total number of input features.
+
+    n_output_features_ : int
+        The total number of output features. This number is a function of
+        ``self.n_input_features`` and the feature library being used.
+
+    n_control_features_ : int
+        The total number of control input features.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import pysindy as ps
+    >>> def f(x):
+    >>>     return 3.6 * x * (1 - x)
+    >>> n_steps = 20
+    >>> eps = 0.001
+    >>> x_map = np.zeros((n_steps))
+    >>> x_map[0] = 0.5
+    >>> for i in range(1, n_steps):
+    >>>     x_map[i] = f(x_map[i - 1]) + eps * np.random.randn()
+    >>> x_train_map = x_map[:16]
+    >>> x_test_map = x_map[16:]
+    >>> model = ps.DiscreteSINDy()
+    >>> model.fit(x_train_map, t=1)
+    >>> model.print()
+    (x0)[k+1] = 0.006 1 + 3.581 x0[k] + -3.586 x0[k]^2
+    >>> model.coefficients()
+    >>> model.predict(x_test_map)
+    AxesArray([[0.8268863 ],
+            [0.51884209],
+            [0.89919392],
+            [0.33532148]])
+    >>> model.score(x_test_map, t=1)
+    0.9998547755296847
+    >>> model.simulate(x0=0.5, t=20)
+    array([[0.5       ],
+       [0.90037072],
+       [0.32376537],
+       [0.78980964],
+       [0.59788467],
+       [0.86556721],
+       [0.41950949],
+       [0.877508  ],
+       [0.38763939],
+       [0.85561537],
+       [0.44528986],
+       [0.88988815],
+       [0.35351698],
+       [0.8241012 ],
+       [0.52224203],
+       [0.89849516],
+       [0.32914646],
+       [0.79648209],
+       [0.58382694],
+       [0.87479097]])
     """
 
     def __init__(
@@ -738,8 +802,8 @@ class DiscreteSINDy(_BaseSINDy):
         self,
         x,
         t,
-        u=None,
         x_next=None,
+        u=None,
         feature_names: Optional[list[str]] = None,
     ):
         """
@@ -748,9 +812,9 @@ class DiscreteSINDy(_BaseSINDy):
         Parameters
         ----------
         x: array-like or list of array-like, shape (n_samples, n_input_features)
-            Training data. If training data contains multiple trajectories,
-            x should be a list containing data for each trajectory. Individual
-            trajectories may contain different numbers of samples.
+            Training data of the current state of the system. If training data 
+            contains multiple trajectories, x should be a list containing data for 
+            each trajectory. Individual trajectories may contain different numbers of samples.
 
         t: float, numpy array of shape (n_samples,), or list of numpy arrays
             If t is a float, it specifies the timestep between each sample.
@@ -760,6 +824,13 @@ class DiscreteSINDy(_BaseSINDy):
             In the case of multi-trajectory training data, t may also be a list
             of arrays containing the collection times for each individual
             trajectory.
+
+        x_next: array-like or list of array-like, shape (n_samples, n_input_features), \
+                optional (default None)
+            Optional data of the system forwarded by one time step. If not provided, the 
+            next will be computed by taking the training data by one time step.
+            If x_next is provided, it must match the shape of the training data and these
+            values will be used as the next state.    
 
         u: array-like or list of array-like, shape (n_samples, n_control_features), \
                 optional (default None)
@@ -948,7 +1019,7 @@ class DiscreteSINDy(_BaseSINDy):
         stop_condition=None,
     ):
         """
-        Simulate the SINDy model forward in time.
+        Simulate the DiscreteSINDy model forward in time.
 
         Parameters
         ----------

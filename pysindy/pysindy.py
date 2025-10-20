@@ -396,7 +396,8 @@ class SINDy(_BaseSINDy):
             x, t, x_dot, u, self.feature_library
         )
 
-        x, x_dot = self._process_trajectories(x, t, x_dot)
+        if x_dot is None:
+            x, x_dot = self._process_trajectories(x, t, x_dot)
 
         if u is None:
             self.n_control_features_ = 0
@@ -500,7 +501,8 @@ class SINDy(_BaseSINDy):
 
         x_dot_predict = self.predict(x, u)
 
-        x, x_dot = self._process_trajectories(x, t, x_dot)
+        if x_dot is None:
+            x, x_dot = self._process_trajectories(x, t, x_dot)
 
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)

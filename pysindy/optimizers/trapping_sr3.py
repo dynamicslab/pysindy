@@ -861,7 +861,7 @@ def _antisymm_triple_constraints(
 
 
 def _build_lib_info(
-    polyterms: list[tuple[int, Int1D]]
+    polyterms: list[tuple[int, Int1D]],
 ) -> tuple[int, int, dict[int, int], dict[int, int], dict[frozenset[int], int]]:
     """From polynomial, calculate various useful info
 

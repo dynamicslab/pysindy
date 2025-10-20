@@ -95,9 +95,7 @@ def validate_no_reshape(x, t: Union[float, np.ndarray, object] = T_DEFAULT):
     return x
 
 
-def validate_control_variables(
-    x: Sequence[AxesArray], u: Sequence[AxesArray]
-) -> None:
+def validate_control_variables(x: Sequence[AxesArray], u: Sequence[AxesArray]) -> None:
     """Ensure that control variables u are compatible with the data x.
 
     Args:

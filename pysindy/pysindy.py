@@ -38,7 +38,6 @@ from .utils import concat_sample_axis
 from .utils import drop_nan_samples
 from .utils import SampleConcatter
 from .utils import validate_control_variables
-from .utils import validate_input
 from .utils import validate_no_reshape
 
 
@@ -568,17 +567,17 @@ class SINDy(_BaseSINDy):
             Initial condition from which to simulate.
 
         t: numpy array of size [n_samples]
-            Array of time points at which to simulate. 
+            Array of time points at which to simulate.
 
         u: function from R^1 to R^{n_control_features} or list/array, optional \
             (default None)
             Control inputs.
-            ``u`` can be a function that would take time as input and output the values of each of
-            the n_control_features control features as a list or numpy array.
-            Alternatively, ``u`` can also be an array of control inputs at each time 
-            step. In this case, the array is fit with the interpolator specified 
-            by ``interpolator``.
-            
+            ``u`` can be a function that would take time as input and output
+            the values of each of the n_control_features control features as
+            a list or numpy array. Alternatively, ``u`` can also be an array
+            of control inputs at each time step. In this case, the array is fit
+            with the interpolator specified by ``interpolator``.
+
         integrator: string, optional (default ``solve_ivp``)
             Function to use to integrate the system.
             Default is ``scipy.integrate.solve_ivp``. The only options
@@ -640,9 +639,7 @@ class SINDy(_BaseSINDy):
             if u_fun(t[0]).ndim == 1:
 
                 def rhs(t, x):
-                    return self.predict(x[np.newaxis, :], u_fun(t).reshape(1, -1))[
-                        0
-                    ]
+                    return self.predict(x[np.newaxis, :], u_fun(t).reshape(1, -1))[0]
 
             else:
 
@@ -652,9 +649,7 @@ class SINDy(_BaseSINDy):
         # Need to hard-code below, because odeint and solve_ivp
         # have different syntax and integration options.
         if integrator == "solve_ivp":
-            return (
-                (solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)).y
-            ).T
+            return ((solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)).y).T
         elif integrator == "odeint":
             if integrator_kws.get("method") == "LSODA":
                 integrator_kws = {}
@@ -672,7 +667,8 @@ class SINDy(_BaseSINDy):
 
 class DiscreteSINDy(_BaseSINDy):
     """
-    Sparse Identification of Nonlinear Dynamical Systems (SINDy) for discrete time systems.
+    Sparse Identification of Nonlinear Dynamical Systems (SINDy) for discrete
+    time systems.
 
     Parameters
     ----------
@@ -777,9 +773,10 @@ class DiscreteSINDy(_BaseSINDy):
         Parameters
         ----------
         x: array-like or list of array-like, shape (n_samples, n_input_features)
-            Training data of the current state of the system. If training data 
-            contains multiple trajectories, x should be a list containing data for 
-            each trajectory. Individual trajectories may contain different numbers of samples.
+            Training data of the current state of the system. If training data
+            contains multiple trajectories, x should be a list containing data for
+            each trajectory. Individual trajectories may contain different numbers
+            of samples.
 
         t: float, numpy array of shape (n_samples,), or list of numpy arrays
             If t is a float, it specifies the timestep between each sample.
@@ -792,10 +789,10 @@ class DiscreteSINDy(_BaseSINDy):
 
         x_next: array-like or list of array-like, shape (n_samples, n_input_features), \
                 optional (default None)
-            Optional data of the system forwarded by one time step. If not provided, the 
+            Optional data of the system forwarded by one time step. If not provided, the
             next will be computed by taking the training data by one time step.
-            If x_next is provided, it must match the shape of the training data and these
-            values will be used as the next state.    
+            If x_next is provided, it must match the shape of the training data and
+            these values will be used as the next state.
 
         u: array-like or list of array-like, shape (n_samples, n_control_features), \
                 optional (default None)
@@ -944,7 +941,7 @@ class DiscreteSINDy(_BaseSINDy):
 
         u: list/array, optional (default None)
             Control inputs.
-            A list (with ``len(u) == t``) or array (with ``u.shape[0] == 1``) 
+            A list (with ``len(u) == t``) or array (with ``u.shape[0] == 1``)
             giving the control inputs at each step.
 
         stop_condition: function object, optional
@@ -961,15 +958,15 @@ class DiscreteSINDy(_BaseSINDy):
             raise TypeError("Model was fit using control variables, so u is required")
 
         if not isinstance(t, int) or t <= 0:
-            raise ValueError(
-                " t must be an integer"
-            )
+            raise ValueError(" t must be an integer")
 
         if stop_condition is not None:
+
             def check_stop_condition(xi):
                 return stop_condition(xi)
 
         else:
+
             def check_stop_condition(xi):
                 pass
 
@@ -992,7 +989,7 @@ class DiscreteSINDy(_BaseSINDy):
                 if check_stop_condition(x[i]):
                     return x[: i + 1]
         return x
-            
+
 
 def _zip_like_sequence(x, t):
     """Create an iterable like zip(x, t), but works if t is scalar.

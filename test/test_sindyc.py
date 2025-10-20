@@ -8,7 +8,8 @@ from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
 
-from pysindy import SINDy, DiscreteSINDy
+from pysindy import DiscreteSINDy
+from pysindy import SINDy
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
 

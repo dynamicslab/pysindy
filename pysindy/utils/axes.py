@@ -676,7 +676,7 @@ def _tensordot_to_einsum(
     for a_ind, b_ind in zip(*axes):
         sub_b_li[b_ind] = sub_a[a_ind]
     sub_b = "".join(sub_b_li)
-    sub = f"{sub_a},{sub_b}"
+    sub = f"{sub_a}, {sub_b}"
     return sub
 
 

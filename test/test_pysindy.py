@@ -22,8 +22,9 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
 
+from pysindy import DiscreteSINDy
 from pysindy import pysindy
-from pysindy import SINDy, DiscreteSINDy
+from pysindy import SINDy
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary

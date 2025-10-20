@@ -2,11 +2,9 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from pysindy.utils import AxesArray
 from pysindy.utils import get_prox
 from pysindy.utils import get_regularization
 from pysindy.utils import reorder_constraints
-from pysindy.utils import validate_control_variables
 
 
 def test_reorder_constraints_1D():

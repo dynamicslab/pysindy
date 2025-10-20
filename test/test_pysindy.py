@@ -22,8 +22,8 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
 
+from pysindy import _core
 from pysindy import DiscreteSINDy
-from pysindy import pysindy
 from pysindy import SINDy
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
@@ -367,9 +367,9 @@ def test_score_discrete_time(data_discrete_time):
 def test_bad_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
     with pytest.raises(TypeError):
-        pysindy._check_multiple_trajectories(x, x_dot=x[0], u=None)
+        _core._check_multiple_trajectories(x, x_dot=x[0], u=None)
     with pytest.raises(ValueError):
-        pysindy._check_multiple_trajectories(x, x_dot=x[:-1], u=None)
+        _core._check_multiple_trajectories(x, x_dot=x[:-1], u=None)
 
 
 def test_fit_discrete_time_multiple_trajectories(

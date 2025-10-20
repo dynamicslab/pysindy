@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 from scipy.special import factorial
 
 from .base import BaseDifferentiation
-from pysindy.utils.axes import AxesArray
+from pysindy.utils._axes import AxesArray
 
 
 class FiniteDifference(BaseDifferentiation):

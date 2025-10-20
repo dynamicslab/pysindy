@@ -2,6 +2,7 @@
 Shared pytest fixtures for unit tests.
 """
 from pathlib import Path
+from tempfile import gettempdir
 
 import jax
 import numpy as np
@@ -34,6 +35,14 @@ def pytest_addoption(parser):
             " test_notebooks.test_external"
         ),
     )
+    parser.addoption(
+        "--jax-pcc",
+        action="store_true",
+        help=(
+            "Whether to cache @jax.jit compilations to disk."
+            "It speeds up the slowest tests appx 2x, writing files to /tmp/jax_cache"
+        ),
+    )
 
 
 def pytest_generate_tests(metafunc):
@@ -45,6 +54,17 @@ def pytest_generate_tests(metafunc):
                 for f in metafunc.config.getoption("external_notebook")
             ],
         )
+
+
+@pytest.fixture(scope="session")
+def set_jax_pcc_env(request):
+    if request.config.getoption("--jax-pcc"):
+        cache_dir = Path(gettempdir()) / "jax_cache/"
+        cache_dir.mkdir(exist_ok=True)
+        jax.config.update("jax_compilation_cache_dir", str(cache_dir))
+        jax.config.update("jax_persistent_cache_min_entry_size_bytes", -1)
+        jax.config.update("jax_persistent_cache_min_compile_time_secs", -1)
+        jax.config.update("jax_persistent_cache_enable_xla_caches", "all")
 
 
 @pytest.fixture(scope="session")

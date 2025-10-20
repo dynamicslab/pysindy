@@ -423,6 +423,31 @@ def test_not_fitted(data_lorenz, library):
         library.transform(x)
 
 
+def test_tensored_library():
+    f_list = [lambda x: x]
+    lib_names_a = [lambda x: f"a({x})"]
+    lib_names_b = [lambda x: f"b({x})"]
+    lib_names_c = [lambda x: f"c({x})"]
+
+    lib_a = CustomLibrary(f_list, lib_names_a)
+    lib_b = CustomLibrary(f_list, lib_names_b)
+    lib_c = CustomLibrary(f_list, lib_names_c)
+
+    libraries = [lib_a, lib_b, lib_c]
+
+    inputs_per_library = [[1], [1], [0]]
+    x = np.array([[1, 2]])
+
+    tensored_library = np.prod(np.asarray(libraries))
+    tensored_library._set_inputs_per_library(inputs_per_library)
+
+    values = tensored_library.fit_transform(x)
+    names = tensored_library.get_feature_names(input_features=["x", "y"])
+
+    assert names == ["a(y) b(y) c(x)"]
+    assert values.item() == 4
+
+
 def test_generalized_library(data_lorenz):
     x, t = data_lorenz
     poly_library = PolynomialLibrary(include_bias=False)

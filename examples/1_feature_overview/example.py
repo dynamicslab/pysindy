@@ -114,7 +114,7 @@ print("Model score: %f" % model.score(x_test, t=dt))
 x_dot_test_predicted = model.predict(x_test)
 
 # Compute derivatives with a finite difference method, for comparison
-x_dot_test_computed = model.differentiate(x_test, t=dt)
+x_dot_test_computed = model.differentiation_method._differentiate(x_test, t=dt)
 
 fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
 for i in range(x_test.shape[1]):
@@ -168,7 +168,7 @@ x_train_map = np.zeros((n_steps))
 x_train_map[0] = 0.5
 for i in range(1, n_steps):
     x_train_map[i] = f(x_train_map[i - 1]) + eps * np.random.randn()
-model = ps.SINDy(discrete_time=True)
+model = ps.DiscreteSINDy()
 model.fit(x_train_map, t=1)
 
 model.print()
@@ -782,7 +782,7 @@ print("Feature names:\n", model.get_feature_names())
 x_dot_test_predicted = model.predict(x_test)
 
 # Compute derivatives with a finite difference method, for comparison
-x_dot_test_computed = model.differentiate(x_test, t=dt)
+x_dot_test_computed = model.differentiation_method._differentiate(x_test, t=dt)
 
 fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
 for i in range(x_test.shape[1]):
@@ -905,7 +905,7 @@ print("Model score: %f" % model.score(x_test, u=u_test, t=dt))
 x_dot_test_predicted = model.predict(x_test, u=u_test)
 
 # Compute derivatives with a finite difference method, for comparison
-x_dot_test_computed = model.differentiate(x_test, t=dt)
+x_dot_test_computed = model.differentiation_method._differentiate(x_test, t=dt)
 
 fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
 for i in range(x_test.shape[1]):
@@ -1105,7 +1105,7 @@ lib = ps.ParameterizedLibrary(
     num_parameters=1,
 )
 opt = ps.STLSQ(threshold=1e-1, normalize_columns=False)
-model = ps.SINDy(feature_library=lib, optimizer=opt, discrete_time=True)
+model = ps.DiscreteSINDy(feature_library=lib, optimizer=opt)
 model.fit(xs_train, u=rs_train, t=1, feature_names=["x", "r"])
 model.print()
 

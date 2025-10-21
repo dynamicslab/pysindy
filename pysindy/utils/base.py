@@ -93,14 +93,23 @@ def validate_no_reshape(x: FloatND, st_grid: Union[float, np.ndarray]) -> None:
             raise ValueError("t must be positive")
     # Only apply these tests if t is array-like
     elif hasattr(st_grid, "shape"):
-        cast(np.ndarray, st_grid)
+        st_grid = cast(np.ndarray, st_grid)
+        st_grid = np.atleast_2d(st_grid)
         n_timepoints = len(st_grid) if st_grid.ndim == 1 else st_grid.shape[-2]
         if not n_timepoints == (x_time := x.shape[-2]):
             raise ValueError(
                 f"Length of t ({n_timepoints}) should match x.shape[-2] ({x_time})."
             )
-        if not np.all(st_grid[:-1] < st_grid[1:]):
-            raise ValueError("Values in t should be in strictly increasing order.")
+        for ax in range(st_grid.shape[-1]):
+            slicer: list[int | slice] = [0] * st_grid.ndim
+            slicer[ax] = slice(None)
+            slicer[-1] = ax
+            subgrid = st_grid[*slicer]
+            if not np.all(subgrid[:-1] < subgrid[1:]):
+                raise ValueError(
+                    "st_grid should be in strictly increasing order. "
+                    f"Axis {ax} misordered."
+                )
     else:
         raise ValueError("t must be a scalar or array-like.")
 

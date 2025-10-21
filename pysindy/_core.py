@@ -858,10 +858,7 @@ class DiscreteSINDy(_BaseSINDy):
         **kwargs: Additional keyword arguments passed to the builtin print function
         """
         eqns = self.equations(precision, discrete_time=True)
-        if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
-            feature_names = self.get_feature_names()
-        else:
-            feature_names = self.feature_names
+        feature_names = self.feature_names
         for i, eqn in enumerate(eqns):
             names = f"({feature_names[i]})[k+1]"
             print(f"{names} = {eqn}", **kwargs)

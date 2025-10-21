@@ -2,11 +2,17 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from numpy.testing import assert_array_equal
+from scipy.integrate import dblquad
 from scipy.integrate import quad
 
+from pysindy import AxesArray
+from pysindy import PolynomialLibrary
+from pysindy import STLSQ
+from pysindy._weak import _derivative_weights
 from pysindy._weak import _get_spatial_endpoints
 from pysindy._weak import _linear_weights
 from pysindy._weak import _phi
+from pysindy._weak import WeakSINDy
 
 
 def test_get_spatial_endpoints():
@@ -55,7 +61,21 @@ def test_test_function_phi(p):
 @pytest.mark.parametrize("p", [2, 3, 4])
 @pytest.mark.parametrize("d", [0, 1, 2])
 @pytest.mark.parametrize("n_grid", [10, 100, 1000])
-def test_weak_derivative(p, d, n_grid):
+def test_integral_weights(p, d, n_grid):
+    r"""Tests the 1D fast piecewise-linear integration weights.
+
+    .. math::
+
+        \int_{-1}^{1} f(x) * phi^{(d)}(x) dx
+
+    Evaluates the integration directly using scipy's default quadrature,
+    then compares to our integration-by-parts that moves derivatives onto
+    the test function :math:`phi(x)` and approximates f as piecewise linear.
+    Comparison should be increasingly accurate as number of grid points
+    increases.
+
+    """
+
     def true_f(x):
         return x**2
 
@@ -65,3 +85,40 @@ def test_weak_derivative(p, d, n_grid):
     weights = _linear_weights(x_i, d, p)
     result = sum(f_i * weights)
     assert_allclose(result, expected, atol=1 / n_grid)
+
+
+@pytest.mark.parametrize("p", [2, 3, 4])
+@pytest.mark.parametrize("deriv_op", [(0, 0), (1, 1), (2, 0)])
+@pytest.mark.parametrize("grid1d", [[np.linspace(-1, 1, 10), np.linspace(2, 5, 30)]])
+def test_integrate_domain2d(p, deriv_op, grid1d):
+    def true_f(x, y):
+        return x**2 + y**2
+
+    xl, xu, yl, yu = grid1d[0][0], grid1d[0][-1], grid1d[1][0], grid1d[1][-1]
+    x_scale = lambda x: -1 + 2 * (x - xl) / (xu - xl)
+    y_scale = lambda y: -1 + 2 * (y - yl) / (yu - yl)
+
+    def integrand(x, y):
+        return (
+            true_f(x, y)
+            * _phi(np.array([x_scale(x)]), deriv_op[0], p)
+            * _phi(np.array([y_scale(y)]), deriv_op[1], p)
+        )
+
+    expected, abserr = dblquad(integrand, xl, xu, yl, yu)  # type: ignore
+    dims = AxesArray(np.array([(xu - xl) / 2, (yu - yl) / 2]), axes={"ax_coord": 0})
+    shape = (len(grid1d[0]), len(grid1d[1]))
+    scaled_subgrid = [np.linspace(-1, 1, shape[0]), np.linspace(-1, 1, shape[1])]
+    xy_i = np.stack(np.meshgrid(grid1d[0], grid1d[1], indexing="ij"), axis=-1)
+    f_i = true_f(xy_i[..., 0], xy_i[..., 1])
+    weights = _derivative_weights(scaled_subgrid, dims, shape, deriv_op, p)
+    result = f_i.flatten() @ np.asarray(weights).flatten()
+    assert_allclose(result, expected, atol=abserr)
+
+
+def test_weak_class(data_1d_random_pde):
+    model = WeakSINDy(PolynomialLibrary(), STLSQ())
+    t, x, u, u_dot = data_1d_random_pde
+    st_grid = np.stack(np.meshgrid(x, t, indexing="ij"), axis=-1)
+
+    model.fit(x=[u], st_grids=[st_grid])

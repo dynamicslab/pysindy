@@ -1,3 +1,4 @@
+from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -19,6 +20,7 @@ from ._core import validate_control_variables
 from ._typing import Float1D
 from ._typing import Float2D
 from ._typing import FloatND
+from ._typing import Int1D
 from .differentiation import FiniteDifference
 from .differentiation.base import BaseDifferentiation
 from .feature_library import ConcatLibrary
@@ -75,6 +77,18 @@ class SubdomainSpecs:
             raise ValueError(err_msg)
         self.n_subdomains = n_subdomains0
         self.grid_ndim = n_st_axes0
+
+    def __getitem__(self, i: int):
+        return (
+            self.axis_inds_per_subdom[i],
+            self.subgrid_dims[i],
+            self.subgrid_shapes[i],
+            self.subgrids_scaled[i],
+        )
+
+    def __iter__(self):
+        for i in range(self.n_subdomains):
+            yield self[i]
 
 
 @dataclass
@@ -137,7 +151,7 @@ class WeakSINDy(_BaseSINDy):
         st_grids: np.ndarray | Sequence[np.ndarray],
         *,
         H_xt: Optional[float | FloatND | Sequence[FloatND]] = None,
-        u: Optional[np.ndarray | Sequence[FloatND]],
+        u: Optional[np.ndarray | Sequence[FloatND]] = None,
         feature_names: Optional[list[str]] = None
     ) -> Self:
         if not _check_multiple_trajectories(x, st_grids, None, u):
@@ -165,7 +179,7 @@ class WeakSINDy(_BaseSINDy):
             _make_domains(grid, sub_dim, self.n_subdomains)
             for grid, sub_dim in zip(st_grids, subdomain_dims)
         ]
-        # Weak should be subclass of PDE library?  Or PDELib.transform gives placeholders?
+        # Weak should be subclass of PDEFIND?  Or PDELib.transform gives placeholders?
         def get_PDElib(lib):
             if isinstance(lib, PDELibrary):
                 return lib
@@ -176,13 +190,20 @@ class WeakSINDy(_BaseSINDy):
                 return False
 
         pde_lib = get_PDElib(self.feature_library)
-        if not pde_lib:
-            multiindices = []
-        else:
+        if pde_lib:
             multiindices = pde_lib.multiindices  # type: ignore
-        multiindices = cast(list[Float1D], multiindices)
+            time_zeros = np.zeros((len(multiindices), 1), dtype=int)
+            time_deriv = np.zeros((1, multiindices.shape[1] + 1), dtype=int)
+            time_deriv[0, -1] = 1
+            multiindices = np.hstack((multiindices, time_zeros))
+            multiindices = np.vstack((multiindices, time_deriv))
+        else:
+            multiindices = np.zeros((1, subdomain_specs[0].grid_ndim), dtype=int)
+            multiindices[0, -1] = 1
 
-        weights_per_stgrid = [
+        multiindices = [tuple(deriv_op) for deriv_op in multiindices]
+
+        weights_per_deriv_op = [
             _set_up_weights(spec, self.test_fn_order, multiindices)
             for spec in subdomain_specs
         ]
@@ -195,6 +216,15 @@ class WeakSINDy(_BaseSINDy):
 
         self._fit_shape()
         return self
+
+    def predict(self):
+        pass
+
+    def simulate(self):
+        pass
+
+    def score(self):
+        pass
 
 
 def _normalize_subdomain_dims(
@@ -274,36 +304,21 @@ def _get_spatial_endpoints(st_grid: FloatND) -> tuple[Float1D, Float1D]:
 
 
 def _set_up_weights(
-    subdoms: SubdomainSpecs, p: int, multiindices: list[Float1D]
-) -> tuple[Any, Any, Any]:
+    subdoms: SubdomainSpecs, p: int, multiindices: list[tuple[int, ...]]
+) -> dict[tuple[int, ...], list[AxesArray]]:
     """
     Sets up weights needed for the weak library. Integrals over domain cells are
     approximated as dot products of weights and the input data.
     """
-    # Below we calculate the weights to convert integrals into dot products
-    # To speed up evaluations, we proceed in several steps
+    weight_lookup: dict[tuple[int, ...], list[AxesArray]] = defaultdict(list)
+    for deriv_op in multiindices:
+        for _, dims, shape, scaled_coord in iter(subdoms):
+            weights = _derivative_weights(
+                _dense_to_open_mesh(scaled_coord), dims, shape, deriv_op, p
+            )
+            weight_lookup[deriv_op].append(weights)
 
-    # Extract the space-time coordinates for each domain and the indices for
-    # the left-most and right-most points for each domain.
-    # We stack the values for each domain cell into a single vector to speed up
-    grids = []  # the rescaled coordinates for each domain
-    left_inds = []  # the spatiotemporal indices at the left of each domain
-    right_inds = []  # the spatiotemporal indices at the right of each domain
-    subgrid_vals_by_axis = list(
-        zip(*[_dense_to_open_mesh(sub) for sub in subdoms.subgrids_scaled])
-    )
-    grids = [np.hstack(subgrid_1axis) for subgrid_1axis in subgrid_vals_by_axis]
-    border_inds = np.cumsum(subdoms.subgrid_shapes, axis=0).T
-    left_inds = np.hstack((np.array([[0, 0]]).T, border_inds[:, :-1]))
-    right_inds = border_inds - 1
-
-    weights_t = _time_derivative_weights(subdoms, grids, left_inds, right_inds, p)
-    weights_pure = _pure_derivative_weights(subdoms, grids, left_inds, right_inds, p)
-    weights_mixed = _mixed_derivative_weights(
-        subdoms, grids, left_inds, right_inds, p, multiindices
-    )
-
-    return weights_t, weights_pure, weights_mixed
+    return weight_lookup
 
 
 def _make_domains(
@@ -401,6 +416,53 @@ def _make_domains(
     )
 
 
+def _derivative_weights(
+    scaled_subgrid_open: list[AxesArray],
+    subgrid_dims: AxesArray,
+    subgrid_shape: tuple[int, ...],
+    deriv: tuple[int, ...],
+    p: int,
+) -> AxesArray:
+    r"""Calculate integral weights for differential operator on basis function
+
+    .. math::
+
+        \int_\Omega f(x) * phi^{(d)}(y(x)) dx
+
+    Where \Omega is a rectangular domain, x are coordinates in the original domain,
+    and y are coordinates in the rescaled domain where each axis ranges from [-1, 1].
+
+    Parameters:
+        scaled_subgrid_open: Open mesh of rescaled subdomain coordinates
+        subgrid_dims: 1D array of subdomain half-dimensions
+        subgrid_shape: Shape of the subdomain
+        deriv: 1D array of derivative orders along each axis
+        p: Polynomial exponent for test function
+
+    Returns:
+        Weights for the integral, shaped as the subdomain grid with an added
+        axis to support stacking with other differential operators.
+        Return matrix should solve the integral as the dot product of
+        ``np.dot(weights_nd.flatten(), f.flatten())``
+    """
+
+    weights_nd = np.ones(subgrid_shape)
+    for it in enumerate(zip(deriv, scaled_subgrid_open, strict=True)):
+        st_axis, (deriv_1d, scaled_coords_1d) = it
+        scaled_coords_1d = np.asarray(
+            scaled_coords_1d
+        )  # AxesArray errors in next few lines
+        weights_1d = _linear_weights(scaled_coords_1d, int(deriv_1d), p)
+        weights_nd = np.apply_along_axis(lambda x: x * weights_1d, st_axis, weights_nd)
+
+    weights_nd *= np.prod(subgrid_dims ** (1.0 - np.array(deriv)))
+    weights_nd = np.reshape(weights_nd, (*subgrid_shape, 1))
+    ax_labels = comprehend_axes(weights_nd)
+    ax_labels["ax_diffop"] = ax_labels.pop("ax_coord")
+
+    return AxesArray(weights_nd, ax_labels)
+
+
 def _time_derivative_weights(
     subdoms: SubdomainSpecs,
     grids: list[Float1D],
@@ -412,20 +474,20 @@ def _time_derivative_weights(
     weights1d = []
     deriv = np.zeros(subdoms.grid_ndim)
     deriv[-1] = 1
-    # Weights for the time integrals along each axis
+    # Weights for the integrals along each axis
     for i in range(subdoms.grid_ndim):
         weights1d = weights1d + [_linear_weights(grids[i], deriv[i], p)]
     # TODO: get rest of code to work with AxesArray.  Too unsure of
     # which axis labels to use at this point to continue
     weights1d = [np.asarray(arr) for arr in weights1d]
-    # Product weights over the axes for time derivatives, shaped as axis_inds_per_subdom
+    # Product weights over the axes, shaped as inds_k
     fullweights = []
     for k in range(subdoms.n_subdomains):
         ret = np.ones(subdoms.subgrid_shapes[k])
         for i in range(subdoms.grid_ndim):
             dims = subdoms.subgrid_shapes[k][i]
             ret = ret * np.reshape(
-                weights1d[i][left_inds[i][k] : right_inds[i][k] + 1], dims
+                weights1d[i][left_inds[k][i] : right_inds[k][i] + 1], dims
             )
 
         fullweights = fullweights + [
@@ -443,22 +505,22 @@ def _pure_derivative_weights(
     right_inds: Float2D,
     p: int,
 ) -> AxesArray:
-    # Weights for pure derivative terms along each axis
     weights1d = []
     deriv = np.zeros(subdoms.grid_ndim)
+    # Weights for the integrals along each axis
     for i in range(subdoms.grid_ndim):
         weights1d = weights1d + [_linear_weights(grids[i], deriv[i], p)]
     # TODO: get rest of code to work with AxesArray.  Too unsure of
     # which axis labels to use at this point to continue
     weights1d = [np.asarray(arr) for arr in weights1d]
-    # Product weights over the axes for pure derivative terms, shaped as inds_k
+    # Product weights over the axes, shaped as inds_k
     fullweights = []
     for k in range(subdoms.n_subdomains):
         ret = np.ones(subdoms.subgrid_shapes[k])
         for i in range(subdoms.grid_ndim):
             dims = subdoms.subgrid_shapes[k][i]
             ret = ret * np.reshape(
-                weights1d[i][left_inds[i][k] : right_inds[i][k] + 1], dims
+                weights1d[i][left_inds[k][i] : right_inds[k][i] + 1], dims
             )
 
         fullweights = fullweights + [ret * np.prod(subdoms.subgrid_dims[k])]
@@ -574,6 +636,9 @@ def _linear_weights(x: Float1D, d: int, p: int) -> Float1D:
     w_plus = ws[1:]
     z_i = zs[:-1]
     z_plus = zs[1:]
+
+    # if any(np.abs(x) > 1.0):
+    #     raise ValueError("Extraneous calculation; truncate to domain [-1, 1]")
 
     weights = np.zeros_like(x)
     const_term1 = x_plus / (x_plus - x_i) * (w_plus - w_i)

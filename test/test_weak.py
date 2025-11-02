@@ -88,6 +88,37 @@ def test_integral_weights(p, d, n_grid):
 
 
 @pytest.mark.parametrize("p", [2, 3, 4])
+@pytest.mark.parametrize("deriv_op", [(0,), (1,), (2,)])
+@pytest.mark.parametrize("grid1d", [np.linspace(2, 5, 30)])
+def test_integrate_domain1d(p, deriv_op, grid1d):
+    def true_f(x):
+        return np.sin(x)
+
+    xl, xu = grid1d[0], grid1d[-1]
+    y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)
+    dy_dx = 2 / (xu - xl)
+
+    def integrand(x):
+        return (
+            true_f(x)
+            * _phi(np.array([y_of_x(x)]), deriv_op[0], p)
+            * dy_dx ** deriv_op[0]
+        )
+
+    expected, _ = quad(integrand, xl, xu)  # type: ignore
+    half_dims = AxesArray(np.array([(xu - xl) / 2]), axes={"ax_coord": 0})
+    # Pause here - check op1, op2, then work on 2d case
+    grid_shape = (len(grid1d),)
+    scaled_subgrid = [np.linspace(-1, 1, grid_shape[0])]
+    x_mesh = grid1d[..., None]
+    f_i = true_f(x_mesh[..., 0])
+    weights = _derivative_weights(scaled_subgrid, half_dims, grid_shape, deriv_op, p)
+    result = f_i.flatten() @ np.asarray(weights).flatten()
+    trap_err_est = max(half_dims**2 / np.array(grid_shape) ** 2)
+    assert_allclose(result, expected, rtol=trap_err_est)
+
+
+@pytest.mark.parametrize("p", [2, 3, 4])
 @pytest.mark.parametrize("deriv_op", [(0, 0), (1, 1), (2, 0)])
 @pytest.mark.parametrize("grid1d", [[np.linspace(-1, 1, 10), np.linspace(2, 5, 30)]])
 def test_integrate_domain2d(p, deriv_op, grid1d):
@@ -105,15 +136,21 @@ def test_integrate_domain2d(p, deriv_op, grid1d):
             * _phi(np.array([y_scale(y)]), deriv_op[1], p)
         )
 
-    expected, abserr = dblquad(integrand, xl, xu, yl, yu)  # type: ignore
-    dims = AxesArray(np.array([(xu - xl) / 2, (yu - yl) / 2]), axes={"ax_coord": 0})
-    shape = (len(grid1d[0]), len(grid1d[1]))
-    scaled_subgrid = [np.linspace(-1, 1, shape[0]), np.linspace(-1, 1, shape[1])]
+    expected, _ = dblquad(integrand, xl, xu, yl, yu)  # type: ignore
+    half_dims = AxesArray(
+        np.array([(xu - xl) / 2, (yu - yl) / 2]), axes={"ax_coord": 0}
+    )
+    grid_shape = (len(grid1d[0]), len(grid1d[1]))
+    scaled_subgrid = [
+        np.linspace(-1, 1, grid_shape[0]),
+        np.linspace(-1, 1, grid_shape[1]),
+    ]
     xy_i = np.stack(np.meshgrid(grid1d[0], grid1d[1], indexing="ij"), axis=-1)
     f_i = true_f(xy_i[..., 0], xy_i[..., 1])
-    weights = _derivative_weights(scaled_subgrid, dims, shape, deriv_op, p)
+    weights = _derivative_weights(scaled_subgrid, half_dims, grid_shape, deriv_op, p)
     result = f_i.flatten() @ np.asarray(weights).flatten()
-    assert_allclose(result, expected, atol=abserr)
+    trap_err_est = max(half_dims**2 / np.array(grid_shape) ** 2)
+    assert_allclose(result, expected, rtol=trap_err_est)
 
 
 def test_weak_class(data_1d_random_pde):

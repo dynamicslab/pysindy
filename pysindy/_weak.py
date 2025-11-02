@@ -449,9 +449,8 @@ def _derivative_weights(
     weights_nd = np.ones(subgrid_shape)
     for it in enumerate(zip(deriv, scaled_subgrid_open, strict=True)):
         st_axis, (deriv_1d, scaled_coords_1d) = it
-        scaled_coords_1d = np.asarray(
-            scaled_coords_1d
-        )  # AxesArray errors in next few lines
+        # AxesArray errors in next few lines
+        scaled_coords_1d = np.asarray(scaled_coords_1d)
         weights_1d = _linear_weights(scaled_coords_1d, int(deriv_1d), p)
         weights_nd = np.apply_along_axis(lambda x: x * weights_1d, st_axis, weights_nd)
 

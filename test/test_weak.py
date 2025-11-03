@@ -87,12 +87,13 @@ def test_integral_weights(p, d, n_grid):
     assert_allclose(result, expected, atol=1 / n_grid)
 
 
+@pytest.mark.parametrize(
+    "true_f", [lambda x: np.sin(x), lambda x: np.ones_like(x)], ids=["sin", "const"]
+)
 @pytest.mark.parametrize("p", [2, 3, 4])
-@pytest.mark.parametrize("deriv_op", [(0,), (1,), (2,)])
-@pytest.mark.parametrize("grid1d", [np.linspace(2, 5, 30)])
-def test_integrate_domain1d(p, deriv_op, grid1d):
-    def true_f(x):
-        return np.sin(x)
+@pytest.mark.parametrize("deriv_op", [(0,), (1,), (2,)], ids=("D0", "D1", "D2"))
+def test_integrate_domain1d(true_f, p, deriv_op):
+    grid1d = np.linspace(2, 5, 30)
 
     xl, xu = grid1d[0], grid1d[-1]
     y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)
@@ -107,7 +108,6 @@ def test_integrate_domain1d(p, deriv_op, grid1d):
 
     expected, _ = quad(integrand, xl, xu)  # type: ignore
     half_dims = AxesArray(np.array([(xu - xl) / 2]), axes={"ax_coord": 0})
-    # Pause here - check op1, op2, then work on 2d case
     grid_shape = (len(grid1d),)
     scaled_subgrid = [np.linspace(-1, 1, grid_shape[0])]
     x_mesh = grid1d[..., None]
@@ -115,25 +115,36 @@ def test_integrate_domain1d(p, deriv_op, grid1d):
     weights = _derivative_weights(scaled_subgrid, half_dims, grid_shape, deriv_op, p)
     result = f_i.flatten() @ np.asarray(weights).flatten()
     trap_err_est = max(half_dims**2 / np.array(grid_shape) ** 2)
-    assert_allclose(result, expected, rtol=trap_err_est)
+    # If expected is zero, can't use rtol
+    if np.linalg.norm(expected) < 1e-5:
+        assert_allclose(result, expected, atol=trap_err_est)
+    else:
+        assert_allclose(result, expected, rtol=trap_err_est)
 
 
+@pytest.mark.parametrize(
+    "true_f",
+    [lambda x, y: np.sin(x) + np.sin(y), lambda x, y: np.ones_like(x)],
+    ids=["sin", "const"],
+)
 @pytest.mark.parametrize("p", [2, 3, 4])
-@pytest.mark.parametrize("deriv_op", [(0, 0), (1, 1), (2, 0)])
-@pytest.mark.parametrize("grid1d", [[np.linspace(-1, 1, 10), np.linspace(2, 5, 30)]])
-def test_integrate_domain2d(p, deriv_op, grid1d):
-    def true_f(x, y):
-        return x**2 + y**2
+@pytest.mark.parametrize("deriv_op", [(0, 0), (1, 1), (2, 0)], ids=("D0", "D1", "D2"))
+def test_integrate_domain2d(true_f, p, deriv_op):
+    grid1d = [np.linspace(-1, 1, 10), np.linspace(2, 5, 30)]
 
     xl, xu, yl, yu = grid1d[0][0], grid1d[0][-1], grid1d[1][0], grid1d[1][-1]
-    x_scale = lambda x: -1 + 2 * (x - xl) / (xu - xl)
-    y_scale = lambda y: -1 + 2 * (y - yl) / (yu - yl)
+    u_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)
+    u_of_y = lambda y: -1 + 2 * (y - yl) / (yu - yl)
+    du_dx = 2 / (xu - xl)
+    du_dy = 2 / (yu - yl)
 
-    def integrand(x, y):
+    def integrand(y, x):  # yes... y, then x
         return (
             true_f(x, y)
-            * _phi(np.array([x_scale(x)]), deriv_op[0], p)
-            * _phi(np.array([y_scale(y)]), deriv_op[1], p)
+            * _phi(np.array([u_of_x(x)]), deriv_op[0], p)
+            * _phi(np.array([u_of_y(y)]), deriv_op[1], p)
+            * du_dx ** deriv_op[0]
+            * du_dy ** deriv_op[1]
         )
 
     expected, _ = dblquad(integrand, xl, xu, yl, yu)  # type: ignore
@@ -150,7 +161,11 @@ def test_integrate_domain2d(p, deriv_op, grid1d):
     weights = _derivative_weights(scaled_subgrid, half_dims, grid_shape, deriv_op, p)
     result = f_i.flatten() @ np.asarray(weights).flatten()
     trap_err_est = max(half_dims**2 / np.array(grid_shape) ** 2)
-    assert_allclose(result, expected, rtol=trap_err_est)
+    # If expected is zero, can't use rtol
+    if np.linalg.norm(expected) < 1e-5:
+        assert_allclose(result, expected, atol=trap_err_est)
+    else:
+        assert_allclose(result, expected, rtol=trap_err_est)
 
 
 def test_weak_class(data_1d_random_pde):

@@ -1,9 +1,57 @@
+r"""Learning via weak differential equations.
+
+Developer notes:
+
+There are several key types involved.
+
+* A meshgrid is a spatiotemporal array that begins with spatial axes, then time,
+  then a coordinate axis.  The (i, j, k)th grid coordinate of ``arr`` is
+  ``arr[i, j, k, :]``.
+* An open mesh is a list of the coordinates along each axis.  The (i, j, k)th
+  grid coordinate of ``gridlist`` is
+  ``[gridlist[0][i], gridlist[1][j], gridlist[2][k]]``.
+* a derivative operation (``deriv_op``) is a tuple of values, each indicating
+  the order of derivative in that coordinate.  E.g
+  :math:`\partial_{x_0}^2\partial_{x_2}\partial_t^3` would be represented as
+  ``(2, 0, 1, 3)``
+* A ``SubdomainSpecs`` describes the subdomains of a larger domain of
+  integration, including information such as the indexes of the subdomains
+  in an original mesh, the size of the subdomains, and their rescaled values.
+* A test function :math:`\phi` is currently not abstracted, but it is
+  represented at several points in the code. ``_phi``, ``_phi_int`` and
+  ``_xphi_int`` are needed to evaluate :math:`\int f\phi dx` on its support.
+  Support is assumed to be [-1, 1], which is translated in
+  ``_derivative_weights``.
+* Library can be arbitrary trees of tensor/concat libraries.
+  Libraries are flattened via distributive property, then integrated by parts
+  to move derivatives onto test function.
+* Between libraries of functions and individual terms in the differential
+  equation, we have ``SemiTerm``s.  A ``SemiTerm`` refers to an individual
+  term of the PDELibrary, e.g. u_xy, multiplied by any tensored non-pde library.
+  They exist because all the terms in a semiterm have the same integration by
+  parts path.
+  When a PDE library is multiplied by another library, derivatives are moved
+  onto the product (f * phi), which results in multiple semiterms for each
+  part of that product.
+
+Research directions
+
+* Implementing other test functions means collecting all calls to ``_phi``
+  functions into a new type
+* Choosing subdomains can be customized with ``_make_domains``
+* sample_weights can be added to boost the importance of certain subdomains.
+* Sarah, if you're doing DMD, you might be able to use ``_derivative_weights``,
+  ``_make_domains``, and ``_convert_u_dot_integral``.  These handle 90% of the
+  weak linear/nonlinear integral.  The really challenging part are terms like
+  u*Du.
+"""
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import Literal
 from typing import Optional
 
 import numpy as np
@@ -24,6 +72,7 @@ from ._typing import Int1D
 from .differentiation import FiniteDifference
 from .differentiation.base import BaseDifferentiation
 from .feature_library import ConcatLibrary
+from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
 from .feature_library import TensoredLibrary
 from .feature_library.base import BaseFeatureLibrary
@@ -98,6 +147,13 @@ class TestFunctionPhi:
     _xphi_int: Callable
 
 
+SemiTerm = tuple[
+    tuple[int, ...] | None, # derivatives of u
+    tuple[BaseFeatureLibrary, tuple[int, ...]], # derivatives of f(u)
+    float, # coefficient
+    tuple[int, ...] # derivatives of phi
+]
+
 class WeakSINDy(_BaseSINDy):
     """For test function basis, see Section 2.4 of Messenger and Bortz, "Weak SINDy:
     Galerkin-Based Data-Driven Model Selection".  Here, the polynomial exponent
@@ -128,6 +184,9 @@ class WeakSINDy(_BaseSINDy):
             raise ValueError("The number of subdomains must be > 0")
         if self.test_fn_order <= 0:
             raise ValueError("Poly degree of the spatial weights must be > 0")
+
+        if isinstance(self.feature_library, GeneralizedLibrary):
+            raise TypeError("WeakSINDy not yet compatible with GeneralizedLibrary")
 
         def max_derivative_order(library: BaseFeatureLibrary):
             if isinstance(library, PDELibrary):
@@ -179,6 +238,7 @@ class WeakSINDy(_BaseSINDy):
             _make_domains(grid, sub_dim, self.n_subdomains)
             for grid, sub_dim in zip(st_grids, subdomain_dims)
         ]
+        n_system_vars = cast(int, x[0].n_coord)
         # Weak should be subclass of PDEFIND?  Or PDELib.transform gives placeholders?
         def get_PDElib(lib):
             if isinstance(lib, PDELibrary):
@@ -197,11 +257,15 @@ class WeakSINDy(_BaseSINDy):
             time_deriv[0, -1] = 1
             multiindices = np.hstack((multiindices, time_zeros))
             multiindices = np.vstack((multiindices, time_deriv))
+            diff_method = pde_lib.differentiation_method
         else:
-            multiindices = np.zeros((1, subdomain_specs[0].grid_ndim), dtype=int)
-            multiindices[0, -1] = 1
+            time_deriv = np.zeros((1, subdomain_specs[0].grid_ndim), dtype=int)
+            time_deriv[0, -1] = 1
+            multiindices = time_deriv
+            diff_method = FiniteDifference()
 
         multiindices = [tuple(deriv_op) for deriv_op in multiindices]
+        zero_deriv = (0,) * n_system_vars
 
         weights_per_deriv_op = [
             _set_up_weights(spec, self.test_fn_order, multiindices)
@@ -210,10 +274,81 @@ class WeakSINDy(_BaseSINDy):
 
         # Need feature names and set n_output_features_ (this is same with PDE library)
         u_dot_wk = [
-            convert_u_dot_integral(xi, weights[0], spec.axis_inds_per_subdom)
-            for xi, weights, spec in zip(x, weights_per_stgrid, subdomain_specs)
+            convert_u_dot_integral(xi, weights[tuple(time_deriv)], spec.axis_inds_per_subdom)
+            for xi, weights, spec in zip(x, weights_per_deriv_op, subdomain_specs)
         ]
+        self.sorted_lib_ = _flatten_libraries(self.feature_library)
+        lib_mapping: dict[BaseFeatureLibrary, list[tuple[int, ...]]] = {}
+        terms: list[SemiTerm] = []
+        for lib in self.sorted_lib_.libraries:
+            # Populate the lib_mapping. Libs are either PDELibrary, non-PDE, or tensor of those
+            no_derivs = (
+                isinstance(lib, TensoredLibrary)
+                and not any(isinstance(lib, PDELibrary) for lib in lib.libraries)
+                or not isinstance(lib, (PDELibrary, TensoredLibrary))
+            )
+            if no_derivs:
+                terms.append((None, (lib, zero_deriv), 1, zero_deriv))
+            elif isinstance(lib, PDELibrary):
+                terms.extend(_integrate_by_parts(lib))
+            else:
+                # tensor library with product fule inside integration by parts
+                pde_lib = lib.libraries[-1]
+                non_pde_lib = TensoredLibrary(lib.libraries[:-1])
+                terms.extend(_integrate_product_by_parts(non_pde_lib, pde_lib))
 
+
+        for it in zip(x, subdomain_specs, weights_per_deriv_op, strict=True):
+            x_i, sub_spec, weight_map = it
+            weak_feats = []
+            st_axes = tuple(range(sub_spec.grid_ndim))
+            eval_cache: dict[BaseFeatureLibrary, np.ndarray] = {}
+            for diff1, prod_term, coeff, diff3 in terms:
+                weights_per_subdom = weight_map[diff3]
+                if not diff1 and not diff3:
+                    # pure feature library
+                    lib = prod_term[0]
+                    if lib in eval_cache:
+                        x_transform = eval_cache[lib]
+                    else:
+                        x_transform = lib.transform(x_i)
+                        eval_cache[lib] = x_transform
+                    x_subdoms = [x_transform[*inds] for inds in sub_spec.axis_inds_per_subdom]
+                    weak_feats.append(
+                        np.tensordot(x_subdom, weights, axis=[st_axes, st_axes])
+                        for x_subdom, weights in zip(x_subdoms, weights_per_subdom)
+                    )
+                elif not prod_term:
+                    # pure derivative term
+                    x_subdoms = [x_i[*inds] for inds in sub_spec.axis_inds_per_subdom]
+                    weak_feats.append(
+                        np.tensordot(x_subdom, weights, axis=[st_axes, st_axes])
+                        for x_subdom, weights in zip(x_subdoms, weights_per_subdom)
+                    )
+                else:
+                    # integration by parts term
+                    lib = prod_term[0]
+                    diff2 = prod_term[1]
+                    if lib in eval_cache:
+                        x_transform = eval_cache[lib]
+                    else:
+                        x_transform = lib.transform(x_i)
+                        eval_cache[lib] = x_transform
+                    x_transform = _differentiate(x_transform, diff2, diff_method)
+                    x_diff = _differentiate(x_i, diff1, diff_method)
+                    xt_subdoms = [
+                        (x_diff * x_transform)[*inds]
+                        for inds in sub_spec.axis_inds_per_subdom
+                    ]
+                    weak_feats.append(
+                        np.tensordot(x_subdom, weights, axis=[st_axes, st_axes])
+                        for x_subdom, weights in zip(xt_subdoms, weights_per_subdom)
+                    )
+            weak_fe
+
+
+
+        # Fit the optimizer!
         self._fit_shape()
         return self
 
@@ -306,9 +441,9 @@ def _get_spatial_endpoints(st_grid: FloatND) -> tuple[Float1D, Float1D]:
 def _set_up_weights(
     subdoms: SubdomainSpecs, p: int, multiindices: list[tuple[int, ...]]
 ) -> dict[tuple[int, ...], list[AxesArray]]:
-    """
-    Sets up weights needed for the weak library. Integrals over domain cells are
-    approximated as dot products of weights and the input data.
+    """Create the quadrature weights for each integral.
+
+    Integrals over domain cells are approximated as dot products of weights and the input data.
     """
     weight_lookup: dict[tuple[int, ...], list[AxesArray]] = defaultdict(list)
     for deriv_op in multiindices:
@@ -462,113 +597,6 @@ def _derivative_weights(
     return AxesArray(weights_nd, ax_labels)
 
 
-def _time_derivative_weights(
-    subdoms: SubdomainSpecs,
-    grids: list[Float1D],
-    left_inds: Float2D,
-    right_inds: Float2D,
-    p: int,
-) -> AxesArray:
-    # Weights for the time integrals along each axis
-    weights1d = []
-    deriv = np.zeros(subdoms.grid_ndim)
-    deriv[-1] = 1
-    # Weights for the integrals along each axis
-    for i in range(subdoms.grid_ndim):
-        weights1d = weights1d + [_linear_weights(grids[i], deriv[i], p)]
-    # TODO: get rest of code to work with AxesArray.  Too unsure of
-    # which axis labels to use at this point to continue
-    weights1d = [np.asarray(arr) for arr in weights1d]
-    # Product weights over the axes, shaped as inds_k
-    fullweights = []
-    for k in range(subdoms.n_subdomains):
-        ret = np.ones(subdoms.subgrid_shapes[k])
-        for i in range(subdoms.grid_ndim):
-            dims = subdoms.subgrid_shapes[k][i]
-            ret = ret * np.reshape(
-                weights1d[i][left_inds[k][i] : right_inds[k][i] + 1], dims
-            )
-
-        fullweights = fullweights + [
-            ret * np.prod(subdoms.subgrid_dims[k] ** (1.0 - deriv))
-        ]
-    # Not 100% sure about these axes:
-    fullweights = np.stack(fullweights, axis=-1)
-    return AxesArray(fullweights, comprehend_axes(fullweights))
-
-
-def _pure_derivative_weights(
-    subdoms: SubdomainSpecs,
-    grids: list[Float1D],
-    left_inds: Float2D,
-    right_inds: Float2D,
-    p: int,
-) -> AxesArray:
-    weights1d = []
-    deriv = np.zeros(subdoms.grid_ndim)
-    # Weights for the integrals along each axis
-    for i in range(subdoms.grid_ndim):
-        weights1d = weights1d + [_linear_weights(grids[i], deriv[i], p)]
-    # TODO: get rest of code to work with AxesArray.  Too unsure of
-    # which axis labels to use at this point to continue
-    weights1d = [np.asarray(arr) for arr in weights1d]
-    # Product weights over the axes, shaped as inds_k
-    fullweights = []
-    for k in range(subdoms.n_subdomains):
-        ret = np.ones(subdoms.subgrid_shapes[k])
-        for i in range(subdoms.grid_ndim):
-            dims = subdoms.subgrid_shapes[k][i]
-            ret = ret * np.reshape(
-                weights1d[i][left_inds[k][i] : right_inds[k][i] + 1], dims
-            )
-
-        fullweights = fullweights + [ret * np.prod(subdoms.subgrid_dims[k])]
-    fullweights = np.stack(fullweights, axis=-1)
-    return AxesArray(fullweights, comprehend_axes(fullweights))
-
-
-def _mixed_derivative_weights(
-    subdoms: SubdomainSpecs,
-    grids: list[Float1D],
-    left_inds: Float2D,
-    right_inds: Float2D,
-    p: int,
-    multiindices: list[Float1D],
-) -> AxesArray:
-    # Weights for the mixed library derivative terms along each axis
-    weights1 = []
-    for deriv in multiindices:
-        weights2 = []
-        # Add in time index
-        deriv = np.concatenate([deriv, [0]])
-        for i in range(subdoms.grid_ndim):
-            weights2 = weights2 + [_linear_weights(grids[i], deriv[i], p)]
-        weights1 = weights1 + [weights2]
-    # TODO: get rest of code to work with AxesArray.  Too unsure of
-    # which axis labels to use at this point to continue
-    weights1 = [[np.asarray(arr) for arr in sublist] for sublist in weights1]
-    # Product weights over the axes for mixed derivative terms, shaped as inds_k
-    fullweights1 = []
-    for k in range(subdoms.n_subdomains):
-        weights2 = []
-        for j, deriv in enumerate(multiindices):
-            ret = np.ones(subdoms.subgrid_shapes[k])
-            for i in range(subdoms.grid_ndim):
-                dims = np.ones(subdoms.grid_ndim, dtype=int)
-                dims[i] = subdoms.subgrid_shapes[k][i]
-                ret = ret * np.reshape(
-                    weights1[j][i][left_inds[i][k] : right_inds[i][k] + 1],
-                    dims,
-                )
-
-            weights2 = weights2 + [
-                ret * np.prod(subdoms.subgrid_dims[k] ** (1.0 - deriv))
-            ]
-        fullweights1 = fullweights1 + [weights2]
-    fullweights1 = np.stack(fullweights1, axis=-1)
-    return AxesArray(fullweights1, comprehend_axes(fullweights1))
-
-
 def _phi(x: Float1D, d: int, p: int) -> Float1D:
     """
     One-dimensional polynomial test function (1-x**2)**p,
@@ -661,6 +689,53 @@ def _dense_to_open_mesh(meshgrid: AxesArray) -> list[AxesArray]:
         openmesh.append(meshgrid[tuple(indexer)])
 
     return openmesh
+
+
+def _integrate_by_parts(pde_lib: PDELibrary) -> list[SemiTerm]:
+    """Move derivatives from each PDE term to test function"""
+    terms = []
+    for deriv_op in pde_lib.multiindices:
+        zeros = tuple(np.zeros_like(deriv_op))
+        coeff = -1 ** deriv_op.sum()
+        terms.append((zeros, None, coeff, deriv_op))
+    return terms
+
+
+def _integrate_product_by_parts(
+    f_lib: BaseFeatureLibrary, pde_lib: PDELibrary
+) -> list[SemiTerm]:
+    """Move derivatives from each PDE term to test function"""
+    terms = []
+    for deriv_op in pde_lib.multiindices:
+        derivs_to_move = deriv_op // 2
+        deriv_op_u = deriv_op - derivs_to_move
+        for deriv_op_f in range(derivs_to_move):
+            deriv_op_phi = derivs_to_move - deriv_op_f
+            coeff = -1 ** derivs_to_move * binom(deriv_op_f, derivs_to_move)
+            terms.append((deriv_op_u, (f_lib, deriv_op_f), coeff, deriv_op_phi))
+    return terms
+
+
+
+def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
+    """Flattens a tree of tensored/concat libraries, maintaining order
+
+    Returns: A flat tree of libraries whose root is a concat library, and every
+        leaf is either a non-iterable library or a tensored library of non-iterable
+        libraries.  PDELibraries are at the end.
+
+    .. todo::
+        ensure that flat tree maintains identities of libraries and caches transforms
+    """
+    if isinstance(library, ConcatLibrary):
+        root = library
+    elif isinstance(library, TensoredLibrary):
+        root = ConcatLibrary([])
+    else:
+        return ConcatLibrary([library])
+    children = [_flatten_libraries(lib) for lib in library.libraries]
+    root.libraries = children
+    return root
 
 
 def _calculate_weak_features(

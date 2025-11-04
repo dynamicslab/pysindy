@@ -2,9 +2,11 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
+from pysindy.utils import AxesArray
 from pysindy.utils import get_prox
 from pysindy.utils import get_regularization
 from pysindy.utils import reorder_constraints
+from pysindy.utils import validate_control_variables
 
 
 def test_reorder_constraints_1D():
@@ -46,6 +48,18 @@ def test_reorder_constraints_2D():
 
     result = reorder_constraints(feature_order, n_feats, output_order="target")
     np.testing.assert_array_equal(result, target_order)
+
+
+def test_validate_controls():
+    with pytest.raises(ValueError):
+        validate_control_variables(1, [])
+    with pytest.raises(ValueError):
+        validate_control_variables([], 1)
+    with pytest.raises(ValueError):
+        validate_control_variables([], [1])
+    arr = AxesArray(np.ones(4).reshape((2, 2)), axes={"ax_time": 0, "ax_coord": 1})
+    with pytest.raises(ValueError):
+        validate_control_variables([arr], [arr[:1]])
 
 
 @pytest.mark.parametrize(

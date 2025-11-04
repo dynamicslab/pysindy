@@ -9,10 +9,14 @@ from pysindy import AxesArray
 from pysindy import PolynomialLibrary
 from pysindy import STLSQ
 from pysindy._weak import _derivative_weights
+from pysindy._weak import _flatten_libraries
 from pysindy._weak import _get_spatial_endpoints
 from pysindy._weak import _linear_weights
 from pysindy._weak import _phi
 from pysindy._weak import WeakSINDy
+from pysindy.feature_library import ConcatLibrary
+from pysindy.feature_library import FourierLibrary
+from pysindy.feature_library import TensoredLibrary
 
 
 def test_get_spatial_endpoints():
@@ -166,6 +170,15 @@ def test_integrate_domain2d(true_f, p, deriv_op):
         assert_allclose(result, expected, atol=trap_err_est)
     else:
         assert_allclose(result, expected, rtol=trap_err_est)
+
+
+def test_flatten_libraries():
+    lib = PolynomialLibrary(1) * (FourierLibrary() + PolynomialLibrary(3))
+    result = _flatten_libraries(lib)
+    expected = PolynomialLibrary(1) * FourierLibrary() + PolynomialLibrary(
+        1
+    ) * PolynomialLibrary(4)
+    assert result == expected
 
 
 def test_weak_class(data_1d_random_pde):

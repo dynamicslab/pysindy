@@ -114,7 +114,7 @@ print("Model score: %f" % model.score(x_test, t=dt))
 x_dot_test_predicted = model.predict(x_test)
 
 # Compute derivatives with a finite difference method, for comparison
-x_dot_test_computed = model.differentiation_method._differentiate(x_test, t=dt)
+x_dot_test_computed = model.differentiation_method(x_test, t=dt)
 
 fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
 for i in range(x_test.shape[1]):
@@ -148,30 +148,6 @@ ax2.plot(x_test_sim[:, 0], x_test_sim[:, 1], x_test_sim[:, 2], "r--")
 ax2.set(xlabel="$x_0$", ylabel="$x_1$", zlabel="$x_2$", title="model simulation")
 
 fig.show()
-
-# %% [markdown]
-# ## Discrete time dynamical system (map)
-
-# %%
-
-
-def f(x):
-    return 3.6 * x * (1 - x)
-
-
-if __name__ != "testing":
-    n_steps = 1000
-else:
-    n_steps = 10
-eps = 0.001  # Noise level
-x_train_map = np.zeros((n_steps))
-x_train_map[0] = 0.5
-for i in range(1, n_steps):
-    x_train_map[i] = f(x_train_map[i - 1]) + eps * np.random.randn()
-model = ps.DiscreteSINDy()
-model.fit(x_train_map, t=1)
-
-model.print()
 
 # %% [markdown]
 # ## Optimization options
@@ -782,7 +758,7 @@ print("Feature names:\n", model.get_feature_names())
 x_dot_test_predicted = model.predict(x_test)
 
 # Compute derivatives with a finite difference method, for comparison
-x_dot_test_computed = model.differentiation_method._differentiate(x_test, t=dt)
+x_dot_test_computed = model.differentiation_method(x_test, t=dt)
 
 fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
 for i in range(x_test.shape[1]):
@@ -905,7 +881,7 @@ print("Model score: %f" % model.score(x_test, u=u_test, t=dt))
 x_dot_test_predicted = model.predict(x_test, u=u_test)
 
 # Compute derivatives with a finite difference method, for comparison
-x_dot_test_computed = model.differentiation_method._differentiate(x_test, t=dt)
+x_dot_test_computed = model.differentiation_method(x_test, t=dt)
 
 fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
 for i in range(x_test.shape[1]):
@@ -1052,62 +1028,6 @@ if run_cvxpy:
     )
     model.fit(x_train, t=t)
     model.print()
-
-# %% [markdown]
-# ## SINDy with control parameters (SINDyCP)
-# The control input in PySINDy can be used to discover equations parameterized by control parameters in conjunction with the `ParameterizedLibrary`. We demonstrate on the logistic map
-# $$ x_{n+1} = r x_n(1-x_n)$$
-# which depends on a single parameter $r$.
-
-# %%
-# Iterate the map and drop the initial 500-step transient. The behavior is chaotic for r>3.6.
-if __name__ != "testing":
-    num = 1000
-    N = 1000
-    N_drop = 500
-else:
-    num = 20
-    N = 20
-    N_drop = 10
-r0 = 3.5
-rs = r0 + np.arange(num) / num * (4 - r0)
-xss = []
-for r in rs:
-    xs = []
-    x = 0.5
-    for n in range(N + N_drop):
-        if n >= N_drop:
-            xs = xs + [x]
-        x = r * x * (1 - x)
-    xss = xss + [xs]
-
-plt.figure(figsize=(4, 4), dpi=100)
-for ind in range(num):
-    plt.plot(np.ones(N) * rs[ind], xss[ind], ",", alpha=0.1, c="black", rasterized=True)
-plt.xlabel("$r$")
-plt.ylabel("$x_n$")
-plt.show()
-
-# %% [markdown]
-# We construct a `parameter_library` and a `feature_library` to act on the input data `x` and the control input `u` independently. The `ParameterizedLibrary` is composed of products of the two libraries output features. This enables fine control over the library features, which is especially useful in the case of PDEs like those arising in pattern formation modeling. See this [notebook](https://github.com/dynamicslab/pysindy/blob/master/examples/17_parameterized_pattern_formation/17_parameterized_pattern_formation.ipynb) for examples.
-
-# %%
-# use four parameter values as training data
-rs_train = [3.6, 3.7, 3.8, 3.9]
-xs_train = [np.array(xss[np.where(np.array(rs) == r)[0][0]]) for r in rs_train]
-
-feature_lib = ps.PolynomialLibrary(degree=3, include_bias=True)
-parameter_lib = ps.PolynomialLibrary(degree=1, include_bias=True)
-lib = ps.ParameterizedLibrary(
-    feature_library=feature_lib,
-    parameter_library=parameter_lib,
-    num_features=1,
-    num_parameters=1,
-)
-opt = ps.STLSQ(threshold=1e-1, normalize_columns=False)
-model = ps.DiscreteSINDy(feature_library=lib, optimizer=opt)
-model.fit(xs_train, u=rs_train, t=1, feature_names=["x", "r"])
-model.print()
 
 # %% [markdown]
 # ## PDEFIND Feature Overview

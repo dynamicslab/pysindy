@@ -143,7 +143,7 @@ class _BaseSINDy(BaseEstimator, ABC):
         check_is_fitted(self)
         return self.optimizer.coef_
 
-    def equations(self, precision: int = 3, discrete_time=False) -> list[str]:
+    def equations(self, precision: int = 3) -> list[str]:
         """
         Get the right hand sides of the SINDy model equations.
 
@@ -160,10 +160,7 @@ class _BaseSINDy(BaseEstimator, ABC):
             input feature.
         """
         check_is_fitted(self, "model")
-        if discrete_time:
-            sys_coord_names = [name + "[k]" for name in self.feature_names]
-        else:
-            sys_coord_names = self.feature_names
+        sys_coord_names = self.feature_names
         feat_names = self.feature_library.get_feature_names(sys_coord_names)
 
         def term(c, name):
@@ -882,6 +879,43 @@ class DiscreteSINDy(_BaseSINDy):
 
         return self
 
+    def equations(self, precision: int = 3) -> list[str]:
+        """
+        Get the right hand sides of the DiscreteSINDy model equations.
+
+        Parameters
+        ----------
+        precision: int, optional (default 3)
+            Number of decimal points to include for each coefficient in the
+            equation.
+
+        Returns
+        -------
+        equations: list of strings
+            List of strings representing the DiscreteSINDy model equations for each
+            input feature.
+        """
+        check_is_fitted(self, "model")
+        sys_coord_names = [name + "[k]" for name in self.feature_names]
+        feat_names = self.feature_library.get_feature_names(sys_coord_names)
+
+        def term(c, name):
+            rounded_coef = np.round(c, precision)
+            if rounded_coef == 0:
+                return ""
+            else:
+                return f"{c:.{precision}f} {name}"
+
+        equations = []
+        for coef_row in self.optimizer.coef_:
+            components = [term(c, i) for c, i in zip(coef_row, feat_names)]
+            eq = " + ".join(filter(bool, components))
+            if not eq:
+                eq = f"{0:.{precision}f}"
+            equations.append(eq)
+
+        return equations
+
     def print(self, precision=3, **kwargs):
         """Print the DiscreteSINDy model equations.
 
@@ -892,7 +926,7 @@ class DiscreteSINDy(_BaseSINDy):
 
         **kwargs: Additional keyword arguments passed to the builtin print function
         """
-        eqns = self.equations(precision, discrete_time=True)
+        eqns = self.equations(precision)
         feature_names = self.feature_names
         for i, eqn in enumerate(eqns):
             names = f"({feature_names[i]})[k+1]"
@@ -1051,32 +1085,17 @@ def _check_multiple_trajectories(x, x_dot, u) -> bool:
 
     """
     SequenceOrNone = Union[Sequence, None]
-    if sys.version_info.minor < 10:
-        mixed_trajectories = (
-            isinstance(x, Sequence)
-            and (
-                not isinstance(x_dot, Sequence)
-                and x_dot is not None
-                or not isinstance(u, Sequence)
-                and u is not None
-            )
-            or isinstance(x_dot, Sequence)
-            and not isinstance(x, Sequence)
-            or isinstance(u, Sequence)
-            and not isinstance(x, Sequence)
+    mixed_trajectories = (
+        isinstance(x, Sequence)
+        and (
+            not isinstance(x_dot, SequenceOrNone)
+            or not isinstance(u, SequenceOrNone)
         )
-    else:
-        mixed_trajectories = (
-            isinstance(x, Sequence)
-            and (
-                not isinstance(x_dot, SequenceOrNone)
-                or not isinstance(u, SequenceOrNone)
-            )
-            or isinstance(x_dot, Sequence)
-            and not isinstance(x, Sequence)
-            or isinstance(u, Sequence)
-            and not isinstance(x, Sequence)
-        )
+        or isinstance(x_dot, Sequence)
+        and not isinstance(x, Sequence)
+        or isinstance(u, Sequence)
+        and not isinstance(x, Sequence)
+    )
     if mixed_trajectories:
         raise TypeError(
             "If x, x_dot, or u are a Sequence of trajectories, each must be a Sequence"

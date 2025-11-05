@@ -31,6 +31,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "IPython.sphinxext.ipython_console_highlighting",
+    "matplotlib.sphinxext.plot_directive"
 ]
 
 nb_execution_mode = "off"

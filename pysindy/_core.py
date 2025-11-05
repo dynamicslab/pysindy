@@ -48,11 +48,9 @@ class _BaseSINDy(BaseEstimator, ABC):
 
     feature_library: BaseFeatureLibrary
     optimizer: _BaseOptimizer
-    discrete_time: bool
     model: Pipeline
     # Hacks to remove later
     feature_names: Optional[list[str]]
-    discrete_time: bool = False
     n_control_features_: int = 0
 
     @abstractmethod
@@ -83,9 +81,7 @@ class _BaseSINDy(BaseEstimator, ABC):
 
     def predict(self, x, u=None):
         """
-        Predict the time derivatives if it is a SINDy model.
-        Predict the next state of the system if it is a DiscreteSINDy model.
-
+        Predict the right hand side of the dynamical system
 
         Parameters
         ----------
@@ -100,8 +96,8 @@ class _BaseSINDy(BaseEstimator, ABC):
 
         Returns
         -------
-        x_next: array-like or list of array-like, shape (n_samples, n_input_features)
-            Predicted next state of the system
+        result: array-like or list of array-like, shape (n_samples, n_input_features)
+            Predicted right hand side of the dynamical system
         """
         if not _check_multiple_trajectories(x, None, u):
             x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
@@ -227,25 +223,25 @@ class SINDy(_BaseSINDy):
 
     Parameters
     ----------
-    optimizer : optimizer object, optional
+    optimizer
         Optimization method used to fit the SINDy model. This must be a class
         extending :class:`pysindy.optimizers.BaseOptimizer`.
-        The default is :class:`STLSQ`.
+        The default is :class:`pysindy.optimizers.STLSQ`.
 
-    feature_library : feature library object, optional
+    feature_library
         Feature library object used to specify candidate right-hand side features.
         This must be a class extending
         :class:`pysindy.feature_library.base.BaseFeatureLibrary`.
-        The default option is :class:`PolynomialLibrary`.
+        The default option is :class:`pysindy.feature_library.PolynomialLibrary`.
 
-    differentiation_method : differentiation object, optional
+    differentiation_method
         Method for differentiating the data. This must be a class extending
-        :class:`pysindy.differentiation_methods.base.BaseDifferentiation` class.
+        :class:`pysindy.differentiation.base.BaseDifferentiation` class.
         The default option is centered difference.
 
     Attributes
     ----------
-    model : ``sklearn.multioutput.MultiOutputRegressor`` object
+    model : ``sklearn.multioutput.MultiOutputRegressor``
         The fitted SINDy model.
 
     n_input_features_ : int
@@ -745,6 +741,45 @@ class DiscreteSINDy(_BaseSINDy):
        [0.79648209],
        [0.58382694],
        [0.87479097]])
+
+    >>> import numpy as np
+    >>> num = 1000
+    >>> N = 1000
+    >>> N_drop = 500
+    >>> r0 = 3.5
+    >>> rs = r0 + np.arange(num) / num * (4 - r0)
+    >>> xss = []
+    >>> for r in rs:
+    >>>     xs = []
+    >>>     x = 0.5
+    >>>     for n in range(N + N_drop):
+    >>>         if n >= N_drop:
+    >>>             xs = xs + [x]
+    >>>         x = r * x * (1 - x)
+    >>>     xss = xss + [xs]
+    .. plot::
+        >>> import matplotlib.pyplot as plt
+        >>> plt.figure(figsize=(4, 4), dpi=100)
+        >>> for r, xs in zip(r_values, xss):
+        >>>     plt.plot([r]*len(xs), xs, ",", alpha=0.1, c="black", rasterized=True)
+        >>>     plt.xlabel("$r$")
+        >>>     plt.ylabel("$x_n$")
+        >>>     plt.show()
+    >>> rs_train = [3.6, 3.7, 3.8, 3.9]
+    >>> xs_train = [np.array(xss[np.where(np.array(rs) == r)[0][0]]) for r in rs_train]
+    >>> feature_lib = ps.PolynomialLibrary(degree=3, include_bias=True)
+    >>> parameter_lib = ps.PolynomialLibrary(degree=1, include_bias=True)
+    >>> lib = ps.ParameterizedLibrary(
+    >>>     feature_library=feature_lib,
+    >>>     parameter_library=parameter_lib,
+    >>>     num_features=1,
+    >>>     num_parameters=1,
+    >>> )
+    >>> opt = ps.STLSQ(threshold=1e-1, normalize_columns=False)
+    >>> model = ps.DiscreteSINDy(feature_library=lib, optimizer=opt)
+    >>> model.fit(xs_train, u=rs_train, t=1, feature_names=["x", "r"])
+    >>> model.print()
+    (x)[k+1] = 1.000 r[k] x[k] + -1.000 r[k] x[k]^2
     """
 
     def __init__(

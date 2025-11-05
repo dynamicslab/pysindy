@@ -1,4 +1,3 @@
-import sys
 import warnings
 from abc import ABC
 from abc import abstractmethod
@@ -1087,10 +1086,7 @@ def _check_multiple_trajectories(x, x_dot, u) -> bool:
     SequenceOrNone = Union[Sequence, None]
     mixed_trajectories = (
         isinstance(x, Sequence)
-        and (
-            not isinstance(x_dot, SequenceOrNone)
-            or not isinstance(u, SequenceOrNone)
-        )
+        and (not isinstance(x_dot, SequenceOrNone) or not isinstance(u, SequenceOrNone))
         or isinstance(x_dot, Sequence)
         and not isinstance(x, Sequence)
         or isinstance(u, Sequence)

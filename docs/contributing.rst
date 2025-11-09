@@ -3,9 +3,9 @@ Contributing to pysindy
 We welcome all sorts of contributions!
 There are generally three different types of contributions.
 Please be aware of how to conduct yourself in an online, professional environment;
-We have a contributor `code of conduct`_.
+We have a standard contributor `code of conduct`_.
 
-.. _code of conduct: https://github.com/dynamicslab/pysindy/docs/contributor_covenant.md
+.. _code of conduct: https://github.com/dynamicslab/pysindy/blob/main/docs/contributor_covenant.md
 
 
 

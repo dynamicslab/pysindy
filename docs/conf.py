@@ -58,6 +58,9 @@ html_show_sourcelink = False
 html_show_sphinx = False
 html_show_copyright = True
 
+plot_html_show_source_link = False
+plot_html_show_formats = False
+
 default_role = "any"
 html_sourcelink_suffix = ""
 

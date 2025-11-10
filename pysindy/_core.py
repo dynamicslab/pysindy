@@ -753,14 +753,35 @@ class DiscreteSINDy(_BaseSINDy):
     >>>             xs = xs + [x]
     >>>         x = r * x * (1 - x)
     >>>     xss = xss + [xs]
+
     .. plot::
-        >>> import matplotlib.pyplot as plt
-        >>> plt.figure(figsize=(4, 4), dpi=100)
-        >>> for r, xs in zip(r_values, xss):
-        >>>     plt.plot([r]*len(xs), xs, ",", alpha=0.1, c="black", rasterized=True)
-        >>>     plt.xlabel("$r$")
-        >>>     plt.ylabel("$x_n$")
-        >>>     plt.show()
+        :include-source: False
+
+        import numpy as np
+        import matplotlib.pyplot as plt
+        num = 1000
+        N = 1000
+        N_drop = 500
+        r0 = 3.5
+        rs = r0 + np.arange(num) / num * (4 - r0)
+        xss = []
+        for r in rs:
+            xs = []
+            x = 0.5
+            for n in range(N + N_drop):
+                if n >= N_drop:
+                    xs = xs + [x]
+                x = r * x * (1 - x)
+            xss = xss + [xs]
+        plt.figure(figsize=(4, 4), dpi=100)
+        for ind in range(num):
+            plt.plot(
+            np.ones(N) * rs[ind], xss[ind], ",", alpha=0.1, c="black", rasterized=True
+            )
+        plt.xlabel("$r$")
+        plt.ylabel("$x_n$")
+        plt.show()
+
     >>> rs_train = [3.6, 3.7, 3.8, 3.9]
     >>> xs_train = [np.array(xss[np.where(np.array(rs) == r)[0][0]]) for r in rs_train]
     >>> feature_lib = ps.PolynomialLibrary(degree=3, include_bias=True)

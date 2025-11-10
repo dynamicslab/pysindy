@@ -60,8 +60,6 @@ def test_validate_controls():
     arr = AxesArray(np.ones(4).reshape((2, 2)), axes={"ax_time": 0, "ax_coord": 1})
     with pytest.raises(ValueError):
         validate_control_variables([arr], [arr[:1]])
-    u_mod = validate_control_variables([arr], [arr], trim_last_point=True)
-    assert u_mod[0].n_time == 1
 
 
 @pytest.mark.parametrize(

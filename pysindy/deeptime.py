@@ -36,12 +36,6 @@ class SINDyEstimator(SINDy):
         Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
         ``['x0', 'x1', ...]``.
 
-    discrete_time : boolean, optional (default False)
-        If True, dynamical system is treated as a map. Rather than predicting
-        derivatives, the right hand side functions step the system forward by
-        one time step. If False, dynamical system is assumed to be a flow
-        (right-hand side functions predict continuous time derivatives).
-
     Attributes
     ----------
     model : sklearn.multioutput.MultiOutputRegressor object
@@ -61,13 +55,11 @@ class SINDyEstimator(SINDy):
         optimizer=None,
         feature_library=None,
         differentiation_method=None,
-        discrete_time=False,
     ):
         super(SINDyEstimator, self).__init__(
             optimizer=optimizer,
             feature_library=feature_library,
             differentiation_method=differentiation_method,
-            discrete_time=discrete_time,
         )
         self._model = None
 
@@ -94,7 +86,6 @@ class SINDyEstimator(SINDy):
         self._model = SINDyModel(
             feature_library=self.model.steps[0][1],
             optimizer=self.model.steps[-1][1],
-            discrete_time=self.discrete_time,
             n_control_features_=self.n_control_features_,
         )
         return self
@@ -157,12 +148,6 @@ class SINDyModel(SINDy):
         Names for the input features (e.g. ``['x', 'y', 'z']``). If None, will use
         ``['x0', 'x1', ...]``.
 
-    discrete_time : boolean, optional (default False)
-        If True, dynamical system is treated as a map. Rather than predicting
-        derivatives, the right hand side functions step the system forward by
-        one time step. If False, dynamical system is assumed to be a flow
-        (right-hand side functions predict continuous time derivatives).
-
     Attributes
     ----------
     model : sklearn.multioutput.MultiOutputRegressor object
@@ -180,13 +165,11 @@ class SINDyModel(SINDy):
         self,
         feature_library,
         optimizer,
-        discrete_time=False,
         n_control_features_=0,
     ):
         super(SINDyModel, self).__init__(
             feature_library=feature_library,
             optimizer=optimizer,
-            discrete_time=discrete_time,
         )
         self.n_control_features_ = n_control_features_
 

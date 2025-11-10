@@ -31,6 +31,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "IPython.sphinxext.ipython_console_highlighting",
+    "matplotlib.sphinxext.plot_directive",
 ]
 
 nb_execution_mode = "off"
@@ -56,6 +57,9 @@ html_theme = "sphinx_rtd_theme"
 html_show_sourcelink = False
 html_show_sphinx = False
 html_show_copyright = True
+
+plot_html_show_source_link = False
+plot_html_show_formats = False
 
 default_role = "any"
 html_sourcelink_suffix = ""

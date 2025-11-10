@@ -95,15 +95,12 @@ def validate_no_reshape(x, t: Union[float, np.ndarray, object] = T_DEFAULT):
     return x
 
 
-def validate_control_variables(
-    x: Sequence[AxesArray], u: Sequence[AxesArray], trim_last_point: bool = False
-) -> None:
+def validate_control_variables(x: Sequence[AxesArray], u: Sequence[AxesArray]) -> None:
     """Ensure that control variables u are compatible with the data x.
 
     Args:
         x: trajectories of system variables
         u: trajectories of control variables
-        trim_last_point: whether to remove last time point of controls
     """
     if not isinstance(x, Sequence):
         raise ValueError("x must be a Sequence")
@@ -112,7 +109,7 @@ def validate_control_variables(
     if len(x) != len(u):
         raise ValueError("x and u must be the same length")
 
-    def _check_control_shape(x, u, trim_last_point):
+    def _check_control_shape(x, u):
         """
         Compare shape of control variable u against x.
         """
@@ -121,9 +118,9 @@ def validate_control_variables(
                 "control variables u must have same number of time points as x. "
                 f"u has {u.n_time} time points and x has {x.n_time} time points"
             )
-        return u[:-1] if trim_last_point else u
+        return u
 
-    u_arr = [_check_control_shape(xi, ui, trim_last_point) for xi, ui in zip(x, u)]
+    u_arr = [_check_control_shape(xi, ui) for xi, ui in zip(x, u)]
 
     return u_arr
 

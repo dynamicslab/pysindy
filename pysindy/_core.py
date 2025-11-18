@@ -694,6 +694,7 @@ class DiscreteSINDy(_BaseSINDy):
     --------
     >>> import numpy as np
     >>> import pysindy as ps
+    >>> import matplotlib.pyplot as plt
     >>> def f(x):
     >>>     return 3.6 * x * (1 - x)
     >>> n_steps = 20
@@ -738,27 +739,9 @@ class DiscreteSINDy(_BaseSINDy):
        [0.58382694],
        [0.87479097]])
 
-    >>> import numpy as np
-    >>> num = 1000
-    >>> N = 1000
-    >>> N_drop = 500
-    >>> r0 = 3.5
-    >>> rs = r0 + np.arange(num) / num * (4 - r0)
-    >>> xss = []
-    >>> for r in rs:
-    >>>     xs = []
-    >>>     x = 0.5
-    >>>     for n in range(N + N_drop):
-    >>>         if n >= N_drop:
-    >>>             xs = xs + [x]
-    >>>         x = r * x * (1 - x)
-    >>>     xss = xss + [xs]
-
     .. plot::
-        :include-source: False
+        :include-source: True
 
-        import numpy as np
-        import matplotlib.pyplot as plt
         num = 1000
         N = 1000
         N_drop = 500

@@ -6,11 +6,14 @@ from scipy.integrate import dblquad
 from scipy.integrate import quad
 
 from pysindy import AxesArray
+from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
 from pysindy import STLSQ
 from pysindy._weak import _derivative_weights
 from pysindy._weak import _flatten_libraries
 from pysindy._weak import _get_spatial_endpoints
+from pysindy._weak import _integrate_by_parts
+from pysindy._weak import _integrate_product_by_parts
 from pysindy._weak import _linear_weights
 from pysindy._weak import _phi
 from pysindy._weak import WeakSINDy
@@ -187,3 +190,32 @@ def test_weak_class(data_1d_random_pde):
     st_grid = np.stack(np.meshgrid(x, t, indexing="ij"), axis=-1)
 
     model.fit(x=[u], st_grids=[st_grid])
+
+
+def test_integrate_by_parts():
+    spatial_grid = np.array([[[0]], [[0]]])
+    features = PDELibrary(derivative_order=2, spatial_grid=spatial_grid)
+    inputs = [np.ones((1, 2))]
+    features.fit(inputs)
+    result = _integrate_by_parts(features)
+    # Current ordering is
+    # u_y, u_yy, u_x, u_xy, u_xx
+    expected = [
+        ((0, 0), None, -1, (0, 1)),
+        ((0, 0), None, 1, (0, 2)),
+        ((0, 0), None, -1, (1, 0)),
+        ((0, 0), None, 1, (1, 1)),
+        ((0, 0), None, 1, (2, 0)),
+    ]
+    assert result == expected
+
+
+def test_integrate_product_by_parts():
+    f_lib = PolynomialLibrary()
+    d_lib = PDELibrary(derivative_order=4)
+    features = f_lib * d_lib
+    inputs = [np.ones((1, 3))]
+    features.fit(inputs)
+    result = _integrate_product_by_parts(f_lib, d_lib)
+    expected = []
+    assert result == expected

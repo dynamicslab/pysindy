@@ -26,7 +26,7 @@ There are several key types involved.
   Libraries are flattened via distributive property, then integrated by parts
   to move derivatives onto test function.
 * Between libraries of functions and individual terms in the differential
-  equation, we have ``SemiTerm``s.  A ``SemiTerm`` refers to an individual
+  equation, we have ``SemiTerm`` s.  A ``SemiTerm`` refers to an individual
   term of the PDELibrary, e.g. u_xy, multiplied by any tensored non-pde library.
   They exist because all the terms in a semiterm have the same integration by
   parts path.
@@ -149,7 +149,7 @@ class TestFunctionPhi:
 
 SemiTerm = tuple[
     tuple[int, ...] | None, # derivatives of u
-    tuple[BaseFeatureLibrary, tuple[int, ...]], # derivatives of f(u)
+    tuple[BaseFeatureLibrary, tuple[int, ...]] | None, # derivatives of f(u)
     float, # coefficient
     tuple[int, ...] # derivatives of phi
 ]
@@ -278,10 +278,9 @@ class WeakSINDy(_BaseSINDy):
             for xi, weights, spec in zip(x, weights_per_deriv_op, subdomain_specs)
         ]
         self.sorted_lib_ = _flatten_libraries(self.feature_library)
-        lib_mapping: dict[BaseFeatureLibrary, list[tuple[int, ...]]] = {}
         terms: list[SemiTerm] = []
         for lib in self.sorted_lib_.libraries:
-            # Populate the lib_mapping. Libs are either PDELibrary, non-PDE, or tensor of those
+            # Populate the semiterm list. Libs are either PDELibrary, non-PDE, or tensor of those
             no_derivs = (
                 isinstance(lib, TensoredLibrary)
                 and not any(isinstance(lib, PDELibrary) for lib in lib.libraries)
@@ -292,7 +291,7 @@ class WeakSINDy(_BaseSINDy):
             elif isinstance(lib, PDELibrary):
                 terms.extend(_integrate_by_parts(lib))
             else:
-                # tensor library with product fule inside integration by parts
+                # tensor library with product rule inside integration by parts
                 pde_lib = lib.libraries[-1]
                 non_pde_lib = TensoredLibrary(lib.libraries[:-1])
                 terms.extend(_integrate_product_by_parts(non_pde_lib, pde_lib))
@@ -302,6 +301,8 @@ class WeakSINDy(_BaseSINDy):
             x_i, sub_spec, weight_map = it
             weak_feats = []
             st_axes = tuple(range(sub_spec.grid_ndim))
+            # Regular feature library gets distributed against terms in PDELibrary
+            # into a set of SemiTerms.  To prevent re-evaluation, cache results
             eval_cache: dict[BaseFeatureLibrary, np.ndarray] = {}
             for diff1, prod_term, coeff, diff3 in terms:
                 weights_per_subdom = weight_map[diff3]
@@ -321,6 +322,7 @@ class WeakSINDy(_BaseSINDy):
                 elif not prod_term:
                     # pure derivative term
                     x_subdoms = [x_i[*inds] for inds in sub_spec.axis_inds_per_subdom]
+                    neg_coef = -1 ** sum()
                     weak_feats.append(
                         np.tensordot(x_subdom, weights, axis=[st_axes, st_axes])
                         for x_subdom, weights in zip(x_subdoms, weights_per_subdom)
@@ -344,7 +346,6 @@ class WeakSINDy(_BaseSINDy):
                         np.tensordot(x_subdom, weights, axis=[st_axes, st_axes])
                         for x_subdom, weights in zip(xt_subdoms, weights_per_subdom)
                     )
-            weak_fe
 
 
 
@@ -696,8 +697,8 @@ def _integrate_by_parts(pde_lib: PDELibrary) -> list[SemiTerm]:
     terms = []
     for deriv_op in pde_lib.multiindices:
         zeros = tuple(np.zeros_like(deriv_op))
-        coeff = -1 ** deriv_op.sum()
-        terms.append((zeros, None, coeff, deriv_op))
+        coeff = (-1) ** deriv_op.sum()
+        terms.append((zeros, None, coeff, tuple(deriv_op)))
     return terms
 
 

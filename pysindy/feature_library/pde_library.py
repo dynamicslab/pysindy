@@ -112,6 +112,9 @@ class PDELibrary(BaseFeatureLibrary):
                 "in favor of differetiation_method and diff_kwargs.",
                 UserWarning,
             )
+        self.is_uniform = False
+        self.periodic = False
+        self.temporal_grid = temporal_grid
 
         if (spatial_grid is not None and derivative_order == 0) or (
             spatial_grid is None and derivative_order != 0 and temporal_grid is None

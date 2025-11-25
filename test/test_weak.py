@@ -212,9 +212,10 @@ def test_integrate_by_parts():
 
 def test_integrate_product_by_parts():
     f_lib = PolynomialLibrary()
-    d_lib = PDELibrary(derivative_order=4)
+    spatial_grid = np.array([[[0]], [[0]]])
+    features = PDELibrary(derivative_order=2, spatial_grid=spatial_grid)
     features = f_lib * d_lib
-    inputs = [np.ones((1, 3))]
+    inputs = [np.ones((1, 2))]
     features.fit(inputs)
     result = _integrate_product_by_parts(f_lib, d_lib)
     expected = []

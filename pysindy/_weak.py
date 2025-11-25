@@ -304,11 +304,11 @@ class WeakSINDy(_BaseSINDy):
             # Regular feature library gets distributed against terms in PDELibrary
             # into a set of SemiTerms.  To prevent re-evaluation, cache results
             eval_cache: dict[BaseFeatureLibrary, np.ndarray] = {}
-            for diff1, prod_term, coeff, diff3 in terms:
+            for diff1, feat_term, coeff, diff3 in terms:
                 weights_per_subdom = weight_map[diff3]
-                if not diff1 and not diff3:
+                if feat_term and not diff1 and not diff3:
                     # pure feature library
-                    lib = prod_term[0]
+                    lib = feat_term[0]
                     if lib in eval_cache:
                         x_transform = eval_cache[lib]
                     else:
@@ -319,7 +319,7 @@ class WeakSINDy(_BaseSINDy):
                         np.tensordot(x_subdom, weights, axis=[st_axes, st_axes])
                         for x_subdom, weights in zip(x_subdoms, weights_per_subdom)
                     )
-                elif not prod_term:
+                elif not feat_term:
                     # pure derivative term
                     x_subdoms = [x_i[*inds] for inds in sub_spec.axis_inds_per_subdom]
                     neg_coef = -1 ** sum()
@@ -329,8 +329,8 @@ class WeakSINDy(_BaseSINDy):
                     )
                 else:
                     # integration by parts term
-                    lib = prod_term[0]
-                    diff2 = prod_term[1]
+                    lib = feat_term[0]
+                    diff2 = feat_term[1]
                     if lib in eval_cache:
                         x_transform = eval_cache[lib]
                     else:

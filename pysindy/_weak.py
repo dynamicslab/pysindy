@@ -48,6 +48,7 @@ Research directions
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
+from itertools import product
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -710,10 +711,14 @@ def _integrate_product_by_parts(
     for deriv_op in pde_lib.multiindices:
         derivs_to_move = deriv_op // 2
         deriv_op_u = deriv_op - derivs_to_move
-        for deriv_op_f in range(derivs_to_move):
-            deriv_op_phi = derivs_to_move - deriv_op_f
-            coeff = -1 ** derivs_to_move * binom(deriv_op_f, derivs_to_move)
-            terms.append((deriv_op_u, (f_lib, deriv_op_f), coeff, deriv_op_phi))
+        product_terms = product(*[range(d + 1) for d in derivs_to_move])
+        for deriv_op_f in product_terms:
+            deriv_op_phi = tuple(derivs_to_move - np.array(deriv_op_f))
+            prod_coeff = np.prod([binom(d_f, d_move) for d_f, d_move in zip(deriv_op_f, derivs_to_move)])
+            if prod_coeff == 0:
+                raise RuntimeError(f"deriv op f : {deriv_op_f}, moving: {derivs_to_move}")
+            coeff = (-1) ** derivs_to_move.sum() * prod_coeff
+            terms.append((tuple(deriv_op_u), (f_lib, deriv_op_f), coeff, deriv_op_phi))
     return terms
 
 

@@ -210,13 +210,22 @@ def test_integrate_by_parts():
     assert result == expected
 
 
+# need to parametrize this for 1d high order and 2d
 def test_integrate_product_by_parts():
     f_lib = PolynomialLibrary()
     spatial_grid = np.array([[[0]], [[0]]])
-    features = PDELibrary(derivative_order=2, spatial_grid=spatial_grid)
+    d_lib = PDELibrary(derivative_order=2, spatial_grid=spatial_grid)
     features = f_lib * d_lib
     inputs = [np.ones((1, 2))]
     features.fit(inputs)
     result = _integrate_product_by_parts(f_lib, d_lib)
-    expected = []
+    expected = [
+        ((0, 1), (f_lib, (0, 0)), 1, (0, 0)),
+        ((0, 1), (f_lib, (0, 0)), -1, (0, 1)),
+        ((0, 1), (f_lib, (0, 1)), -1, (0, 0)),
+        ((1, 0), (f_lib, (0, 0)), 1, (0, 0)),
+        ((1, 1), (f_lib, (0, 0)), 1, (0, 0)),
+        ((1, 0), (f_lib, (0, 0)), -1, (1, 0)),
+        ((1, 0), (f_lib, (1, 0)), -1, (0, 0)),
+    ]
     assert result == expected

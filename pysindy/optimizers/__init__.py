@@ -31,9 +31,8 @@ try:
 except (ImportError, NameError):
     pass
 try:
-    from .torch_solver import TorchOptimizer
+    from .torch_s import TorchOptimizer
 except Exception:
-    # Optional dependency torch may be missing or cause import-time errors
     TorchOptimizer = None
 
 

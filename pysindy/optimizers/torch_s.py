@@ -29,7 +29,7 @@ Example: Fit a SINDy model with the Torch optimizer.
     >>> rng = np.random.default_rng(0)
     >>> X = rng.standard_normal((500, 3))
     >>> Y = X @ np.array([[1.0, 0.0, -0.5], [0.0, 2.0, 0.0], [0.0, 0.0, 0.0]]).T
-    >>> opt = TorchOptimizer(threshold=0.05, alpha_l1=1e-3, step_size=1e-2, max_iter=500, early_stopping_patience=50)
+    >>> opt = TorchOptimizer()
     >>> lib = PolynomialLibrary(degree=2)
     >>> model = SINDy(optimizer=opt, feature_library=lib)
     >>> model.fit(X, t=0.01)
@@ -45,9 +45,9 @@ Notes
   `min_delta` for `early_stopping_patience` consecutive steps.
 - The optimizer tracks and restores the best solution observed across iterations.
 """
-
 import warnings
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -69,15 +69,18 @@ import torch
 from torch import nn
 from torch.optim import Optimizer
 
+
 # Taken from https://github.com/kyleliang919/C-Optim/blob/main/c_adamw.py
 class CAdamW(Optimizer):
     """
-    Implements Adam algorithm with weight decay fix as introduced in [Decoupled Weight Decay
+    Implements Adam algorithm with weight decay fix
+    as introduced in [Decoupled Weight Decay
     Regularization](https://arxiv.org/abs/1711.05101).
 
     Parameters:
         params (`Iterable[nn.parameter.Parameter]`):
-            Iterable of parameters to optimize or dictionaries defining parameter groups.
+            Iterable of parameters to optimize or dictionaries
+            defining parameter groups.
         lr (`float`, *optional*, defaults to 0.001):
             The learning rate to use.
         betas (`Tuple[float,float]`, *optional*, defaults to `(0.9, 0.999)`):
@@ -87,9 +90,11 @@ class CAdamW(Optimizer):
         weight_decay (`float`, *optional*, defaults to 0.0):
             Decoupled weight decay to apply.
         correct_bias (`bool`, *optional*, defaults to `True`):
-            Whether or not to correct bias in Adam (for instance, in Bert TF repository they use `False`).
+            Whether or not to correct bias in Adam
+            (for instance, in Bert TF repository they use `False`).
         no_deprecation_warning (`bool`, *optional*, defaults to `False`):
-            A flag used to disable the deprecation warning (set to `True` to disable the warning).
+            A flag used to disable the deprecation warning
+            (set to `True` to disable the warning).
     """
 
     def __init__(
@@ -129,7 +134,8 @@ class CAdamW(Optimizer):
         Performs a single optimization step.
 
         Arguments:
-            closure (`Callable`, *optional*): A closure that reevaluates the model and returns the loss.
+            closure (`Callable`, *optional*):
+            A closure that reevaluates the model and returns the loss.
         """
         loss = None
         if closure is not None:
@@ -178,10 +184,12 @@ class CAdamW(Optimizer):
 
                 # compute norm gradient
                 mask = (exp_avg * grad > 0).to(grad.dtype)
-                # mask = mask * (mask.numel() / (mask.sum() + 1)) ## original implementation, leaving it here for record
+                # mask = mask * (mask.numel() / (mask.sum() + 1))
+                # ## original implementation, leaving it here for record
                 mask.div_(
                     mask.mean().clamp_(min=1e-3)
-                )  # https://huggingface.co/rwightman/timm-optim-caution found this implementation is more favourable in many cases
+                )  # https://huggingface.co/rwightman/timm-optim-caution
+                # found this implementation is more favourable in many cases
                 norm_grad = (exp_avg * mask) / denom
                 p.add_(norm_grad, alpha=-step_size)
         return loss
@@ -298,7 +306,7 @@ class TorchOptimizer(BaseOptimizer):
         alpha_l1: float = 0.0,
         step_size: float = 1e-1,
         max_iter: int = 1000,
-        optimizer: str = "adam",
+        optimizer: str = "cadamw",
         normalize_columns: bool = False,
         copy_X: bool = True,
         initial_guess: Optional[np.ndarray] = None,
@@ -307,8 +315,8 @@ class TorchOptimizer(BaseOptimizer):
         seed: Optional[int] = None,
         sparse_ind: Optional[list[int]] = None,
         unbias: bool = True,
-        early_stopping_patience: int = 0,
-        min_delta: float = 0.0,
+        early_stopping_patience: int = 100,
+        min_delta: float = 1e-10,
     ):
         super().__init__(
             max_iter=max_iter,
@@ -340,9 +348,12 @@ class TorchOptimizer(BaseOptimizer):
         self.early_stopping_patience = int(early_stopping_patience)
         self.min_delta = float(min_delta)
         if torch is None:
-            # Delay hard failure to fit-time to allow import of module without torch
+            # Delay hard failure to fit-time to
+            # allow import of module without torch
             warnings.warn(
-                "PyTorch is not installed; TorchSINDyOptimizer will not run until torch is available.")
+                "PyTorch is not installed; "
+                "TorchOptimizer will not run until torch is available."
+            )
 
     def _reduce(self, x: np.ndarray, y: np.ndarray) -> None:
         """Core optimization loop.
@@ -372,7 +383,9 @@ class TorchOptimizer(BaseOptimizer):
             If PyTorch is not installed at run time.
         """
         if torch is None:
-            raise ImportError("PyTorch is required for TorchSINDyOptimizer. Please install torch.")
+            raise ImportError(
+                "PyTorch is required for TorchOptimizer. Please install torch."
+            )
         # Select device
         if self.torch_device == "cuda" and not torch.cuda.is_available():
             warnings.warn("CUDA not available; falling back to CPU.")
@@ -410,7 +423,9 @@ class TorchOptimizer(BaseOptimizer):
         # Support mask helper: restrict thresholding to specified indices
         sparse_mask = None
         if self.sparse_ind is not None:
-            sparse_mask = torch.zeros((n_targets, n_features), dtype=torch.bool, device=device)
+            sparse_mask = torch.zeros(
+                (n_targets, n_features), dtype=torch.bool, device=device
+            )
             sparse_mask[:, self.sparse_ind] = True
 
         def loss_fn(W_):
@@ -467,7 +482,9 @@ class TorchOptimizer(BaseOptimizer):
                 last_mask = mask
                 if 0 < self.early_stopping_patience <= patience_counter:
                     break
-            if self.verbose and (it % max(1, self.max_iter // 10) == 0 or it == self.max_iter - 1):
+            if self.verbose and (
+                it % max(1, self.max_iter // 10) == 0 or it == self.max_iter - 1
+            ):
                 mse_val = float(((X @ W.T - Y).pow(2)).sum().cpu().numpy()) / n_samples
                 l0 = int((torch.abs(W) >= self.threshold).sum().item())
                 print(f"[TorchSINDy] iter={it} mse={mse_val:.4e} L0={l0} obj={obj:.4e}")

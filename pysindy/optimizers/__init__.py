@@ -30,6 +30,11 @@ try:
     from .sbr import SBR
 except (ImportError, NameError):
     pass
+try:
+    from .torch_solver import TorchOptimizer
+except Exception:
+    # Optional dependency torch may be missing or cause import-time errors
+    TorchOptimizer = None
 
 
 __all__ = [
@@ -46,4 +51,5 @@ __all__ = [
     "SINDyPI",
     "MIOSR",
     "SBR",
+    "TorchOptimizer",
 ]

@@ -33,6 +33,7 @@ dependencies = [
     "derivative>=0.6.2",
     "scipy",
     "typing_extensions",
+    "torch",
 ]
 
 [project.optional-dependencies]

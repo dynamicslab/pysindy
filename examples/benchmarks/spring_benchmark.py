@@ -7,14 +7,11 @@ System:
 Simulates with RK4, evaluates multiple optimizers, prints metrics and equations,
 and saves a plot comparing true vs predicted test trajectories.
 """
-import traceback
-from pathlib import Path
 import time
 import warnings
 from typing import List, Tuple
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from pysindy import SINDy
 from pysindy.feature_library import PolynomialLibrary
@@ -149,37 +146,17 @@ def nonlinear_spring_example() -> None:
             print(f"{r['name']:<15} ERROR: {r['error']}")
         else:
             print(f"{r['name']:<15} {r['score']:>10.4f} {r['mse']:>12.4e} {r['fit_time_s']:>12.4f} {str(r['complexity']):>12}")
+    for r in results:
+        if "error" in r:
+            print(f"{r['name']:<15} ERROR: {r['error']}")
+        else:
+            print(f"{r['name']:<15} {r['score']:>10.4f} {r['mse']:>12.4e} {r['fit_time_s']:>12.4f} {str(r['complexity']):>12}")
             eqs = r.get("equations")
             if eqs:
                 for eq in eqs:
                     print(f"    {eq}")
             else:
                 print("    (equations unavailable)")
-
-    # Plot true vs predicted for the best (by MSE) model
-    good = [r for r in results if "error" not in r]
-    if good:
-        best = min(good, key=lambda r: r["mse"])  # type: ignore
-        model = best["model"]
-        X_te_pred = model.simulate(X_te[0], t[len(X_tr):])
-        # Build figure data
-        fig, axs = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
-        tt = t[len(X_tr):]
-        axs[0].plot(tt, X_te[:, 0], label="x true")
-        axs[0].plot(tt, X_te_pred[:, 0], label="x pred", linestyle="--")
-        axs[0].set_ylabel("x")
-        axs[0].legend()
-        axs[1].plot(tt, X_te[:, 1], label="v true")
-        axs[1].plot(tt, X_te_pred[:, 1], label="v pred", linestyle="--")
-        axs[1].set_ylabel("v")
-        axs[1].set_xlabel("t")
-        axs[1].legend()
-        fig.suptitle(f"Nonlinear spring - best: {best['name']} (MSE={best['mse']:.3e}, Score={best['score']:.3f})")
-        out_dir = Path(__file__).parents[0].joinpath('figures')
-        out_dir.mkdir(exist_ok=True)
-        fig.savefig(out_dir.joinpath('nonlinear_spring.svg'), dpi=300)
-        plt.show()
-
 
 if __name__ == "__main__":
     nonlinear_spring_example()

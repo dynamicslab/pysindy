@@ -266,8 +266,8 @@ def run_optimizer(
     model.fit(X, t=dt)
     fit_time = time.perf_counter() - t0
     score = model.score(X, t=dt)
-    dX_pred = model.predict(X)
-    mse = float(np.mean((dX_pred - dX_dt) ** 2))
+    dXdt_pred = model.predict(X)
+    mse = float(np.mean((dXdt_pred - dX_dt) ** 2))
     complexity = optimizer.complexity if hasattr(optimizer, "complexity") else None
     try:
         equations = model.equations()

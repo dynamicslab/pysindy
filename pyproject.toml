@@ -33,7 +33,6 @@ dependencies = [
     "derivative>=0.6.2",
     "scipy",
     "typing_extensions",
-    "torch",
 ]
 
 [project.optional-dependencies]
@@ -50,7 +49,8 @@ dev = [
     "jupytext",
     "pre-commit",
     "hypothesis",
-    "jupyter-contrib-nbextensions"
+    "jupyter-contrib-nbextensions",
+    "torch",
 ]
 docs = [
     "ipython",

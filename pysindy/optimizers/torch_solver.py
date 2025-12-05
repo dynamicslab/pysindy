@@ -59,7 +59,6 @@ except Exception:  # pragma: no cover - optional dependency
     torch = None  # type: ignore
 
 if TYPE_CHECKING:  # only for type checkers
-    import torch as torch_types  # noqa: F401
 
 
 import math

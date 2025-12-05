@@ -355,7 +355,7 @@ def main():
                         alpha_l1=1e-3,
                         step_size=1e-2,
                         max_iter=200,
-                        optimizer="adam",
+                        optimizer="cadamw",
                         seed=0,
                         unbias=True,
                         early_stopping_patience=50,

@@ -221,7 +221,7 @@ def rk4(
     - X: state trajectory of shape (N, d).
     - dX_dt: analytic RHS evaluated along trajectory, shape (N, d).
     """
-    t = np.arange(t0, t1 + 1e-12, dt)
+    t = np.linspace(t0, t1, int(round((t1 - t0) / dt)) + 1)
     X = np.zeros((t.size, x0.size), dtype=float)
     X[0, :] = np.array(x0, dtype=float)
     for i in range(1, t.size):

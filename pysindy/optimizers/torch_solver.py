@@ -14,7 +14,7 @@ Key features
 - Compatible with PySINDy BaseOptimizer interface and ensembling.
 
 Optional dependencies
-- PyTorch is optional at import time; a RuntimeError will be raised during fit if
+- PyTorch is optional at import time; an ImportError will be raised during fit if
   torch is not available. Code paths and annotations avoid import-time failures.
 - CAdamW is a custom optimizer shipped with the project and used when requested.
 

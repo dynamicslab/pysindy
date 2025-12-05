@@ -47,7 +47,6 @@ Notes
 """
 import warnings
 from typing import Optional
-from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -58,13 +57,9 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     torch = None  # type: ignore
 
-if TYPE_CHECKING:  # only for type checkers
-
-
 import math
 from typing import Callable, Iterable, Tuple
 
-import torch
 from torch import nn
 from torch.optim import Optimizer
 
@@ -346,6 +341,8 @@ class TorchOptimizer(BaseOptimizer):
         self.sparse_ind = sparse_ind
         self.early_stopping_patience = int(early_stopping_patience)
         self.min_delta = float(min_delta)
+        self.stability_eps = 1e-14
+
         if torch is None:
             # Delay hard failure to fit-time to
             # allow import of module without torch
@@ -406,7 +403,8 @@ class TorchOptimizer(BaseOptimizer):
         if self.coef_ is None:
             W = torch.zeros((n_targets, n_features), dtype=dtype, device=device)
         else:
-            W = torch.as_tensor(self.coef_, dtype=dtype, device=device)
+            # Decouple from numpy memory to avoid mutating BaseOptimizer.history_[0]
+            W = torch.tensor(self.coef_, dtype=dtype, device=device).clone()
         W.requires_grad_(True)
 
         # Optimizer for smooth loss
@@ -475,7 +473,7 @@ class TorchOptimizer(BaseOptimizer):
             with torch.no_grad():
                 coef_np = W.detach().cpu().numpy()
                 self.history_.append(coef_np)
-                mask = np.abs(coef_np) >= max(self.threshold, 1e-14)
+                mask = np.abs(coef_np) >= max(self.threshold, self.stability_eps)
                 if last_mask is not None and np.array_equal(mask, last_mask):
                     break
                 last_mask = mask
@@ -484,7 +482,10 @@ class TorchOptimizer(BaseOptimizer):
             if self.verbose and (
                 it % max(1, self.max_iter // 10) == 0 or it == self.max_iter - 1
             ):
-                mse_val = float(((X @ W.T - Y).pow(2)).sum().cpu().numpy()) / n_samples
+                mse_val = (
+                    float(((X @ W.T - Y).pow(2)).sum().cpu().detach().numpy())
+                    / n_samples
+                )
                 l0 = int((torch.abs(W) >= self.threshold).sum().item())
                 print(f"[TorchSINDy] iter={it} mse={mse_val:.4e} L0={l0} obj={obj:.4e}")
 
@@ -492,7 +493,7 @@ class TorchOptimizer(BaseOptimizer):
         final_W = (best_W if best_W is not None else W).detach().cpu().numpy()
         self.coef_ = final_W
         # ind_ based on tiny threshold
-        self.ind_ = np.abs(self.coef_) > 1e-14
+        self.ind_ = np.abs(self.coef_) > self.stability_eps
 
     @property
     def complexity(self):

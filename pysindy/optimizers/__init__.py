@@ -33,7 +33,7 @@ except (ImportError, NameError):
 try:
     from .torch_solver import TorchOptimizer
 except Exception:
-    TorchOptimizer = None
+    pass
 
 
 __all__ = [

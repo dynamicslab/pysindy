@@ -46,6 +46,7 @@ Notes
 - The optimizer tracks and restores the best solution observed across iterations.
 """
 import warnings
+from typing import List
 from typing import Optional
 
 import numpy as np

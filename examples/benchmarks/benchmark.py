@@ -344,7 +344,7 @@ def main():
         try:
             opt_defs.append(("SBR", SBR()))
         except Exception:
-            pass
+            traceback.print_exc()
     if TorchOptimizer is not None:
         try:
             opt_defs.append(

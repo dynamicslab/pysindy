@@ -464,7 +464,7 @@ class TorchOptimizer(BaseOptimizer):
             # Evaluate objective and update best
             with torch.no_grad():
                 obj = float(loss_fn(W).cpu().numpy())
-                if best_obj is None or (best_obj - obj) > self.min_delta:
+                if best_obj is None or obj < (best_obj - self.min_delta):
                     best_obj = obj
                     best_W = W.detach().clone()
                     patience_counter = 0

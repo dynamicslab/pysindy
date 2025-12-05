@@ -312,7 +312,7 @@ class TorchOptimizer(BaseOptimizer):
         verbose: bool = False,
         device: Optional[str] = None,
         seed: Optional[int] = None,
-        sparse_ind: Optional[list[int]] = None,
+        sparse_ind: Optional[List[int]] = None,
         unbias: bool = True,
         early_stopping_patience: int = 100,
         min_delta: float = 1e-10,

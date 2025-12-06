@@ -104,19 +104,6 @@ def test_early_stopping_via_patience_and_min_delta():
     assert len(opt.history_) <= 1 + patience + 1  # a few iterations at most
 
 
-def test_cuda_device_selection_warning_or_success():
-    X, Y = make_synthetic(n_samples=50, noise=0.0, seed=5)
-    if not torch.cuda.is_available():
-        with pytest.warns(UserWarning, match="CUDA not available; falling back to CPU"):
-            opt = TorchOptimizer(device="cuda", max_iter=5, threshold=0.0, seed=0)
-            opt.fit(X, Y)
-            assert opt.coef_.shape == (Y.shape[1], X.shape[1])
-    else:
-        opt = TorchOptimizer(device="cuda", max_iter=10, threshold=1e-4, seed=0)
-        opt.fit(X, Y)
-        assert opt.coef_.shape == (Y.shape[1], X.shape[1])
-
-
 def test_complexity_property_matches_manual():
     X, Y = make_synthetic(n_samples=120, noise=0.02, seed=6)
     opt = TorchOptimizer(max_iter=60, threshold=5e-2, alpha_l1=1e-3, seed=6)
@@ -149,3 +136,16 @@ def test_history_tracking_shapes_and_length():
     assert shapes_ok
     # The first history entry (initial guess) should differ from a later iterate
     assert not np.allclose(opt.history_[0], opt.history_[-1])
+
+
+def test_device_selection_warning_or_success():
+    X, Y = make_synthetic(n_samples=50, noise=0.0, seed=5)
+    if not torch.cuda.is_available():
+        with pytest.warns(UserWarning, match="CUDA not available; falling back to CPU"):
+            opt = TorchOptimizer(device="cuda", max_iter=5, threshold=0.0, seed=0)
+            opt.fit(X, Y)
+            assert opt.coef_.shape == (Y.shape[1], X.shape[1])
+    else:
+        opt = TorchOptimizer(device="cuda", max_iter=10, threshold=1e-4, seed=0)
+        opt.fit(X, Y)
+        assert opt.coef_.shape == (Y.shape[1], X.shape[1])

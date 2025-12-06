@@ -34,6 +34,10 @@ try:
     from .torch_solver import TorchOptimizer
 except Exception:
     pass
+try:
+    from .jax_solver import JaxOptimizer
+except Exception:
+    pass
 
 
 __all__ = [
@@ -51,4 +55,5 @@ __all__ = [
     "MIOSR",
     "SBR",
     "TorchOptimizer",
+    "JaxOptimizer",
 ]

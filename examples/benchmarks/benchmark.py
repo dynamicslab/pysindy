@@ -31,7 +31,9 @@ from typing import Tuple
 
 import numpy as np
 
+from pysindy import ConstrainedSR3
 from pysindy import SINDy
+from pysindy import StableLinearSR3
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import FROLS
 from pysindy.optimizers import SR3
@@ -46,6 +48,10 @@ try:
     from pysindy.optimizers import TorchOptimizer
 except Exception:
     TorchOptimizer = None  # type: ignore
+try:
+    from pysindy.optimizers import JaxOptimizer
+except Exception:
+    JaxOptimizer = None  # type: ignore
 
 
 # ------------------------------- Systems ------------------------------------
@@ -331,11 +337,23 @@ def main():
 
     # Select optimizers
     opt_defs: List[Tuple[str, object]] = []
-    opt_defs.append(("STLSQ", STLSQ(threshold=0.1, alpha=0.05, max_iter=20)))
+    opt_defs.append(("STLSQ", STLSQ()))
     opt_defs.append(
         (
             "SR3-L0",
-            SR3(reg_weight_lam=0.1, regularizer="L0", relax_coeff_nu=1.0, max_iter=50),
+            SR3(),
+        )
+    )
+    opt_defs.append(
+        (
+            "SR3-constrained",
+            ConstrainedSR3(),
+        )
+    )
+    opt_defs.append(
+        (
+            "SR3-stable",
+            StableLinearSR3(),
         )
     )
     opt_defs.append(("FROLS", FROLS()))
@@ -356,6 +374,26 @@ def main():
                         step_size=1e-2,
                         max_iter=200,
                         optimizer="cadamw",
+                        seed=0,
+                        unbias=True,
+                        early_stopping_patience=50,
+                        min_delta=1e-8,
+                    ),
+                )
+            )
+        except Exception:
+            traceback.print_exc()
+    if JaxOptimizer is not None:
+        try:
+            opt_defs.append(
+                (
+                    "JaxOptimizer",
+                    JaxOptimizer(
+                        threshold=0.05,
+                        alpha_l1=1e-3,
+                        step_size=1e-2,
+                        max_iter=200,
+                        optimizer="adam",
                         seed=0,
                         unbias=True,
                         early_stopping_patience=50,

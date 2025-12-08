@@ -56,12 +56,19 @@ jobs:
       run: |
         sudo apt-get update -y
         sudo apt-get install pandoc
-        sudo apt-get update -y
         pip install -e .[docs,cvxpy,miosr,sbr]
     - name: Build docs
       run: |
         cd docs
         python -m sphinx -T -E -W -b html -d _build/doctrees . _build/html
+
+    - name: Save the built docs
+      uses: actions/upload-artifact@v4
+      with:
+        name: docs-html
+        path: docs/_build/html/
+        retention-days: 5
+
 
   tests:
     name: Tests
@@ -79,66 +86,84 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Install dependencies
       run: |
         pip install --upgrade pip
         pip install .[dev,miosr,cvxpy,sbr]
         pip freeze > environment.txt
+
     - name: Save the environment
       uses: actions/upload-artifact@v4
       with:
         name: requirements ${{matrix.python-version}}
         path: environment.txt
         retention-days: 5
+
     - name: Test with pytest
       run: |
         coverage run --source=pysindy -m pytest test -m "not slow"  && coverage xml
+
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
 
   benchmarks:
-    name: Install Dependencies
+    name: Benchmarks (ASV)
     needs: tests
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         python-version: ["3.12"]
 
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Load cached venv
-      id: cached-dependencies-dev
+    - name: Cache pip
       uses: actions/cache@v4
       with:
-        path: .venv
-        key: dev-${{ matrix.python-version }}-${{ hashFiles('**/venv.lock') }}
-    - name: Install dependencies
-      if: steps.cached-dependencies-dev.outputs.cache-hit != 'true'
-      run: pip install .[dev]
-    # ======
-    # Compare benchmarks between master and PR, and fail if any get worse
-    # ======
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
 
-    - name: Setup ASV
+    - name: Install dependencies
       run: |
+        pip install --upgrade pip
+        pip install .[dev]
         pip install asv
+
+    - name: Cache ASV environments
+      uses: actions/cache@v4
+      with:
+        path: asv_bench/.asv/env
+        key: asv-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('asv_bench/asv.conf.json') }}
+        restore-keys: |
+          asv-${{ runner.os }}-py${{ matrix.python-version }}-
+
+    - name: Setup ASV machine
+      run: |
         cd asv_bench
         asv machine --yes
+
     - name: Check regression
+      if: github.event_name == 'pull_request'
       run: |
         cd asv_bench
         git fetch origin $GITHUB_BASE_REF:base $GITHUB_REF:pr

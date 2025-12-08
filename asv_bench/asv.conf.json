@@ -10,6 +10,7 @@
     "html_dir": ".asv/html",
     "show_commit_url": "https://github.com/$OWNER/$REPO/commit/",
     "build_command": [
-        "python -m build --outdir {build_cache_dir} {build_dir}"
+        "pip install -U pip",
+        "pip install .[dev]"
     ]
 }

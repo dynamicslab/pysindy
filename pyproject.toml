@@ -37,6 +37,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "asv",
     "matplotlib",
     "seaborn",
     "pytest>=6.2.4, <8.0.0",

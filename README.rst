@@ -99,7 +99,7 @@ Related packages
 
 
 .. |BuildCI| image:: https://github.com/dynamicslab/pysindy/actions/workflows/main.yml/badge.svg
-    :target: https://github.com/dynamicslab/pysindy/actions/workflows/main.yml?query=branch%3Amaster
+    :target: https://github.com/dynamicslab/pysindy/actions/workflows/main.yml?query=branch%3Amain
 
 .. |RTD| image:: https://readthedocs.org/projects/pysindy/badge/?version=latest
     :target: https://pysindy.readthedocs.io/en/latest/?badge=latest
@@ -108,7 +108,7 @@ Related packages
 .. |PyPI| image:: https://badge.fury.io/py/pysindy.svg
     :target: https://badge.fury.io/py/pysindy
 
-.. |Codecov| image:: https://codecov.io/gh/dynamicslab/pysindy/branch/master/graph/badge.svg
+.. |Codecov| image:: https://codecov.io/gh/dynamicslab/pysindy/branch/main/graph/badge.svg
     :target: https://codecov.io/gh/dynamicslab/pysindy
 
 .. |JOSS1| image:: https://joss.theoj.org/papers/82d080bbe10ac3ab4bc03fa75f07d644/status.svg

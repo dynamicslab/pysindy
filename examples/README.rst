@@ -1,7 +1,7 @@
 Tutorials
 =============================
 These are introductory guides to get familiar with how to use pysindy in your project.
-Tutorials in the pysindy repo are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/master/examples>`_.
+Tutorials in the pysindy repo are also available as `Jupyter notebooks <https://github.com/dynamicslab/pysindy/tree/main/examples>`_.
 
 
 `Getting Started fitting a model <./tutorial_1/example.ipynb>`_

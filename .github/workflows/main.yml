@@ -127,8 +127,13 @@ jobs:
       matrix:
         python-version: ["3.12"]
 
+    permissions:
+      contents: write   # gh-pages publishing
+
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # ASV history
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -168,3 +173,17 @@ jobs:
         cd asv_bench
         git fetch origin $GITHUB_BASE_REF:base $GITHUB_REF:pr
         asv continuous base pr -e
+
+    - name: Run benchmarks on main
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        cd asv_bench
+        asv run
+        asv publish
+    - name: Deploy ASV dashboard to gh-pages
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: asv_bench/.asv/html
+        force_orphan: true

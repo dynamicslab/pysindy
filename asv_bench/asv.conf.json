@@ -1,5 +1,6 @@
 {
     "version": 1,
+    "branches": ["main"],
     "project": "pysindy",
     "project_url": "https://pysindy.readthedocs.io/",
     "repo": "..",

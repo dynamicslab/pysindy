@@ -1,0 +1,75 @@
+{
+    "finite_difference_1D.FiniteDifferenceBM.peakmem_derivative": {
+        "code": "class FiniteDifferenceBM:\n    def peakmem_derivative(self):\n        self.differentiator(self.t, t=self.t)\n\n    def setup(self):\n        self.differentiator = FiniteDifference()\n        self.t = np.arange(0, 2 * np.pi, 0.01)",
+        "name": "finite_difference_1D.FiniteDifferenceBM.peakmem_derivative",
+        "param_names": [],
+        "params": [],
+        "type": "peakmemory",
+        "unit": "bytes",
+        "version": "c9b03cefe824a4e6f36435d90623655ad939902d2330bcdc781117ca6a087f1c"
+    },
+    "finite_difference_1D.FiniteDifferenceBM.time_derivative": {
+        "code": "class FiniteDifferenceBM:\n    def time_derivative(self):\n        self.differentiator(self.t, t=self.t)\n\n    def setup(self):\n        self.differentiator = FiniteDifference()\n        self.t = np.arange(0, 2 * np.pi, 0.01)",
+        "min_run_count": 2,
+        "name": "finite_difference_1D.FiniteDifferenceBM.time_derivative",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "5c17dd231e3d92d2404c5e43d1b245d20ec9f38896fd6f3a1cd2b1228a079564",
+        "warmup_time": -1
+    },
+    "inference.InferenceBM.peakmem_a_predict": {
+        "code": "class InferenceBM:\n    def peakmem_a_predict(self):\n        self.model.predict(self.inputs[:1])\n\n    def setup(self):\n        t = np.linspace(0, 1, 100)\n        x = 3 * np.exp(-2 * t)\n        y = 0.5 * np.exp(t)\n        X = np.stack((x, y), axis=-1)  # First column is x, second is y\n    \n        self.model = ps.SINDy()\n        self.model.fit(X, t=t, feature_names=[\"x\", \"y\"])\n        rng = np.random.default_rng(42)\n        self.inputs = rng.random((10, 2))",
+        "name": "inference.InferenceBM.peakmem_a_predict",
+        "param_names": [],
+        "params": [],
+        "type": "peakmemory",
+        "unit": "bytes",
+        "version": "83cc2cba7cc55a20675aba3d6c9b9d70b24602718e038627ed6ad2a81e91459c"
+    },
+    "inference.InferenceBM.peakmem_many_predict": {
+        "code": "class InferenceBM:\n    def peakmem_many_predict(self):\n        self.model.predict(self.inputs)\n\n    def setup(self):\n        t = np.linspace(0, 1, 100)\n        x = 3 * np.exp(-2 * t)\n        y = 0.5 * np.exp(t)\n        X = np.stack((x, y), axis=-1)  # First column is x, second is y\n    \n        self.model = ps.SINDy()\n        self.model.fit(X, t=t, feature_names=[\"x\", \"y\"])\n        rng = np.random.default_rng(42)\n        self.inputs = rng.random((10, 2))",
+        "name": "inference.InferenceBM.peakmem_many_predict",
+        "param_names": [],
+        "params": [],
+        "type": "peakmemory",
+        "unit": "bytes",
+        "version": "35e36b8093f14e16588794940bc31c48d3d3551f778b5909e1f13aa9ff5d2069"
+    },
+    "inference.InferenceBM.time_a_predict": {
+        "code": "class InferenceBM:\n    def time_a_predict(self):\n        self.model.predict(self.inputs[:1])\n\n    def setup(self):\n        t = np.linspace(0, 1, 100)\n        x = 3 * np.exp(-2 * t)\n        y = 0.5 * np.exp(t)\n        X = np.stack((x, y), axis=-1)  # First column is x, second is y\n    \n        self.model = ps.SINDy()\n        self.model.fit(X, t=t, feature_names=[\"x\", \"y\"])\n        rng = np.random.default_rng(42)\n        self.inputs = rng.random((10, 2))",
+        "min_run_count": 2,
+        "name": "inference.InferenceBM.time_a_predict",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "c34c5b40c75b18002df6fe331c6ceec10e5160b097e4dececf0dcdfe2b67764a",
+        "warmup_time": -1
+    },
+    "inference.InferenceBM.time_many_predict": {
+        "code": "class InferenceBM:\n    def time_many_predict(self):\n        self.model.predict(self.inputs)\n\n    def setup(self):\n        t = np.linspace(0, 1, 100)\n        x = 3 * np.exp(-2 * t)\n        y = 0.5 * np.exp(t)\n        X = np.stack((x, y), axis=-1)  # First column is x, second is y\n    \n        self.model = ps.SINDy()\n        self.model.fit(X, t=t, feature_names=[\"x\", \"y\"])\n        rng = np.random.default_rng(42)\n        self.inputs = rng.random((10, 2))",
+        "min_run_count": 2,
+        "name": "inference.InferenceBM.time_many_predict",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "84d2f6e0577bbafef45e7231d18ecd30e1b87671c353954bed8feda1f5ff89de",
+        "warmup_time": -1
+    },
+    "version": 2
+}

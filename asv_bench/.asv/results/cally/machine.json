@@ -1,0 +1,9 @@
+{
+    "arch": "x86_64",
+    "cpu": "Intel(R) Core(TM) i7-7500U CPU @ 2.70GHz",
+    "machine": "cally",
+    "num_cpu": "4",
+    "os": "Linux 6.8.0-87-generic",
+    "ram": "12126116",
+    "version": 1
+}

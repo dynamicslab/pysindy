@@ -92,10 +92,10 @@ class LMSettings:
     """
 
     max_iter: int = 501
-    atol_gradnorm: float = 1e-8
+    atol_gradnorm: float = 1e-6
     atol_gn_decrement: float = 1e-12
     min_improvement: float = 0.05
-    search_increase_ratio: float = 1.5
+    search_increase_ratio: float = 2.0
     max_search_iterations: int = 20
     min_step_damping: float = 1e-12
     max_step_damping: float = 100.0
@@ -440,17 +440,17 @@ def LevenbergMarquardt(
         step_result, succeeded = _LevenbergMarquardtUpdate(
             params, step_damping, problem, regularizer, opt_settings
         )
-        params = step_result.params
-        multiplier = opt_settings.step_adapt_multiplier
-        if step_result.improvement_ratio <= 0.2:
-            step_damping = multiplier * step_damping
-        if step_result.improvement_ratio >= 0.8:
-            step_damping = step_damping / multiplier
 
+        step_damping = (
+            jnp.maximum(1 / 3, 1 - (2 * step_result.improvement_ratio - 1) ** 3)
+            * step_result.step_damping
+        )
         if not succeeded:
-            warn("Search Failed! Final Iteration Results:")
+            warn(f"Search Failed on iteration {i}! Final Iteration Results:")
             conv_history.finish(convergence_tag="failed-line-search")
             return params, conv_history
+
+        params = step_result.params
         model_decrease = (
             conv_history.loss_vals[-1] - step_result.loss
         ) / step_result.improvement_ratio

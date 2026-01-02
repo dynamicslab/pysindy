@@ -19,6 +19,9 @@ from pysindy.sssindy.expressions import JaxPolyLib
 from pysindy.sssindy.expressions import JointObjective
 from pysindy.sssindy.interpolants import RKHSInterpolant
 from pysindy.sssindy.interpolants.kernels import get_gaussianRBF
+from pysindy.sssindy.opt import L2CholeskyLMRegularizer
+from pysindy.sssindy.opt import LMSettings
+from pysindy.sssindy.opt import LMSolver
 
 
 class SSSINDyLorenzSparsity:
@@ -26,10 +29,17 @@ class SSSINDyLorenzSparsity:
     See that we do decently on the Lorenz system
     """
 
+    timeout = 360
+
     def setup(self):
         self.data = gen_lorenz(seed=124, dt=0.02, t_end=5)
         self.sss_model = SSSINDy(
-            JointObjective(50, 1, JaxPolyLib(), RKHSInterpolant(get_gaussianRBF(0.05)))
+            JointObjective(50, 1, JaxPolyLib(), RKHSInterpolant(get_gaussianRBF(0.05))),
+            LMSolver(
+                optimizer_settings=LMSettings(
+                    callback_every=5, search_increase_ratio=2.0
+                )
+            ),
         )
 
     def time_experiment(self):
@@ -135,7 +145,7 @@ def gen_lorenz(
     x0_train = ic_stdev * rng.standard_normal((n_trajectories, n_coord)) + x0_center
     for x0 in x0_train:
         x_train.append(Lorenz().make_trajectory(nt, dt, x0))
-    t_train = np.arange(0, t_end, dt, dtype=np.float_)
+    t_train = np.linspace(0, t_end, nt, dtype=np.float64)
     x_dot_train = [np.vstack([Lorenz().rhs(xij, 0) for xij in xi]) for xi in x_train]
     return ProbData(
         dt,
@@ -256,3 +266,9 @@ def coeff_metrics(coefficients, coeff_true):
     )
     metrics["main"] = metrics["coeff_f1"]
     return metrics
+
+
+if __name__ == "__main__":
+    bm = SSSINDyLorenzSparsity()
+    bm.setup()
+    bm.time_experiment()

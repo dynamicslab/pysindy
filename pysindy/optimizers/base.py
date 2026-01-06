@@ -12,7 +12,7 @@ import numpy as np
 from scipy import sparse
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
-from sklearn.linear_model._base import _preprocess_data
+from sklearn.utils import check_array
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import check_X_y
@@ -32,11 +32,47 @@ def _rescale_data(X, y, sample_weight):
     sample_weight = np.asarray(sample_weight)
     if sample_weight.ndim == 0:
         sample_weight = np.full(n_samples, sample_weight, dtype=sample_weight.dtype)
-    sample_weight = np.sqrt(sample_weight)
-    sw_matrix = sparse.dia_matrix((sample_weight, 0), shape=(n_samples, n_samples))
+    sample_weight_sr = np.sqrt(sample_weight)
+    sw_matrix = sparse.dia_matrix((sample_weight_sr, 0), shape=(n_samples, n_samples))
     X = safe_sparse_dot(sw_matrix, X)
     y = safe_sparse_dot(sw_matrix, y)
-    return X, y
+    return X, y, sample_weight_sr
+
+
+def _preprocess_data(
+    X,
+    y,
+    *,
+    fit_intercept: bool = False,
+    copy=True,
+    copy_y=True,
+    sample_weight=None,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, None, Optional[np.ndarray]]:
+    """A clone/variant of sklearn's _preprocess_data, but that's private
+
+    It makes assumptions that are always true for pysindy but may not be for
+    generic sklearn estimators.
+
+    In future, will harness power of sklearn's array API compatibility layer
+    to determine device, array namespace (e.g. jax).
+    """
+    X = check_array(X, copy=copy, accept_sparse=["csr", "csc"])
+    y = check_array(y, dtype=X.dtype, copy=copy_y, ensure_2d=False)
+
+    n_samples, n_features = X.shape
+
+    dtype_ = X.dtype
+    X_offset = np.zeros(n_features, dtype=X.dtype)
+    if y.ndim == 1:
+        y_offset = np.asarray(0.0, dtype=dtype_)
+    else:
+        y_offset = np.zeros(y.shape[1], dtype=dtype_)
+    if sample_weight is not None:
+        X, y, sample_weight_sr = _rescale_data(X, y, sample_weight)
+    else:
+        sample_weight_sr = None
+
+    return X, y, X_offset, y_offset, None, sample_weight_sr
 
 
 class _BaseOptimizer(BaseEstimator, abc.ABC):
@@ -173,16 +209,13 @@ class BaseOptimizer(LinearRegression, _BaseOptimizer):
         x_, y = drop_nan_samples(x_, y)
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
-        x, y, X_offset, y_offset, X_scale = _preprocess_data(
+        x, y, X_offset, y_offset, _, sample_weight_sqrt = _preprocess_data(
             x_,
             y,
             fit_intercept=False,
             copy=self.copy_X,
             sample_weight=sample_weight,
         )
-
-        if sample_weight is not None:
-            x, y = _rescale_data(x, y, sample_weight)
 
         self.iters = 0
 
@@ -225,7 +258,8 @@ class BaseOptimizer(LinearRegression, _BaseOptimizer):
             for i in range(np.shape(self.history_)[0]):
                 self.history_[i] = self.history_[i] / feat_norms
 
-        self._set_intercept(X_offset, y_offset, X_scale)
+        # Intercept is the responsibility of feature libraries
+        self.intercept_ = 0.0
         return self
 
     def _unbias(self, x: np.ndarray, y: np.ndarray):

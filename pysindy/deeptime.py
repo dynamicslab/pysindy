@@ -84,8 +84,8 @@ class SINDyEstimator(SINDy):
         """
         super(SINDyEstimator, self).fit(x, **kwargs)
         self._model = SINDyModel(
-            feature_library=self.model.steps[0][1],
-            optimizer=self.model.steps[-1][1],
+            feature_library=self.feature_library,
+            optimizer=self.optimizer,
             n_control_features_=self.n_control_features_,
         )
         return self

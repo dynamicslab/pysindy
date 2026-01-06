@@ -30,6 +30,14 @@ try:
     from .sbr import SBR
 except (ImportError, NameError):
     pass
+try:
+    from .torch_solver import TorchOptimizer
+except Exception:
+    pass
+try:
+    from .jax_solver import JaxOptimizer
+except Exception:
+    pass
 
 
 __all__ = [
@@ -46,4 +54,6 @@ __all__ = [
     "SINDyPI",
     "MIOSR",
     "SBR",
+    "TorchOptimizer",
+    "JaxOptimizer",
 ]

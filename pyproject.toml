@@ -50,7 +50,8 @@ dev = [
     "jupytext",
     "pre-commit",
     "hypothesis",
-    "jupyter-contrib-nbextensions"
+    "jupyter-contrib-nbextensions",
+    "torch",
 ]
 docs = [
     "ipython",

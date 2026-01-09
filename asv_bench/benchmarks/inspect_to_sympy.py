@@ -31,11 +31,14 @@ import ast
 import inspect
 import textwrap
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Tuple
 
+import numpy as np
 import sympy as sp
+from dysts.base import BaseDyn
 
 
 def _is_name(node: ast.AST, name: str) -> bool:
@@ -181,10 +184,6 @@ class _ASTToSympy(ast.NodeVisitor):
             idx_node = node.slice
             if isinstance(idx_node, ast.Constant):
                 idx = idx_node.value
-            elif isinstance(idx_node, ast.Index) and isinstance(
-                idx_node.value, ast.Constant
-            ):
-                idx = idx_node.value.value
             else:
                 raise NotImplementedError(
                     "Only constant indices into state vector supported"
@@ -200,16 +199,76 @@ class _ASTToSympy(ast.NodeVisitor):
         raise NotImplementedError("Unsupported subscript pattern")
 
 
-def object_to_sympy_rhs(
+def _numeric_consistency_check(
+    dysts_flow: BaseDyn,
+    rhsfunc: Callable,
+    arg_names: List[str],
+    state_names: List[str],
+    vector_mode: bool,
+    sys_dim: int,
+    lambda_rhs: sp.Lambda,
+) -> None:
+    """Compare the original dysts rhs function to the SymPy-derived lambda.
+
+    Raises a RuntimeError if they disagree.
+    """
+    # default to nonnegative support (e.g. Lotka volterra)
+    random_state = np.random.standard_exponential(size=sys_dim)
+
+    # Construct call arguments for the original function (bound method).
+    call_args = []
+    for name in arg_names:
+        if name == "self":
+            continue
+        if name in state_names and not vector_mode:
+            idx = state_names.index(name)
+            call_args.append(random_state[idx])
+        elif name in state_names and vector_mode:
+            call_args.append(np.asarray(random_state, dtype=float))
+        elif name == "t":
+            call_args.append(float(np.random.standard_normal(size=())))
+        else:
+            call_args.append(dysts_flow.params[name])
+
+    dysts_val = rhsfunc(*call_args)
+    orig_arr = np.asarray(dysts_val, dtype=float).ravel()
+
+    sym_val = lambda_rhs(*tuple(random_state))
+    sym_arr = np.asarray(sym_val, dtype=float).ravel()
+
+    if orig_arr.shape != sym_arr.shape:
+        raise RuntimeError(
+            f"_rhs shape {orig_arr.shape} != sympy shape {sym_arr.shape}"
+        )
+
+    if not np.allclose(orig_arr, sym_arr, rtol=1e-6, atol=1e-9):
+        raise RuntimeError("Numeric mismatch between original and sympy conversion.")
+
+
+def dynsys_to_sympy(
     obj: Any, func_name: str = "_rhs"
 ) -> Tuple[List[sp.Symbol], List[sp.Expr], sp.Lambda]:
     """Inspect ``obj`` for a method named ``func_name`` and return a SymPy
     representation of its RHS.
 
-    Returns a tuple ``(state_symbols, exprs, lambda_rhs)`` where ``state_symbols``
+    Returns:
+        a tuple ``(state_symbols, exprs, lambda_rhs)`` where ``state_symbols``
     is a list of SymPy symbols for the state vector, ``exprs`` is a list of
     SymPy expressions for the RHS components, and ``lambda_rhs`` is a SymPy
     Lambda mapping the state symbols to the RHS vector.
+
+    Example:
+
+    >>> from dysts.flows import Lorenz
+    >>> from inspect_to_sympy import dynsys_to_sympy
+    >>> lor = Lorenz()
+    >>> symbols, exprs, lambda_rhs = dynsys_to_sympy(lor)
+    >>> print(lor._rhs(1, 2, 3, t=0.0, **lor.params))
+    (10, 23, -6.0009999999999994)
+
+    >>> print(tuple(lambda_rhs(1, 2, 3)))
+    (10, 23, -6.00100000000000)
+
     """
 
     if not hasattr(obj, func_name):
@@ -241,7 +300,7 @@ def object_to_sympy_rhs(
         start_idx = 1
 
     vector_mode = False
-    state_arg_names: List[str]
+    state_args: List[str]
     t_idx = None
     if "t" in arg_names:
         t_idx = arg_names.index("t")
@@ -251,33 +310,33 @@ def object_to_sympy_rhs(
         if t_idx is not None:
             potential = arg_names[start_idx:t_idx]
             if len(potential) >= n_state:
-                state_arg_names = potential[:n_state]
+                state_args = potential[:n_state]
             else:
-                state_arg_names = [arg_names[start_idx]]
+                state_args = [arg_names[start_idx]]
                 vector_mode = True
         else:
             potential = arg_names[start_idx:]
             if len(potential) >= n_state:
-                state_arg_names = potential[:n_state]
+                state_args = potential[:n_state]
             else:
-                state_arg_names = [arg_names[start_idx]]
+                state_args = [arg_names[start_idx]]
                 vector_mode = True
     else:
         if t_idx is not None:
-            state_arg_names = arg_names[start_idx:t_idx]
-            if len(state_arg_names) == 0:
-                state_arg_names = [arg_names[start_idx]]
+            state_args = arg_names[start_idx:t_idx]
+            if len(state_args) == 0:
+                state_args = [arg_names[start_idx]]
                 vector_mode = True
-            elif len(state_arg_names) == 1:
+            elif len(state_args) == 1:
                 # single name could be vector or scalar; assume vector-mode
                 vector_mode = True
         else:
-            state_arg_names = [arg_names[start_idx]]
+            state_args = [arg_names[start_idx]]
             vector_mode = True
 
     # If vector_mode, inspect AST for subscript/index usage or tuple unpacking
     if vector_mode:
-        state_name = state_arg_names[0]
+        state_name = state_args[0]
         max_index = -1
         unpack_size = None
         for node in ast.walk(fndef):
@@ -290,13 +349,6 @@ def object_to_sympy_rhs(
                 if isinstance(sl, ast.Constant) and isinstance(sl.value, int):
                     if sl.value > max_index:
                         max_index = sl.value
-                elif (
-                    isinstance(sl, ast.Index)
-                    and isinstance(sl.value, ast.Constant)
-                    and isinstance(sl.value.value, int)
-                ):
-                    if sl.value.value > max_index:
-                        max_index = sl.value.value
             if isinstance(node, ast.Assign):
                 if isinstance(node.value, ast.Name) and node.value.id == state_name:
                     targets = node.targets
@@ -316,12 +368,12 @@ def object_to_sympy_rhs(
         primary_state_name = state_name
     else:
         # individual state args -> use their arg names as symbol names
-        state_symbols = [sp.Symbol(n) for n in state_arg_names]
-        primary_state_name = state_arg_names[0] if len(state_arg_names) > 0 else "x"
+        state_symbols = [sp.Symbol(n) for n in state_args]
+        primary_state_name = state_args[0] if len(state_args) > 0 else "x"
 
     # Build locals mapping from known state arg names and parameters
     locals_map: Dict[str, Any] = {}
-    for i, name in enumerate(state_arg_names):
+    for i, name in enumerate(state_args):
         if i < len(state_symbols):
             locals_map[name] = state_symbols[i]
 
@@ -364,7 +416,6 @@ def object_to_sympy_rhs(
             return_expr = stmt.value
 
     if return_expr is None:
-        raise ValueError("No return statement found in function")
         # maybe last statement is an Expr with list construction;
         # try to find a Return node deep
         for node in ast.walk(fndef):
@@ -379,7 +430,6 @@ def object_to_sympy_rhs(
     converter = _ASTToSympy(primary_state_name, state_symbols, locals_map)
     rhs_val = converter.visit(return_expr)
 
-    # Normalize rhs_val to a list/tuple of expressions
     if isinstance(rhs_val, (list, tuple)):
         exprs = list(rhs_val)
     else:
@@ -388,7 +438,18 @@ def object_to_sympy_rhs(
 
     lambda_rhs = sp.Lambda(tuple(state_symbols), sp.Matrix(exprs))
 
+    # Run numeric consistency guard (raises on mismatch)
+    _numeric_consistency_check(
+        obj,
+        func,
+        arg_names,
+        state_args,
+        vector_mode,
+        len(state_symbols),
+        lambda_rhs,
+    )
+
     return state_symbols, exprs, lambda_rhs
 
 
-__all__ = ["object_to_sympy_rhs"]
+__all__ = ["dynsys_to_sympy"]

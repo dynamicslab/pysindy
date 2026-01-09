@@ -7,12 +7,12 @@ except Exception:  # pragma: no cover - skip if dysts not installed
         "dysts not available; skipping inspect_to_sympy tests", allow_module_level=True
     )
 
-from asv_bench.benchmarks.inspect_to_sympy import object_to_sympy_rhs
+from asv_bench.benchmarks.inspect_to_sympy import dynsys_to_sympy
 
 
 def test_lorenz_to_sympy():
     lor = Lorenz()
-    symbols, exprs, lambda_rhs = object_to_sympy_rhs(lor, func_name="_rhs")
+    symbols, exprs, lambda_rhs = dynsys_to_sympy(lor, func_name="_rhs")
     assert len(symbols) == lor.dimension
     # evaluate lambda with simple numeric values
     vals = tuple(float(i + 1) for i in range(lor.dimension))

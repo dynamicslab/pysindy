@@ -33,9 +33,20 @@ dependencies = [
     "derivative>=0.6.2",
     "scipy",
     "typing_extensions",
+    "cvxpy>=1.5",
+    "scs>=2.1, !=2.1.4",
+    "jax>=0.6.2",
+    "equinox",
+    "sympy",
+    "sympy2jax",
+    "tqdm",
+    "jaxopt",
+    "numpyro",
+    "gurobipy>=9.5.1,!=10.0.0"
 ]
 
 [project.optional-dependencies]
+bench = ["dysts"]
 dev = [
     "asv",
     "matplotlib",
@@ -43,6 +54,7 @@ dev = [
     "pytest>=6.2.4, <8.0.0",
     "black",
     "build",
+    "dysts",
     "pytest-cov",
     "pytest-lazy-fixture",
     "flake8-builtins-unleashed",
@@ -63,17 +75,7 @@ docs = [
     "sphinxcontrib-apidoc",
     "matplotlib"
 ]
-miosr = [
-    "gurobipy>=9.5.1,!=10.0.0"
-]
-cvxpy = [
-    "cvxpy>=1.5",
-    "scs>=2.1, !=2.1.4"
-]
-sbr = [
-    "numpyro",
-    "jax"
-]
+
 
 [tool.black]
 line-length = 88

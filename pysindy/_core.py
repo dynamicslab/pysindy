@@ -384,9 +384,12 @@ class SINDy(_BaseSINDy):
         ]
         x_dot = concat_sample_axis(x_dot)
         self.model = Pipeline(steps)
-        self.model.fit(x, x_dot, sample_weight=sample_weight)
+        if sample_weight is None:
+            self.model.fit(x, x_dot)
+        else:
+            sw = SampleConcatter().transform_sample_weight(x, sample_weight)
+            self.model.fit(x, x_dot, model__sample_weight=sw)
         self._fit_shape()
-
         return self
 
     def predict(self, x, u=None):

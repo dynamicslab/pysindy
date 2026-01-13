@@ -114,7 +114,7 @@ print("Model score: %f" % model.score(x_test, t=dt))
 x_dot_test_predicted = model.predict(x_test)
 
 # Compute derivatives with a finite difference method, for comparison
-x_dot_test_computed = model.differentiate(x_test, t=dt)
+x_dot_test_computed = model.differentiation_method(x_test, t=dt)
 
 fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
 for i in range(x_test.shape[1]):
@@ -148,30 +148,6 @@ ax2.plot(x_test_sim[:, 0], x_test_sim[:, 1], x_test_sim[:, 2], "r--")
 ax2.set(xlabel="$x_0$", ylabel="$x_1$", zlabel="$x_2$", title="model simulation")
 
 fig.show()
-
-# %% [markdown]
-# ## Discrete time dynamical system (map)
-
-# %%
-
-
-def f(x):
-    return 3.6 * x * (1 - x)
-
-
-if __name__ != "testing":
-    n_steps = 1000
-else:
-    n_steps = 10
-eps = 0.001  # Noise level
-x_train_map = np.zeros((n_steps))
-x_train_map[0] = 0.5
-for i in range(1, n_steps):
-    x_train_map[i] = f(x_train_map[i - 1]) + eps * np.random.randn()
-model = ps.SINDy(discrete_time=True)
-model.fit(x_train_map, t=1)
-
-model.print()
 
 # %% [markdown]
 # ## Optimization options
@@ -278,7 +254,7 @@ model.print()
 # It can be seen that the x1 term in the second equation correctly gets truncated with these thresholds.
 #
 # ### ConstrainedSR3
-# We can impose linear equality and inequality constraints on the coefficients in the `SINDy` model using the `ConstrainedSR3` class. Below we constrain the x0 coefficient in the second equation to be exactly 28 and the x0 and x1 coefficients in the first equations to be negatives of one another. See this [notebook](https://github.com/dynamicslab/pysindy/blob/master/examples/7_plasma_examples.ipynb) for examples.
+# We can impose linear equality and inequality constraints on the coefficients in the `SINDy` model using the `ConstrainedSR3` class. Below we constrain the x0 coefficient in the second equation to be exactly 28 and the x0 and x1 coefficients in the first equations to be negatives of one another. See this [notebook](https://github.com/dynamicslab/pysindy/blob/main/examples/7_plasma_examples.ipynb) for examples.
 
 # %%
 # Figure out how many library features there will be
@@ -445,7 +421,7 @@ if run_miosr:
 # See the [gurobi documentation](https://www.gurobi.com/documentation/9.5/refman/mip_logging.html) for more information on how to read the log output and this [tutorial](https://www.gurobi.com/resource/mip-basics/) on the basics of mixed-integer optimization.
 #
 # ### SSR (greedy algorithm)
-# Stepwise sparse regression (SSR) is a greedy algorithm which solves the problem (defaults to ridge regression) by iteratively truncating the smallest coefficient during the optimization. There are many ways one can decide to truncate terms. We implement two popular ways, truncating the smallest coefficient at each iteration, or chopping each coefficient, computing N - 1 models, and then choosing the model with the lowest residual error. See this [notebook](https://github.com/dynamicslab/pysindy/blob/master/examples/11_SSR_FROLS.ipynb) for examples.
+# Stepwise sparse regression (SSR) is a greedy algorithm which solves the problem (defaults to ridge regression) by iteratively truncating the smallest coefficient during the optimization. There are many ways one can decide to truncate terms. We implement two popular ways, truncating the smallest coefficient at each iteration, or chopping each coefficient, computing N - 1 models, and then choosing the model with the lowest residual error. See this [notebook](https://github.com/dynamicslab/pysindy/blob/main/examples/11_SSR_FROLS.ipynb) for examples.
 
 # %%
 ssr_optimizer = ps.SSR(alpha=0.05)
@@ -474,7 +450,7 @@ model.print()
 
 # %% [markdown]
 # ### FROLS (greedy algorithm)
-# Forward Regression Orthogonal Least Squares (FROLS) is another greedy algorithm which solves the least-squares regression problem (actually default is to solve ridge regression) with $L_0$ norm by iteratively selecting the most correlated function in the library. At each step, the candidate functions are orthogonalized with respect to the already-selected functions. The selection criteria is the Error Reduction Ratio, i.e. the normalized increase in the explained output variance due to the addition of a given function to the basis. See this [notebook](https://github.com/dynamicslab/pysindy/blob/master/examples/11_SSR_FROLS.ipynb) for examples.
+# Forward Regression Orthogonal Least Squares (FROLS) is another greedy algorithm which solves the least-squares regression problem (actually default is to solve ridge regression) with $L_0$ norm by iteratively selecting the most correlated function in the library. At each step, the candidate functions are orthogonalized with respect to the already-selected functions. The selection criteria is the Error Reduction Ratio, i.e. the normalized increase in the explained output variance due to the addition of a given function to the basis. See this [notebook](https://github.com/dynamicslab/pysindy/blob/main/examples/11_SSR_FROLS.ipynb) for examples.
 
 # %%
 optimizer = ps.FROLS(alpha=0.05)
@@ -504,7 +480,7 @@ model.print()
 
 # %% [markdown]
 # ### Ensemble methods
-# One way to improve SINDy performance is to generate many models by sub-sampling the time series (ensemble) or sub-sampling the candidate library $\mathbf{\Theta}$ (library ensemble). The resulting models can then be synthesized by taking the average (bagging), taking the median (this is the recommended because it works well in practice), or some other post-processing. See this [notebook](https://github.com/dynamicslab/pysindy/blob/master/examples/13_ensembling.ipynb) for more examples.
+# One way to improve SINDy performance is to generate many models by sub-sampling the time series (ensemble) or sub-sampling the candidate library $\mathbf{\Theta}$ (library ensemble). The resulting models can then be synthesized by taking the average (bagging), taking the median (this is the recommended because it works well in practice), or some other post-processing. See this [notebook](https://github.com/dynamicslab/pysindy/blob/main/examples/13_ensembling.ipynb) for more examples.
 
 # %%
 # Default is to sample the entire time series with replacement, generating 10 models on roughly
@@ -642,7 +618,7 @@ model.print()
 
 # %% [markdown]
 # ### More differentiation options
-# PySINDy is compatible with any of the differentiation methods from the [derivative](https://pypi.org/project/derivative/) package. They are explored in detail in [this notebook](https://github.com/dynamicslab/pysindy/blob/master/examples/5_differentiation.ipynb).
+# PySINDy is compatible with any of the differentiation methods from the [derivative](https://pypi.org/project/derivative/) package. They are explored in detail in [this notebook](https://github.com/dynamicslab/pysindy/blob/main/examples/5_differentiation.ipynb).
 #
 # PySINDy defines a `SINDyDerivative` class for interfacing with `derivative` methods. To use a differentiation method provided by `derivative`, simply pass into `SINDyDerivative` the keyword arguments you would give the [dxdt](https://derivative.readthedocs.io/en/latest/api.html#derivative.differentiation.dxdt) method.
 
@@ -782,7 +758,7 @@ print("Feature names:\n", model.get_feature_names())
 x_dot_test_predicted = model.predict(x_test)
 
 # Compute derivatives with a finite difference method, for comparison
-x_dot_test_computed = model.differentiate(x_test, t=dt)
+x_dot_test_computed = model.differentiation_method(x_test, t=dt)
 
 fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
 for i in range(x_test.shape[1]):
@@ -905,7 +881,7 @@ print("Model score: %f" % model.score(x_test, u=u_test, t=dt))
 x_dot_test_predicted = model.predict(x_test, u=u_test)
 
 # Compute derivatives with a finite difference method, for comparison
-x_dot_test_computed = model.differentiate(x_test, t=dt)
+x_dot_test_computed = model.differentiation_method(x_test, t=dt)
 
 fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
 for i in range(x_test.shape[1]):
@@ -971,7 +947,7 @@ fig.show()
 #
 # In order to deal with this, we need a library $\Theta(\mathbf{x}, \dot{\mathbf{x}})$. SINDy parallel implicit (SINDy-PI) is geared to solve these problems. It solves the optimization problem,
 # $$argmin_\mathbf{\Xi} (\|\Theta(\mathbf{X}, \dot{\mathbf{X}}) - \Theta(\mathbf{X}, \dot{\mathbf{X}})\mathbf{\Xi}\| + \lambda \|\mathbf{\Xi}\|_1)$$
-# such that diag$(\mathbf{\Xi}) = 0$. So for every candidate library term it generates a different model. With N state variables, we need to choose N of the equations to solve for the system evolution. See the [SINDy-PI notebook](https://github.com/dynamicslab/pysindy/blob/master/examples/9_sindypi_with_sympy.ipynb) for more details.
+# such that diag$(\mathbf{\Xi}) = 0$. So for every candidate library term it generates a different model. With N state variables, we need to choose N of the equations to solve for the system evolution. See the [SINDy-PI notebook](https://github.com/dynamicslab/pysindy/blob/main/examples/9_sindypi_with_sympy.ipynb) for more details.
 #
 # Here we illustrate successful identification of the 1D Michelson-Menten enzyme model
 # $$\dot{x} = 0.6 - \frac{1.5 x}{0.3 + x}.$$
@@ -1052,62 +1028,6 @@ if run_cvxpy:
     )
     model.fit(x_train, t=t)
     model.print()
-
-# %% [markdown]
-# ## SINDy with control parameters (SINDyCP)
-# The control input in PySINDy can be used to discover equations parameterized by control parameters in conjunction with the `ParameterizedLibrary`. We demonstrate on the logistic map
-# $$ x_{n+1} = r x_n(1-x_n)$$
-# which depends on a single parameter $r$.
-
-# %%
-# Iterate the map and drop the initial 500-step transient. The behavior is chaotic for r>3.6.
-if __name__ != "testing":
-    num = 1000
-    N = 1000
-    N_drop = 500
-else:
-    num = 20
-    N = 20
-    N_drop = 10
-r0 = 3.5
-rs = r0 + np.arange(num) / num * (4 - r0)
-xss = []
-for r in rs:
-    xs = []
-    x = 0.5
-    for n in range(N + N_drop):
-        if n >= N_drop:
-            xs = xs + [x]
-        x = r * x * (1 - x)
-    xss = xss + [xs]
-
-plt.figure(figsize=(4, 4), dpi=100)
-for ind in range(num):
-    plt.plot(np.ones(N) * rs[ind], xss[ind], ",", alpha=0.1, c="black", rasterized=True)
-plt.xlabel("$r$")
-plt.ylabel("$x_n$")
-plt.show()
-
-# %% [markdown]
-# We construct a `parameter_library` and a `feature_library` to act on the input data `x` and the control input `u` independently. The `ParameterizedLibrary` is composed of products of the two libraries output features. This enables fine control over the library features, which is especially useful in the case of PDEs like those arising in pattern formation modeling. See this [notebook](https://github.com/dynamicslab/pysindy/blob/master/examples/17_parameterized_pattern_formation/17_parameterized_pattern_formation.ipynb) for examples.
-
-# %%
-# use four parameter values as training data
-rs_train = [3.6, 3.7, 3.8, 3.9]
-xs_train = [np.array(xss[np.where(np.array(rs) == r)[0][0]]) for r in rs_train]
-
-feature_lib = ps.PolynomialLibrary(degree=3, include_bias=True)
-parameter_lib = ps.PolynomialLibrary(degree=1, include_bias=True)
-lib = ps.ParameterizedLibrary(
-    feature_library=feature_lib,
-    parameter_library=parameter_lib,
-    num_features=1,
-    num_parameters=1,
-)
-opt = ps.STLSQ(threshold=1e-1, normalize_columns=False)
-model = ps.SINDy(feature_library=lib, optimizer=opt, discrete_time=True)
-model.fit(xs_train, u=rs_train, t=1, feature_names=["x", "r"])
-model.print()
 
 # %% [markdown]
 # ## PDEFIND Feature Overview

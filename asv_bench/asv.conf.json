@@ -1,0 +1,15 @@
+{
+    "version": 1,
+    "branches": ["main"],
+    "project": "pysindy",
+    "project_url": "https://pysindy.readthedocs.io/",
+    "repo": "..",
+    "environment_type": "virtualenv",
+    "env_dir": ".asv/env",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html",
+    "show_commit_url": "https://github.com/$OWNER/$REPO/commit/",
+    "build_command": [
+        "python -m build --outdir {build_cache_dir} {build_dir}"
+    ]
+}

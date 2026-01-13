@@ -1,13 +1,11 @@
 name: Update Test Branch
 
-# This workflow keeps main branch up to date with
-# the master branch. It exists so that people can
-# use the main branch as a reference for actions
-# and environment dependencies.
-
+# This workflow keeps master branch up to date with
+# the main branch. It exists so that people who depended on master
+# can continue receiving updates until it is eventually
 on:
   push:
-    branches: [master]
+    branches: [main]
 
 permissions:
   contents: write
@@ -26,8 +24,8 @@ jobs:
 
       - name: Update Main Branch
         run: |
-          git checkout master
-          git fetch origin
           git checkout main
-          git reset --hard origin/master
-          git push -f origin main
+          git fetch origin
+          git checkout master
+          git reset --hard origin/main
+          git push -f origin master

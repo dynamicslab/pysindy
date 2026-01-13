@@ -37,6 +37,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "asv",
     "matplotlib",
     "seaborn",
     "pytest>=6.2.4, <8.0.0",
@@ -60,6 +61,7 @@ docs = [
     "sphinx==8.2.3",
     "pyyaml",
     "sphinxcontrib-apidoc",
+    "matplotlib"
 ]
 miosr = [
     "gurobipy>=9.5.1,!=10.0.0"

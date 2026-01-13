@@ -8,6 +8,7 @@ from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
 from sklearn.utils.validation import check_is_fitted
 
+from pysindy import DiscreteSINDy
 from pysindy import SINDy
 from pysindy.optimizers import SR3
 from pysindy.optimizers import STLSQ
@@ -257,12 +258,12 @@ def test_score_multiple_trajectories(data_multiple_trajectories):
 def test_fit_discrete_time(data):
     x, u = data
 
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, u=u, t=1)
     check_is_fitted(model)
 
-    model = SINDy(discrete_time=True)
-    model.fit(x[:-1], u=u[:-1], x_dot=x[1:], t=1)
+    model = DiscreteSINDy()
+    model.fit(x[:-1], u=u[:-1], x_next=x[1:], t=1)
     check_is_fitted(model)
 
 
@@ -275,7 +276,7 @@ def test_fit_discrete_time(data):
 )
 def test_simulate_discrete_time(data):
     x, u = data
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, u=u, t=1)
     n_steps = x.shape[0]
     x1 = model.simulate(x[0], t=n_steps, u=u)
@@ -294,7 +295,7 @@ def test_simulate_discrete_time(data):
 )
 def test_predict_discrete_time(data):
     x, u = data
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     print(x, u)
     model.fit(x, u=u, t=1)
     assert len(model.predict(x, u=u)) == len(x)
@@ -309,22 +310,22 @@ def test_predict_discrete_time(data):
 )
 def test_score_discrete_time(data):
     x, u = data
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, u=u, t=1)
     assert model.score(x, u=u, t=1) > 0.75
-    assert model.score(x, u=u, x_dot=x, t=1) < 1
+    assert model.score(x, u=u, x_next=x, t=1) < 1
 
 
 def test_fit_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories_c,
 ):
     x, u = data_discrete_time_multiple_trajectories_c
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, u=u, t=1)
     check_is_fitted(model)
 
-    model = SINDy(discrete_time=True)
-    model.fit(x, u=u, x_dot=x, t=1)
+    model = DiscreteSINDy()
+    model.fit(x, u=u, x_next=x, t=1)
     check_is_fitted(model)
 
 
@@ -332,7 +333,7 @@ def test_predict_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories_c,
 ):
     x, u = data_discrete_time_multiple_trajectories_c
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, u=u, t=1)
 
     y = model.predict(x, u=u)
@@ -343,14 +344,14 @@ def test_score_discrete_time_multiple_trajectories(
     data_discrete_time_multiple_trajectories_c,
 ):
     x, u = data_discrete_time_multiple_trajectories_c
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, u=u, t=1)
 
     s = model.score(x, u=u, t=1)
     assert s > 0.75
 
     # x is not its own derivative, so we expect bad performance here
-    s = model.score(x, u=u, x_dot=x, t=1)
+    s = model.score(x, u=u, x_next=x, t=1)
     assert s < 1
 
 
@@ -362,7 +363,7 @@ def test_simulate_errors(data_lorenz_c_1d):
     with pytest.raises(ValueError):
         model.simulate(x[0], t=1, u=u)
 
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     with pytest.raises(ValueError):
         model.simulate(x[0], t=[1, 2], u=u)
 
@@ -412,7 +413,7 @@ def test_extra_u_warn(data_lorenz_c_1d):
 
 def test_extra_u_warn_discrete(data_discrete_time_c):
     x, u = data_discrete_time_c
-    model = SINDy(discrete_time=True)
+    model = DiscreteSINDy()
     model.fit(x, t=1)
 
     with pytest.warns(UserWarning):
@@ -422,4 +423,4 @@ def test_extra_u_warn_discrete(data_discrete_time_c):
         model.score(x, u=u, t=1)
 
     with pytest.warns(UserWarning):
-        model.simulate(x[0], u=u, t=10, integrator_kws={"rtol": 0.1})
+        model.simulate(x[0], u=u, t=10)

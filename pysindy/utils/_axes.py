@@ -677,7 +677,7 @@ def _tensordot_to_einsum(
     for a_ind, b_ind in zip(*axes):
         sub_b_li[b_ind] = sub_a[a_ind]
     sub_b = "".join(sub_b_li)
-    sub = f"{sub_a},{sub_b}"
+    sub = f"{sub_a},{sub_b}"  # noqa: E231
     return sub
 
 
@@ -831,7 +831,7 @@ class SampleConcatter(BaseEstimator, TransformerMixin):
     def __init__(self):
         pass
 
-    def fit(self, x_list, y_list):
+    def fit(self, x_list, y_list=None):
         return self
 
     def __sklearn_is_fitted__(self):

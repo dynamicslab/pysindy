@@ -408,11 +408,17 @@ class SINDy(_BaseSINDy):
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
         self.feature_names = feature_names
-
         x_dot = concat_sample_axis(x_dot)
-        x = self.feature_library.fit_transform(x)
-        x = SampleConcatter().fit_transform(x)
-        self.optimizer.fit(x, x_dot)
+        x_list = self.feature_library.fit_transform(x)  # list of trajectories (AxesArray)
+        sc = SampleConcatter()
+        x = sc.fit_transform(x_list)  # concatenated design matrix
+        w_concat = None
+        if sample_weight is not None:
+            w_concat = sc.transform_sample_weight(x_list, sample_weight)
+        if w_concat is None:
+            self.optimizer.fit(x, x_dot)
+        else:
+            self.optimizer.fit(x, x_dot, sample_weight=w_concat)
         self._fit_shape()
         return self
 

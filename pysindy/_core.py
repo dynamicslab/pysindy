@@ -424,7 +424,7 @@ class SINDy(_BaseSINDy):
         """Print the SINDy model equations.
 
         Parameters
-        ----------s
+        ----------
         lhs: list of strings, optional (default None)
             List of variables to print on the left-hand sides of the learned equations.
             By default :code:`self.input_features` are used.

@@ -79,15 +79,6 @@ class STLSQ(BaseOptimizer):
         History of ``coef_``. ``history_[k]`` contains the values of
         ``coef_`` at iteration k of sequentially thresholded least-squares.
 
-
-    Notes
-    -----
-    - Supports ``sample_weight`` during :meth:`fit`. Sample weights are applied
-      by rescaling rows of the regression problem (X, y) before column
-      normalization and thresholding. This allows weighted least squares
-      formulations in SINDy.
-    - When ``sample_weight`` is not provided, all samples are treated equally.
-
     Examples
     --------
     >>> import numpy as np

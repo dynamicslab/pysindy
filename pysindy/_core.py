@@ -14,7 +14,6 @@ from scipy.interpolate import interp1d
 from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
 from sklearn.utils.validation import check_is_fitted
-
 from typing_extensions import Self
 
 from .differentiation import BaseDifferentiation

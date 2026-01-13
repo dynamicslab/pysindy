@@ -11,7 +11,6 @@ import numpy as np
 from scipy.integrate import odeint
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
-from sklearn import set_config
 from sklearn.base import BaseEstimator
 from sklearn.metrics import r2_score
 from sklearn.utils.validation import check_is_fitted

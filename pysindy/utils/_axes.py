@@ -839,6 +839,9 @@ class SampleConcatter(BaseEstimator, TransformerMixin):
 
     def transform(self, x_list):
         return concat_sample_axis(x_list)
+    
+    def transform_sample_weight(self, x_list, sample_weight_list):
+        return concat_sample_weight(x_list, sample_weight_list)
 
 
 def concat_sample_axis(x_list: List[AxesArray]):
@@ -857,6 +860,48 @@ def concat_sample_axis(x_list: List[AxesArray]):
         arr = AxesArray(x.reshape((n_samples, x.shape[x.ax_coord])), new_axes)
         new_arrs.append(arr)
     return np.concatenate(new_arrs, axis=new_arrs[0].ax_sample)
+
+def concat_sample_weight(x_list, sample_weight_list):
+    """
+    Concatenate per-trajectory sample weights into a single 1D vector aligned
+    with concat_sample_axis(x_list).
+    Accepts only: list of 1D numpy arrays (one per trajectory).
+    """
+    if sample_weight_list is None:
+        return None
+
+    if not isinstance(sample_weight_list, list):
+        raise TypeError("sample_weight must be a list of numpy arrays (one per trajectory).")
+    if len(sample_weight_list) != len(x_list):
+        raise ValueError("sample_weight length must match number of trajectories.")
+
+    parts = []
+    for w, x in zip(sample_weight_list, x_list):
+        if not isinstance(w, np.ndarray):
+            raise TypeError("Each sample_weight entry must be a numpy array.")
+        if w.ndim != 1:
+            raise ValueError("Each sample_weight array must be 1D.")
+
+        # Must match concat_sample_axis's definition of n_samples
+        sample_ax_names = ("ax_spatial", "ax_time", "ax_sample")
+        sample_ax_inds = []
+        for name in sample_ax_names:
+            ax_inds = getattr(x, name, [])
+            if isinstance(ax_inds, int):
+                ax_inds = [ax_inds]
+            sample_ax_inds += ax_inds
+
+        n_samples = int(np.prod([x.shape[ax] for ax in sample_ax_inds]))
+
+        if w.shape[0] != n_samples:
+            raise ValueError(
+                f"sample_weight length {w.shape[0]} does not match "
+                f"trajectory flattened sample count {n_samples}."
+            )
+
+        parts.append(w.astype(float, copy=False))
+        
+    return np.concatenate(parts, axis=0)
 
 
 def wrap_axes(axes: dict, obj):

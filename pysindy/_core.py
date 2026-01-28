@@ -406,12 +406,11 @@ class SINDy(_BaseSINDy):
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
         self.feature_names = feature_names
+
         x_dot = concat_sample_axis(x_dot)
-        x_list = self.feature_library.fit_transform(
-            x
-        )  # list of trajectories (AxesArray)
+        x_list = self.feature_library.fit_transform(x)
         sc = SampleConcatter()
-        x = sc.fit_transform(x_list)  # concatenated design matrix
+        x = sc.fit_transform(x_list)
         w_concat = None
         if sample_weight is not None:
             w_concat = sc.transform_sample_weight(x_list, sample_weight)
@@ -494,8 +493,8 @@ class SINDy(_BaseSINDy):
             <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
             for more options.
 
-        sample_weight : list of array-like, shape (n_samples, n_input_features)
-            or (n_samples, ). Weights to give to the samples to give more importance
+        sample_weight : list of 1D array-like, shape (n_samples, ).
+            Weights to give to the samples to give more importance
             to less noisy or more informative samples.
 
         metric_kws: dict, optional

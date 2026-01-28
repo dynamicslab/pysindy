@@ -522,13 +522,13 @@ class SINDy(_BaseSINDy):
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)
 
+        x_dot, x_dot_predict, good_idx = drop_nan_samples(
+            x_dot, x_dot_predict, return_indices=True
+        )
+
         if sample_weight is not None:
-            x_dot, x_dot_predict, good_idx = drop_nan_samples(
-                x_dot, x_dot_predict, return_indices=True
-            )
-            metric_kws = {**metric_kws, "sample_weight": sample_weight[good_idx]}
-        else:
-            x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
+            sample_weight = np.concatenate([np.asarray(w) for w in sample_weight])
+            metric_kws["sample_weight"] = sample_weight[good_idx]
 
         return metric(x_dot, x_dot_predict, **metric_kws)
 
@@ -1040,13 +1040,13 @@ class DiscreteSINDy(_BaseSINDy):
         x_next = concat_sample_axis(x_next)
         x_next_predict = concat_sample_axis(x_next_predict)
 
+        x_next, x_next_predict, good_idx = drop_nan_samples(
+            x_next, x_next_predict, return_indices=True
+        )
+
         if sample_weight is not None:
-            x_next, x_next_predict, good_idx = drop_nan_samples(
-                x_next, x_next_predict, return_indices=True
-            )
-            metric_kws = {**metric_kws, "sample_weight": sample_weight[good_idx]}
-        else:
-            x_next, x_next_predict = drop_nan_samples(x_next, x_next_predict)
+            sample_weight = np.concatenate([np.asarray(w) for w in sample_weight])
+            metric_kws["sample_weight"] = sample_weight[good_idx]
 
         return metric(x_next, x_next_predict, **metric_kws)
 

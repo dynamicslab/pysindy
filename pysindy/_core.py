@@ -379,8 +379,8 @@ class SINDy(_BaseSINDy):
             Names for the input features (e.g. :code:`['x', 'y', 'z']`).
             If None, will use :code:`['x0', 'x1', ...]`.
 
-        sample_weight : list of array-like, shape (n_samples, n_input_features)
-            or (n_samples, ). Weights to give to the samples to give more importance
+        sample_weight : list of 1D array-like, shape (n_samples, ).
+            Weights to give to the samples to give more importance
             to less noisy or more informative samples.
 
         Returns

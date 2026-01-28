@@ -861,7 +861,7 @@ def concat_sample_axis(x_list: List[AxesArray]):
     return np.concatenate(new_arrs, axis=new_arrs[0].ax_sample)
 
 
-def concat_sample_weight(x_list, sample_weight_list):
+def concat_sample_weight(x_list: List[AxesArray], sample_weight_list: List[np.ndarray]):
     """
     Concatenate per-trajectory sample weights into a single 1D vector aligned
     with concat_sample_axis(x_list).
@@ -870,10 +870,6 @@ def concat_sample_weight(x_list, sample_weight_list):
     if sample_weight_list is None:
         return None
 
-    if not isinstance(sample_weight_list, list):
-        raise TypeError(
-            "sample_weight must be a list of numpy arrays (one per trajectory)."
-        )
     if len(sample_weight_list) != len(x_list):
         raise ValueError("sample_weight length must match number of trajectories.")
 

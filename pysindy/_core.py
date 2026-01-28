@@ -411,14 +411,15 @@ class SINDy(_BaseSINDy):
         x_list = self.feature_library.fit_transform(x)
         sc = SampleConcatter()
         x = sc.fit_transform(x_list)
-        w_concat = None
-        if sample_weight is not None:
-            w_concat = sc.transform_sample_weight(x_list, sample_weight)
-        if w_concat is None:
-            self.optimizer.fit(x, x_dot)
-        else:
-            self.optimizer.fit(x, x_dot, sample_weight=w_concat)
+        w_concat = (
+            sc.transform_sample_weight(x_list, sample_weight)
+            if sample_weight is not None
+            else None
+        )
+
+        self.optimizer.fit(x, x_dot, sample_weight=w_concat)
         self._fit_shape()
+
         return self
 
     def print(self, lhs=None, precision=3, **kwargs):
@@ -525,8 +526,7 @@ class SINDy(_BaseSINDy):
             x_dot, x_dot_predict, good_idx = drop_nan_samples(
                 x_dot, x_dot_predict, return_indices=True
             )
-            sample_weight = sample_weight[good_idx]
-            metric_kws = {**metric_kws, "sample_weight": sample_weight}
+            metric_kws = {**metric_kws, "sample_weight": sample_weight[good_idx]}
         else:
             x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
 
@@ -911,13 +911,13 @@ class DiscreteSINDy(_BaseSINDy):
         sc = SampleConcatter()
         x = sc.fit_transform(x_list)
 
-        w_concat = None
-        if sample_weight is not None:
-            w_concat = sc.transform_sample_weight(x_list, sample_weight)
-        if w_concat is None:
-            self.optimizer.fit(x, x_next)
-        else:
-            self.optimizer.fit(x, x_next, sample_weight=w_concat)
+        w_concat = (
+            sc.transform_sample_weight(x_list, sample_weight)
+            if sample_weight is not None
+            else None
+        )
+
+        self.optimizer.fit(x, x_next, sample_weight=w_concat)
         self._fit_shape()
 
         return self
@@ -1040,7 +1040,14 @@ class DiscreteSINDy(_BaseSINDy):
         x_next = concat_sample_axis(x_next)
         x_next_predict = concat_sample_axis(x_next_predict)
 
-        x_next, x_next_predict = drop_nan_samples(x_next, x_next_predict)
+        if sample_weight is not None:
+            x_next, x_next_predict, good_idx = drop_nan_samples(
+                x_next, x_next_predict, return_indices=True
+            )
+            metric_kws = {**metric_kws, "sample_weight": sample_weight[good_idx]}
+        else:
+            x_next, x_next_predict = drop_nan_samples(x_next, x_next_predict)
+
         return metric(x_next, x_next_predict, **metric_kws)
 
     def simulate(

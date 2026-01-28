@@ -102,9 +102,7 @@ class _BaseSINDy(BaseEstimator, ABC):
         else:
             multiple_trajectories = True
 
-        x, _, u, _ = _comprehend_and_validate_inputs(
-            x, 1, None, u, self.feature_library
-        )
+        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
 
         check_is_fitted(self)
         if self.n_control_features_ > 0 and u is None:
@@ -390,12 +388,12 @@ class SINDy(_BaseSINDy):
         self: a fitted :class:`SINDy` instance
         """
 
-        if not _check_multiple_trajectories(x, x_dot, u):
+        if not _check_multiple_trajectories(x, x_dot, u, sample_weight):
             x, t, x_dot, u, sample_weight = _adapt_to_multiple_trajectories(
                 x, t, x_dot, u, sample_weight
             )
-        x, x_dot, u, sample_weight = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library, sample_weight
+        x, x_dot, u = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library
         )
 
         if x_dot is None:
@@ -512,12 +510,12 @@ class SINDy(_BaseSINDy):
             Metric function value for the model prediction of x_dot.
         """
 
-        if not _check_multiple_trajectories(x, x_dot, u):
+        if not _check_multiple_trajectories(x, x_dot, u, sample_weight):
             x, t, x_dot, u, sample_weight = _adapt_to_multiple_trajectories(
                 x, t, x_dot, u, sample_weight
             )
-        x, x_dot, u, sample_weight = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library, sample_weight
+        x, x_dot, u = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library
         )
 
         x_dot_predict = self.predict(x, u)
@@ -890,12 +888,12 @@ class DiscreteSINDy(_BaseSINDy):
         self: a fitted :class:`DiscreteSINDy` instance
         """
 
-        if not _check_multiple_trajectories(x, x_next, u):
+        if not _check_multiple_trajectories(x, x_next, u, sample_weight):
             x, t, x_next, u, sample_weight = _adapt_to_multiple_trajectories(
                 x, t, x_next, u, sample_weight
             )
-        x, x_next, u, sample_weight = _comprehend_and_validate_inputs(
-            x, t, x_next, u, self.feature_library, sample_weight
+        x, x_next, u = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library
         )
 
         if x_next is None:
@@ -1033,12 +1031,12 @@ class DiscreteSINDy(_BaseSINDy):
             Metric function value for the model prediction of x_next.
         """
 
-        if not _check_multiple_trajectories(x, x_next, u):
+        if not _check_multiple_trajectories(x, x_next, u, sample_weight):
             x, t, x_next, u, sample_weight = _adapt_to_multiple_trajectories(
                 x, t, x_next, u, sample_weight
             )
-        x, x_next, u, sample_weight = _comprehend_and_validate_inputs(
-            x, t, x_next, u, self.feature_library, sample_weight
+        x, x_next, u = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library
         )
 
         x_next_predict = self.predict(x, u)
@@ -1143,13 +1141,14 @@ def _zip_like_sequence(x, t):
         return product(x, [t])
 
 
-def _check_multiple_trajectories(x, x_dot, u) -> bool:
+def _check_multiple_trajectories(x, x_dot, u, sample_weight=None) -> bool:
     """Determine if data contains multiple trajectories
 
     Args:
         x: Samples from which to make predictions.
         x_dot: Pre-computed derivatives of the samples.
         u: Control variables
+        sample_weight: Optional, weights for sample importance
 
     Returns:
         whether data has multiple trajectories
@@ -1167,18 +1166,25 @@ def _check_multiple_trajectories(x, x_dot, u) -> bool:
         and not isinstance(x, Sequence)
         or isinstance(u, Sequence)
         and not isinstance(x, Sequence)
+        or isinstance(sample_weight, Sequence)
+        and not isinstance(x, Sequence)
     )
     if mixed_trajectories:
         raise TypeError(
-            "If x, x_dot, or u are a Sequence of trajectories, each must be a Sequence"
+            "If x, x_dot, u or sample_weight are a"
+            " Sequence of trajectories, each must be a Sequence"
             " of trajectories or None."
         )
     if isinstance(x, Sequence):
-        matching_lengths = (x_dot is None or len(x) == len(x_dot)) and (
-            u is None or len(x) == len(u)
+        matching_lengths = (
+            (x_dot is None or len(x) == len(x_dot))
+            and (u is None or len(x) == len(u))
+            and (sample_weight is None or len(x) == len(sample_weight))
         )
         if not matching_lengths:
-            raise ValueError("x, x_dot and/or u have mismatched number of trajectories")
+            raise ValueError(
+                "x, x_dot, u or sample_weight have mismatched number of trajectories"
+            )
         return True
     return False
 
@@ -1191,6 +1197,7 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u, sample_weight=None) -> tuple
         t: Time step between samples or array of collection times.
         x_dot: Pre-computed derivatives of the samples.
         u: Control variables
+        sample_weight: Optional, weights for sample importance
 
     Returns:
         Tuple of updated x, t, x_dot, u
@@ -1207,9 +1214,7 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u, sample_weight=None) -> tuple
     return x, t, x_dot, u, sample_weight
 
 
-def _comprehend_and_validate_inputs(
-    x, t, x_dot, u, feature_library, sample_weight=None
-):
+def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
     """Validate input types, reshape arrays, and label axes"""
 
     def comprehend_and_validate(arr, t):
@@ -1260,13 +1265,4 @@ def _comprehend_and_validate_inputs(
             )
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
 
-    if sample_weight is not None:
-        if len(sample_weight) != len(x):
-            raise ValueError("sample_weight length must match number of trajectories.")
-        for w in sample_weight:
-            if not isinstance(w, np.ndarray):
-                raise TypeError("Each sample_weight must be a numpy array.")
-            if w.ndim != 1:
-                raise ValueError("Each sample_weight array must be 1D.")
-
-    return x, x_dot, u, sample_weight
+    return x, x_dot, u

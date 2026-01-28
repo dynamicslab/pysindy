@@ -125,7 +125,7 @@ def validate_control_variables(x: Sequence[AxesArray], u: Sequence[AxesArray]) -
     return u_arr
 
 
-def drop_nan_samples(x, y):
+def drop_nan_samples(x, y, return_indices: bool = False):
     """Drops samples from x and y where either has a nan value"""
     x_non_sample_axes = tuple(ax for ax in range(x.ndim) if ax != x.ax_sample)
     y_non_sample_axes = tuple(ax for ax in range(y.ndim) if ax != y.ax_sample)
@@ -134,6 +134,8 @@ def drop_nan_samples(x, y):
     good_sample_ind = np.nonzero(x_good_samples & y_good_samples)[0]
     x = x.take(good_sample_ind, axis=x.ax_sample)
     y = y.take(good_sample_ind, axis=y.ax_sample)
+    if return_indices:
+        return x, y, good_sample_ind
     return x, y
 
 

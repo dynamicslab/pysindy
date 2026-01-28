@@ -292,6 +292,18 @@ def data_2dspatial():
     return x, y, u
 
 
+@pytest.fixture(scope="session")
+def data_2d_linear():
+    t = np.linspace(0, 2 * np.pi, 50)
+    x_a = np.stack([np.cos(t), np.sin(t)], axis=1)
+    xdot_a = np.stack([-np.sin(t), np.cos(t)], axis=1)
+
+    x_b = np.stack([np.cos(2 * t), np.sin(2 * t)], axis=1)
+    xdot_b = np.stack([-2 * np.sin(2 * t), 2 * np.cos(2 * t)], axis=1)
+
+    return (x_a, xdot_a), (x_b, xdot_b)
+
+
 @pytest.fixture
 def custom_library():
     library_functions = [

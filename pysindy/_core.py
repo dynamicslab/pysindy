@@ -832,6 +832,7 @@ class DiscreteSINDy(_BaseSINDy):
         x_next=None,
         u=None,
         feature_names: Optional[list[str]] = None,
+        sample_weight: Optional[TrajectoryType] = None,
     ):
         """
         Fit a DiscreteSINDy model.
@@ -873,6 +874,10 @@ class DiscreteSINDy(_BaseSINDy):
             Names for the input features (e.g. :code:`['x', 'y', 'z']`).
             If None, will use :code:`['x0', 'x1', ...]`.
 
+        sample_weight : list of 1D array-like, shape (n_samples, ).
+            Weights to give to the samples to give more importance
+            to less noisy or more informative samples.
+
         Returns
         -------
         self: a fitted :class:`DiscreteSINDy` instance
@@ -902,9 +907,17 @@ class DiscreteSINDy(_BaseSINDy):
         self.feature_names = feature_names
 
         x_next = concat_sample_axis(x_next)
-        x = self.feature_library.fit_transform(x)
-        x = SampleConcatter().fit_transform(x)
-        self.optimizer.fit(x, x_next)
+        x_list = self.feature_library.fit_transform(x)
+        sc = SampleConcatter()
+        x = sc.fit_transform(x_list)
+
+        w_concat = None
+        if sample_weight is not None:
+            w_concat = sc.transform_sample_weight(x_list, sample_weight)
+        if w_concat is None:
+            self.optimizer.fit(x, x_next)
+        else:
+            self.optimizer.fit(x, x_next, sample_weight=w_concat)
         self._fit_shape()
 
         return self
@@ -962,7 +975,16 @@ class DiscreteSINDy(_BaseSINDy):
             names = f"({feature_names[i]})[k+1]"
             print(f"{names} = {eqn}", **kwargs)
 
-    def score(self, x, t, u=None, x_next=None, metric=r2_score, **metric_kws):
+    def score(
+        self,
+        x,
+        t,
+        u=None,
+        x_next=None,
+        metric=r2_score,
+        sample_weight: Optional[TrajectoryType] = None,
+        **metric_kws,
+    ):
         """
         Returns a score for the next state prediction produced by the model.
 
@@ -988,6 +1010,10 @@ class DiscreteSINDy(_BaseSINDy):
             See `Scikit-learn \
             <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
             for more options.
+
+        sample_weight : list of 1D array-like, shape (n_samples, ).
+            Weights to give to the samples to give more importance
+            to less noisy or more informative samples.
 
         metric_kws: dict, optional
             Optional keyword arguments to pass to the metric function.

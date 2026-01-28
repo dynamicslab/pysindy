@@ -337,7 +337,7 @@ class SINDy(_BaseSINDy):
         x_dot=None,
         u=None,
         feature_names: Optional[list[str]] = None,
-        sample_weight: Optional[TrajectoryType]=None,
+        sample_weight: Optional[TrajectoryType] = None,
     ):
         """
         Fit a SINDy model.
@@ -407,7 +407,9 @@ class SINDy(_BaseSINDy):
 
         self.feature_names = feature_names
         x_dot = concat_sample_axis(x_dot)
-        x_list = self.feature_library.fit_transform(x)  # list of trajectories (AxesArray)
+        x_list = self.feature_library.fit_transform(
+            x
+        )  # list of trajectories (AxesArray)
         sc = SampleConcatter()
         x = sc.fit_transform(x_list)  # concatenated design matrix
         w_concat = None
@@ -456,7 +458,7 @@ class SINDy(_BaseSINDy):
         x_dot=None,
         u=None,
         metric=r2_score,
-        sample_weight:Optional[TrajectoryType]=None,
+        sample_weight: Optional[TrajectoryType] = None,
         **metric_kws,
     ):
         """

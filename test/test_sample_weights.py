@@ -61,11 +61,13 @@ def test_metadata_routing_sample_weight(simple_systems):
     sindy_B = SINDy(optimizer=LinearRegression(fit_intercept=False))
     sindy_B.fit([x_b], t=0.1, x_dot=[xdot_b])
     coef_B = np.copy(sindy_B.optimizer.coef_)
-    
+
     expected_unweighted = (2 * coef_A + coef_B) / 3.0
-    expected_weighted   = (2 * coef_A + 10 * coef_B) / 12.0
+    expected_weighted = (2 * coef_A + 10 * coef_B) / 12.0
 
     assert np.allclose(coef_unweighted, expected_unweighted, rtol=1e-2, atol=1e-6)
-    assert np.allclose(coef_weighted,   expected_weighted,   rtol=1e-2, atol=1e-6)
+    assert np.allclose(coef_weighted, expected_weighted, rtol=1e-2, atol=1e-6)
 
-    assert np.linalg.norm(coef_weighted - coef_B) < np.linalg.norm(coef_unweighted - coef_B)
+    assert np.linalg.norm(coef_weighted - coef_B) < np.linalg.norm(
+        coef_unweighted - coef_B
+    )

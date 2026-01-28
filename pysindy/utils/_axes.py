@@ -838,7 +838,7 @@ class SampleConcatter(TransformerMixin):
 
     def transform(self, x_list):
         return concat_sample_axis(x_list)
-    
+
     def transform_sample_weight(self, x_list, sample_weight_list):
         return concat_sample_weight(x_list, sample_weight_list)
 
@@ -860,6 +860,7 @@ def concat_sample_axis(x_list: List[AxesArray]):
         new_arrs.append(arr)
     return np.concatenate(new_arrs, axis=new_arrs[0].ax_sample)
 
+
 def concat_sample_weight(x_list, sample_weight_list):
     """
     Concatenate per-trajectory sample weights into a single 1D vector aligned
@@ -870,7 +871,9 @@ def concat_sample_weight(x_list, sample_weight_list):
         return None
 
     if not isinstance(sample_weight_list, list):
-        raise TypeError("sample_weight must be a list of numpy arrays (one per trajectory).")
+        raise TypeError(
+            "sample_weight must be a list of numpy arrays (one per trajectory)."
+        )
     if len(sample_weight_list) != len(x_list):
         raise ValueError("sample_weight length must match number of trajectories.")
 
@@ -899,7 +902,7 @@ def concat_sample_weight(x_list, sample_weight_list):
             )
 
         parts.append(w.astype(float, copy=False))
-        
+
     return np.concatenate(parts, axis=0)
 
 

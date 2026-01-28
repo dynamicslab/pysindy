@@ -97,12 +97,14 @@ class _BaseSINDy(BaseEstimator, ABC):
             Predicted right hand side of the dynamical system
         """
         if not _check_multiple_trajectories(x, None, u):
-            x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
+            x, _, _, u, _ = _adapt_to_multiple_trajectories(x, None, None, u)
             multiple_trajectories = False
         else:
             multiple_trajectories = True
 
-        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
+        x, _, u, _ = _comprehend_and_validate_inputs(
+            x, 1, None, u, self.feature_library
+        )
 
         check_is_fitted(self)
         if self.n_control_features_ > 0 and u is None:
@@ -389,9 +391,11 @@ class SINDy(_BaseSINDy):
         """
 
         if not _check_multiple_trajectories(x, x_dot, u):
-            x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
-        x, x_dot, u = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library
+            x, t, x_dot, u, sample_weight = _adapt_to_multiple_trajectories(
+                x, t, x_dot, u, sample_weight
+            )
+        x, x_dot, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library, sample_weight
         )
 
         if x_dot is None:
@@ -509,9 +513,11 @@ class SINDy(_BaseSINDy):
         """
 
         if not _check_multiple_trajectories(x, x_dot, u):
-            x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
-        x, x_dot, u = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library
+            x, t, x_dot, u, sample_weight = _adapt_to_multiple_trajectories(
+                x, t, x_dot, u, sample_weight
+            )
+        x, x_dot, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library, sample_weight
         )
 
         x_dot_predict = self.predict(x, u)
@@ -527,8 +533,9 @@ class SINDy(_BaseSINDy):
         )
 
         if sample_weight is not None:
-            sample_weight = np.concatenate([np.asarray(w) for w in sample_weight])
-            metric_kws["sample_weight"] = sample_weight[good_idx]
+            sc = SampleConcatter()
+            w_concat = sc.transform_sample_weight(x, sample_weight)
+            metric_kws["sample_weight"] = w_concat[good_idx]
 
         return metric(x_dot, x_dot_predict, **metric_kws)
 
@@ -884,9 +891,11 @@ class DiscreteSINDy(_BaseSINDy):
         """
 
         if not _check_multiple_trajectories(x, x_next, u):
-            x, t, x_next, u = _adapt_to_multiple_trajectories(x, t, x_next, u)
-        x, x_next, u = _comprehend_and_validate_inputs(
-            x, t, x_next, u, self.feature_library
+            x, t, x_next, u, sample_weight = _adapt_to_multiple_trajectories(
+                x, t, x_next, u, sample_weight
+            )
+        x, x_next, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library, sample_weight
         )
 
         if x_next is None:
@@ -1025,9 +1034,11 @@ class DiscreteSINDy(_BaseSINDy):
         """
 
         if not _check_multiple_trajectories(x, x_next, u):
-            x, t, x_next, u = _adapt_to_multiple_trajectories(x, t, x_next, u)
-        x, x_next, u = _comprehend_and_validate_inputs(
-            x, t, x_next, u, self.feature_library
+            x, t, x_next, u, sample_weight = _adapt_to_multiple_trajectories(
+                x, t, x_next, u, sample_weight
+            )
+        x, x_next, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library, sample_weight
         )
 
         x_next_predict = self.predict(x, u)
@@ -1045,8 +1056,9 @@ class DiscreteSINDy(_BaseSINDy):
         )
 
         if sample_weight is not None:
-            sample_weight = np.concatenate([np.asarray(w) for w in sample_weight])
-            metric_kws["sample_weight"] = sample_weight[good_idx]
+            sc = SampleConcatter()
+            w_concat = sc.transform_sample_weight(x, sample_weight)
+            metric_kws["sample_weight"] = w_concat[good_idx]
 
         return metric(x_next, x_next_predict, **metric_kws)
 
@@ -1171,7 +1183,7 @@ def _check_multiple_trajectories(x, x_dot, u) -> bool:
     return False
 
 
-def _adapt_to_multiple_trajectories(x, t, x_dot, u) -> tuple:
+def _adapt_to_multiple_trajectories(x, t, x_dot, u, sample_weight=None) -> tuple:
     """Adapt model data to that multiple_trajectories.
 
     Args:
@@ -1184,17 +1196,20 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u) -> tuple:
         Tuple of updated x, t, x_dot, u
     """
     x = [x]
-    # if t is not a dt
     if not isinstance(t, np.ScalarType):
         t = [t]
     if x_dot is not None:
         x_dot = [x_dot]
     if u is not None:
         u = [u]
-    return x, t, x_dot, u
+    if sample_weight is not None:
+        sample_weight = [sample_weight]
+    return x, t, x_dot, u, sample_weight
 
 
-def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
+def _comprehend_and_validate_inputs(
+    x, t, x_dot, u, feature_library, sample_weight=None
+):
     """Validate input types, reshape arrays, and label axes"""
 
     def comprehend_and_validate(arr, t):
@@ -1244,4 +1259,14 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
                 ValueError("Could not reshape control input to match the input data.")
             )
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
-    return x, x_dot, u
+
+    if sample_weight is not None:
+        if len(sample_weight) != len(x):
+            raise ValueError("sample_weight length must match number of trajectories.")
+        for w in sample_weight:
+            if not isinstance(w, np.ndarray):
+                raise TypeError("Each sample_weight must be a numpy array.")
+            if w.ndim != 1:
+                raise ValueError("Each sample_weight array must be 1D.")
+
+    return x, x_dot, u, sample_weight

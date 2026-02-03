@@ -191,7 +191,6 @@ def test_flatten_libraries():
     assert type(result.libraries[1].libraries[1]) == PDELibrary
 
 
-
 def test_weak_class(data_1d_random_pde):
     model = WeakSINDy(PolynomialLibrary(), STLSQ())
     t, x, u, u_dot = data_1d_random_pde

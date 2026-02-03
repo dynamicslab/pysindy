@@ -176,12 +176,20 @@ def test_integrate_domain2d(true_f, p, deriv_op):
 
 
 def test_flatten_libraries():
-    lib = PolynomialLibrary(1) * (FourierLibrary() + PolynomialLibrary(3))
+    fake_spatial_grid = np.array([[[0]], [[0]]])
+    pde_lib = PDELibrary(derivative_order=2, spatial_grid=fake_spatial_grid)
+    lib = PolynomialLibrary(1) * (FourierLibrary() + pde_lib)
     result = _flatten_libraries(lib)
-    expected = PolynomialLibrary(1) * FourierLibrary() + PolynomialLibrary(
-        1
-    ) * PolynomialLibrary(4)
-    assert result == expected
+
+    assert isinstance(result, ConcatLibrary)
+    assert len(result.libraries) == 2
+    assert isinstance(result.libraries[0], TensoredLibrary)
+    assert isinstance(result.libraries[1], TensoredLibrary)
+    assert type(result.libraries[0].libraries[0]) == PolynomialLibrary
+    assert type(result.libraries[0].libraries[1]) == FourierLibrary
+    assert type(result.libraries[1].libraries[0]) == PolynomialLibrary
+    assert type(result.libraries[1].libraries[1]) == PDELibrary
+
 
 
 def test_weak_class(data_1d_random_pde):

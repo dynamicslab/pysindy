@@ -724,25 +724,43 @@ def _integrate_product_by_parts(
 
 
 def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
-    """Flattens a tree of tensored/concat libraries, maintaining order
+    """Flattens a tree of tensored/concat libraries, maintaining order.
 
     Returns: A flat tree of libraries whose root is a concat library, and every
         leaf is either a non-iterable library or a tensored library of non-iterable
-        libraries.  PDELibraries are at the end.
+        libraries. PDELibraries are at the end.
 
     .. todo::
         ensure that flat tree maintains identities of libraries and caches transforms
     """
-    if isinstance(library, ConcatLibrary):
-        root = library
-    elif isinstance(library, TensoredLibrary):
-        root = ConcatLibrary([])
-    else:
-        return ConcatLibrary([library])
-    children = [_flatten_libraries(lib) for lib in library.libraries]
-    root.libraries = children
-    return root
+    def _as_factors(lib: BaseFeatureLibrary) -> list[BaseFeatureLibrary]:
+        if isinstance(lib, TensoredLibrary):
+            return list(lib.libraries)
+        return [lib]
 
+    def _flatten(lib: BaseFeatureLibrary) -> ConcatLibrary:
+        if isinstance(lib, ConcatLibrary):
+            flattened: list[BaseFeatureLibrary] = []
+            for child in lib.libraries:
+                flattened.extend(_flatten(child).libraries)
+            return ConcatLibrary(flattened)
+
+        if isinstance(lib, TensoredLibrary):
+            flattened_children = [_flatten(child) for child in lib.libraries]
+            products: list[BaseFeatureLibrary] = []
+            for combo in product(*[child.libraries for child in flattened_children]):
+                factors: list[BaseFeatureLibrary] = []
+                for term in combo:
+                    factors.extend(_as_factors(term))
+                if len(factors) == 1:
+                    products.append(factors[0])
+                else:
+                    products.append(TensoredLibrary(factors))
+            return ConcatLibrary(products)
+
+        return ConcatLibrary([lib])
+
+    return _flatten(library)
 
 def _calculate_weak_features(
     x: AxesArray,

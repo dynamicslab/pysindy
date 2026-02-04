@@ -275,7 +275,7 @@ class WeakSINDy(_BaseSINDy):
 
         # Need feature names and set n_output_features_ (this is same with PDE library)
         u_dot_wk = [
-            convert_u_dot_integral(xi, weights[tuple(time_deriv)], spec.axis_inds_per_subdom)
+            convert_u_dot_integral(xi, weights[tuple(time_deriv[0])], spec.axis_inds_per_subdom)
             for xi, weights, spec in zip(x, weights_per_deriv_op, subdomain_specs)
         ]
         self.sorted_lib_ = _flatten_libraries(self.feature_library)
@@ -410,7 +410,7 @@ def _normalize_subdomain_dims(
 
 
 def convert_u_dot_integral(
-    u: AxesArray, fulltweights, axis_inds_per_subdom: list[list[AxesArray]]
+    u: AxesArray, fulltweights: list[AxesArray], axis_inds_per_subdom: list[list[AxesArray]]
 ) -> AxesArray:
     """
     Takes a full set of spatiotemporal fields u(x, t) and finds the weak
@@ -420,15 +420,17 @@ def convert_u_dot_integral(
     grid_dim = u.ndim - 1
     u_dot_integral = np.zeros((n_subdomains, u.shape[-1]))
     u_subdomains = [u[np.ix_(*ax_inds)] for ax_inds in axis_inds_per_subdom]
-
+    st_axes = range(grid_dim)
     u_dot_integral = np.array(
         [
-            np.tensordot(weights, values, axis=range(u.ndim - 1))
+            np.tensordot(
+                weights, values, axes=[st_axes, st_axes]
+            )
             for weights, values in zip(fulltweights, u_subdomains)
         ]
     )
 
-    return AxesArray(u_dot_integral, {"ax_time": 0, "ax_coord": 1})
+    return AxesArray(u_dot_integral, {"ax_sample": 0, "ax_coord": 1})
 
 
 def _get_spatial_endpoints(st_grid: FloatND) -> tuple[Float1D, Float1D]:

@@ -250,7 +250,7 @@ def test_score(data):
 
 def test_fit_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
-    x = x + 1e-2 * np.random.randn(*x.shape)
+    x = _add_noise(x, 1e-2)
     model = BINDy(1e-2)
 
     model.fit(x, t=t)
@@ -269,7 +269,7 @@ def test_fit_multiple_trajectories(data_multiple_trajectories):
 
 def test_predict_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
-    x = x + 1e-2 * np.random.randn(*x.shape)
+    x = _add_noise(x, 1e-2)
     model = BINDy(1e-2)
     model.fit(x, t=t)
 
@@ -279,7 +279,7 @@ def test_predict_multiple_trajectories(data_multiple_trajectories):
 
 def test_score_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
-    x = x + 1e-2 * np.random.randn(*x.shape)
+    x = _add_noise(x, 1e-2)
     model = BINDy(1e-2)
     model.fit(x, t=t)
 
@@ -357,5 +357,11 @@ def test_data_shapes():
     x = np.ones((n, n, n, n, 2))
     model.fit(x, t)
 
+def _add_noise(x, sigma=1e-2):
+    """Add Gaussian noise to x to arrays and list-of-arrays."""
+    if isinstance(x, (list, tuple)):
+        return [np.asarray(xi) + sigma * np.random.randn(*np.asarray(xi).shape) for xi in x]
+    x = np.asarray(x)
+    return x + sigma * np.random.randn(*x.shape)
 
 

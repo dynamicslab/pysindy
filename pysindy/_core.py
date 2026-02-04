@@ -1208,16 +1208,13 @@ class BINDy(SINDy):
 
             for xi, ti in _zip_like_sequence(x_list, t_list):
                 xi_arr = np.asarray(xi)
-                if xi_arr.ndim < 2:
-                    raise ValueError(
-                        "Input x must have at least 2 dimensions "
-                        "(samples, features)."
-                    )
-
-                n_samples = xi_arr.shape[-2]
+                if xi_arr.ndim == 1:
+                    n_samples = xi_arr.shape[0]
+                else:
+                    n_samples = xi_arr.shape[-2]
 
                 # Build a time grid for _sigma2 mapping
-                if isinstance(ti, np.ScalarType):
+                if np.isscalar(ti):
                     dt = float(ti)
                     if dt <= 0:
                         raise ValueError("t (dt) must be positive.")

@@ -132,6 +132,21 @@ class BaseFeatureLibrary(TransformerMixin, BaseEstimator):
         return self.n_output_features_
 
 
+class EmptyLibrary(BaseFeatureLibrary):
+    """Empty library that outputs an empty array. Useful for testing."""
+
+    def fit(self, x, y=None):
+        self.n_features_in_ = x.shape[1]
+        self.n_output_features_ = 0
+        return self
+
+    def transform(self, x):
+        check_is_fitted(self)
+        return np.empty((x.shape[:-1], 0))
+
+    def get_feature_names(self, input_features=None) -> list[str]:
+        return []
+
 def x_sequence_or_item(wrapped_func):
     """Allow a feature library's method to handle list or item inputs."""
 

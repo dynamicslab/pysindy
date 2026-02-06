@@ -46,7 +46,7 @@ Research directions
   u*Du.
 """
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Sequence, Collection
 from dataclasses import dataclass
 from itertools import product
 from typing import Any
@@ -80,7 +80,7 @@ from .feature_library.base import BaseFeatureLibrary
 from .optimizers.base import BaseOptimizer
 from .utils import comprehend_axes
 from .utils._axes import AxesArray
-
+from .utils import concat_sample_axis, drop_nan_samples
 
 @dataclass
 class SubdomainSpecs:
@@ -154,6 +154,24 @@ SemiTerm = tuple[
     float, # coefficient
     tuple[int, ...] # derivatives of phi
 ]
+"""A type alias for a term in calculating the weak form of a feature.
+
+Each regular feature gets multiplied by a test function and integrated.
+Depending upon the functional form of that feature integration
+results in a sum of these SemiTerms.
+
+The first item is the derivative order on the system variable u.  If None,
+then the weak form includes no multiplication by u.  This differs from a
+tuple of zeros, which represents the zeroth derivative of u.
+
+The second term is the derivative order of a non-derivative feature.  If None,
+then the weak form includes no multiplication by a non-derivative feature.
+
+The third term is the coefficient of the term in weak form, emerging from
+a combination of integration by parts and the product rule.
+
+
+"""
 
 class WeakSINDy(_BaseSINDy):
     """For test function basis, see Section 2.4 of Messenger and Bortz, "Weak SINDy:
@@ -240,6 +258,7 @@ class WeakSINDy(_BaseSINDy):
             for grid, sub_dim in zip(st_grids, subdomain_dims)
         ]
         n_system_vars = cast(int, x[0].n_coord)
+        grid_ndim = subdomain_specs[0].grid_ndim
         # Weak should be subclass of PDEFIND?  Or PDELib.transform gives placeholders?
         def get_PDElib(lib):
             if isinstance(lib, PDELibrary):
@@ -265,8 +284,9 @@ class WeakSINDy(_BaseSINDy):
             multiindices = time_deriv
             diff_method = FiniteDifference()
 
+        zero_deriv = (0,) * grid_ndim
+        multiindices = np.vstack((multiindices, zero_deriv))
         multiindices = [tuple(deriv_op) for deriv_op in multiindices]
-        zero_deriv = (0,) * n_system_vars
 
         weights_per_deriv_op = [
             _set_up_weights(spec, self.test_fn_order, multiindices)
@@ -279,7 +299,8 @@ class WeakSINDy(_BaseSINDy):
             for xi, weights, spec in zip(x, weights_per_deriv_op, subdomain_specs)
         ]
         self.sorted_lib_ = _flatten_libraries(self.feature_library)
-        terms: list[SemiTerm] = []
+        self.sorted_lib_.fit(x[0])
+        terms: list[SemiTerm | Collection[SemiTerm]] = []
         for lib in self.sorted_lib_.libraries:
             # Populate the semiterm list. Libs are either PDELibrary, non-PDE, or tensor of those
             no_derivs = (
@@ -288,69 +309,44 @@ class WeakSINDy(_BaseSINDy):
                 or not isinstance(lib, (PDELibrary, TensoredLibrary))
             )
             if no_derivs:
+                # semiterm reflects all features in the library
                 terms.append((None, (lib, zero_deriv), 1, zero_deriv))
             elif isinstance(lib, PDELibrary):
-                terms.extend(_integrate_by_parts(lib))
+                # semiterm reflects one feature in the library
+                multiindices = lib.multiindices
+                multiindices = np.hstack((lib.multiindices, np.zeros((len(multiindices), 1), dtype=int)))
+                terms.extend(_integrate_by_parts(multiindices))
             else:
                 # tensor library with product rule inside integration by parts
-                pde_lib = lib.libraries[-1]
+                # semiterm reflects all features in the non-PDE library
+                # multiplied by one term in the PDE library
+                multiindices = lib.libraries[-1].multiindices
+                multiindices = np.hstack((multiindices, np.zeros((len(multiindices), 1), dtype=int)))
                 non_pde_lib = TensoredLibrary(lib.libraries[:-1])
-                terms.extend(_integrate_product_by_parts(non_pde_lib, pde_lib))
+                terms.extend(_integrate_product_by_parts(non_pde_lib, multiindices))
 
-
+        rhs_trajectories = []
         for it in zip(x, subdomain_specs, weights_per_deriv_op, strict=True):
             x_i, sub_spec, weight_map = it
             weak_feats = []
-            st_axes = tuple(range(sub_spec.grid_ndim))
-            # Regular feature library gets distributed against terms in PDELibrary
-            # into a set of SemiTerms.  To prevent re-evaluation, cache results
-            eval_cache: dict[BaseFeatureLibrary, np.ndarray] = {}
-            for diff1, feat_term, coeff, diff3 in terms:
-                weights_per_subdom = weight_map[diff3]
-                if feat_term and not diff1 and not diff3:
-                    # pure feature library
-                    lib = feat_term[0]
-                    if lib in eval_cache:
-                        x_transform = eval_cache[lib]
-                    else:
-                        x_transform = lib.transform(x_i)
-                        eval_cache[lib] = x_transform
-                    x_subdoms = [x_transform[*inds] for inds in sub_spec.axis_inds_per_subdom]
-                    weak_feats.append(
-                        np.tensordot(x_subdom, weights, axis=[st_axes, st_axes])
-                        for x_subdom, weights in zip(x_subdoms, weights_per_subdom)
-                    )
-                elif not feat_term:
-                    # pure derivative term
-                    x_subdoms = [x_i[*inds] for inds in sub_spec.axis_inds_per_subdom]
-                    neg_coef = -1 ** sum()
-                    weak_feats.append(
-                        np.tensordot(x_subdom, weights, axis=[st_axes, st_axes])
-                        for x_subdom, weights in zip(x_subdoms, weights_per_subdom)
-                    )
+            for term in terms:
+                if isinstance(term, tuple):
+                    weak_feats.append(_eval_semiterm(x_i, term, sub_spec, weight_map))
                 else:
-                    # integration by parts term
-                    lib = feat_term[0]
-                    diff2 = feat_term[1]
-                    if lib in eval_cache:
-                        x_transform = eval_cache[lib]
-                    else:
-                        x_transform = lib.transform(x_i)
-                        eval_cache[lib] = x_transform
-                    x_transform = _differentiate(x_transform, diff2, diff_method)
-                    x_diff = _differentiate(x_i, diff1, diff_method)
-                    xt_subdoms = [
-                        (x_diff * x_transform)[*inds]
-                        for inds in sub_spec.axis_inds_per_subdom
-                    ]
-                    weak_feats.append(
-                        np.tensordot(x_subdom, weights, axis=[st_axes, st_axes])
-                        for x_subdom, weights in zip(xt_subdoms, weights_per_subdom)
-                    )
-
-
+                    # term is a collection of semi-terms that sum represent
+                    # product rule terms.
+                    parts = [_eval_semiterm(x_i, part, sub_spec, weight_map) for part in term]
+                    weak_feats.append(sum(parts))
+            weak_feats = AxesArray(np.concatenate(weak_feats, axis=-1), {"ax_sample": 0, "ax_coord": 1})
+            rhs_trajectories.append(weak_feats)
 
         # Fit the optimizer!
+        lhs = concat_sample_axis(u_dot_wk)
+        rhs = concat_sample_axis(rhs_trajectories)
+        lhs, rhs = drop_nan_samples(lhs, rhs)
+
+        self.optimizer.fit(rhs, lhs)
+        self.feature_library.fit(x[0])
         self._fit_shape()
         return self
 
@@ -364,11 +360,41 @@ class WeakSINDy(_BaseSINDy):
         pass
 
 
+def _eval_semiterm(
+    x: AxesArray,
+    term: SemiTerm,
+    sub_spec: SubdomainSpecs,
+    weight_map: dict[tuple[int, ...], list[AxesArray]],
+) -> AxesArray:
+    """Calculate the value of a single SemiTerm on x across all subdomains"""
+    diff1, feat_term, coeff, diff3 = term
+    weights_per_subdom = weight_map[diff3]
+    st_axes = tuple(range(sub_spec.grid_ndim))
+    if diff1 is None:
+        x_d = np.ones_like(x)
+    else:
+        x_d = PDELibrary(spatial_grid=sub_spec.domain, multiindices=[diff1]).fit_transform(x)
+    if feat_term is not None:
+        feat_lib, diff2 = feat_term
+        fx = feat_lib.fit_transform(x)
+        fx = PDELibrary(spatial_grid=sub_spec.domain, multiindices=[diff2]).fit_transform(fx)
+    else:
+        fx = np.ones_like(x)
+    xt = x_d * fx
+
+    x_subdoms = [xt[np.ix_(*inds)] for inds in sub_spec.axis_inds_per_subdom]
+    weak_feat = [
+        coeff * np.tensordot(x_subdom, weights, axes=[st_axes, st_axes])[:, 0]
+        for x_subdom, weights in zip(x_subdoms, weights_per_subdom, strict=True)
+    ]
+    return AxesArray(np.array(weak_feat), {"ax_sample": 0, "ax_coord": 1})
+
+
 def _normalize_subdomain_dims(
     st_grids: list[AxesArray],
     subdomain_dims: Optional[float | FloatND | Sequence[FloatND]],
 ) -> list[AxesArray]:
-    """Establish domain-dependent functionality"""
+    """Convert subdomain_dims from various user types to a list of arrays"""
     n_traj = len(st_grids)
     grid_ndim = st_grids[0].ndim - 1
     xts = [_get_spatial_endpoints(grid) for grid in st_grids]
@@ -695,20 +721,21 @@ def _dense_to_open_mesh(meshgrid: AxesArray) -> list[AxesArray]:
     return openmesh
 
 
-def _integrate_by_parts(pde_lib: PDELibrary) -> list[SemiTerm]:
+def _integrate_by_parts(multiindices: Float2D) -> list[SemiTerm]:
     """Move derivatives from each PDE term to test function"""
     terms = []
-    for deriv_op in pde_lib.multiindices:
+    for deriv_op in multiindices:
+        deriv_op = tuple(deriv_op)
         zeros = tuple(np.zeros_like(deriv_op))
-        coeff = (-1) ** deriv_op.sum()
+        coeff = (-1) ** sum(deriv_op)
         terms.append((zeros, None, coeff, tuple(deriv_op)))
     return terms
 
 
 def _integrate_product_by_parts(
-    f_lib: BaseFeatureLibrary, pde_lib: PDELibrary
-) -> list[SemiTerm]:
-    """Move derivatives from each PDE term to test function
+    f_lib: BaseFeatureLibrary, multiindices: Float2D
+) -> list[Collection[SemiTerm]]:
+    r"""Move derivatives from each PDE term to test function
 
     \int f(u) * u^(d) * phi dx
 
@@ -716,17 +743,19 @@ def _integrate_product_by_parts(
     using the product rule to distribute derivatives.
     """
     terms = []
-    for deriv_op in pde_lib.multiindices:
+    for deriv_op in multiindices:
         derivs_to_move = deriv_op // 2
         deriv_op_u = deriv_op - derivs_to_move
         product_terms = product(*[range(d + 1) for d in derivs_to_move])
+        single_feature_terms = []
         for deriv_op_f in product_terms:
             deriv_op_phi = tuple(derivs_to_move - np.array(deriv_op_f))
             prod_coeff = np.prod([binom(d_move, d_f) for d_f, d_move in zip(deriv_op_f, derivs_to_move)])
             if prod_coeff == 0:
                 raise RuntimeError(f"deriv op f : {deriv_op_f}, moving: {derivs_to_move}")
-            coeff = (-1) ** derivs_to_move.sum() * prod_coeff
-            terms.append((tuple(deriv_op_u), (f_lib, deriv_op_f), coeff, deriv_op_phi))
+            coeff = (-1) ** sum(derivs_to_move) * prod_coeff
+            single_feature_terms.append((tuple(deriv_op_u), (f_lib, deriv_op_f), coeff, deriv_op_phi))
+        terms.append(single_feature_terms)
     return terms
 
 

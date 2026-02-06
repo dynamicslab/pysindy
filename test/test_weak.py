@@ -192,11 +192,14 @@ def test_flatten_libraries():
 
 
 def test_weak_class(data_1d_random_pde):
-    model = WeakSINDy(PolynomialLibrary(), STLSQ())
     t, x, u, u_dot = data_1d_random_pde
-    st_grid = np.stack(np.meshgrid(x, t, indexing="ij"), axis=-1)
+    mesh = np.stack(np.meshgrid(x, t, indexing="ij"), axis=-1)
+    f_lib = PolynomialLibrary()
+    u_lib = PDELibrary(derivative_order=2, spatial_grid=x)
+    lib = f_lib + u_lib + f_lib * u_lib
+    model = WeakSINDy(lib, STLSQ())
 
-    model.fit(x=[u], st_grids=[st_grid])
+    model.fit(x=[u], st_grids=[mesh])
 
 
 def test_integrate_by_parts():
@@ -204,7 +207,7 @@ def test_integrate_by_parts():
     features = PDELibrary(derivative_order=2, spatial_grid=spatial_grid)
     inputs = [np.ones((1, 2))]
     features.fit(inputs)
-    result = _integrate_by_parts(features)
+    result = _integrate_by_parts(features.multiindices)
     # Current ordering is
     # u_y, u_yy, u_x, u_xy, u_xx
     expected = [
@@ -225,14 +228,18 @@ def test_integrate_product_by_parts():
     features = f_lib * d_lib
     inputs = [np.ones((1, 2))]
     features.fit(inputs)
-    result = _integrate_product_by_parts(f_lib, d_lib)
+    result = _integrate_product_by_parts(f_lib, d_lib.multiindices)
     expected = [
-        ((0, 1), (f_lib, (0, 0)), 1, (0, 0)),
-        ((0, 1), (f_lib, (0, 0)), -1, (0, 1)),
-        ((0, 1), (f_lib, (0, 1)), -1, (0, 0)),
-        ((1, 0), (f_lib, (0, 0)), 1, (0, 0)),
-        ((1, 1), (f_lib, (0, 0)), 1, (0, 0)),
-        ((1, 0), (f_lib, (0, 0)), -1, (1, 0)),
-        ((1, 0), (f_lib, (1, 0)), -1, (0, 0)),
+        [((0, 1), (f_lib, (0, 0)), 1, (0, 0))],
+        [
+            ((0, 1), (f_lib, (0, 0)), -1, (0, 1)),
+            ((0, 1), (f_lib, (0, 1)), -1, (0, 0))
+        ],
+        [((1, 0), (f_lib, (0, 0)), 1, (0, 0))],
+        [((1, 1), (f_lib, (0, 0)), 1, (0, 0))],
+        [
+            ((1, 0), (f_lib, (0, 0)), -1, (1, 0)),
+            ((1, 0), (f_lib, (1, 0)), -1, (0, 0))
+        ],
     ]
     assert result == expected

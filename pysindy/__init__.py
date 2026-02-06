@@ -69,6 +69,7 @@ except (ImportError, NameError):
 __all__ = [
     "SINDy",
     "DiscreteSINDy",
+    "BINDy",
     "differentiation",
     "feature_library",
     "optimizers",

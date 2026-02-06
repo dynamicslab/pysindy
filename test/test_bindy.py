@@ -1,5 +1,5 @@
 """
-Unit tests for SINDy class.
+Unit tests for BINDy class.
 
 Note: all tests should be encapsulated in functions with
 names starting with "test_"

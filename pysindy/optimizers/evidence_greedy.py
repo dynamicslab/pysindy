@@ -370,7 +370,7 @@ class EvidenceGreedy(BaseOptimizer):
                 ]
                 all_histories.append(history_j)
 
-                # Keep history_ format consistent: one snapshot for this target
+                # Consistent history_ format 
                 history_tmp = np.full((n_targets, n_features), np.nan, dtype=float)
                 history_tmp[j, :] = 0.0
                 self.history_.append(history_tmp)
@@ -379,7 +379,7 @@ class EvidenceGreedy(BaseOptimizer):
             # Since the target (Y) is also possibly normalized, we need to rescale _sigma2 accordingly.
             if self.normalize_columns:
                 yn = float(y_norm[j])
-                # Prevent divide-by-zero / inf inflation
+                # Prevent division by zero / inf
                 denom = max(yn * yn, eps)
                 _sigma2_ = float(self._sigma2) / denom
             else:

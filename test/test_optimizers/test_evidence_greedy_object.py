@@ -38,7 +38,7 @@ def main():
 
     # EvidenceGreedy optimizer
     
-    opt = EvidenceGreedy(alpha=1e-6, max_iter=None, unbias=False, normalize_columns=False)
+    opt = EvidenceGreedy(alpha=1e-6, max_iter=None, unbias=False, normalize_columns=True)
 
     # New wrapper object
     model = ps.BINDy(sigma_x)

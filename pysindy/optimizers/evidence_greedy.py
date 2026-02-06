@@ -345,12 +345,45 @@ class EvidenceGreedy(BaseOptimizer):
         for j in range(n_targets):
             b = B[:, j]  # (M,)
             yTy = float(yTy_all[j])  # scalar
+        
+            eps = float(np.finfo(float).eps)
+            if (not np.isfinite(yTy)) or (yTy <= eps):
+                coef[j, :] = 0.0
+                ind[j, :] = False
+
+                # Log evidence of the empty model (K=0). m_N is ignored for K=0.
+                log_ev = _log_evidence_from_G(
+                    G_active=np.zeros((0, 0), dtype=float),
+                    b_active=np.zeros((0,), dtype=float),
+                    yTy=yTy,
+                    n_samples=n_samples,
+                    alpha=self.alpha,
+                    _sigma2=float(self._sigma2),
+                    m_N=None,
+                )
+                history_j = [
+                    {
+                        "step": 0,
+                        "support_size": 0,
+                        "log_evidence": float(log_ev),
+                    }
+                ]
+                all_histories.append(history_j)
+
+                # Keep history_ format consistent: one snapshot for this target
+                history_tmp = np.full((n_targets, n_features), np.nan, dtype=float)
+                history_tmp[j, :] = 0.0
+                self.history_.append(history_tmp)
+                continue
 
             # Since the target (Y) is also possibly normalized, we need to rescale _sigma2 accordingly.
             if self.normalize_columns:
-                _sigma2_ = self._sigma2 / (y_norm[j] ** 2)
+                yn = float(y_norm[j])
+                # Prevent divide-by-zero / inf inflation
+                denom = max(yn * yn, eps)
+                _sigma2_ = float(self._sigma2) / denom
             else:
-                _sigma2_ = self._sigma2
+                _sigma2_ = float(self._sigma2)
 
             coef_j, ind_j, history_j, coef_hist = _backward_evidence_greedy_single(
                 x=x,

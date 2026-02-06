@@ -46,7 +46,8 @@ Research directions
   u*Du.
 """
 from collections import defaultdict
-from collections.abc import Sequence, Collection
+from collections.abc import Collection
+from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import product
 from typing import Any
@@ -58,6 +59,7 @@ from typing import Optional
 import numpy as np
 from scipy.special import binom
 from scipy.special import perm
+from sklearn.base import check_is_fitted
 from typing_extensions import Self
 
 from ._core import _adapt_to_multiple_trajectories
@@ -79,8 +81,10 @@ from .feature_library import TensoredLibrary
 from .feature_library.base import BaseFeatureLibrary
 from .optimizers.base import BaseOptimizer
 from .utils import comprehend_axes
+from .utils import concat_sample_axis
+from .utils import drop_nan_samples
 from .utils._axes import AxesArray
-from .utils import concat_sample_axis, drop_nan_samples
+
 
 @dataclass
 class SubdomainSpecs:
@@ -149,10 +153,10 @@ class TestFunctionPhi:
 
 
 SemiTerm = tuple[
-    tuple[int, ...] | None, # derivatives of u
-    tuple[BaseFeatureLibrary, tuple[int, ...]] | None, # derivatives of f(u)
-    float, # coefficient
-    tuple[int, ...] # derivatives of phi
+    tuple[int, ...] | None,  # derivatives of u
+    tuple[BaseFeatureLibrary, tuple[int, ...]] | None,  # derivatives of f(u)
+    float,  # coefficient
+    tuple[int, ...],  # derivatives of phi
 ]
 """A type alias for a term in calculating the weak form of a feature.
 
@@ -172,6 +176,7 @@ a combination of integration by parts and the product rule.
 
 
 """
+
 
 class WeakSINDy(_BaseSINDy):
     """For test function basis, see Section 2.4 of Messenger and Bortz, "Weak SINDy:
@@ -230,7 +235,7 @@ class WeakSINDy(_BaseSINDy):
         *,
         H_xt: Optional[float | FloatND | Sequence[FloatND]] = None,
         u: Optional[np.ndarray | Sequence[FloatND]] = None,
-        feature_names: Optional[list[str]] = None
+        feature_names: Optional[list[str]] = None,
     ) -> Self:
         if not _check_multiple_trajectories(x, st_grids, None, u):
             x = cast(np.ndarray, x)
@@ -295,7 +300,9 @@ class WeakSINDy(_BaseSINDy):
 
         # Need feature names and set n_output_features_ (this is same with PDE library)
         u_dot_wk = [
-            convert_u_dot_integral(xi, weights[tuple(time_deriv[0])], spec.axis_inds_per_subdom)
+            convert_u_dot_integral(
+                xi, weights[tuple(time_deriv[0])], spec.axis_inds_per_subdom
+            )
             for xi, weights, spec in zip(x, weights_per_deriv_op, subdomain_specs)
         ]
         self.sorted_lib_ = _flatten_libraries(self.feature_library)
@@ -314,14 +321,18 @@ class WeakSINDy(_BaseSINDy):
             elif isinstance(lib, PDELibrary):
                 # semiterm reflects one feature in the library
                 multiindices = lib.multiindices
-                multiindices = np.hstack((lib.multiindices, np.zeros((len(multiindices), 1), dtype=int)))
+                multiindices = np.hstack(
+                    (lib.multiindices, np.zeros((len(multiindices), 1), dtype=int))
+                )
                 terms.extend(_integrate_by_parts(multiindices))
             else:
                 # tensor library with product rule inside integration by parts
                 # semiterm reflects all features in the non-PDE library
                 # multiplied by one term in the PDE library
                 multiindices = lib.libraries[-1].multiindices
-                multiindices = np.hstack((multiindices, np.zeros((len(multiindices), 1), dtype=int)))
+                multiindices = np.hstack(
+                    (multiindices, np.zeros((len(multiindices), 1), dtype=int))
+                )
                 non_pde_lib = TensoredLibrary(lib.libraries[:-1])
                 terms.extend(_integrate_product_by_parts(non_pde_lib, multiindices))
 
@@ -335,9 +346,13 @@ class WeakSINDy(_BaseSINDy):
                 else:
                     # term is a collection of semi-terms that sum represent
                     # product rule terms.
-                    parts = [_eval_semiterm(x_i, part, sub_spec, weight_map) for part in term]
+                    parts = [
+                        _eval_semiterm(x_i, part, sub_spec, weight_map) for part in term
+                    ]
                     weak_feats.append(sum(parts))
-            weak_feats = AxesArray(np.concatenate(weak_feats, axis=-1), {"ax_sample": 0, "ax_coord": 1})
+            weak_feats = AxesArray(
+                np.concatenate(weak_feats, axis=-1), {"ax_sample": 0, "ax_coord": 1}
+            )
             rhs_trajectories.append(weak_feats)
 
         # Fit the optimizer!
@@ -349,6 +364,56 @@ class WeakSINDy(_BaseSINDy):
         self.feature_library.fit(x[0])
         self._fit_shape()
         return self
+
+    def get_feature_names(self) -> list[str]:
+        """
+        Get a list of names of features used by SINDy model.
+
+        Returns
+        -------
+        feats: list
+            A list of strings giving the names of the features in the feature
+            library, :code:`self.feature_library`.
+        """
+        check_is_fitted(self)
+        return self.sorted_lib_.get_feature_names(input_features=self.feature_names_)
+
+    def equations(self, precision: int = 3) -> list[str]:
+        """
+        Get the right hand sides of the SINDy model equations.
+
+        Parameters
+        ----------
+        precision: int, optional (default 3)
+            Number of decimal points to include for each coefficient in the
+            equation.
+
+        Returns
+        -------
+        equations: list of strings
+            List of strings representing the SINDy model equations for each
+            input feature.
+        """
+        check_is_fitted(self)
+        sys_coord_names = self.feature_names_
+        feat_names = self.sorted_lib_.get_feature_names(sys_coord_names)
+
+        def term(c, name):
+            rounded_coef = np.round(c, precision)
+            if rounded_coef == 0:
+                return ""
+            else:
+                return f"{c: .{precision}f} {name}"
+
+        equations = []
+        for coef_row in self.optimizer.coef_:
+            components = [term(c, i) for c, i in zip(coef_row, feat_names)]
+            eq = " + ".join(filter(bool, components))
+            if not eq:
+                eq = f"{0: .{precision}f}"
+            equations.append(eq)
+
+        return equations
 
     def predict(self):
         pass
@@ -373,11 +438,15 @@ def _eval_semiterm(
     if diff1 is None:
         x_d = np.ones_like(x)
     else:
-        x_d = PDELibrary(spatial_grid=sub_spec.domain, multiindices=[diff1]).fit_transform(x)
+        x_d = PDELibrary(
+            spatial_grid=sub_spec.domain, multiindices=[diff1]
+        ).fit_transform(x)
     if feat_term is not None:
         feat_lib, diff2 = feat_term
         fx = feat_lib.fit_transform(x)
-        fx = PDELibrary(spatial_grid=sub_spec.domain, multiindices=[diff2]).fit_transform(fx)
+        fx = PDELibrary(
+            spatial_grid=sub_spec.domain, multiindices=[diff2]
+        ).fit_transform(fx)
     else:
         fx = np.ones_like(x)
     xt = x_d * fx
@@ -436,7 +505,9 @@ def _normalize_subdomain_dims(
 
 
 def convert_u_dot_integral(
-    u: AxesArray, fulltweights: list[AxesArray], axis_inds_per_subdom: list[list[AxesArray]]
+    u: AxesArray,
+    fulltweights: list[AxesArray],
+    axis_inds_per_subdom: list[list[AxesArray]],
 ) -> AxesArray:
     """
     Takes a full set of spatiotemporal fields u(x, t) and finds the weak
@@ -449,9 +520,7 @@ def convert_u_dot_integral(
     st_axes = range(grid_dim)
     u_dot_integral = np.array(
         [
-            np.tensordot(
-                weights, values, axes=[st_axes, st_axes]
-            )
+            np.tensordot(weights, values, axes=[st_axes, st_axes])
             for weights, values in zip(fulltweights, u_subdomains)
         ]
     )
@@ -750,14 +819,19 @@ def _integrate_product_by_parts(
         single_feature_terms = []
         for deriv_op_f in product_terms:
             deriv_op_phi = tuple(derivs_to_move - np.array(deriv_op_f))
-            prod_coeff = np.prod([binom(d_move, d_f) for d_f, d_move in zip(deriv_op_f, derivs_to_move)])
+            prod_coeff = np.prod(
+                [binom(d_move, d_f) for d_f, d_move in zip(deriv_op_f, derivs_to_move)]
+            )
             if prod_coeff == 0:
-                raise RuntimeError(f"deriv op f : {deriv_op_f}, moving: {derivs_to_move}")
+                raise RuntimeError(
+                    f"deriv op f : {deriv_op_f}, moving: {derivs_to_move}"
+                )
             coeff = (-1) ** sum(derivs_to_move) * prod_coeff
-            single_feature_terms.append((tuple(deriv_op_u), (f_lib, deriv_op_f), coeff, deriv_op_phi))
+            single_feature_terms.append(
+                (tuple(deriv_op_u), (f_lib, deriv_op_f), coeff, deriv_op_phi)
+            )
         terms.append(single_feature_terms)
     return terms
-
 
 
 def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
@@ -770,6 +844,7 @@ def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
     .. todo::
         ensure that flat tree maintains identities of libraries and caches transforms
     """
+
     def _as_factors(lib: BaseFeatureLibrary) -> list[BaseFeatureLibrary]:
         if isinstance(lib, TensoredLibrary):
             return list(lib.libraries)
@@ -798,6 +873,7 @@ def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
         return ConcatLibrary([lib])
 
     return _flatten(library)
+
 
 def _calculate_weak_features(
     x: AxesArray,

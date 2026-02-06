@@ -200,6 +200,7 @@ def test_weak_class(data_1d_random_pde):
     model = WeakSINDy(lib, STLSQ())
 
     model.fit(x=[u], st_grids=[mesh])
+    model.print()
 
 
 def test_integrate_by_parts():
@@ -231,15 +232,9 @@ def test_integrate_product_by_parts():
     result = _integrate_product_by_parts(f_lib, d_lib.multiindices)
     expected = [
         [((0, 1), (f_lib, (0, 0)), 1, (0, 0))],
-        [
-            ((0, 1), (f_lib, (0, 0)), -1, (0, 1)),
-            ((0, 1), (f_lib, (0, 1)), -1, (0, 0))
-        ],
+        [((0, 1), (f_lib, (0, 0)), -1, (0, 1)), ((0, 1), (f_lib, (0, 1)), -1, (0, 0))],
         [((1, 0), (f_lib, (0, 0)), 1, (0, 0))],
         [((1, 1), (f_lib, (0, 0)), 1, (0, 0))],
-        [
-            ((1, 0), (f_lib, (0, 0)), -1, (1, 0)),
-            ((1, 0), (f_lib, (1, 0)), -1, (0, 0))
-        ],
+        [((1, 0), (f_lib, (0, 0)), -1, (1, 0)), ((1, 0), (f_lib, (1, 0)), -1, (0, 0))],
     ]
     assert result == expected

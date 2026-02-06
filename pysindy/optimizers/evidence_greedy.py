@@ -35,8 +35,6 @@ class EvidenceGreedy(BaseOptimizer):
     (sigma_p^{-2}) and ``_sigma2`` is the observation noise variance
     (sigma^2).
 
-    #TODO: make it more ml style than statistics look at STLSQ
-
     The algorithm:
 
       1. Starts from the full support (all library terms active).
@@ -182,8 +180,8 @@ class EvidenceGreedy(BaseOptimizer):
         super().__init__(
             max_iter=max_iter,
             normalize_columns=normalize_columns,
-            initial_guess=initial_guess,  # TODO: Documentation
-            copy_X=copy_X,  # TODO: just leave
+            initial_guess=initial_guess,  
+            copy_X=copy_X,  
             unbias=unbias,
         )
 

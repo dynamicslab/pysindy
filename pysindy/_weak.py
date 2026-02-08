@@ -45,12 +45,13 @@ Research directions
   weak linear/nonlinear integral.  The really challenging part are terms like
   u*Du.
 """
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Collection
 from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import product
-from typing import Any
+from typing import Any, final
 from typing import Callable
 from typing import cast
 from typing import Literal
@@ -100,7 +101,8 @@ class SubdomainSpecs:
         subgrid_dims: The dimensions of each subdomain in original spatiotemporal
             units, divided by two (i.e. half the length of each axis in a subodmain).
             Rows index subdomain, columns index spatiotemporal axis
-        subgrid_shapes: The shape of each supdomain meshgrid
+        subgrid_shapes: The shape of each supdomain meshgrid, minus the coordinate
+            axis.
         subgrids_scaled: subdomain meshgrid in same format as ``domain`` attr,
             rescaled along each axis from [-1, 1]
     """
@@ -145,11 +147,85 @@ class SubdomainSpecs:
             yield self[i]
 
 
-@dataclass
-class TestFunctionPhi:
-    _phi: Callable
-    _phi_int: Callable
-    _xphi_int: Callable
+@dataclass(frozen=True)
+class TestFunctionPhi(ABC):
+
+    @property
+    @abstractmethod    
+    def max_order(self) -> int:
+        ...
+
+    @abstractmethod
+    def phi(self, x: Float1D, d: int) -> Float1D:
+        ...
+    
+    @abstractmethod
+    def phi_int(self, x: Float1D, d: int) -> Float1D:
+        ...
+
+    @abstractmethod
+    def xphi_int(self, x: Float1D, d: int) -> Float1D:
+        ...
+
+
+@final
+@dataclass(frozen=True)
+class UniformEvenBump(TestFunctionPhi):
+    """The uniform even bump function, (1-x**2)**p"""
+    p: int
+
+    def __post_init__(self):
+        if self.p <= 0:
+            raise ValueError("Polynomial exponent must be a positive integer.")
+        
+    @property
+    def max_order(self) -> int:
+        return self.p
+
+    def phi(self, x: Float1D, d: int) -> Float1D:
+        """Evaluate the function, differentiated d times
+        
+        Calculated term-wise in the binomial expansion.
+        """
+        
+        ks = np.arange(self.p + 1)
+        ks = ks[np.where(2 * (self.p - ks) - d >= 0)][:, np.newaxis]
+        poly_coef = binom(self.p, ks)
+        sign = (-1) ** (self.p - ks)
+        x_pows = 2 * (self.p - ks) - d
+        deriv_coef = perm(2 * (self.p - ks), d)
+        monomials = sign * poly_coef * deriv_coef * x[np.newaxis, :] ** x_pows
+        return np.sum(monomials, axis=0)
+    
+    def phi_int(self, x: Float1D, d: int) -> Float1D:
+        """
+        Indefinite integral of one-dimensional polynomial test
+        function (1-x**2)**p, differentiated d times, calculated
+        term-wise in the binomial expansion.
+        """
+        ks = np.arange(self.p + 1)
+        ks = ks[np.where(2 * (self.p - ks) - d >= 0)][:, np.newaxis]
+        poly_coef = binom(self.p, ks)
+        sign = (-1) ** (self.p - ks)
+        x_pows = 2 * (self.p - ks) - d + 1
+        deriv_coef = perm(2 * (self.p - ks), d) / (2 * (self.p - ks) - d + 1)
+        monomials = sign * poly_coef * deriv_coef * x[np.newaxis, :] ** x_pows
+        return np.sum(monomials, axis=0)
+
+    def xphi_int(self, x: Float1D, d: int) -> Float1D:
+        """
+        Indefinite integral of one-dimensional polynomial test function
+        x*(1-x**2)**p, differentiated d times, calculated term-wise in the
+        binomial expansion.
+        """
+        ks = np.arange(self.p + 1)
+        ks = ks[np.where(2 * (self.p - ks) - d >= 0)][:, np.newaxis]
+        poly_coef = binom(self.p, ks)
+        sign = (-1) ** (self.p - ks)
+        x_pows = 2 * (self.p - ks) - d + 2
+        deriv_coef = perm(2 * (self.p - ks), d) / (2 * (self.p - ks) - d + 2)
+        monomials = sign * poly_coef * deriv_coef * x[np.newaxis, :] ** x_pows
+        return np.sum(monomials, axis=0)
 
 
 SemiTerm = tuple[
@@ -174,7 +250,7 @@ then the weak form includes no multiplication by a non-derivative feature.
 The third term is the coefficient of the term in weak form, emerging from
 a combination of integration by parts and the product rule.
 
-
+The fourth term is the derivative order moved on the test function phi
 """
 
 
@@ -190,13 +266,13 @@ class WeakSINDy(_BaseSINDy):
         feature_library: Optional[BaseFeatureLibrary],
         optimizer: Optional[BaseOptimizer],
         n_subdomains: int = 100,
-        test_fn_order=4,
+        test_fn: TestFunctionPhi = UniformEvenBump(4),
         spatial_diff_method: type[BaseDifferentiation] = FiniteDifference,
         diff_kwargs: Optional[dict] = None,
     ):
         super().__init__(feature_library=feature_library, optimizer=optimizer)
         self.n_subdomains = n_subdomains
-        self.test_fn_order = test_fn_order
+        self.test_fn = test_fn
         self.spatial_diff_method = spatial_diff_method
         self.diff_kwargs = diff_kwargs
         self.__post_init()
@@ -206,8 +282,6 @@ class WeakSINDy(_BaseSINDy):
             self.diff_kwargs = {}
         if self.n_subdomains <= 0:
             raise ValueError("The number of subdomains must be > 0")
-        if self.test_fn_order <= 0:
-            raise ValueError("Poly degree of the spatial weights must be > 0")
 
         if isinstance(self.feature_library, GeneralizedLibrary):
             raise TypeError("WeakSINDy not yet compatible with GeneralizedLibrary")
@@ -220,8 +294,11 @@ class WeakSINDy(_BaseSINDy):
             return 0
 
         derivative_order = max_derivative_order(self.feature_library)
-        if self.test_fn_order < derivative_order:
-            self.test_fn_order = derivative_order
+        if self.test_fn.max_order < derivative_order:
+            raise ValueError(
+                "The test function must be able to support derivatives up to the "
+                "maximum derivative order in the feature library."
+            )
 
     def set_params(self, **kwargs):
         for k, v in kwargs.items():
@@ -294,7 +371,7 @@ class WeakSINDy(_BaseSINDy):
         multiindices = [tuple(deriv_op) for deriv_op in multiindices]
 
         weights_per_deriv_op = [
-            _set_up_weights(spec, self.test_fn_order, multiindices)
+            _set_up_weights(spec, self.test_fn, multiindices)
             for spec in subdomain_specs
         ]
 
@@ -538,7 +615,7 @@ def _get_spatial_endpoints(st_grid: FloatND) -> tuple[Float1D, Float1D]:
 
 
 def _set_up_weights(
-    subdoms: SubdomainSpecs, p: int, multiindices: list[tuple[int, ...]]
+    subdoms: SubdomainSpecs, phi: TestFunctionPhi, multiindices: list[tuple[int, ...]]
 ) -> dict[tuple[int, ...], list[AxesArray]]:
     """Create the quadrature weights for each integral.
 
@@ -548,7 +625,7 @@ def _set_up_weights(
     for deriv_op in multiindices:
         for _, dims, shape, scaled_coord in iter(subdoms):
             weights = _derivative_weights(
-                _dense_to_open_mesh(scaled_coord), dims, shape, deriv_op, p
+                _dense_to_open_mesh(scaled_coord), dims, shape, deriv_op, phi
             )
             weight_lookup[deriv_op].append(weights)
 
@@ -655,7 +732,7 @@ def _derivative_weights(
     subgrid_dims: AxesArray,
     subgrid_shape: tuple[int, ...],
     deriv: tuple[int, ...],
-    p: int,
+    phi: TestFunctionPhi,
 ) -> AxesArray:
     r"""Calculate integral weights for differential operator on basis function
 
@@ -671,7 +748,7 @@ def _derivative_weights(
         subgrid_dims: 1D array of subdomain half-dimensions
         subgrid_shape: Shape of the subdomain
         deriv: 1D array of derivative orders along each axis
-        p: Polynomial exponent for test function
+        phi: Test function object
 
     Returns:
         Weights for the integral, shaped as the subdomain grid with an added
@@ -685,7 +762,7 @@ def _derivative_weights(
         st_axis, (deriv_1d, scaled_coords_1d) = it
         # AxesArray errors in next few lines
         scaled_coords_1d = np.asarray(scaled_coords_1d)
-        weights_1d = _linear_weights(scaled_coords_1d, int(deriv_1d), p)
+        weights_1d = _linear_weights(scaled_coords_1d, int(deriv_1d), phi)
         weights_nd = np.apply_along_axis(lambda x: x * weights_1d, st_axis, weights_nd)
 
     weights_nd *= np.prod(subgrid_dims ** (1.0 - np.array(deriv)))
@@ -696,55 +773,8 @@ def _derivative_weights(
     return AxesArray(weights_nd, ax_labels)
 
 
-def _phi(x: Float1D, d: int, p: int) -> Float1D:
-    """
-    One-dimensional polynomial test function (1-x**2)**p,
-    differentiated d times, calculated term-wise in the binomial
-    expansion.
-    """
-    ks = np.arange(p + 1)
-    ks = ks[np.where(2 * (p - ks) - d >= 0)][:, np.newaxis]
-    poly_coef = binom(p, ks)
-    sign = (-1) ** (p - ks)
-    x_pows = 2 * (p - ks) - d
-    deriv_coef = perm(2 * (p - ks), d)
-    monomials = sign * poly_coef * deriv_coef * x[np.newaxis, :] ** x_pows
-    return np.sum(monomials, axis=0)
 
-
-def _phi_int(x: Float1D, d: int, p: int) -> Float1D:
-    """
-    Indefinite integral of one-dimensional polynomial test
-    function (1-x**2)**p, differentiated d times, calculated
-    term-wise in the binomial expansion.
-    """
-    ks = np.arange(p + 1)
-    ks = ks[np.where(2 * (p - ks) - d >= 0)][:, np.newaxis]
-    poly_coef = binom(p, ks)
-    sign = (-1) ** (p - ks)
-    x_pows = 2 * (p - ks) - d + 1
-    deriv_coef = perm(2 * (p - ks), d) / (2 * (p - ks) - d + 1)
-    monomials = sign * poly_coef * deriv_coef * x[np.newaxis, :] ** x_pows
-    return np.sum(monomials, axis=0)
-
-
-def _xphi_int(x: Float1D, d: int, p: int) -> Float1D:
-    """
-    Indefinite integral of one-dimensional polynomial test function
-    x*(1-x**2)**p, differentiated d times, calculated term-wise in the
-    binomial expansion.
-    """
-    ks = np.arange(p + 1)
-    ks = ks[np.where(2 * (p - ks) - d >= 0)][:, np.newaxis]
-    poly_coef = binom(p, ks)
-    sign = (-1) ** (p - ks)
-    x_pows = 2 * (p - ks) - d + 2
-    deriv_coef = perm(2 * (p - ks), d) / (2 * (p - ks) - d + 2)
-    monomials = sign * poly_coef * deriv_coef * x[np.newaxis, :] ** x_pows
-    return np.sum(monomials, axis=0)
-
-
-def _linear_weights(x: Float1D, d: int, p: int) -> Float1D:
+def _linear_weights(x: Float1D, d: int, phi: TestFunctionPhi) -> Float1D:
     """
     One-dimensional weights for integration against the dth derivative
     of the polynomial test function (1-x**2)**p. This is derived
@@ -754,8 +784,8 @@ def _linear_weights(x: Float1D, d: int, p: int) -> Float1D:
     The piecewise components are computed analytically, and the integral is
     expressed as a dot product of weights against the f_i.
     """
-    ws = _phi_int(x, d, p)
-    zs = _xphi_int(x, d, p)
+    ws = phi.phi_int(x, d)
+    zs = phi.xphi_int(x, d)
     x_i = x[:-1]
     x_plus = x[1:]
     w_i = ws[:-1]

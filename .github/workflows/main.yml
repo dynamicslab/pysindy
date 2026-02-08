@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.11"
       - name: Linting
         run: |
           pip install pre-commit
@@ -34,7 +34,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.10"
+        python-version: "3.11"
     - name: build
       run: pip install .
     - name: test import
@@ -78,7 +78,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.11", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v4

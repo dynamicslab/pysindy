@@ -1,7 +1,6 @@
 """
 EvidenceGreedy optimizer: greedy Bayesian evidence-based sparse regression.
 
-See :class:`pysindy.optimizers.EvidenceGreedy` for full documentation.
 """
 from __future__ import annotations
 
@@ -13,12 +12,12 @@ from scipy.linalg import LinAlgWarning
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import ridge_regression
 
-from .base import BaseOptimizer
 from .base import _normalize_features
+from .base import BaseOptimizer
 
 
 class EvidenceGreedy(BaseOptimizer):
-    """
+    r"""
     Backward evidence-based sparse regression for SINDy.
 
     This optimizer performs backward feature elimination driven by the
@@ -28,8 +27,8 @@ class EvidenceGreedy(BaseOptimizer):
 
     .. math::
 
-        w &\\sim \\mathcal{N}(0, \\alpha^{-1} I), \\\\
-        y_j \\mid w &\\sim \\mathcal{N}(\\Theta w, \\sigma^2 I),
+        w &\sim \mathcal{N}\!\left(0,\ \alpha^{-1} I\right), \\
+        y_j \mid w &\sim \mathcal{N}\!\left(\Theta w,\ \sigma^2 I\right),
 
     where ``alpha`` is the prior precision on the coefficients
     (sigma_p^{-2}) and ``_sigma2`` is the observation noise variance
@@ -37,13 +36,15 @@ class EvidenceGreedy(BaseOptimizer):
 
     The algorithm:
 
-      1. Starts from the full support (all library terms active).
-      2. At each step, temporarily removes each active term in turn.
-      3. For each candidate support, computes the Bayesian log evidence
-         log p(y_j | alpha, _sigma2, support) using precomputed
-         statistics G = Theta^T Theta and b_j = Theta^T y_j.
-      4. Accepts the removal that yields the largest increase in evidence.
-      5. Stops when no single removal increases the evidence.
+    1. Start from the full support (all library terms active).
+    2. At each step, temporarily remove each active term in turn.
+    3. For each candidate support, compute the Bayesian log evidence
+    :math:`\log p(y_j \mid \alpha, \sigma^2, \mathrm{support})` using the
+    precomputed statistics :math:`G=\Theta^\top\Theta` and
+    :math:`b_j=\Theta^\top y_j`.
+    4. Accept the removal that yields the largest increase in evidence.
+    5. Stop when no single removal increases the evidence.
+
 
     Parameters
     ----------
@@ -66,12 +67,16 @@ class EvidenceGreedy(BaseOptimizer):
 
 
     normalize_columns : bool, default=True
-        Passed to :class:`~pysindy.optimizers.base.BaseOptimizer`. If True,
-        BOTH the columns of the library matrix AND the target variables are normalized before regression.
-        The Bayesian prior and ridge penalty are then applied in this
-        normalized space. The learned coefficients are mapped back
-        to the original scale when stored in ``coef_``.
-        Note that when normalized_columns is True, the ``alpha`` is typically of order 1.0.
+        Passed to :class:`~pysindy.optimizers.base.BaseOptimizer`.
+        If True, BOTH the columns of the library matrix and the target
+        variables are normalized before regression. The Bayesian prior
+        and ridge penalty are then applied in this normalized space. The
+        learned coefficients are mapped back to the original scale when
+        stored in ``coef_``.
+
+        Note that when ``normalize_columns=True``, ``alpha`` is typically of
+        order 1.0.
+
 
     copy_X : bool, default=True
         Passed to :class:`~pysindy.optimizers.base.BaseOptimizer`. If True,
@@ -142,9 +147,12 @@ class EvidenceGreedy(BaseOptimizer):
     >>> model.fit(x, t=t[1] - t[0])
     >>> model.print()
 
-    (x0)' = -9.979 x0 + 9.980 x1\
-    (x1)' = 27.807 x0 + -0.963 x1 + -0.995 x0 x2\
-    (x2)' = -2.658 x2 + 0.997 x0 x1 
+    Example output::
+
+        (x0)' = -9.979 x0 + 9.980 x1
+        (x1)' = 27.807 x0 - 0.963 x1 - 0.995 x0 x2
+        (x2)' = -2.658 x2 + 0.997 x0 x1
+
     """
 
     def __init__(
@@ -180,8 +188,8 @@ class EvidenceGreedy(BaseOptimizer):
         super().__init__(
             max_iter=max_iter,
             normalize_columns=normalize_columns,
-            initial_guess=initial_guess,  
-            copy_X=copy_X,  
+            initial_guess=initial_guess,
+            copy_X=copy_X,
             unbias=unbias,
         )
 
@@ -192,19 +200,26 @@ class EvidenceGreedy(BaseOptimizer):
         sigma_x: float,
     ) -> float:
         """
-        Estimate the derivative noise variance _sigma2 induced by a
+        Estimate the derivative noise variance ``_sigma2`` induced by a
         finite-difference differentiator.
 
         This treats ``differentiator._differentiate`` as a linear operator
-        x -> L_dt x. By sending an identity matrix of size T through the
-        operator, we reconstruct the finite-difference matrix L_dt and use
+        mapping ``x`` to ``L x``. By sending an identity matrix of size ``T``
+        through the operator, we reconstruct the finite-difference matrix
+        ``L`` and use
 
-            Var[eta_k] = sigma_x**2 * sum_j L_dt[k, j]**2
+        .. math::
 
-        for the induced derivative noise at row k. The returned _sigma2 is
-        the average of this variance over all rows that contain only
+            \\mathrm{Var}[\\eta_k] = \\sigma_x^2 \\sum_j L_{k j}^2
+
+        for the induced derivative noise at row ``k``. The returned
+        ``_sigma2`` is the mean of this variance over rows that contain only
         finite values.
-        # TODO: support pointwise noise variance in future versions.
+
+        Notes
+        -----
+        This implementation currently returns a single averaged noise variance.
+        Pointwise noise variance may be supported in future versions.
 
         Parameters
         ----------
@@ -216,7 +231,7 @@ class EvidenceGreedy(BaseOptimizer):
             Time grid passed to the differentiator.
         sigma_x : float
             Standard deviation of the additive measurement noise on the
-            state x(t). Must be non-negative.
+            state ``x(t)``. Must be non-negative.
 
         Returns
         -------
@@ -224,6 +239,7 @@ class EvidenceGreedy(BaseOptimizer):
             Estimated variance of the induced noise on the differentiated
             signal.
         """
+
         t = np.asarray(t)
         if t.ndim != 1:
             raise ValueError("t must be a 1D time grid.")
@@ -251,7 +267,9 @@ class EvidenceGreedy(BaseOptimizer):
                 "without NaNs; check differentiator settings."
             )
 
-        # In this version, we use the mean variance over all valid time points as the noise estimate after propagation.
+        # In this version, we use the mean variance over all
+        # valid time points as the noise estimate after propagation.
+
         # TODO: Support pointwise noise variance in future versions.
         row_norm_sq = np.sum(L_dt[finite_row_mask] ** 2, axis=1)
         factor = float(np.mean(row_norm_sq))
@@ -327,7 +345,11 @@ class EvidenceGreedy(BaseOptimizer):
             y = y.reshape(-1, 1)
         n_targets = y.shape[1]  # N
 
-        # BaseOptimizer only normalise the library, but for the Bayesian framework, we also need to normalize the targets. Normalising this help make sure the parameter is also rescaled to unit order.
+        # BaseOptimizer only normalise the library, but for the Bayesian
+        # framework, we also need to normalize the targets.
+        # Normalising this help make sure the parameter
+        # is also rescaled to unit order.
+
         if self.normalize_columns:
             y_norm, y = _normalize_features(y)
 
@@ -343,7 +365,7 @@ class EvidenceGreedy(BaseOptimizer):
         for j in range(n_targets):
             b = B[:, j]  # (M,)
             yTy = float(yTy_all[j])  # scalar
-        
+
             eps = float(np.finfo(float).eps)
             if (not np.isfinite(yTy)) or (yTy <= eps):
                 coef[j, :] = 0.0
@@ -368,13 +390,15 @@ class EvidenceGreedy(BaseOptimizer):
                 ]
                 all_histories.append(history_j)
 
-                # Consistent history_ format 
+                # Consistent history_ format
                 history_tmp = np.full((n_targets, n_features), np.nan, dtype=float)
                 history_tmp[j, :] = 0.0
                 self.history_.append(history_tmp)
                 continue
 
-            # Since the target (Y) is also possibly normalized, we need to rescale _sigma2 accordingly.
+            # Since the target (Y) is also possibly normalized,
+            # we need to rescale _sigma2 accordingly.
+
             if self.normalize_columns:
                 yn = float(y_norm[j])
                 # Prevent division by zero / inf
@@ -400,10 +424,10 @@ class EvidenceGreedy(BaseOptimizer):
             ind[j, :] = ind_j
             all_histories.append(history_j)
 
-            ## For history, we need to reshape to match the format of other optimizers.
+            # For history, we need to reshape to match the format of other optimizers.
             for i in range(np.shape(coef_hist)[1]):
                 history_tmp = np.full((n_targets, n_features), np.nan, dtype=float)
-                history_tmp[j,:] = coef_hist[:,i]
+                history_tmp[j, :] = coef_hist[:, i]
                 self.history_.append(history_tmp)
 
         self.coef_ = coef
@@ -470,7 +494,7 @@ def _log_evidence_from_G(
     _sigma2: float,
     m_N: np.ndarray | None,
 ) -> float:
-    """
+    r"""
     Compute the Bayesian log evidence for a given active set and posterior mean.
 
     Notation:
@@ -642,7 +666,6 @@ def _backward_evidence_greedy_single(
     # Start with full support
     active = np.ones(M, dtype=bool)
     history: list[dict[str, float]] = []
-    
 
     # Initial MAP estimate on the full support
     J_full = np.where(active)[0]
@@ -686,7 +709,7 @@ def _backward_evidence_greedy_single(
     else:
         n_steps_max = min(max_iter, max(M - 1, 0))
 
-    m_hist = np.zeros((M,n_steps_max+1),dtype=float)
+    m_hist = np.zeros((M, n_steps_max + 1), dtype=float)
 
     for step in range(1, n_steps_max + 1):
         active_indices = np.where(active)[0]

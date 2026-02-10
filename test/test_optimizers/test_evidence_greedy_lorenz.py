@@ -48,11 +48,7 @@ def test_evidence_greedy_lorenz_example():
     sigma2 = EvidenceGreedy.TemporalNoisePropagation(fd, t, sigma_x)
 
     # EvidenceGreedy optimizer with the same hyperparameters as the docstring
-    opt = EvidenceGreedy(
-        alpha=1e-6,
-        _sigma2=sigma2,
-        max_iter=20
-    )
+    opt = EvidenceGreedy(alpha=1e-6, _sigma2=sigma2, max_iter=20)
 
     model = ps.SINDy(optimizer=opt)
     model.fit(x, t=t[1] - t[0])

@@ -14,20 +14,15 @@ pytest file_to_test.py
 """
 import numpy as np
 import pytest
-from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
 
 from pysindy import _core
-from pysindy import SINDy
 from pysindy import BINDy
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
-from pysindy.optimizers import STLSQ
 from pysindy.optimizers import EvidenceGreedy
 
 
@@ -221,9 +216,11 @@ def test_integration_derivative_methods(data_lorenz, derivative_kws):
     x, t = data_lorenz
     x = x + 1e-2 * np.random.randn(*x.shape)
     fd = SINDyDerivative(**derivative_kws)
-    
+
     sigma2 = EvidenceGreedy.TemporalNoisePropagation(fd, t, 1e-2)
-    model = BINDy(1e-2, optimizer=EvidenceGreedy(_sigma2=sigma2), differentiation_method=fd)
+    model = BINDy(
+        1e-2, optimizer=EvidenceGreedy(_sigma2=sigma2), differentiation_method=fd
+    )
     model.fit(x, t=t)
 
     check_is_fitted(model)
@@ -297,6 +294,7 @@ def test_bad_multiple_trajectories(data_multiple_trajectories):
     with pytest.raises(ValueError):
         _core._check_multiple_trajectories(x, x_dot=x[:-1], u=None)
 
+
 @pytest.mark.parametrize(
     "data",
     [
@@ -320,7 +318,6 @@ def test_equations(data, capsys):
 
     assert len(out) > 0
     assert "(x0)' = " in out
-
 
 
 def test_coefficients_equals_complexity(data_lorenz):
@@ -357,11 +354,12 @@ def test_data_shapes():
     x = np.ones((n, n, n, n, 2))
     model.fit(x, t)
 
+
 def _add_noise(x, sigma=1e-2):
     """Add Gaussian noise to x to arrays and list-of-arrays."""
     if isinstance(x, (list, tuple)):
-        return [np.asarray(xi) + sigma * np.random.randn(*np.asarray(xi).shape) for xi in x]
+        return [
+            np.asarray(xi) + sigma * np.random.randn(*np.asarray(xi).shape) for xi in x
+        ]
     x = np.asarray(x)
     return x + sigma * np.random.randn(*x.shape)
-
-

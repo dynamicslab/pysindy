@@ -1064,8 +1064,9 @@ class BINDy(SINDy):
     ----------
     sigma_x (required): float
         Measurement noise standard deviation (std) for the state measurements ``x``.
-        If x_dot is provided, sigma_x is directly used to set noise variance ``optimizer._sigma2=sigma_x**2``.
-        Otherwise, sigma_x is propagated through the ``differentiation_method`` by 
+        If ``x_dot`` is provided, ``sigma_x`` is used to set noise variance
+        ``optimizer._sigma2 = sigma_x**2``.
+        Otherwise, sigma_x is propagated through the ``differentiation_method`` by
         ``_sigma2 = EvidenceGreedy.TemporalNoisePropagation(
             differentiation_method, t_grid, sigma_x
         )`` to estimate
@@ -1108,10 +1109,18 @@ class BINDy(SINDy):
 
     Notes
     -----
-    - Propagation of noise from state measurement noise ``sigma_x``  to noise variance used in regression ``_sigma2`` is only performed when:
-      (i) ``x_dot`` is None (derivatives are expxected to be supplied in the next step supplied),
-      (ii) ``differentiation_method`` is a suitable linear method (e.g., :class:`FiniteDifference` or :class:`SmoothedFiniteDifference`).
-      (Currently, spectral differentiation is not supported for noise propagation.)
+    Noise propagation from measurement noise ``sigma_x`` to the derivative
+    noise variance used by the regression (``optimizer._sigma2``) is only
+    performed when:
+
+    1. ``x_dot`` is not provided, and derivatives are estimated internally.
+    2. ``differentiation_method`` is linear (e.g.,
+    :class:`~pysindy.differentiation.FiniteDifference` or
+    :class:`~pysindy.differentiation.SmoothedFiniteDifference`).
+
+    Spectral differentiation is currently not supported for noise
+    propagation.
+
 
     - FiniteDifference is strongly recommended for EvidenceGreedy because the
       noise propagation algorithm assumes a linear differential operator. If you
@@ -1147,7 +1156,10 @@ class BINDy(SINDy):
         sigma_x: float,
         optimizer: Optional[BaseOptimizer] = None,
         feature_library: Optional[BaseFeatureLibrary] = None,
-        differentiation_method: Optional[FiniteDifference] = None, # Only support differentiation methods that are linear. # TODO: FiniteDifference and SmoothedFiniteDifference are included as it's under FiniteDifference, but what about SpectralDerivative?
+        differentiation_method: Optional[FiniteDifference] = None,
+        # Only support differentiation methods that are linear.
+        # # TODO: FiniteDifference and SmoothedFiniteDifference are included
+        # as it's under FiniteDifference, but what about SpectralDerivative?
     ):
         if optimizer is None:
             optimizer = EvidenceGreedy(
@@ -1188,18 +1200,19 @@ class BINDy(SINDy):
         # If derivatives are supplied, sigma_x does not define derivative-noise.
         if x_dot is not None:
             self.optimizer._sigma2 = self.sigma_x**2
-            warnings.warn(
-                f"BINDy: Noise is not propagated through differentiation method. Assume noise variance from specificed sigma_x.\n _sigma2 value used: {self.optimizer._sigma2}",
-                UserWarning,
+            msg = (
+                "BINDy: Noise is not propagated through the differentiation method. "
+                "Assuming noise variance from specified sigma_x. "
+                f"_sigma2 value used: {self.optimizer._sigma2}"
             )
+            warnings.warn(msg, UserWarning)
+
             return super().fit(x, t, x_dot=x_dot, u=u, feature_names=feature_names)
         else:
             # Ensure we treat everything as multiple trajectories for
             # _sigma2 calculation.
             if not _check_multiple_trajectories(x, x_dot, u):
-                x_list, t_list, _, _ = _adapt_to_multiple_trajectories(
-                    x, t, x_dot, u
-                )
+                x_list, t_list, _, _ = _adapt_to_multiple_trajectories(x, t, x_dot, u)
             else:
                 x_list, t_list = x, t
 
@@ -1228,7 +1241,7 @@ class BINDy(SINDy):
                             f"Length of t ({len(t_grid)}) does not match "
                             f"number of samples ({n_samples})."
                         )
-                # Call TemporalNoisePropagation to compute an averaged _sigma2 
+                # Call TemporalNoisePropagation to compute an averaged _sigma2
                 _sigma2_i = EvidenceGreedy.TemporalNoisePropagation(
                     self.differentiation_method,
                     t_grid,

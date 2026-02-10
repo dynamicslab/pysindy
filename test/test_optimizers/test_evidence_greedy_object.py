@@ -2,8 +2,6 @@ import numpy as np
 from scipy.integrate import odeint
 
 import pysindy as ps
-from pysindy.differentiation import FiniteDifference
-from pysindy.optimizers import EvidenceGreedy
 
 
 def lorenz(z, t):
@@ -26,21 +24,8 @@ def main():
     sigma_x = 1e-1
     x = x + sigma_x * np.random.normal(size=x.shape)
 
-    # Differentiation method
-    fd = FiniteDifference(
-        order=4,
-        d=1,
-        axis=0,
-        is_uniform=True,
-        drop_endpoints=False,
-        periodic=False,
-    )
-
-    # EvidenceGreedy optimizer
-    
-    opt = EvidenceGreedy(alpha=1e-6, max_iter=None, unbias=False, normalize_columns=True)
-
     # New wrapper object
+
     model = ps.BINDy(sigma_x)
     # model = ps.BINDy(sigma_x,
     #     optimizer=opt,
@@ -54,6 +39,7 @@ def main():
 
     print("\nRecovered equations:")
     model.print(precision=3)
+
 
 if __name__ == "__main__":
     main()

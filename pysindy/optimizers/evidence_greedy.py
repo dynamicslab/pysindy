@@ -1,7 +1,4 @@
-"""
-EvidenceGreedy optimizer: greedy Bayesian evidence-based sparse regression.
-
-"""
+"""EvidenceGreedy optimizer: greedy Bayesian evidence-based sparse regression."""
 from __future__ import annotations
 
 import sys
@@ -36,14 +33,15 @@ class EvidenceGreedy(BaseOptimizer):
 
     The algorithm:
 
-    1. Start from the full support (all library terms active).
-    2. At each step, temporarily remove each active term in turn.
-    3. For each candidate support, compute the Bayesian log evidence
-    :math:`\log p(y_j \mid \alpha, \sigma^2, \mathrm{support})` using the
-    precomputed statistics :math:`G=\Theta^\top\Theta` and
-    :math:`b_j=\Theta^\top y_j`.
-    4. Accept the removal that yields the largest increase in evidence.
-    5. Stop when no single removal increases the evidence.
+    #. Start from the full support (all library terms active).
+    #. At each step, temporarily remove each active term in turn.
+    #. For each candidate support, compute the Bayesian log evidence
+       :math:`\log p(y_j \mid \alpha, \sigma^2, \mathrm{support})` using the
+       precomputed statistics :math:`G=\Theta^\top\Theta` and
+       :math:`b_j=\Theta^\top y_j`.
+    #. Accept the removal that yields the largest increase in evidence.
+    #. Stop when no single removal increases the evidence.
+
 
 
     Parameters
@@ -64,8 +62,6 @@ class EvidenceGreedy(BaseOptimizer):
         Maximum number of elimination steps. If None, at most M - 1
         removals are allowed.
 
-
-
     normalize_columns : bool, default=True
         Passed to :class:`~pysindy.optimizers.base.BaseOptimizer`.
         If True, BOTH the columns of the library matrix and the target
@@ -76,7 +72,6 @@ class EvidenceGreedy(BaseOptimizer):
 
         Note that when ``normalize_columns=True``, ``alpha`` is typically of
         order 1.0.
-
 
     copy_X : bool, default=True
         Passed to :class:`~pysindy.optimizers.base.BaseOptimizer`. If True,
@@ -124,6 +119,7 @@ class EvidenceGreedy(BaseOptimizer):
 
     Examples
     --------
+
     >>> import numpy as np
     >>> from scipy.integrate import odeint
     >>> from pysindy import SINDy
@@ -238,6 +234,7 @@ class EvidenceGreedy(BaseOptimizer):
         _sigma2 : float
             Estimated variance of the induced noise on the differentiated
             signal.
+
         """
 
         t = np.asarray(t)
@@ -292,6 +289,7 @@ class EvidenceGreedy(BaseOptimizer):
             by :class:`BaseOptimizer`.
         y : ndarray of shape (n_samples, n_targets)
             Target derivatives after preprocessing.
+
         """
         x = np.asarray(x)
         y = np.asarray(y)
@@ -336,6 +334,7 @@ class EvidenceGreedy(BaseOptimizer):
 
         y : ndarray of shape (n_samples, n_targets)
             Target derivatives.
+
         """
         x = np.asarray(x)
         y = np.asarray(y)
@@ -460,6 +459,7 @@ def _ridge_map(
 
     Any LinAlgWarning raised by the underlying solver is converted into a
     RuntimeWarning, but the returned coefficients are still used.
+
     """
     X_active = np.asarray(X_active)
     y_active = np.asarray(y_active).ravel()
@@ -547,6 +547,7 @@ def _log_evidence_from_G(
     -------
     log_ev : float
         Bayesian log evidence.
+
     """
     G_active = np.asarray(G_active)
     b_active = np.asarray(b_active)
@@ -649,6 +650,7 @@ def _backward_evidence_greedy_single(
     history : list of dict
         Diagnostics for each step:
         [{"step": ..., "support_size": ..., "log_evidence": ...}, ...]
+
     """
     x = np.asarray(x)
     y_col = np.asarray(y_col).ravel()

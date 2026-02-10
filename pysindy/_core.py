@@ -1063,15 +1063,20 @@ class BINDy(SINDy):
     Parameters
     ----------
     sigma_x (required): float
-        Measurement noise standard deviation (std) for the state measurements ``x``.
-        If ``x_dot`` is provided, ``sigma_x`` is used to set noise variance
-        ``optimizer._sigma2 = sigma_x**2``.
-        Otherwise, sigma_x is propagated through the ``differentiation_method`` by
-        ``_sigma2 = EvidenceGreedy.TemporalNoisePropagation(
-            differentiation_method, t_grid, sigma_x
-        )`` to estimate
-        the derivative noise variance.
-        For multiple trajectories, _sigma2 is computed per trajectory and averaged.
+        Measurement noise standard deviation (std) for the state measurements
+        ``x``. If ``x_dot`` is provided, ``sigma_x`` is used to set the noise
+        variance ``optimizer._sigma2 = sigma_x**2``.
+
+        Otherwise, ``sigma_x`` is propagated through the
+        ``differentiation_method`` to estimate the derivative noise variance::
+
+            _sigma2 = EvidenceGreedy.TemporalNoisePropagation(
+                differentiation_method, t_grid, sigma_x
+            )
+
+        For multiple trajectories, ``_sigma2`` is computed per trajectory and
+        averaged.
+
 
     optimizer
         Optimization method used to fit the SINDy model. This must be a class
@@ -1115,11 +1120,12 @@ class BINDy(SINDy):
 
     1. ``x_dot`` is not provided, and derivatives are estimated internally.
     2. ``differentiation_method`` is linear (e.g.,
-    :class:`~pysindy.differentiation.FiniteDifference` or
-    :class:`~pysindy.differentiation.SmoothedFiniteDifference`).
+       :class:`~pysindy.differentiation.FiniteDifference` or
+       :class:`~pysindy.differentiation.SmoothedFiniteDifference`).
 
     Spectral differentiation is currently not supported for noise
     propagation.
+
 
 
     - FiniteDifference is strongly recommended for EvidenceGreedy because the

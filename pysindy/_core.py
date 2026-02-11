@@ -1057,8 +1057,8 @@ class DiscreteSINDy(_BaseSINDy):
 
 class BINDy(SINDy):
     """
-    Sparse Identification of Nonlinear Dynamical Systems (SINDy).
-    Uses backward evidence-based greedy sparse regression.
+    Bayesian Identification of Nonlinear Dynamical Systems (BINDy) - a Bayesian way to enforce and justify Occam's Razor.
+    Uses backward evidence-based greedy search to promote sparsity.
 
     Parameters
     ----------

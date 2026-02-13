@@ -175,8 +175,7 @@ class _BaseSINDy(BaseEstimator, ABC):
             input feature.
         """
         check_is_fitted(self)
-        sys_coord_names = self.feature_names
-        feat_names = self.feature_library.get_feature_names(sys_coord_names)
+        feat_names = self.get_feature_names()
 
         def term(c, name):
             rounded_coef = np.round(c, precision)

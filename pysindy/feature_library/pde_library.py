@@ -4,6 +4,7 @@ from itertools import product as iproduct
 from typing import Optional, Self
 
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
@@ -116,30 +117,14 @@ class PDELibrary(BaseFeatureLibrary):
         -------
         output_feature_names : list of string, length n_output_features
         """
-        check_is_fitted(self)
-        n_features = self.n_features_in_
 
         if input_features is None:
+            check_is_fitted(self)
+            n_features = self.n_features_in_
             input_features = ["x%d" % i for i in range(n_features)]
 
-        def derivative_string(multiindex):
-            subscript = ""
-            for axis in range(self.grid_ndim):
-                str_deriv = str(axis + 1)
-                subscript += str_deriv * multiindex[axis]
-            return subscript
 
-        # Include derivative terms
-        feat_names = []
-
-        for multiindex in self.multiindices:
-            for sys_coord in input_features:
-                feat_names.append(
-                    sys_coord + "_" + derivative_string(multiindex)
-                )
-
-
-        return feat_names
+        return make_pde_feature_names(input_features, self.multiindices)
 
     @x_sequence_or_item
     def fit(self, x_full: Sequence[AxesArray], y=None) -> Self:
@@ -217,3 +202,26 @@ class PDELibrary(BaseFeatureLibrary):
 
     def get_spatial_grid(self):
         return self.spatial_grid
+
+
+def make_pde_feature_names(
+    input_features: list[str], multiindices: tuple[tuple[int, ...], ...]
+) -> list[str]:
+    """
+    Arguments:
+    input_features: String names for system coodinates.
+    multiindices: 2D array reflecting the differentiation features
+    """
+    def derivative_string(multiindex: tuple[int]):
+        subscript = ""
+        for axis in range(len(multiindex)):
+            str_deriv = str(axis + 1)
+            subscript += str_deriv * multiindex[axis]
+        return subscript
+    feat_names = []
+    for multiindex in multiindices:
+        for sys_coord in input_features:
+            feat_names.append(
+                sys_coord + "_" + derivative_string(multiindex)
+            )
+    return feat_names

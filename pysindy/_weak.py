@@ -50,7 +50,9 @@ from collections import defaultdict
 from collections.abc import Collection
 from collections.abc import Sequence
 from dataclasses import dataclass
-from itertools import product
+from functools import partial
+from itertools import chain, repeat
+from itertools import product as iproduct
 from typing import Any, final
 from typing import Callable
 from typing import cast
@@ -78,6 +80,7 @@ from .differentiation.base import BaseDifferentiation
 from .feature_library import ConcatLibrary
 from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
+from .feature_library.pde_library import make_pde_feature_names
 from .feature_library import TensoredLibrary
 from .feature_library.base import BaseFeatureLibrary
 from .optimizers.base import BaseOptimizer
@@ -385,33 +388,7 @@ class WeakSINDy(_BaseSINDy):
         self.sorted_lib_ = _flatten_libraries(self.feature_library)
         self.sorted_lib_.fit(x[0])
         terms: list[SemiTerm | Collection[SemiTerm]] = []
-        for lib in self.sorted_lib_.libraries:
-            # Populate the semiterm list. Libs are either PDELibrary, non-PDE, or tensor of those
-            no_derivs = (
-                isinstance(lib, TensoredLibrary)
-                and not any(isinstance(lib, PDELibrary) for lib in lib.libraries)
-                or not isinstance(lib, (PDELibrary, TensoredLibrary))
-            )
-            if no_derivs:
-                # semiterm reflects all features in the library
-                terms.append((None, (lib, zero_deriv), 1, zero_deriv))
-            elif isinstance(lib, PDELibrary):
-                # semiterm reflects one feature in the library
-                multiindices = lib.multiindices
-                multiindices = np.hstack(
-                    (lib.multiindices, np.zeros((len(multiindices), 1), dtype=int))
-                )
-                terms.extend(_integrate_by_parts(multiindices))
-            else:
-                # tensor library with product rule inside integration by parts
-                # semiterm reflects all features in the non-PDE library
-                # multiplied by one term in the PDE library
-                multiindices = lib.libraries[-1].multiindices
-                multiindices = np.hstack(
-                    (multiindices, np.zeros((len(multiindices), 1), dtype=int))
-                )
-                non_pde_lib = TensoredLibrary(lib.libraries[:-1])
-                terms.extend(_integrate_product_by_parts(non_pde_lib, multiindices))
+        terms, term_namefuncs = _plan_weak_form(self.sorted_lib_, zero_deriv)
 
         rhs_trajectories = []
         for it in zip(x, subdomain_specs, weights_per_deriv_op, strict=True):
@@ -535,6 +512,58 @@ def _eval_semiterm(
     ]
     return AxesArray(np.array(weak_feat), {"ax_sample": 0, "ax_coord": 1})
 
+
+def _plan_weak_form(
+    lib: ConcatLibrary, zero_deriv: tuple[Literal[0], ...]
+) -> tuple[
+    list[SemiTerm | Collection[SemiTerm]],
+    list[Callable[[list[str]], list[str]]]
+]:
+    """Plan the weak form calculation by traversing the library tree.
+
+    For each PDELibrary, we need to integrate by parts and move derivatives onto
+    the test function.  For each non-PDE library, we just multiply by phi and
+    integrate.  For a tensor of PDE and non-PDE libraries, we need to apply
+    the product rule inside integration by parts, which results in multiple
+    SemiTerms for each term in the non-PDE library.
+    """
+    terms: list[SemiTerm | Collection[SemiTerm]] = []
+    term_namefuncs = []
+    for lib in lib.libraries:
+        no_derivs = (
+            isinstance(lib, TensoredLibrary)
+            and not any(isinstance(lib, PDELibrary) for lib in lib.libraries)
+            or not isinstance(lib, (PDELibrary, TensoredLibrary))
+        )
+        if no_derivs:
+            term_namefuncs.append(lib.get_feature_names)
+            terms.append((None, (lib, zero_deriv), 1, zero_deriv))
+        elif isinstance(lib, PDELibrary):
+            multiindices = lib.multiindices
+            multiindices = np.hstack(
+                (multiindices, np.zeros((len(multiindices), 1), dtype=int))
+            )
+            new_terms, new_namefuncs = _integrate_by_parts(multiindices)
+            term_namefuncs.extend(new_namefuncs)
+            terms.extend(new_terms)
+        else:
+            pde_lib = next(
+                sublib for sublib in lib.libraries if isinstance(sublib, PDELibrary)
+            )
+            multiindices = pde_lib.multiindices
+            multiindices = np.hstack(
+                (multiindices, np.zeros((len(multiindices), 1), dtype=int))
+            )
+            non_pde_lib = TensoredLibrary(
+                [
+                    sublib for sublib in lib.libraries
+                    if not isinstance(sublib, PDELibrary)
+                ]
+            )
+            new_terms, new_namefuncs = _integrate_product_by_parts(non_pde_lib, multiindices)
+            terms.extend(new_terms)
+            term_namefuncs.extend(new_namefuncs)
+    return terms, term_namefuncs
 
 def _normalize_subdomain_dims(
     st_grids: list[AxesArray],
@@ -820,20 +849,26 @@ def _dense_to_open_mesh(meshgrid: AxesArray) -> list[AxesArray]:
     return openmesh
 
 
-def _integrate_by_parts(multiindices: Float2D) -> list[SemiTerm]:
+def _integrate_by_parts(multiindices: Float2D) -> tuple[
+    list[SemiTerm], list[Callable[[list[str]], list[str]]]
+]:
     """Move derivatives from each PDE term to test function"""
-    terms = []
+    terms: list[SemiTerm] = []
+    term_namefuncs: list[Callable[[list[str]], list[str]]] = []
     for deriv_op in multiindices:
         deriv_op = tuple(deriv_op)
         zeros = tuple(np.zeros_like(deriv_op))
         coeff = (-1) ** sum(deriv_op)
         terms.append((zeros, None, coeff, tuple(deriv_op)))
-    return terms
+        term_namefuncs.append(partial(make_pde_feature_names, multiindices=(deriv_op,)))
+    return terms, term_namefuncs
 
 
 def _integrate_product_by_parts(
     f_lib: BaseFeatureLibrary, multiindices: Float2D
-) -> list[Collection[SemiTerm]]:
+) -> tuple[
+    list[Collection[SemiTerm]], list[Callable[[list[str]], list[str]]]
+]:
     r"""Move derivatives from each PDE term to test function
 
     \int f(u) * u^(d) * phi dx
@@ -841,11 +876,33 @@ def _integrate_product_by_parts(
     floor (d/2) derivatives must be moved from u to (f * phi),
     using the product rule to distribute derivatives.
     """
-    terms = []
+    terms: list[Collection[SemiTerm]] = []
+    term_namefuncs: list[Callable[[list[str]], list[str]]] = []
+    class _MockPDELib(PDELibrary):
+        """A PDE-like library that doesn't fit but can create feature names"""
+        def __init__(self, multiindices):
+            self.multiindices = multiindices
+        
+        def __sklearn_is_fitted__(self):
+            return True
+
+        def get_feature_names(self, input_features: list[str]) -> list[str]:
+            return make_pde_feature_names(input_features, self.multiindices)
+
+    def mock_tensored_names(lib1: BaseFeatureLibrary, lib2: _MockPDELib) -> Callable[[list[str]], list[str]]:
+        def make_names(input_features: list[str]) -> list[str]:
+            lib1_names = lib1.get_feature_names(input_features)
+            lib2_names = lib2.get_feature_names(input_features)
+            return list(f"{n1} {n2}" for n1, n2 in iproduct(lib1_names, lib2_names))
+        return make_names
+
     for deriv_op in multiindices:
+        namefunc = mock_tensored_names(f_lib, _MockPDELib(multiindices=[deriv_op]))
+        term_namefuncs.append(namefunc)
+
         derivs_to_move = deriv_op // 2
         deriv_op_u = deriv_op - derivs_to_move
-        product_terms = product(*[range(d + 1) for d in derivs_to_move])
+        product_terms = iproduct(*[range(d + 1) for d in derivs_to_move])
         single_feature_terms = []
         for deriv_op_f in product_terms:
             deriv_op_phi = tuple(derivs_to_move - np.array(deriv_op_f))
@@ -861,7 +918,7 @@ def _integrate_product_by_parts(
                 (tuple(deriv_op_u), (f_lib, deriv_op_f), coeff, deriv_op_phi)
             )
         terms.append(single_feature_terms)
-    return terms
+    return terms, term_namefuncs
 
 
 def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
@@ -875,95 +932,25 @@ def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
         ensure that flat tree maintains identities of libraries and caches transforms
     """
 
-    def _as_factors(lib: BaseFeatureLibrary) -> list[BaseFeatureLibrary]:
-        if isinstance(lib, TensoredLibrary):
-            return list(lib.libraries)
-        return [lib]
-
-    def _flatten(lib: BaseFeatureLibrary) -> ConcatLibrary:
-        if isinstance(lib, ConcatLibrary):
-            flattened: list[BaseFeatureLibrary] = []
-            for child in lib.libraries:
-                flattened.extend(_flatten(child).libraries)
-            return ConcatLibrary(flattened)
-
-        if isinstance(lib, TensoredLibrary):
-            flattened_children = [_flatten(child) for child in lib.libraries]
-            products: list[BaseFeatureLibrary] = []
-            for combo in product(*[child.libraries for child in flattened_children]):
-                factors: list[BaseFeatureLibrary] = []
-                for term in combo:
-                    factors.extend(_as_factors(term))
-                if len(factors) == 1:
-                    products.append(factors[0])
-                else:
-                    products.append(TensoredLibrary(factors))
-            return ConcatLibrary(products)
-
-        return ConcatLibrary([lib])
-
-    return _flatten(library)
-
-
-def _calculate_weak_features(
-    x: AxesArray,
-    spec: SubdomainSpecs,
-    lib: BaseFeatureLibrary,
-    weights: tuple[list[AxesArray], list[AxesArray], list[AxesArray]],
-    multiindices: list[Float1D],
-    n_output_features_: int,
-) -> AxesArray:
-    n_features = x.n_coord
-    xp = np.empty((spec.n_subdomains, n_output_features_), dtype=x.dtype)
-
-    # Extract the input features on indices in each domain cell
-    x_subdomains = [x[np.ix_(*ax_inds)] for ax_inds in spec.axis_inds_per_subdom]
-    f_subdomains = [lib.fit(xi).transform(xi) for xi in x_subdomains]
-
-    # Evaluate the functions on the indices of domain cells
-    library_functions = np.array(
-        [
-            np.tensordot(weights, funcs, axis=spec.grid_ndim)
-            for weights, funcs in zip(weights[0], f_subdomains)
+    if isinstance(library, TensoredLibrary):
+        sublibs = [
+            _flatten_libraries(lib1).libraries for lib1 in library.libraries
         ]
-    )
+        sum_of_products: list[TensoredLibrary] = []
+        for combo in iproduct(*sublibs):
+            new_prod: list[BaseFeatureLibrary] = []
+            for term in combo:
+                if isinstance(term, TensoredLibrary):
+                    new_prod.extend(term.libraries)
+                else:
+                    new_prod.append(term)
+            sum_of_products.append(TensoredLibrary(new_prod))
+        return ConcatLibrary(sum_of_products)
 
-    if multiindices:
-        # pure integral terms
-        library_integrals = np.empty((K, n_features * num_derivatives), dtype=x.dtype)
-
-        for weight_sub, x_sub in zip(
-            weights[1], x_subdomains
-        ):  # loop over domain cells
-            library_idx = 0
-            for j, diff_op in enumerate(multiindices):  # loop over derivatives
-                # Calculate the integral feature by taking the dot product
-                # of the weights and data x_k over each axis.
-                # Integration by parts gives power of (-1).
-                lib_int = -(1 ** np.sum(diff_op)) * np.tensordot(
-                    weight_sub[j], x_sub, axes=range(spec.grid_ndim)
-                )
-                library_integrals[k, library_idx : library_idx + n_features] = lib_int
-                library_idx += n_features
-
-    library_idx = 0
-    # library function terms
-    xp[:, library_idx : library_idx + n_library_terms] = library_functions
-    library_idx += n_library_terms
-
-    if multiindices:
-        # pure integral terms
-        xp[
-            :, library_idx : library_idx + num_derivatives * n_features
-        ] = library_integrals
-        library_idx += num_derivatives * n_features
-
-        # mixed function integral terms
-        if include_interaction:
-            xp[
-                :,
-                library_idx : library_idx
-                + n_library_terms * num_derivatives * n_features,
-            ] = library_mixed_integrals
-            library_idx += n_library_terms * num_derivatives * n_features
-    return AxesArray(xp, {"ax_sample": 0, "ax_coord": 1})
+    elif isinstance(library, ConcatLibrary):
+        sublibs = [
+            _flatten_libraries(lib1).libraries for lib1 in library.libraries
+        ]
+        return ConcatLibrary(list(chain.from_iterable(sublibs)))
+    else:
+        return ConcatLibrary([library])

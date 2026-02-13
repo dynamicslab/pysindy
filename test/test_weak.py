@@ -19,6 +19,7 @@ from pysindy._weak import _linear_weights
 from pysindy._weak import UniformEvenBump, TestFunctionPhi
 from pysindy._weak import WeakSINDy
 from pysindy._weak import SubdomainSpecs
+from pysindy._weak import _plan_weak_form, _eval_semiterm
 from pysindy.feature_library import ConcatLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import TensoredLibrary
@@ -213,7 +214,7 @@ def test_integrate_by_parts():
     features = PDELibrary(derivative_order=2, spatial_grid=spatial_grid)
     inputs = [np.ones((1, 2))]
     features.fit(inputs)
-    result = _integrate_by_parts(features.multiindices)
+    result, _ = _integrate_by_parts(features.multiindices)
     # Current ordering is
     # u_y, u_yy, u_x, u_xy, u_xx
     expected = [
@@ -234,7 +235,7 @@ def test_integrate_product_by_parts():
     features = f_lib * d_lib
     inputs = [np.ones((1, 2))]
     features.fit(inputs)
-    result = _integrate_product_by_parts(f_lib, d_lib.multiindices)
+    result, _ = _integrate_product_by_parts(f_lib, d_lib.multiindices)
     expected = [
         [((0, 1), (f_lib, (0, 0)), 1, (0, 0))],
         [((0, 1), (f_lib, (0, 0)), -1, (0, 1)), ((0, 1), (f_lib, (0, 1)), -1, (0, 0))],
@@ -244,44 +245,31 @@ def test_integrate_product_by_parts():
     ]
     assert result == expected
 
-
-def test_weak_feature_ordering(fake_domains):
+@pytest.mark.parametrize(
+    "feat_combos",
+    [
+        "d_lib", "p_lib", "d_lib + c_lib", "f_lib * (c_lib + d_lib)"
+    ]
+)
+def test_weak_feature_ordering(fake_domains, feat_combos):
     st_grid = fake_domains.domain
-    # 3 quick commits needed:
-    # DONE: Fake subdomains,
-    # Fake test function
-    # DONE: linear_weights takes test function
-    f_lib = PolynomialLibrary()
-    d_lib = PDELibrary(derivative_order=2, spatial_grid=st_grid)
-    features = f_lib * d_lib
-
-    sorted_lib = WeakSINDy._sort_feature_library(features)
-    # The observed field is a saddle point of quadratic monomials
-    # we map expected terms to their feature_names;
-    # generate SemiTerms for the weak integrals,
-    # and compare the sorted library's feature names to the resulting transformation.
     u = st_grid[..., 0] ** 2 - st_grid[..., 1] ** 2
     v = - st_grid[..., 0] ** 2 + st_grid[..., 1] ** 2
-    # We need a fake test function that returns constants for all derivatives.
-    # Or something like a dirac delta.
-    # We also need a subdomain specs where each subdomain is a single point
-    # and then reassemble the features in the input shape from the subdomains.
-    expected_features = {
-        "u_11": 2 * np.ones_like(u),
-        "u_22": -2 * np.ones_like(u),
-        "u_12": np.zeros_like(u),
-        "u_1": 2 * st_grid[..., 0],
-        "u_2": -2 * st_grid[..., 1],
-        "v_11": -2 * np.ones_like(u),
-        "v_22": 2 * np.ones_like(u),
-        "v_12": np.zeros_like(u),
-        "v_1": -2 * st_grid[..., 0],
-        "v_2": 2 * st_grid[..., 1],
-        "1": np.ones_like(u),
-        "u v": u * v,
-        "u^2": u**2,
-        "v^2": v**2
-    }
+    x_input = np.stack((u, v), axis=-1)
+    c_lib = PolynomialLibrary(degree=0)
+    p_lib = PolynomialLibrary(degree=2)
+    f_lib = FourierLibrary()
+    d_lib = PDELibrary(derivative_order=2, spatial_grid=st_grid)
+    features = (d_lib + c_lib) * (p_lib + f_lib)
+    features = eval(feat_combos)
+    features.fit(x_input)
+    sorted_lib = _flatten_libraries(features).fit(x_input)
+    feat_names = sorted_lib.get_feature_names(input_features=["u", "v"])
+    terms, namefuncs = _plan_weak_form(sorted_lib, (0, 0, 0))
+    feat_names_plan = []
+    for namefunc in namefuncs:
+        feat_names_plan.extend(namefunc(["u", "v"]))
+    assert set(feat_names) == set(feat_names_plan)
 
 
 @pytest.fixture(scope="session")
@@ -312,15 +300,3 @@ def fake_domains() -> SubdomainSpecs:
         subgrid_shapes=subgrid_shapes,
         subgrids_scaled=subgrids_scaled
     )
-
-class MockSiftingTestFunction(TestFunctionPhi):
-    max_order = 999  # type: ignore
-
-    def phi(self, x: Float1D, d: int) -> Float1D:
-        return np.ones_like(x)
-    
-    def phi_int(self, x: Float1D, d: int) -> Float1D:
-        return self.phi(x, d)
-    
-    def xphi_int(self, x: Float1D, d: int) -> Float1D:
-        return x * self.phi(x, d)

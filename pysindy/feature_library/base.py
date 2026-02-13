@@ -481,10 +481,16 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         output_feature_names : list of string, length n_output_features
         """
-        check_is_fitted(self)
 
         if input_features is None:
+            check_is_fitted(self)
             input_features = ["x%d" % i for i in range(self.n_features_in_)]
+
+        n_features = len(input_features)
+        if self.inputs_per_library is None:
+            self.inputs_per_library = list(
+                repeat(list(range(n_features)), len(self.libraries))
+            )
 
         feature_names = self.libraries[0].get_feature_names(
             np.asarray(input_features)[_unique(self.inputs_per_library[0])].tolist()

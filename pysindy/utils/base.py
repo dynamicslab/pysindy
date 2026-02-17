@@ -94,8 +94,9 @@ def validate_no_reshape(x: FloatND, st_grid: Union[float, np.ndarray]) -> None:
     # Only apply these tests if t is array-like
     elif hasattr(st_grid, "shape"):
         st_grid = cast(np.ndarray, st_grid)
-        st_grid = np.atleast_2d(st_grid)
-        n_timepoints = len(st_grid) if st_grid.ndim == 1 else st_grid.shape[-2]
+        if st_grid.ndim < 2:
+            st_grid = np.reshape(st_grid, (-1, 1))
+        n_timepoints = st_grid.shape[-2]
         if not n_timepoints == (x_time := x.shape[-2]):
             raise ValueError(
                 f"Length of t ({n_timepoints}) should match x.shape[-2] ({x_time})."

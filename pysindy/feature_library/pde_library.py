@@ -78,7 +78,7 @@ class PDELibrary(BaseFeatureLibrary):
 
         if spatial_grid is None or (derivative_order == 0 and multiindices is None):
             raise ValueError(
-                "Spatial grid and the derivativesmust be initialized."
+                "Spatial grid and the derivatives must be initialized."
             )
 
         if spatial_grid.ndim == 1:

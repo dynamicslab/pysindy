@@ -337,34 +337,16 @@ def generalized_library():
 
 
 @pytest.fixture
-def sindypi_library(data_lorenz):
-    function_library = PolynomialLibrary(degree=2, include_bias=False)
-    _, t = data_lorenz
-
-    return PDELibrary(
-        function_library=function_library,
-        temporal_grid=t,
-        implicit_terms=True,
-        derivative_order=1,
-    )
-
-
-@pytest.fixture
 def ode_library():
-    function_library = PolynomialLibrary(degree=2, include_bias=False)
 
-    return PDELibrary(
-        function_library=function_library,
-    )
+    return PDELibrary()
 
 
 @pytest.fixture
 def pde_library(data_lorenz):
     _, spatial_grid = data_lorenz
-    function_library = PolynomialLibrary(degree=2, include_bias=False)
 
     return PDELibrary(
-        function_library=function_library,
         spatial_grid=spatial_grid,
         derivative_order=4,
     )

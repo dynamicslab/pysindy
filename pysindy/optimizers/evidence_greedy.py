@@ -191,8 +191,8 @@ class EvidenceGreedy(BaseOptimizer):
 
     @staticmethod
     def TemporalNoisePropagation(
-        differentiator,
-        t,
+        differentiator: FiniteDifference,
+        t: Float1D | Float2D,
         sigma_x: float,
     ) -> float:
         """

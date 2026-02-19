@@ -45,17 +45,20 @@ Research directions
   weak linear/nonlinear integral.  The really challenging part are terms like
   u*Du.
 """
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Collection
 from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import partial
-from itertools import chain, repeat
+from itertools import chain
 from itertools import product as iproduct
-from typing import Any, final
+from itertools import repeat
+from typing import Any
 from typing import Callable
 from typing import cast
+from typing import final
 from typing import Literal
 from typing import Optional
 
@@ -81,9 +84,9 @@ from .feature_library import ConcatLibrary
 from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
 from .feature_library import PolynomialLibrary
-from .feature_library.pde_library import make_pde_feature_names
 from .feature_library import TensoredLibrary
 from .feature_library.base import BaseFeatureLibrary
+from .feature_library.pde_library import make_pde_feature_names
 from .optimizers import STLSQ
 from .optimizers.base import BaseOptimizer
 from .utils import comprehend_axes
@@ -489,7 +492,7 @@ def _eval_semiterm(
     weights_per_subdom = weight_map[diff3]
     st_axes = tuple(range(sub_spec.grid_ndim))
     if diff1 is None:
-        x_d = np.ones_like(x)
+        x_d = AxesArray(np.ones((*x.shape[:-1], 1)), x.axes)
     else:
         x_d = PDELibrary(
             spatial_grid=sub_spec.domain, multiindices=[diff1]
@@ -501,8 +504,13 @@ def _eval_semiterm(
             spatial_grid=sub_spec.domain, multiindices=[diff2]
         ).fit_transform(fx)
     else:
-        fx = np.ones_like(x)
-    xt = x_d * fx
+        fx = AxesArray(np.ones((*x.shape[:-1], 1)), x.axes)
+
+    # Tensor product along last (coordinate) axis
+    xt = np.reshape(
+        x_d[..., :, "coord"] * fx[..., "coord", :],
+        (*x_d.shape[:-1], -1)
+    )
 
     x_subdoms = [xt[np.ix_(*inds)] for inds in sub_spec.axis_inds_per_subdom]
     weak_feat = [
@@ -626,12 +634,12 @@ def convert_u_dot_integral(
     st_axes = range(grid_dim)
     u_dot_integral = np.array(
         [
-            np.tensordot(weights, values, axes=[st_axes, st_axes])
+            np.tensordot(weights, values, axes=[st_axes, st_axes]).flatten()
             for weights, values in zip(fulltweights, u_subdomains)
         ]
     )
 
-    return AxesArray(u_dot_integral, {"ax_sample": 0, "ax_coord": 1})
+    return AxesArray(u_dot_integral, {"ax_time": 0, "ax_coord": 1})
 
 
 def _get_spatial_endpoints(st_grid: FloatND) -> tuple[Float1D, Float1D]:

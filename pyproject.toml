@@ -49,7 +49,8 @@ dev = [
     "jupytext",
     "pre-commit",
     "hypothesis",
-    "jupyter-contrib-nbextensions"
+    "jupyter-contrib-nbextensions",
+    "sindy_exp",
 ]
 docs = [
     "ipython",

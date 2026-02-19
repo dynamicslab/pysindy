@@ -1,4 +1,5 @@
-from typing import TypeAlias, TypeVar
+from typing import TypeAlias
+from typing import TypeVar
 
 import numpy as np
 import numpy.typing as npt

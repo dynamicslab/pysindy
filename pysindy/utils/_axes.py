@@ -572,8 +572,17 @@ def einsum(
 
     for char in rscript.replace("...", "."):
         if char == ".":
+            ellipsis_names=[]
             for script_names in allscript_names:
-                out_names += script_names.get("...", [])
+                ellipsis_candidate = script_names.get("...", [])
+                if not ellipsis_names:
+                    ellipsis_names = ellipsis_candidate
+                    out_names += script_names.get("...", [])
+                elif ellipsis_candidate and ellipsis_candidate != ellipsis_names:
+                    raise ValueError(
+                        f"Cannot use ellipsis for {ellipsis_names} in one array and "
+                        f"{ellipsis_candidate} in another."
+                    )
         else:
             ax_names = []
             for script_names in allscript_names:

@@ -5,21 +5,23 @@ from numpy.testing import assert_array_equal
 from scipy.integrate import dblquad
 from scipy.integrate import quad
 
-from pysindy._typing import Float1D
 from pysindy import AxesArray
 from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
 from pysindy import STLSQ
+from pysindy._typing import Float1D
 from pysindy._weak import _derivative_weights
+from pysindy._weak import _eval_semiterm
 from pysindy._weak import _flatten_libraries
 from pysindy._weak import _get_spatial_endpoints
 from pysindy._weak import _integrate_by_parts
 from pysindy._weak import _integrate_product_by_parts
 from pysindy._weak import _linear_weights
-from pysindy._weak import UniformEvenBump, TestFunctionPhi
-from pysindy._weak import WeakSINDy
+from pysindy._weak import _plan_weak_form
 from pysindy._weak import SubdomainSpecs
-from pysindy._weak import _plan_weak_form, _eval_semiterm
+from pysindy._weak import TestFunctionPhi
+from pysindy._weak import UniformEvenBump
+from pysindy._weak import WeakSINDy
 from pysindy.feature_library import ConcatLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import TensoredLibrary

@@ -74,15 +74,17 @@ from ._core import validate_control_variables
 from ._typing import Float1D
 from ._typing import Float2D
 from ._typing import FloatND
-from ._typing import Int1D
+from ._typing import TrajectoryType
 from .differentiation import FiniteDifference
 from .differentiation.base import BaseDifferentiation
 from .feature_library import ConcatLibrary
 from .feature_library import GeneralizedLibrary
 from .feature_library import PDELibrary
+from .feature_library import PolynomialLibrary
 from .feature_library.pde_library import make_pde_feature_names
 from .feature_library import TensoredLibrary
 from .feature_library.base import BaseFeatureLibrary
+from .optimizers import STLSQ
 from .optimizers.base import BaseOptimizer
 from .utils import comprehend_axes
 from .utils import concat_sample_axis
@@ -266,8 +268,8 @@ class WeakSINDy(_BaseSINDy):
 
     def __init__(
         self,
-        feature_library: Optional[BaseFeatureLibrary],
-        optimizer: Optional[BaseOptimizer],
+        feature_library: Optional[BaseFeatureLibrary] = None,
+        optimizer: Optional[BaseOptimizer] = None,
         n_subdomains: int = 100,
         test_fn: TestFunctionPhi = UniformEvenBump(4),
         spatial_diff_method: type[BaseDifferentiation] = FiniteDifference,
@@ -283,6 +285,11 @@ class WeakSINDy(_BaseSINDy):
     def __post_init(self):
         if self.diff_kwargs is None:
             self.diff_kwargs = {}
+        
+        if self.feature_library is None:
+            self.feature_library = PolynomialLibrary()
+        if self.optimizer is None:
+            self.optimizer = STLSQ()
         if self.n_subdomains <= 0:
             raise ValueError("The number of subdomains must be > 0")
 
@@ -387,6 +394,7 @@ class WeakSINDy(_BaseSINDy):
         ]
         self.sorted_lib_ = _flatten_libraries(self.feature_library)
         self.sorted_lib_.fit(x[0])
+        self.feature_library = self.sorted_lib_ # flattening affects term ordering
         terms: list[SemiTerm | Collection[SemiTerm]] = []
         terms, term_namefuncs = _plan_weak_form(self.sorted_lib_, zero_deriv)
 
@@ -469,15 +477,6 @@ class WeakSINDy(_BaseSINDy):
 
         return equations
 
-    def predict(self):
-        pass
-
-    def simulate(self):
-        pass
-
-    def score(self):
-        pass
-
 
 def _eval_semiterm(
     x: AxesArray,
@@ -526,6 +525,7 @@ def _plan_weak_form(
     integrate.  For a tensor of PDE and non-PDE libraries, we need to apply
     the product rule inside integration by parts, which results in multiple
     SemiTerms for each term in the non-PDE library.
+
     """
     terms: list[SemiTerm | Collection[SemiTerm]] = []
     term_namefuncs = []
@@ -889,7 +889,7 @@ def _integrate_product_by_parts(
         def get_feature_names(self, input_features: list[str]) -> list[str]:
             return make_pde_feature_names(input_features, self.multiindices)
 
-    def mock_tensored_names(lib1: BaseFeatureLibrary, lib2: _MockPDELib) -> Callable[[list[str]], list[str]]:
+    def mock_tensored_names(lib1: BaseFeatureLibrary, lib2: BaseFeatureLibrary) -> Callable[[list[str]], list[str]]:
         def make_names(input_features: list[str]) -> list[str]:
             lib1_names = lib1.get_feature_names(input_features)
             lib2_names = lib2.get_feature_names(input_features)
@@ -897,7 +897,7 @@ def _integrate_product_by_parts(
         return make_names
 
     for deriv_op in multiindices:
-        namefunc = mock_tensored_names(f_lib, _MockPDELib(multiindices=[deriv_op]))
+        namefunc = mock_tensored_names(_MockPDELib(multiindices=[deriv_op]), f_lib)
         term_namefuncs.append(namefunc)
 
         derivs_to_move = deriv_op // 2
@@ -926,7 +926,7 @@ def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
 
     Returns: A flat tree of libraries whose root is a concat library, and every
         leaf is either a non-iterable library or a tensored library of non-iterable
-        libraries. PDELibraries are at the end.
+        libraries. PDELibraries are at the beginning of any tensored library.
 
     .. todo::
         ensure that flat tree maintains identities of libraries and caches transforms
@@ -944,7 +944,9 @@ def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
                     new_prod.extend(term.libraries)
                 else:
                     new_prod.append(term)
-            sum_of_products.append(TensoredLibrary(new_prod))
+            pde_libs = [lib for lib in new_prod if isinstance(lib, PDELibrary)]
+            non_pde_libs = [lib for lib in new_prod if lib not in pde_libs]
+            sum_of_products.append(TensoredLibrary(pde_libs + non_pde_libs))
         return ConcatLibrary(sum_of_products)
 
     elif isinstance(library, ConcatLibrary):

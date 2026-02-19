@@ -18,6 +18,7 @@ from sklearn.metrics import r2_score
 from sklearn.utils.validation import check_is_fitted
 from typing_extensions import Self
 
+from ._typing import TrajectoryType
 from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
 from .feature_library import PolynomialLibrary
@@ -43,9 +44,6 @@ from .utils import validate_no_reshape
 from .utils.bindy import TemporalNoisePropagation
 
 
-TrajectoryType = TypeVar("TrajectoryType", list[np.ndarray], np.ndarray)
-
-
 class _BaseSINDy(BaseEstimator, ABC):
 
     feature_library: BaseFeatureLibrary
@@ -67,16 +65,6 @@ class _BaseSINDy(BaseEstimator, ABC):
 
     @abstractmethod
     def fit(self, x: TrajectoryType, t: TrajectoryType, *args, **kwargs) -> Self:
-        ...
-
-    @abstractmethod
-    def simulate(self, x0: np.ndarray, t: np.ndarray) -> np.ndarray:
-        ...
-
-    @abstractmethod
-    def score(
-        self, x: TrajectoryType, t: TrajectoryType, x_dot: TrajectoryType
-    ) -> float:
         ...
 
     def _fit_shape(self):

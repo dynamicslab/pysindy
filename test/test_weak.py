@@ -248,7 +248,11 @@ def test_integrate_product_by_parts():
 @pytest.mark.parametrize(
     "feat_combos",
     [
-        "d_lib", "p_lib", "d_lib + c_lib", "f_lib * (c_lib + d_lib)"
+        "d_lib",
+        "p_lib",
+        "d_lib + c_lib",
+        "f_lib * (c_lib + d_lib)",
+        "(c_lib + d_lib) * f_lib"
     ]
 )
 def test_weak_feature_ordering(fake_domains, feat_combos):
@@ -269,7 +273,10 @@ def test_weak_feature_ordering(fake_domains, feat_combos):
     feat_names_plan = []
     for namefunc in namefuncs:
         feat_names_plan.extend(namefunc(["u", "v"]))
+    orig_names = features.get_feature_names(["u", "v"])
+    assert len(feat_names) == len(orig_names)
     assert set(feat_names) == set(feat_names_plan)
+    assert feat_names == feat_names_plan
 
 
 @pytest.fixture(scope="session")

@@ -1,4 +1,4 @@
-from typing import TypeAlias
+from typing import TypeAlias, TypeVar
 
 import numpy as np
 import numpy.typing as npt
@@ -14,3 +14,5 @@ Float3D: TypeAlias = np.ndarray[tuple[int, int, int], FloatDType]
 Float4D: TypeAlias = np.ndarray[tuple[int, int, int, int], FloatDType]
 Float5D: TypeAlias = np.ndarray[tuple[int, int, int, int, int], FloatDType]
 FloatND: TypeAlias = npt.NDArray[NpFlt]
+
+TrajectoryType = TypeVar("TrajectoryType", list[np.ndarray], np.ndarray)

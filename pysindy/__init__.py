@@ -16,6 +16,7 @@ from ._core import SINDy
 from ._core import DiscreteSINDy
 from ._core import BINDy
 from ._core import AxesArray
+from ._weak import WeakSINDy
 from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
 from .differentiation import SpectralDerivative
@@ -70,6 +71,7 @@ __all__ = [
     "SINDy",
     "DiscreteSINDy",
     "BINDy",
+    "WeakSINDy",
     "differentiation",
     "feature_library",
     "optimizers",

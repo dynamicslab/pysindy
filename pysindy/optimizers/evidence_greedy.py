@@ -301,9 +301,9 @@ class EvidenceGreedy(BaseOptimizer):
         _, n_targets = y.shape
 
         if self.coef_.shape != (n_targets, n_features):
-            raise RuntimeError(
-                "EvidenceGreedy._unbias: unexpected coef_ shape "
-                f"{self.coef_.shape}, expected {(n_targets, n_features)}."
+            raise ValueError(
+                f"Unexpected coef_ shape {self.coef_.shape}, expected "
+                f"{(n_targets, n_features)}."
             )
 
         # For each target dimension, refit LS on its active columns.

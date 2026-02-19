@@ -87,7 +87,7 @@ def validate_no_reshape(x: FloatND, st_grid: Union[float, np.ndarray]) -> None:
         )
 
     if st_grid is None:
-        raise ValueError("t must be a scalar or array-like.")
+        return
     elif np.ndim(st_grid) == 0:
         if st_grid <= 0:
             raise ValueError("t must be positive")

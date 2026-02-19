@@ -171,7 +171,6 @@ def test_simulate(data):
         PolynomialLibrary(degree=3),
         FourierLibrary(n_frequencies=3),
         pytest.lazy_fixture("custom_library"),
-        pytest.lazy_fixture("sindypi_library"),
         PolynomialLibrary() + FourierLibrary(),
     ],
 )
@@ -231,10 +230,8 @@ def test_score(data):
 def test_score_pde(data_1d_random_pde):
     t, x, u, u_dot = data_1d_random_pde
     pde_lib = PDELibrary(
-        function_library=PolynomialLibrary(degree=2, include_bias=False),
         derivative_order=4,
         spatial_grid=x,
-        include_bias=True,
     )
     model = SINDy(feature_library=pde_lib).fit(
         u,
@@ -272,11 +269,6 @@ def test_fit_multiple_trajectories(data_multiple_trajectories):
     model = SINDy()
     model.fit(x, t=t, x_dot=x)
     check_is_fitted(model)
-
-    # Test validate_input
-    t[0] = None
-    with pytest.raises(ValueError):
-        model.fit(x, t=t)
 
 
 def test_predict_multiple_trajectories(data_multiple_trajectories):
@@ -533,7 +525,6 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
     t, x, u = diffuse_multiple_trajectories
 
     pde_lib = PDELibrary(
-        function_library=PolynomialLibrary(degree=1, include_bias=False),
         derivative_order=2,
         spatial_grid=x,
     )

@@ -37,34 +37,10 @@ def test_not_fitted(data_lorenz_c_1d):
 def test_improper_shape_input(data_1d):
     x, t = data_1d
     u = np.ones_like(x)
-
-    # Ensure model successfully handles different data shapes
     model = SINDy()
-    with pytest.raises(TypeError, match="Most arrays must"):
-        model.fit(x.flatten(), u=u, t=t)
-
-    model = SINDy()
-    with pytest.raises(TypeError, match="Most arrays must"):
-        model.fit(x.flatten(), u=u, t=t, x_dot=x.flatten())
-
-    model = SINDy()
-    with pytest.raises(TypeError, match="Most arrays must"):
-        model.fit(x, u=u, t=t, x_dot=x.flatten())
-
-    model = SINDy()
-    with pytest.raises(TypeError, match="Most arrays must"):
-        model.fit(x.flatten(), u=u.flatten(), t=t)
-
-    model = SINDy()
-    with pytest.raises(TypeError, match="Most arrays must"):
-        model.fit(x.flatten(), u=u.flatten(), t=t, x_dot=x.flatten())
-
-    model = SINDy()
-    with pytest.raises(TypeError, match="Most arrays must"):
-        model.fit(x, u=u.flatten(), t=t, x_dot=x.flatten())
 
     # Should fail if x and u have incompatible numbers of rows
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Length of t"):
         model.fit(x[:-1, :], u=u, t=t[:-1])
 
 

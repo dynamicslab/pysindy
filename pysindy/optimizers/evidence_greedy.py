@@ -273,55 +273,6 @@ class EvidenceGreedy(BaseOptimizer):
 
         return float(sigma_x**2 * factor)
 
-    def _unbias(self, x: np.ndarray, y: np.ndarray) -> None:
-        """
-        Optional unregularized refit on the selected support.
-
-        This mirrors the STLSQ behaviour in the simple case:
-        keep the support ``ind_`` found by the evidence-greedy search,
-        but recompute the coefficients on that support by ordinary
-        least squares (no ridge penalty).
-
-        Parameters
-        ----------
-        x : ndarray of shape (n_samples, n_features)
-            Library matrix Theta(X) after preprocessing / normalization
-            by :class:`BaseOptimizer`.
-        y : ndarray of shape (n_samples, n_targets)
-            Target derivatives after preprocessing.
-
-        """
-        x = np.asarray(x)
-        y = np.asarray(y)
-
-        if y.ndim == 1:
-            y = y.reshape(-1, 1)
-
-        n_samples, n_features = x.shape
-        _, n_targets = y.shape
-
-        if self.coef_.shape != (n_targets, n_features):
-            raise ValueError(
-                f"Unexpected coef_ shape {self.coef_.shape}, expected "
-                f"{(n_targets, n_features)}."
-            )
-
-        # For each target dimension, refit LS on its active columns.
-        for i in range(n_targets):
-            active_mask = self.ind_[i]
-            if not np.any(active_mask):
-                # No active terms for this target; nothing to refit.
-                continue
-
-            X_active = x[:, active_mask]
-            y_i = y[:, i]
-
-            # STLSQ style: use LinearRegression(fit_intercept=False)
-            optvar = LinearRegression(fit_intercept=False).fit(X_active, y_i).coef_
-
-            # Overwrite only active coefficients; inactive remain zero.
-            self.coef_[i, active_mask] = optvar
-
     def _reduce(self, x: np.ndarray, y: np.ndarray) -> None:
         """
         Run backward evidence selection for each target dimension.

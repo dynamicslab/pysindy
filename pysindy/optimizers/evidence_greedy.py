@@ -680,32 +680,22 @@ def _backward_evidence_greedy_single(
             J = np.where(mask_candidate)[0]
 
             if J.size == 0:
-                # Evaluate the empty model analytically
-                log_ev_J = _log_evidence_from_G(
-                    G_active=G[np.ix_(J, J)],
-                    b_active=b[J],
-                    yTy=yTy,
-                    n_samples=n_samples,
-                    alpha=alpha,
-                    _sigma2=_sigma2,
-                    m_N=None,
-                )
-                m_full_candidate = np.zeros(n_features, dtype=float)
+                m_N = None
             else:
-                G_J = G[np.ix_(J, J)]
-                b_J = b[J]
-                m_J = _ridge_map(x[:, J], y_col, alpha_prior=alpha, _sigma2=_sigma2)
-                log_ev_J = _log_evidence_from_G(
-                    G_active=G_J,
-                    b_active=b_J,
-                    yTy=yTy,
-                    n_samples=n_samples,
-                    alpha=alpha,
-                    _sigma2=_sigma2,
-                    m_N=m_J,
-                )
-                m_full_candidate = np.zeros(n_features, dtype=float)
-                m_full_candidate[J] = m_J
+                m_N = _ridge_map(x[:, J], y_col, alpha_prior=alpha, _sigma2=_sigma2)
+                # Evaluate the empty model analytically
+            log_ev_J = _log_evidence_from_G(
+                G_active=G[np.ix_(J, J)],
+                b_active=b[J],
+                yTy=yTy,
+                n_samples=n_samples,
+                alpha=alpha,
+                _sigma2=_sigma2,
+                m_N=m_N,
+            )
+            m_full_candidate = np.zeros(n_features, dtype=float)
+            if J.size != 0:
+                m_full_candidate[J] = m_N
 
             if log_ev_J > best_step_log_ev:
                 best_step_log_ev = log_ev_J

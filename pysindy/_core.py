@@ -1160,7 +1160,7 @@ class BINDy(SINDy):
     def __init__(
         self,
         sigma_x: float,
-        optimizer: Optional[BaseOptimizer] = None,
+        optimizer: Optional[EvidenceGreedy] = None,
         feature_library: Optional[BaseFeatureLibrary] = None,
         differentiation_method: Optional[FiniteDifference] = None,
         # Only support differentiation methods that are linear.
@@ -1214,62 +1214,62 @@ class BINDy(SINDy):
             warnings.warn(msg, UserWarning)
 
             return super().fit(x, t, x_dot=x_dot, u=u, feature_names=feature_names)
+        
+        # Ensure we treat everything as multiple trajectories for
+        # _sigma2 calculation.
+        if not _check_multiple_trajectories(x, x_dot, u):
+            x_list, t_list, _, _ = _adapt_to_multiple_trajectories(x, t, x_dot, u)
         else:
-            # Ensure we treat everything as multiple trajectories for
-            # _sigma2 calculation.
-            if not _check_multiple_trajectories(x, x_dot, u):
-                x_list, t_list, _, _ = _adapt_to_multiple_trajectories(x, t, x_dot, u)
+            x_list, t_list = x, t
+
+        _sigma2_vals = []
+        eps = float(np.finfo(float).eps)
+
+        for xi, ti in _zip_like_sequence(x_list, t_list):
+            xi_arr = np.asarray(xi)
+            if xi_arr.ndim == 1:
+                n_samples = xi_arr.shape[0]
             else:
-                x_list, t_list = x, t
+                n_samples = xi_arr.shape[-2]
 
-            _sigma2_vals = []
-            eps = float(np.finfo(float).eps)
+            # Build a time grid for _sigma2 mapping
+            if np.isscalar(ti):
+                dt = float(ti)
+                if dt <= 0:
+                    raise ValueError("t (dt) must be positive.")
+                t_grid = np.arange(n_samples, dtype=float) * dt
+            else:
+                t_grid = np.asarray(ti, dtype=float)
+                if t_grid.ndim != 1:
+                    raise ValueError("t must be a 1D array of time points.")
+                if len(t_grid) != n_samples:
+                    raise ValueError(
+                        f"Length of t ({len(t_grid)}) does not match "
+                        f"number of samples ({n_samples})."
+                    )
+            # Call TemporalNoisePropagation to compute an averaged _sigma2
+            _sigma2_i = EvidenceGreedy.TemporalNoisePropagation(
+                self.differentiation_method,
+                t_grid,
+                float(self.sigma_x),
+            )
+            _sigma2_vals.append(float(_sigma2_i))
 
-            for xi, ti in _zip_like_sequence(x_list, t_list):
-                xi_arr = np.asarray(xi)
-                if xi_arr.ndim == 1:
-                    n_samples = xi_arr.shape[0]
-                else:
-                    n_samples = xi_arr.shape[-2]
+        _sigma2_mean = float(np.mean(_sigma2_vals))
+        _sigma2_mean = max(_sigma2_mean, eps)  # must be positive
 
-                # Build a time grid for _sigma2 mapping
-                if np.isscalar(ti):
-                    dt = float(ti)
-                    if dt <= 0:
-                        raise ValueError("t (dt) must be positive.")
-                    t_grid = np.arange(n_samples, dtype=float) * dt
-                else:
-                    t_grid = np.asarray(ti, dtype=float)
-                    if t_grid.ndim != 1:
-                        raise ValueError("t must be a 1D array of time points.")
-                    if len(t_grid) != n_samples:
-                        raise ValueError(
-                            f"Length of t ({len(t_grid)}) does not match "
-                            f"number of samples ({n_samples})."
-                        )
-                # Call TemporalNoisePropagation to compute an averaged _sigma2
-                _sigma2_i = EvidenceGreedy.TemporalNoisePropagation(
-                    self.differentiation_method,
-                    t_grid,
-                    float(self.sigma_x),
-                )
-                _sigma2_vals.append(float(_sigma2_i))
+        # If user provided a non-EvidenceGreedy optimizer, this
+        # attribute may not exist. In that case we fail loudly,
+        # because the wrapper is specific to EvidenceGreedy.
+        if not hasattr(self.optimizer, "_sigma2"):
+            raise AttributeError(
+                "BINDy requires an optimizer with a "
+                "'_sigma2' attribute. Got optimizer of type: "
+                + type(self.optimizer).__name__
+            )
 
-            _sigma2_mean = float(np.mean(_sigma2_vals))
-            _sigma2_mean = max(_sigma2_mean, eps)  # must be positive
-
-            # If user provided a non-EvidenceGreedy optimizer, this
-            # attribute may not exist. In that case we fail loudly,
-            # because the wrapper is specific to EvidenceGreedy.
-            if not hasattr(self.optimizer, "_sigma2"):
-                raise AttributeError(
-                    "BINDy requires an optimizer with a "
-                    "'_sigma2' attribute. Got optimizer of type: "
-                    + type(self.optimizer).__name__
-                )
-
-            # Set _sigma2 on the underlying optimizer
-            self.optimizer._sigma2 = _sigma2_mean
+        # Set _sigma2 on the underlying optimizer
+        self.optimizer._sigma2 = _sigma2_mean
 
         # Now run the standard SINDy fitting pipeline.
         return super().fit(x, t, x_dot=x_dot, u=u, feature_names=feature_names)

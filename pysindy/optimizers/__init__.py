@@ -1,6 +1,6 @@
 from .base import BaseOptimizer
 from .base import EnsembleOptimizer
-from .evidence_greedy import EvidenceGreedy  # changes
+from .evidence_greedy import EvidenceGreedy
 from .frols import FROLS
 from .sr3 import SR3
 from .ssr import SSR
@@ -48,5 +48,5 @@ __all__ = [
     "SINDyPI",
     "MIOSR",
     "SBR",
-    "EvidenceGreedy",  # changes
+    "EvidenceGreedy",
 ]

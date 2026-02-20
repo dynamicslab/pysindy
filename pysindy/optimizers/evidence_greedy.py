@@ -365,8 +365,8 @@ class EvidenceGreedy(BaseOptimizer):
             b = B[:, j]  # (M,)
             yTy = float(yTy_all[j])  # scalar
 
-            eps = float(np.finfo(float).eps)
-            if (not np.isfinite(yTy)) or (yTy <= eps):
+            eps_precision = float(np.finfo(float).eps)
+            if (not np.isfinite(yTy)) or (yTy <= eps_precision):
                 coef[j, :] = 0.0
                 ind[j, :] = False
 
@@ -401,10 +401,10 @@ class EvidenceGreedy(BaseOptimizer):
             if self.normalize_columns:
                 yn = float(y_norm[j])
                 # Prevent division by zero / inf
-                denom = max(yn * yn, eps)
-                _sigma2_ = float(self._sigma2) / denom
+                denom = max(yn * yn, eps_precision)
+                sigma2_scaled = float(self._sigma2) / denom
             else:
-                _sigma2_ = float(self._sigma2)
+                sigma2_scaled = float(self._sigma2)
 
             coef_j, ind_j, history_j, coef_hist = _backward_evidence_greedy_single(
                 x=x,
@@ -414,7 +414,7 @@ class EvidenceGreedy(BaseOptimizer):
                 yTy=yTy,
                 n_samples=n_samples,
                 alpha=self.alpha,
-                _sigma2=_sigma2_,
+                _sigma2=sigma2_scaled,
                 max_iter=self.max_iter,
                 verbose=self.verbose,
             )

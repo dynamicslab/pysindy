@@ -114,7 +114,7 @@ class EvidenceGreedy(BaseOptimizer):
 
             {"step": k,
              "removed": j,
-             "support_size": K,
+             "support_size": (number of active features after removal),
              "log_evidence": value}
 
     Examples
@@ -321,7 +321,7 @@ class EvidenceGreedy(BaseOptimizer):
                 coef[j, :] = 0.0
                 ind[j, :] = False
 
-                # Log evidence of the empty model (K=0). m_N is ignored for K=0.
+                # Log evidence of the empty model (n_features=0). m_N is ignored for n_features=0.
                 log_ev = _log_evidence_from_G(
                     G_active=np.zeros((0, 0), dtype=float),
                     b_active=np.zeros((0,), dtype=float),
@@ -472,10 +472,10 @@ def _log_evidence_from_G(
 
     Parameters
     ----------
-    G_active : ndarray, shape (K, K)
+    G_active : ndarray, shape (n_features, n_features)
         Gram matrix for active features.
 
-    b_active : ndarray, shape (K,)
+    b_active : ndarray, shape (n_features,)
         Theta^T y restricted to active features.
 
     yTy : float
@@ -490,9 +490,9 @@ def _log_evidence_from_G(
     _sigma2 : float
         Observation noise variance.
 
-    m_N : ndarray of shape (K,) or None
+    m_N : ndarray of shape (n_features,) or None
         Posterior mean coefficients for the active set. For the empty
-        model (K == 0), this is ignored and may be None.
+        model (n_features == 0), this is ignored and may be None.
 
     Returns
     -------
@@ -503,10 +503,10 @@ def _log_evidence_from_G(
     G_active = np.asarray(G_active)
     b_active = np.asarray(b_active)
 
-    K = G_active.shape[0]
+    n_features = G_active.shape[0]
 
     # Degenerate empty model: p(y) = N(0, _sigma2 I)
-    if K == 0:
+    if n_features == 0:
         term1 = n_samples * np.log(2.0 * np.pi)
         term2 = n_samples * np.log(_sigma2)
         term3 = (1.0 / _sigma2) * yTy
@@ -517,7 +517,7 @@ def _log_evidence_from_G(
         raise ValueError("m_N must be provided for a non-empty active set.")
 
     m_N = np.asarray(m_N).reshape(-1)
-    if m_N.shape[0] != K:
+    if m_N.shape[0] != n_features:
         raise ValueError("m_N has incompatible shape for the active set.")
 
     beta = 1.0 / _sigma2
@@ -527,7 +527,7 @@ def _log_evidence_from_G(
     residual_sq = yTy - 2.0 * float(m_N.T @ b_active) + float(m_N.T @ (G_active @ m_N))
 
     # log|Lambda|
-    Lambda = alpha * np.eye(K) + beta * G_active
+    Lambda = alpha * np.eye(n_features) + beta * G_active
     sign, logdet_Lambda = np.linalg.slogdet(Lambda)
     if sign <= 0:
         # Numerically bad model; treat as very low evidence.
@@ -535,7 +535,7 @@ def _log_evidence_from_G(
 
     term1 = n_samples * np.log(2.0 * np.pi)
     term2 = n_samples * np.log(_sigma2)
-    term3 = logdet_Lambda - K * np.log(alpha)
+    term3 = logdet_Lambda - n_features * np.log(alpha)
     term4 = (1.0 / _sigma2) * residual_sq
     term5 = alpha * float(m_N.T @ m_N)
 

@@ -1057,9 +1057,25 @@ class DiscreteSINDy(_BaseSINDy):
 
 class BINDy(SINDy):
     """
-    Bayesian Identification of Nonlinear Dynamical Systems (BINDy) - a Bayesian way to enforce and justify Occam's Razor.
-    Uses backward evidence-based greedy search to promote sparsity.
+    Bayesian Identification of Nonlinear Dynamical Systems (BINDy)
+    
+    Learns a dynamical model with corrections for measurement noise
+    passing through differentiation and feature library.  Maximizes a Gaussian
+    (Laplace) approximation of the posterior with a weakly informed hyper
+    prior on the feature coefficients, then greedily eliminates model features to
+    maximize Bayesian evidence.
+    
+    For more information, see <add a citation to your paper>.
+   
+    .. seealso::
 
+        `SBR`
+            A Bayesian optimizer that uses a more sophisticated prior and Monte Carlo
+            estimation, but is slower and does not correct for noise through the features
+            and differentiation
+            
+        `EnsembleOptimizer`
+            A more low-tech, probabilistic optimizer
     Parameters
     ----------
     sigma_x (required): float

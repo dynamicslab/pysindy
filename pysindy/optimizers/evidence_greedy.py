@@ -15,9 +15,11 @@ from .base import BaseOptimizer
 
 class EvidenceGreedy(BaseOptimizer):
     r"""
-    Backward evidence-based sparse regression for SINDy.
+    Sparse Regression by maximizing Bayesian evidence 
+    through greedy elimination of features
 
-    This optimizer performs backward feature elimination driven by the
+    This optimizer performs backward model selection 
+    (i.e.feature elimination) driven by the
     Bayesian log evidence for a linear Gaussian model with an isotropic
     Gaussian prior on the coefficients. For each target dimension y_j,
     we assume
@@ -448,21 +450,12 @@ def _log_evidence_from_G(
     r"""
     Compute the Bayesian log evidence for a given active set and posterior mean.
 
-    Notation:
-
-      - y in R^(n_samples), Theta in R^{n_samples x n_features}
-      - alpha = sigma_p^{-2}
-      - beta = sigma^{-2}
-      - G = Theta^T Theta,  b = Theta^T y,  yTy = y^T y
-      - Lambda = alpha I_(n_features) + beta G_active
-      - m_N is the posterior mean on the active set
-
     Evidence approximation:
 
         log p(y) =
-            -1/2 [ n_samples log(2 pi) + n_samples log sigma^2
+            -1/2 [ n_samples log(2 pi) + n_samples log _sigma2
                    + log|Lambda| - n_features log alpha
-                   + beta ||y - Theta m_N||^2
+                   + ||y - Theta m_N||^2 / _sigma2
                    + alpha ||m_N||^2 ]
 
     where
@@ -470,10 +463,15 @@ def _log_evidence_from_G(
         ||y - Theta m_N||^2
             = yTy - 2 m_N^T b_active + m_N^T G_active m_N
 
+    and
+
+        Lambda = alpha I_(n_features) + G_active / _sigma2
+
     Parameters
     ----------
     G_active : ndarray, shape (n_features, n_features)
-        Gram matrix for active features.
+        Gram matrix for active features 
+        (i.e. Theta^T Theta restricted to active features).
 
     b_active : ndarray, shape (n_features,)
         Theta^T y restricted to active features.

@@ -59,7 +59,7 @@ class EvidenceGreedy(BaseOptimizer):
         Observation noise variance (sigma^2). Must be positive.
 
     max_iter : int or None
-        Maximum number of elimination steps. If None, at most M - 1
+        Maximum number of elimination steps. If None, at most n_features - 1
         removals are allowed.
 
     normalize_columns : bool, default=True
@@ -290,7 +290,7 @@ class EvidenceGreedy(BaseOptimizer):
         x = np.asarray(x)
         y = np.asarray(y)
 
-        n_samples, n_features = x.shape  # T, M
+        n_samples, n_features = x.shape  # T, n_features
         if y.ndim == 1:
             y = y.reshape(-1, 1)
         n_targets = y.shape[1]  # N
@@ -304,8 +304,8 @@ class EvidenceGreedy(BaseOptimizer):
             y_norm, y = _normalize_features(y)
 
         # Shared Gram matrix and RHS for all outputs:
-        G = x.T @ x  # (M, M) = Theta^T Theta
-        B = x.T @ y  # (M, N) = Theta^T Y
+        G = x.T @ x  # (n_features, n_features) = Theta^T Theta
+        B = x.T @ y  # (n_features, N) = Theta^T Y
         yTy_all = np.sum(y**2, axis=0)  # (N,) = [y_j^T y_j]
 
         coef = np.zeros((n_targets, n_features), dtype=float)
@@ -313,7 +313,7 @@ class EvidenceGreedy(BaseOptimizer):
         all_histories: list[list[dict[str, float]]] = []
 
         for j in range(n_targets):
-            b = B[:, j]  # (M,)
+            b = B[:, j]  # (n_features,)
             yTy = float(yTy_all[j])  # scalar
 
             eps_precision = float(np.finfo(float).eps)
@@ -450,18 +450,18 @@ def _log_evidence_from_G(
 
     Notation:
 
-      - y in R^T, Theta in R^{T x M}
+      - y in R^(n_samples), Theta in R^{n_samples x n_features}
       - alpha = sigma_p^{-2}
       - beta = sigma^{-2}
       - G = Theta^T Theta,  b = Theta^T y,  yTy = y^T y
-      - Lambda = alpha I_M + beta G_active
+      - Lambda = alpha I_(n_features) + beta G_active
       - m_N is the posterior mean on the active set
 
     Evidence approximation:
 
         log p(y) =
-            -1/2 [ T log(2 pi) + T log sigma^2
-                   + log|Lambda| - M log alpha
+            -1/2 [ n_samples log(2 pi) + n_samples log sigma^2
+                   + log|Lambda| - n_features log alpha
                    + beta ||y - Theta m_N||^2
                    + alpha ||m_N||^2 ]
 
@@ -560,16 +560,16 @@ def _backward_evidence_greedy_single(
 
     Parameters
     ----------
-    x : ndarray, shape (n_samples, M)
+    x : ndarray, shape (n_samples, n_features)
         Library matrix Theta(X) for this regression problem.
 
     y_col : ndarray, shape (n_samples,)
         Single target column y_j.
 
-    G : ndarray, shape (M, M)
+    G : ndarray, shape (n_features, n_features)
         Full Gram matrix Theta^T Theta.
 
-    b : ndarray, shape (M,)
+    b : ndarray, shape (n_features,)
         Full vector Theta^T y_j.
 
     yTy : float
@@ -585,17 +585,17 @@ def _backward_evidence_greedy_single(
         Observation noise variance.
 
     max_iter : int
-        Maximum number of elimination steps. At most M - 1 steps are needed.
+        Maximum number of elimination steps. At most n_features - 1 steps are needed.
 
     verbose : bool, optional (default False)
         If True, prints a short trace of evidence values.
 
     Returns
     -------
-    coef_full : ndarray, shape (M,)
+    coef_full : ndarray, shape (n_features,)
         Final coefficient vector (zeros outside the selected support).
 
-    active_mask : ndarray, shape (M,), dtype bool
+    active_mask : ndarray, shape (n_features,), dtype bool
         Boolean mask for active features.
 
     history : list of dict
@@ -608,16 +608,16 @@ def _backward_evidence_greedy_single(
     G = np.asarray(G)
     b = np.asarray(b)
 
-    n_samples_x, M = x.shape
+    n_samples_x, n_features = x.shape
     if n_samples_x != n_samples:
         raise ValueError("Mismatch between n_samples and x.shape[0].")
-    if G.shape != (M, M):
-        raise ValueError("G must have shape (M, M).")
-    if b.shape[0] != M:
+    if G.shape != (n_features, n_features):
+        raise ValueError("G must have shape (n_features, n_features).")
+    if b.shape[0] != n_features:
         raise ValueError("Dimensions of G and b are inconsistent.")
 
     # Start with full support
-    active = np.ones(M, dtype=bool)
+    active = np.ones(n_features, dtype=bool)
     history: list[dict[str, float]] = []
 
     # Initial MAP estimate on the full support
@@ -635,7 +635,7 @@ def _backward_evidence_greedy_single(
     )
 
     best_log_ev = log_ev
-    best_m = np.zeros(M, dtype=float)
+    best_m = np.zeros(n_features, dtype=float)
     best_m[J_full] = m_full
     best_active = active.copy()
 
@@ -654,15 +654,15 @@ def _backward_evidence_greedy_single(
         }
     )
 
-    # At most M - 1 removals are possible.
+    # At most n_features - 1 removals are possible.
     # If max_iter is None, perform a full backward elimination
-    # with at most M - 1 removals.
+    # with at most n_features - 1 removals.
     if max_iter is None:
-        n_steps_max = max(M - 1, 0)
+        n_steps_max = max(n_features - 1, 0)
     else:
-        n_steps_max = min(max_iter, max(M - 1, 0))
+        n_steps_max = min(max_iter, max(n_features - 1, 0))
 
-    m_hist = np.zeros((M, n_steps_max + 1), dtype=float)
+    m_hist = np.zeros((n_features, n_steps_max + 1), dtype=float)
 
     for step in range(1, n_steps_max + 1):
         active_indices = np.where(active)[0]
@@ -690,7 +690,7 @@ def _backward_evidence_greedy_single(
                     _sigma2=_sigma2,
                     m_N=None,
                 )
-                m_full_candidate = np.zeros(M, dtype=float)
+                m_full_candidate = np.zeros(n_features, dtype=float)
             else:
                 G_J = G[np.ix_(J, J)]
                 b_J = b[J]
@@ -704,7 +704,7 @@ def _backward_evidence_greedy_single(
                     _sigma2=_sigma2,
                     m_N=m_J,
                 )
-                m_full_candidate = np.zeros(M, dtype=float)
+                m_full_candidate = np.zeros(n_features, dtype=float)
                 m_full_candidate[J] = m_J
 
             if log_ev_J > best_step_log_ev:
@@ -727,7 +727,7 @@ def _backward_evidence_greedy_single(
         # Accept the best removal
         active[best_step_idx] = False
         best_log_ev = best_step_log_ev
-        best_m = best_step_m_full  # already full-length (M,)
+        best_m = best_step_m_full  # already full-length (n_features,)
         best_active = active.copy()
 
         if verbose:

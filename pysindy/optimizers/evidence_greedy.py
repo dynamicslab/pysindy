@@ -509,8 +509,8 @@ def _log_evidence_from_G(
     if n_features == 0:
         term1 = n_samples * np.log(2.0 * np.pi)
         term2 = n_samples * np.log(_sigma2)
-        term3 = (1.0 / _sigma2) * yTy
-        log_ev = -0.5 * (term1 + term2 + term3)
+        term4 = (1.0 / _sigma2) * yTy
+        log_ev = -0.5 * (term1 + term2 + term4)
         return float(log_ev)
 
     if m_N is None:

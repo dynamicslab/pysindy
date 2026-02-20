@@ -302,13 +302,18 @@ class EvidenceGreedy(BaseOptimizer):
         # Normalising this help make sure the parameter
         # is also rescaled to unit order.
 
+        eps_precision = float(np.finfo(float).eps)
+
+        y_norm, y_normalised = _normalize_features(y)
         if self.normalize_columns:
-            y_norm, y = _normalize_features(y)
+            y = y_normalised
+            yTy_all = np.ones(n_features, dtype=float)  # Since y is normalized, y^T y = n_samples
+        else:
+            yTy_all = y_norm**2.0
 
         # Shared Gram matrix and RHS for all outputs:
         G = x.T @ x  # (n_features, n_features) = Theta^T Theta
         B = x.T @ y  # (n_features, N) = Theta^T Y
-        yTy_all = np.sum(y**2, axis=0)  # (N,) = [y_j^T y_j]
 
         coef = np.zeros((n_targets, n_features), dtype=float)
         ind = np.zeros((n_targets, n_features), dtype=bool)
@@ -318,8 +323,8 @@ class EvidenceGreedy(BaseOptimizer):
             b = B[:, j]  # (n_features,)
             yTy = float(yTy_all[j])  # scalar
 
-            eps_precision = float(np.finfo(float).eps)
-            if (not np.isfinite(yTy)) or (yTy <= eps_precision):
+            # In case y is a zero vector or close to it, output as an empty model.
+            if (y_norm[j]**2.0 <= eps_precision):
                 coef[j, :] = 0.0
                 ind[j, :] = False
 

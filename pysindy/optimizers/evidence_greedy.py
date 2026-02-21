@@ -289,21 +289,18 @@ class EvidenceGreedy(BaseOptimizer):
             Target derivatives.
 
         """
-        x = np.asarray(x)
-        y = np.asarray(y)
+        
+        # Getting dimensions 
+        n_samples, n_features = x.shape 
+        n_targets = y.shape[1] 
 
-        n_samples, n_features = x.shape  # T, n_features
-        if y.ndim == 1:
-            y = y.reshape(-1, 1)
-        n_targets = y.shape[1]  # N
+        # Numerical precision threshold for treating norms as zero. Also used to prevent division by zero in when normalizing sigma2 to sigma2_scaled.
+        eps_precision = float(np.finfo(float).eps)
 
         # BaseOptimizer only normalise the library, but for the Bayesian
         # framework, we also need to normalize the targets.
         # Normalising this help make sure the parameter
-        # is also rescaled to unit order.
-
-        eps_precision = float(np.finfo(float).eps)
-
+        # is also rescaled to unit order.    
         y_norm, y_normalised = _normalize_features(y)
         if self.normalize_columns:
             y = y_normalised

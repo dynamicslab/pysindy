@@ -49,6 +49,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Collection
+from collections.abc import Mapping
 from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import partial
@@ -63,20 +64,20 @@ from typing import Literal
 from typing import Optional
 
 import numpy as np
-from sklearn.metrics import r2_score
 from scipy.interpolate import interp1d
 from scipy.special import binom
 from scipy.special import perm
 from sklearn.base import check_is_fitted
+from sklearn.metrics import r2_score
 from typing_extensions import Self
 
 from ._core import _adapt_to_multiple_trajectories
-from ._core import SINDy
 from ._core import _check_multiple_trajectories
 from ._core import _validate_inputs
+from ._core import _zip_like_sequence
+from ._core import SINDy
 from ._core import standardize_shape
 from ._core import validate_control_variables
-from ._core import _zip_like_sequence
 from ._typing import Float1D
 from ._typing import Float2D
 from ._typing import FloatND
@@ -162,14 +163,14 @@ class SubdomainSpecs:
 class TestFunctionPhi(ABC):
 
     @property
-    @abstractmethod    
+    @abstractmethod
     def max_order(self) -> int:
         ...
 
     @abstractmethod
     def phi(self, x: Float1D, d: int) -> Float1D:
         ...
-    
+
     @abstractmethod
     def phi_int(self, x: Float1D, d: int) -> Float1D:
         ...
@@ -188,26 +189,26 @@ class UniformEvenBump(TestFunctionPhi):
     def __post_init__(self):
         if self.p <= 0:
             raise ValueError("Polynomial exponent must be a positive integer.")
-        
+
     @property
     def max_order(self) -> int:
         return self.p
 
-    def phi(self, x: Float1D, d: int) -> Float1D:
+    def phi(self, x: float | Float1D, d: int=0) -> Float1D:
         """Evaluate the function, differentiated d times
-        
+
         Calculated term-wise in the binomial expansion.
         """
-        
+        x = np.asarray(x)
         ks = np.arange(self.p + 1)
         ks = ks[np.where(2 * (self.p - ks) - d >= 0)][:, np.newaxis]
         poly_coef = binom(self.p, ks)
         sign = (-1) ** (self.p - ks)
         x_pows = 2 * (self.p - ks) - d
         deriv_coef = perm(2 * (self.p - ks), d)
-        monomials = sign * poly_coef * deriv_coef * x[np.newaxis, :] ** x_pows
+        monomials = sign * poly_coef * deriv_coef * x[np.newaxis, ...] ** x_pows
         return np.sum(monomials, axis=0)
-    
+
     def phi_int(self, x: Float1D, d: int) -> Float1D:
         """
         Indefinite integral of one-dimensional polynomial test
@@ -296,7 +297,7 @@ class WeakSINDy(SINDy):
     def __post_init(self):
         if self.diff_kwargs is None:
             self.diff_kwargs = {}
-        
+
         if self.feature_library is None:
             self.feature_library = PolynomialLibrary()
         if self.optimizer is None:
@@ -409,7 +410,11 @@ class WeakSINDy(SINDy):
         # Need feature names and set n_output_features_ (this is same with PDE library)
         u_dot_wk = [
             convert_u_dot_integral(
-                xi, weights[tuple(time_deriv[0])], spec.axis_inds_per_subdom
+                xi,
+                spec,
+                weights,
+                diff_type,
+                tuple(time_deriv[0]),
             )
             for xi, weights, spec in zip(x, weights_per_deriv_op, subdomain_specs)
         ]
@@ -658,26 +663,32 @@ def _normalize_subdomain_dims(
 
 def convert_u_dot_integral(
     u: AxesArray,
-    fulltweights: list[AxesArray],
-    axis_inds_per_subdom: list[list[AxesArray]],
+    sub_spec: SubdomainSpecs,
+    weight_map: Mapping[tuple[int, ...], list[AxesArray]],
+    differentiation_method: type[BaseDifferentiation],
+    time_deriv_op: tuple[int, ...],
 ) -> AxesArray:
     """
     Takes a full set of spatiotemporal fields u(x, t) and finds the weak
     form of u_dot.
-    """
-    n_subdomains = len(fulltweights)
-    grid_dim = u.ndim - 1
-    u_dot_integral = np.zeros((n_subdomains, u.shape[-1]))
-    u_subdomains = [u[np.ix_(*ax_inds)] for ax_inds in axis_inds_per_subdom]
-    st_axes = range(grid_dim)
-    u_dot_integral = np.array(
-        [
-            np.tensordot(weights, values, axes=[st_axes, st_axes]).flatten()
-            for weights, values in zip(fulltweights, u_subdomains)
-        ]
-    )
 
-    return AxesArray(u_dot_integral, {"ax_time": 0, "ax_coord": 1})
+    Using integration by parts in time with compactly-supported test
+    functions, this computes the weak time-derivative integral with the
+    sign convention from ``_integrate_by_parts``.
+    """
+    lhs_terms, _ = _integrate_by_parts(np.asarray([time_deriv_op]))
+    lhs_term = lhs_terms[0]
+    _, _, _, lhs_deriv_op = lhs_term
+    if lhs_deriv_op != time_deriv_op:
+        raise RuntimeError("Inconsistent derivative operator in weak time integral")
+
+    return _eval_semiterm(
+        u,
+        lhs_term,
+        sub_spec,
+        weight_map,
+        differentiation_method,
+    )
 
 
 def _get_spatial_endpoints(st_grid: FloatND) -> tuple[Float1D, Float1D]:
@@ -928,7 +939,7 @@ def _integrate_product_by_parts(
         """A PDE-like library that doesn't fit but can create feature names"""
         def __init__(self, multiindices):
             self.multiindices = multiindices
-        
+
         def __sklearn_is_fitted__(self):
             return True
 

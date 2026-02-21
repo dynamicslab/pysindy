@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -10,6 +12,7 @@ from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
 from pysindy import STLSQ
 from pysindy._typing import Float1D
+from pysindy._weak import _dense_to_open_mesh
 from pysindy._weak import _derivative_weights
 from pysindy._weak import _eval_semiterm
 from pysindy._weak import _flatten_libraries
@@ -18,9 +21,11 @@ from pysindy._weak import _integrate_by_parts
 from pysindy._weak import _integrate_product_by_parts
 from pysindy._weak import _linear_weights
 from pysindy._weak import _plan_weak_form
+from pysindy._weak import convert_u_dot_integral
 from pysindy._weak import SubdomainSpecs
 from pysindy._weak import UniformEvenBump
 from pysindy._weak import WeakSINDy
+from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import ConcatLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import TensoredLibrary
@@ -45,6 +50,7 @@ def test_uniform_even_bump(p):
     # So these are easy to read but slower and manually defined by
     # derivative order.
     test_func = UniformEvenBump(p)
+
     def d0(x):
         return (1 - x**2) ** p
 
@@ -125,7 +131,9 @@ def test_integrate_domain1d(true_f, p, deriv_op):
     scaled_subgrid = [np.linspace(-1, 1, grid_shape[0])]
     x_mesh = grid1d[..., None]
     f_i = true_f(x_mesh[..., 0])
-    weights = _derivative_weights(scaled_subgrid, half_dims, grid_shape, deriv_op, test_func)
+    weights = _derivative_weights(
+        scaled_subgrid, half_dims, grid_shape, deriv_op, test_func
+    )
     result = f_i.flatten() @ np.asarray(weights).flatten()
     trapz_err_est = max(half_dims**2 / np.array(grid_shape) ** 2)
     # If expected is zero, can't use rtol
@@ -172,7 +180,9 @@ def test_integrate_domain2d(true_f, p, deriv_op):
     ]
     xy_i = np.stack(np.meshgrid(grid1d[0], grid1d[1], indexing="ij"), axis=-1)
     f_i = true_f(xy_i[..., 0], xy_i[..., 1])
-    weights = _derivative_weights(scaled_subgrid, half_dims, grid_shape, deriv_op, test_func)
+    weights = _derivative_weights(
+        scaled_subgrid, half_dims, grid_shape, deriv_op, test_func
+    )
     result = f_i.flatten() @ np.asarray(weights).flatten()
     trap_err_est = max(half_dims**2 / np.array(grid_shape) ** 2)
     # If expected is zero, can't use rtol
@@ -246,6 +256,49 @@ def test_integrate_product_by_parts():
     ]
     assert result == expected
 
+
+def test_convert_u_dot_integral(simple_time_domain):
+
+    xl, xu = simple_time_domain.domain[0, 0], simple_time_domain.domain[-1, 0]
+    test_func = UniformEvenBump(4)
+    deriv_op = cast(tuple[int, ...], (1,))
+    y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)
+
+    def true_u(x):
+        return x**2
+
+    def true_udot(x):
+        return 2 * x
+
+    def integrand(x):
+        return true_udot(x) * test_func.phi(y_of_x(x))
+
+    u = true_u(simple_time_domain.domain)
+    expected, _ = quad(integrand, xl, xu)
+
+    weights = [
+        _derivative_weights(
+            _dense_to_open_mesh(simple_time_domain.subgrids_scaled[subdomain]),
+            simple_time_domain.subgrid_dims[subdomain],
+            tuple(simple_time_domain.subgrid_shapes[subdomain]),
+            deriv_op,
+            test_func,
+        )
+        for subdomain in range(simple_time_domain.n_subdomains)
+    ]
+    weight_map = {deriv_op: weights}
+
+    result = convert_u_dot_integral(
+        u,
+        simple_time_domain,
+        weight_map,
+        FiniteDifference,
+        deriv_op,
+    )
+    n_points = simple_time_domain.domain.n_time
+    assert_allclose(result[:, 0], np.array([expected, expected]), atol=1 / n_points)
+
+
 @pytest.mark.parametrize(
     "feat_combos",
     [
@@ -253,13 +306,13 @@ def test_integrate_product_by_parts():
         "p_lib",
         "d_lib + c_lib",
         "f_lib * (c_lib + d_lib)",
-        "(c_lib + d_lib) * f_lib"
-    ]
+        "(c_lib + d_lib) * f_lib",
+    ],
 )
-def test_weak_feature_ordering(fake_domains, feat_combos):
-    st_grid = fake_domains.domain
+def test_weak_feature_ordering(single_point_domain, feat_combos):
+    st_grid = single_point_domain.domain
     u = st_grid[..., 0] ** 2 - st_grid[..., 1] ** 2
-    v = - st_grid[..., 0] ** 2 + st_grid[..., 1] ** 2
+    v = -st_grid[..., 0] ** 2 + st_grid[..., 1] ** 2
     x_input = np.stack((u, v), axis=-1)
     c_lib = PolynomialLibrary(degree=0)
     p_lib = PolynomialLibrary(degree=2)
@@ -281,11 +334,28 @@ def test_weak_feature_ordering(fake_domains, feat_combos):
 
 
 @pytest.fixture(scope="session")
-def fake_domains() -> SubdomainSpecs:
+def simple_time_domain() -> SubdomainSpecs:
+    xl, xu = 2, 5
+    half_dim = (xu - xl) / 2
+    grid = AxesArray(np.linspace(xl, xu, 200)[:, None], {"ax_time": 0, "ax_coord": 1})
+    subgrid_scaled = AxesArray(
+        np.linspace(-1, 1, len(grid))[:, None], {"ax_time": 0, "ax_coord": 1}
+    )
+    return SubdomainSpecs(
+        domain=grid,
+        axis_inds_per_subdom=[[np.arange(len(grid))], [np.arange(len(grid))]],
+        subgrid_dims=np.array([[half_dim], [half_dim]]),
+        subgrid_shapes=np.array([[len(grid)], [len(grid)]]),
+        subgrids_scaled=[subgrid_scaled, subgrid_scaled],
+    )
+
+
+@pytest.fixture(scope="session")
+def single_point_domain() -> SubdomainSpecs:
     # A fake subdomain spec where each subdomain maps to a single point,
     # so that a dirac test function will sift the weak value to the true value
     # Does scaling need to be adjusted so integral loses its scale?
-    ordinates = np.arange(0, 1, .1)
+    ordinates = np.arange(0, 1, 0.1)
     times = ordinates
     st_grid = np.stack(np.meshgrid(ordinates, times, indexing="ij"), axis=-1)
     st_grid = AxesArray(st_grid, axes={"ax_spatial": 0, "ax_time": 1, "ax_coord": 2})
@@ -296,8 +366,8 @@ def fake_domains() -> SubdomainSpecs:
     subgrids_scaled = []
     for ind in sorted_inds:
         axis_inds_per_subdom.append([np.array([ind[0]]), np.array([ind[1]])])
-        subgrid_dims.append((.05, .05))
-        subgrid_shapes.append((1,1))
+        subgrid_dims.append((0.05, 0.05))
+        subgrid_shapes.append((1, 1))
         subgrids_scaled.append(np.array([[[0]], [[0]]]))
     subgrid_dims = np.array(subgrid_dims)
     subgrid_shapes = np.array(subgrid_shapes)
@@ -306,5 +376,5 @@ def fake_domains() -> SubdomainSpecs:
         axis_inds_per_subdom=axis_inds_per_subdom,
         subgrid_dims=subgrid_dims,
         subgrid_shapes=subgrid_shapes,
-        subgrids_scaled=subgrids_scaled
+        subgrids_scaled=subgrids_scaled,
     )

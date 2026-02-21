@@ -317,7 +317,7 @@ class EvidenceGreedy(BaseOptimizer):
 
         coef = np.zeros((n_targets, n_features), dtype=float)
         ind = np.zeros((n_targets, n_features), dtype=bool)
-        all_histories: list[list[dict[str, float]]] = []
+        self.evidence_history_: list[list[dict[str, float]]] = []
 
         for tgt in range(n_targets):
             b = B[:, tgt]  # (n_features,)
@@ -345,7 +345,7 @@ class EvidenceGreedy(BaseOptimizer):
                         "log_evidence": float(log_ev),
                     }
                 ]
-                all_histories.append(history_tgt)
+                self.evidence_history_.append(history_tgt)
 
                 # Consistent history_ format
                 history_tmp = np.full((n_targets, n_features), np.nan, dtype=float)
@@ -379,7 +379,7 @@ class EvidenceGreedy(BaseOptimizer):
 
             coef[tgt, :] = coef_tgt
             ind[tgt, :] = ind_tgt
-            all_histories.append(history_tgt)
+            self.evidence_history_.append(history_tgt)
 
             # For history, we need to reshape to match the format of other optimizers.
             for i in range(np.shape(coef_hist)[1]):
@@ -393,9 +393,6 @@ class EvidenceGreedy(BaseOptimizer):
         # Map coefficients back to original scale if normalized.
         if self.normalize_columns:
             self.coef_ = self.coef_ * y_norm.reshape(-1, 1)
-
-        # Expose full evidence traces if required.
-        self.evidence_history_ = all_histories
 
 
 def _ridge_map(

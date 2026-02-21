@@ -63,17 +63,20 @@ from typing import Literal
 from typing import Optional
 
 import numpy as np
+from sklearn.metrics import r2_score
+from scipy.interpolate import interp1d
 from scipy.special import binom
 from scipy.special import perm
 from sklearn.base import check_is_fitted
 from typing_extensions import Self
 
 from ._core import _adapt_to_multiple_trajectories
-from ._core import _BaseSINDy
+from ._core import SINDy
 from ._core import _check_multiple_trajectories
 from ._core import _validate_inputs
 from ._core import standardize_shape
 from ._core import validate_control_variables
+from ._core import _zip_like_sequence
 from ._typing import Float1D
 from ._typing import Float2D
 from ._typing import FloatND
@@ -262,7 +265,7 @@ The fourth term is the derivative order moved on the test function phi
 """
 
 
-class WeakSINDy(_BaseSINDy):
+class WeakSINDy(SINDy):
     """For test function basis, see Section 2.4 of Messenger and Bortz, "Weak SINDy:
     Galerkin-Based Data-Driven Model Selection".  Here, the polynomial exponent
     decaying at the left and right boundary are the same: p==q in the manuscript's
@@ -271,14 +274,19 @@ class WeakSINDy(_BaseSINDy):
 
     def __init__(
         self,
-        feature_library: Optional[BaseFeatureLibrary] = None,
         optimizer: Optional[BaseOptimizer] = None,
+        feature_library: Optional[BaseFeatureLibrary] = None,
+        differentiation_method: Optional[BaseDifferentiation] = None,
         n_subdomains: int = 100,
         test_fn: TestFunctionPhi = UniformEvenBump(4),
         spatial_diff_method: type[BaseDifferentiation] = FiniteDifference,
         diff_kwargs: Optional[dict] = None,
     ):
-        super().__init__(feature_library=feature_library, optimizer=optimizer)
+        super().__init__(
+            optimizer=optimizer,
+            feature_library=feature_library,
+            differentiation_method=differentiation_method
+        )
         self.n_subdomains = n_subdomains
         self.test_fn = test_fn
         self.spatial_diff_method = spatial_diff_method
@@ -352,10 +360,20 @@ class WeakSINDy(_BaseSINDy):
             _make_domains(grid, sub_dim, self.n_subdomains)
             for grid, sub_dim in zip(st_grids, subdomain_dims)
         ]
-        n_system_vars = cast(int, x[0].n_coord)
         grid_ndim = subdomain_specs[0].grid_ndim
+        self.grid_ndim_ = grid_ndim
+
+        # spatially smooth
+        time_slice = (*(0,) * (grid_ndim - 1), slice(None), -1)
+        t = [st_grid[*time_slice] for st_grid in st_grids]
+        self.differentiation_method.axis=x[0].ax_time
+        x_smooth: list[AxesArray] = []
+        for xi, ti in _zip_like_sequence(x, t):
+            self.differentiation_method(xi, ti)
+            x_smooth.append(self.differentiation_method.smoothed_x_)
+
         # Weak should be subclass of PDEFIND?  Or PDELib.transform gives placeholders?
-        def get_PDElib(lib):
+        def get_PDElib(lib) -> Literal[False] | PDELibrary:
             if isinstance(lib, PDELibrary):
                 return lib
             elif isinstance(lib, (ConcatLibrary, TensoredLibrary)):
@@ -372,12 +390,12 @@ class WeakSINDy(_BaseSINDy):
             time_deriv[0, -1] = 1
             multiindices = np.hstack((multiindices, time_zeros))
             multiindices = np.vstack((multiindices, time_deriv))
-            diff_method = pde_lib.differentiation_method
+            diff_type = pde_lib.differentiation_method
         else:
             time_deriv = np.zeros((1, subdomain_specs[0].grid_ndim), dtype=int)
             time_deriv[0, -1] = 1
             multiindices = time_deriv
-            diff_method = FiniteDifference()
+            diff_type = FiniteDifference
 
         zero_deriv = (0,) * grid_ndim
         multiindices = np.vstack((multiindices, zero_deriv))
@@ -396,23 +414,23 @@ class WeakSINDy(_BaseSINDy):
             for xi, weights, spec in zip(x, weights_per_deriv_op, subdomain_specs)
         ]
         self.sorted_lib_ = _flatten_libraries(self.feature_library)
-        self.sorted_lib_.fit(x[0])
+        self.sorted_lib_.fit(x_smooth[0])
         self.feature_library = self.sorted_lib_ # flattening affects term ordering
         terms: list[SemiTerm | Collection[SemiTerm]] = []
         terms, term_namefuncs = _plan_weak_form(self.sorted_lib_, zero_deriv)
 
         rhs_trajectories = []
-        for it in zip(x, subdomain_specs, weights_per_deriv_op, strict=True):
+        for it in zip(x_smooth, subdomain_specs, weights_per_deriv_op, strict=True):
             x_i, sub_spec, weight_map = it
             weak_feats = []
             for term in terms:
                 if isinstance(term, tuple):
-                    weak_feats.append(_eval_semiterm(x_i, term, sub_spec, weight_map))
+                    weak_feats.append(_eval_semiterm(x_i, term, sub_spec, weight_map, diff_type))
                 else:
                     # term is a collection of semi-terms that sum represent
                     # product rule terms.
                     parts = [
-                        _eval_semiterm(x_i, part, sub_spec, weight_map) for part in term
+                        _eval_semiterm(x_i, part, sub_spec, weight_map, diff_type) for part in term
                     ]
                     weak_feats.append(sum(parts))
             weak_feats = AxesArray(
@@ -429,6 +447,23 @@ class WeakSINDy(_BaseSINDy):
         self.feature_library.fit(x[0])
         self._fit_shape()
         return self
+
+    def simulate(
+        self,
+        x0,
+        t,
+        u=None,
+        integrator="solve_ivp",
+        interpolator=None,
+        integrator_kws={"method": "LSODA", "rtol": 1e-12, "atol": 1e-12},
+        interpolator_kws={},
+    ):
+        if self.grid_ndim_ > 1:
+            raise TypeError("Model trained as PDE, but can only simulate ODEs")
+        return super().simulate(
+            x0, t, u, integrator, interpolator, integrator_kws, interpolator_kws
+        )
+
 
     def get_feature_names(self) -> list[str]:
         """
@@ -486,6 +521,7 @@ def _eval_semiterm(
     term: SemiTerm,
     sub_spec: SubdomainSpecs,
     weight_map: dict[tuple[int, ...], list[AxesArray]],
+    differentiation_method: type[BaseDifferentiation]
 ) -> AxesArray:
     """Calculate the value of a single SemiTerm on x across all subdomains"""
     diff1, feat_term, coeff, diff3 = term
@@ -501,7 +537,9 @@ def _eval_semiterm(
         feat_lib, diff2 = feat_term
         fx = feat_lib.fit_transform(x)
         fx = PDELibrary(
-            spatial_grid=sub_spec.domain, multiindices=[diff2]
+            spatial_grid=sub_spec.domain,
+            multiindices=[diff2],
+            differentiation_method=differentiation_method
         ).fit_transform(fx)
     else:
         fx = AxesArray(np.ones((*x.shape[:-1], 1)), x.axes)

@@ -84,6 +84,10 @@ class _BaseOptimizer(BaseEstimator, abc.ABC):
         check_is_fitted(self)
         return np.count_nonzero(self.coef_) + np.count_nonzero(self.intercept_)
 
+    @abc.abstractmethod
+    def fit(self, x, y):
+        ...
+
 
 class BaseOptimizer(LinearRegression, _BaseOptimizer):
     """

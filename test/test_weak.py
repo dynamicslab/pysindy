@@ -19,7 +19,6 @@ from pysindy._weak import _integrate_product_by_parts
 from pysindy._weak import _linear_weights
 from pysindy._weak import _plan_weak_form
 from pysindy._weak import SubdomainSpecs
-from pysindy._weak import TestFunctionPhi
 from pysindy._weak import UniformEvenBump
 from pysindy._weak import WeakSINDy
 from pysindy.feature_library import ConcatLibrary
@@ -128,12 +127,12 @@ def test_integrate_domain1d(true_f, p, deriv_op):
     f_i = true_f(x_mesh[..., 0])
     weights = _derivative_weights(scaled_subgrid, half_dims, grid_shape, deriv_op, test_func)
     result = f_i.flatten() @ np.asarray(weights).flatten()
-    trap_err_est = max(half_dims**2 / np.array(grid_shape) ** 2)
+    trapz_err_est = max(half_dims**2 / np.array(grid_shape) ** 2)
     # If expected is zero, can't use rtol
     if np.linalg.norm(expected) < 1e-5:
-        assert_allclose(result, expected, atol=trap_err_est)
+        assert_allclose(result, expected, atol=trapz_err_est)
     else:
-        assert_allclose(result, expected, rtol=trap_err_est)
+        assert_allclose(result, expected, rtol=trapz_err_est)
 
 
 @pytest.mark.parametrize(
@@ -195,8 +194,8 @@ def test_flatten_libraries():
     assert isinstance(result.libraries[1], TensoredLibrary)
     assert type(result.libraries[0].libraries[0]) == PolynomialLibrary
     assert type(result.libraries[0].libraries[1]) == FourierLibrary
-    assert type(result.libraries[1].libraries[0]) == PolynomialLibrary
-    assert type(result.libraries[1].libraries[1]) == PDELibrary
+    assert type(result.libraries[1].libraries[0]) == PDELibrary
+    assert type(result.libraries[1].libraries[1]) == PolynomialLibrary
 
 
 def test_weak_class(data_1d_random_pde):
@@ -205,7 +204,7 @@ def test_weak_class(data_1d_random_pde):
     f_lib = PolynomialLibrary()
     u_lib = PDELibrary(derivative_order=2, spatial_grid=x)
     lib = f_lib + u_lib + f_lib * u_lib
-    model = WeakSINDy(lib, STLSQ())
+    model = WeakSINDy(feature_library=lib)
 
     model.fit(x=[u], st_grids=[mesh])
     model.print()

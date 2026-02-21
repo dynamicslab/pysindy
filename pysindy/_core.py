@@ -514,6 +514,8 @@ class SINDy(_BaseSINDy):
         x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
         return metric(x_dot, x_dot_predict, **metric_kws)
 
+
+    # Once WeakPDEibrary removed, this can be inlined to just call differentiation
     def _process_trajectories(
         self, x: list[AxesArray], t: list[AxesArray], x_dot: Optional[list[AxesArray]]
     ) -> tuple[list[AxesArray], list[AxesArray]]:

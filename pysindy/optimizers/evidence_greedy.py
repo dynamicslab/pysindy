@@ -239,7 +239,6 @@ class EvidenceGreedy(BaseOptimizer):
 
         """
 
-        t = np.asarray(t)
         if t.ndim != 1:
             raise ValueError("t must be a 1D time grid.")
         if sigma_x < 0:
@@ -413,8 +412,6 @@ def _ridge_map(
     RuntimeWarning, but the returned coefficients are still used.
 
     """
-    X_active = np.asarray(X_active)
-    y_active = np.asarray(y_active).ravel()
 
     lam = alpha_prior * _sigma2
     kw = ridge_kw or {}
@@ -497,8 +494,6 @@ def _log_evidence_from_G(
         Bayesian log evidence.
 
     """
-    G_active = np.asarray(G_active)
-    b_active = np.asarray(b_active)
 
     n_features = G_active.shape[0]
 
@@ -513,7 +508,7 @@ def _log_evidence_from_G(
     if m_N is None:
         raise ValueError("m_N must be provided for a non-empty active set.")
 
-    m_N = np.asarray(m_N).reshape(-1)
+    # m_N = np.asarray(m_N).reshape(-1)
     if m_N.shape[0] != n_features:
         raise ValueError("m_N has incompatible shape for the active set.")
 
@@ -600,10 +595,6 @@ def _backward_evidence_greedy_single(
         [{"step": ..., "support_size": ..., "log_evidence": ...}, ...]
 
     """
-    x = np.asarray(x)
-    y_col = np.asarray(y_col).ravel()
-    G = np.asarray(G)
-    b = np.asarray(b)
 
     n_samples_x, n_features = x.shape
     if n_samples_x != n_samples:

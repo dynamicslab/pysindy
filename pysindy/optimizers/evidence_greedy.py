@@ -21,13 +21,13 @@ class EvidenceGreedy(BaseOptimizer):
     This optimizer performs backward model selection 
     (i.e.feature elimination) driven by the
     Bayesian log evidence for a linear Gaussian model with an isotropic
-    Gaussian prior on the coefficients. For each target dimension y_j,
+    Gaussian prior on the coefficients. For each target dimension y_{tgt},
     we assume
 
     .. math::
 
         w &\sim \mathcal{N}\!\left(0,\ \alpha^{-1} I\right), \\
-        y_j \mid w &\sim \mathcal{N}\!\left(\Theta w,\ \sigma^2 I\right),
+        y_{tgt} \mid w &\sim \mathcal{N}\!\left(\Theta w,\ \sigma^2 I\right),
 
     where ``alpha`` is the prior precision on the coefficients
     (sigma_p^{-2}) and ``_sigma2`` is the observation noise variance
@@ -38,9 +38,9 @@ class EvidenceGreedy(BaseOptimizer):
     #. Start from the full support (all library terms active).
     #. At each step, temporarily remove each active term in turn.
     #. For each candidate support, compute the Bayesian log evidence
-       :math:`\log p(y_j \mid \alpha, \sigma^2, \mathrm{support})` using the
+       :math:`\log p(y_{tgt} \mid \alpha, \sigma^2, \mathrm{support})` using the
        precomputed statistics :math:`G=\Theta^\top\Theta` and
-       :math:`b_j=\Theta^\top y_j`.
+       :math:`b_{tgt}=\Theta^\top y_{tgt}`.
     #. Accept the removal that yields the largest increase in evidence.
     #. Stop when no single removal increases the evidence.
 
@@ -100,8 +100,8 @@ class EvidenceGreedy(BaseOptimizer):
         the i-th target variable, with zeros outside the selected support.
 
     ind_ : ndarray of bool of shape (n_targets, n_features)
-        Boolean support mask corresponding to ``coef_``. ``ind_[i, j]`` is
-        True if the j-th library function is active in the equation for the
+        Boolean support mask corresponding to ``coef_``. ``ind_[i, tgt]`` is
+        True if the tgt-th library function is active in the equation for the
         i-th target.
 
     history_ : list of ndarray
@@ -115,7 +115,7 @@ class EvidenceGreedy(BaseOptimizer):
         backward-elimination step for the i-th target, e.g.::
 
             {"step": k,
-             "removed": j,
+             "removed": tgt,
              "support_size": (number of active features after removal),
              "log_evidence": value}
 
@@ -208,7 +208,7 @@ class EvidenceGreedy(BaseOptimizer):
 
         .. math::
 
-            \\mathrm{Var}[\\eta_k] = \\sigma_x^2 \\sum_j L_{k j}^2
+            \\mathrm{Var}[\\eta_k] = \\sigma_x^2 \\sum_{tgt} L_{k tgt}^2
 
         for the induced derivative noise at row ``k``. The returned
         ``_sigma2`` is the mean of this variance over rows that contain only
@@ -319,14 +319,14 @@ class EvidenceGreedy(BaseOptimizer):
         ind = np.zeros((n_targets, n_features), dtype=bool)
         all_histories: list[list[dict[str, float]]] = []
 
-        for j in range(n_targets):
-            b = B[:, j]  # (n_features,)
-            yTy = float(yTy_all[j])  # scalar
+        for tgt in range(n_targets):
+            b = B[:, tgt]  # (n_features,)
+            yTy = float(yTy_all[tgt])  # scalar
 
             # In case y is a zero vector or close to it, output as an empty model.
-            if (y_norm[j]**2.0 <= eps_precision):
-                coef[j, :] = 0.0
-                ind[j, :] = False
+            if (y_norm[tgt]**2.0 <= eps_precision):
+                coef[tgt, :] = 0.0
+                ind[tgt, :] = False
 
                 # Log evidence of the empty model (n_features=0). m_N is ignored for n_features=0.
                 log_ev = _log_evidence_from_G(
@@ -338,18 +338,18 @@ class EvidenceGreedy(BaseOptimizer):
                     _sigma2=float(self._sigma2),
                     m_N=None,
                 )
-                history_j = [
+                history_tgt = [
                     {
                         "step": 0,
                         "support_size": 0,
                         "log_evidence": float(log_ev),
                     }
                 ]
-                all_histories.append(history_j)
+                all_histories.append(history_tgt)
 
                 # Consistent history_ format
                 history_tmp = np.full((n_targets, n_features), np.nan, dtype=float)
-                history_tmp[j, :] = 0.0
+                history_tmp[tgt, :] = 0.0
                 self.history_.append(history_tmp)
                 continue
 
@@ -357,16 +357,16 @@ class EvidenceGreedy(BaseOptimizer):
             # we need to rescale _sigma2 accordingly.
 
             if self.normalize_columns:
-                yn = float(y_norm[j])
+                yn = float(y_norm[tgt])
                 # Prevent division by zero / inf
                 denom = max(yn * yn, eps_precision)
                 sigma2_scaled = float(self._sigma2) / denom
             else:
                 sigma2_scaled = float(self._sigma2)
 
-            coef_j, ind_j, history_j, coef_hist = _backward_evidence_greedy_single(
+            coef_tgt, ind_tgt, history_tgt, coef_hist = _backward_evidence_greedy_single(
                 x=x,
-                y_col=y[:, j],
+                y_col=y[:, tgt],
                 G=G,
                 b=b,
                 yTy=yTy,
@@ -377,14 +377,14 @@ class EvidenceGreedy(BaseOptimizer):
                 verbose=self.verbose,
             )
 
-            coef[j, :] = coef_j
-            ind[j, :] = ind_j
-            all_histories.append(history_j)
+            coef[tgt, :] = coef_tgt
+            ind[tgt, :] = ind_tgt
+            all_histories.append(history_tgt)
 
             # For history, we need to reshape to match the format of other optimizers.
             for i in range(np.shape(coef_hist)[1]):
                 history_tmp = np.full((n_targets, n_features), np.nan, dtype=float)
-                history_tmp[j, :] = coef_hist[:, i]
+                history_tmp[tgt, :] = coef_hist[:, i]
                 self.history_.append(history_tmp)
 
         self.coef_ = coef
@@ -567,16 +567,16 @@ def _backward_evidence_greedy_single(
         Library matrix Theta(X) for this regression problem.
 
     y_col : ndarray, shape (n_samples,)
-        Single target column y_j.
+        Single target column y_{tgt}.
 
     G : ndarray, shape (n_features, n_features)
         Full Gram matrix Theta^T Theta.
 
     b : ndarray, shape (n_features,)
-        Full vector Theta^T y_j.
+        Full vector Theta^T y_{tgt}.
 
     yTy : float
-        Scalar y_j^T y_j.
+        Scalar y_{tgt}^T y_{tgt}.
 
     n_samples : int
         Number of time samples T.

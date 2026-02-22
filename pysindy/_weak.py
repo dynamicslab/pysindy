@@ -525,8 +525,8 @@ def _eval_semiterm(
     x: AxesArray,
     term: SemiTerm,
     sub_spec: SubdomainSpecs,
-    weight_map: dict[tuple[int, ...], list[AxesArray]],
-    differentiation_method: type[BaseDifferentiation]
+    weight_map: Mapping[tuple[int, ...], list[AxesArray]],
+    differentiation_method: type[BaseDifferentiation] | None=None
 ) -> AxesArray:
     """Calculate the value of a single SemiTerm on x across all subdomains"""
     diff1, feat_term, coeff, diff3 = term
@@ -535,17 +535,24 @@ def _eval_semiterm(
     if diff1 is None:
         x_d = AxesArray(np.ones((*x.shape[:-1], 1)), x.axes)
     else:
+        if differentiation_method is None:
+            raise ValueError("Derivative term requested; must provide diff method")
         x_d = PDELibrary(
-            spatial_grid=sub_spec.domain, multiindices=[diff1]
+            spatial_grid=sub_spec.domain,
+            multiindices=[diff1],
+            differentiation_method=differentiation_method
         ).fit_transform(x)
     if feat_term is not None:
         feat_lib, diff2 = feat_term
         fx = feat_lib.fit_transform(x)
-        fx = PDELibrary(
-            spatial_grid=sub_spec.domain,
-            multiindices=[diff2],
-            differentiation_method=differentiation_method
-        ).fit_transform(fx)
+        if any(diff2):
+            if differentiation_method is None:
+                raise ValueError("Derivative term requested; must provide diff method")
+            fx = PDELibrary(
+                spatial_grid=sub_spec.domain,
+                multiindices=[diff2],
+                differentiation_method=differentiation_method
+            ).fit_transform(fx)
     else:
         fx = AxesArray(np.ones((*x.shape[:-1], 1)), x.axes)
 
@@ -691,7 +698,7 @@ def convert_u_dot_integral(
     )
 
 
-def _get_spatial_endpoints(st_grid: FloatND) -> tuple[Float1D, Float1D]:
+def _get_spatial_endpoints(st_grid: AxesArray) -> tuple[AxesArray, AxesArray]:
     """Retrieve the min/max coordinates for each axis of a meshgrid"""
     grid_ndim = st_grid.ndim - 1
     min_inds = (0,) * grid_ndim

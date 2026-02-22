@@ -333,6 +333,50 @@ def test_weak_feature_ordering(single_point_domain, feat_combos):
     assert feat_names == feat_names_plan
 
 
+def test_eval_semiterm_output_shape(simple_time_domain):
+    """_eval_semiterm returns an (n_subdomains, n_coord) shaped AxesArray."""
+    sub_spec = simple_time_domain
+    deriv_op = cast(tuple[int, ...], (0,))
+    test_func = UniformEvenBump(4)
+    weights = [
+        _derivative_weights(
+            _dense_to_open_mesh(sub_spec.subgrids_scaled[s]),
+            sub_spec.subgrid_dims[s],
+            tuple(sub_spec.subgrid_shapes[s]),
+            deriv_op,
+            test_func,
+        )
+        for s in range(sub_spec.n_subdomains)
+    ]
+    weight_map = {deriv_op: weights}
+    x = AxesArray(np.ones((*sub_spec.domain.shape[:-1], 1)), sub_spec.domain.axes)
+    term = (None, None, 1.0, deriv_op)
+    result = _eval_semiterm(x, term, sub_spec, weight_map)
+    assert result.shape == (sub_spec.n_subdomains, 1)
+
+
+def test_eval_semiterm_phi_prime_vanishes(simple_time_domain):
+    """Integrating a constant against phi' gives zero since phi vanishes at boundaries."""
+    sub_spec = simple_time_domain
+    deriv_op = cast(tuple[int, ...], (1,))
+    test_func = UniformEvenBump(4)
+    weights = [
+        _derivative_weights(
+            _dense_to_open_mesh(sub_spec.subgrids_scaled[s]),
+            sub_spec.subgrid_dims[s],
+            tuple(sub_spec.subgrid_shapes[s]),
+            deriv_op,
+            test_func,
+        )
+        for s in range(sub_spec.n_subdomains)
+    ]
+    weight_map = {deriv_op: weights}
+    x = AxesArray(np.ones((*sub_spec.domain.shape[:-1], 1)), sub_spec.domain.axes)
+    term = (None, None, 1.0, deriv_op)
+    result = _eval_semiterm(x, term, sub_spec, weight_map)
+    assert_allclose(result, 0, atol=1e-10)
+
+
 @pytest.fixture(scope="session")
 def simple_time_domain() -> SubdomainSpecs:
     xl, xu = 2, 5

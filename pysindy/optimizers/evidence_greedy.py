@@ -596,12 +596,6 @@ def _backward_evidence_greedy_single(
     """
 
     n_samples_x, n_features = x.shape
-    if n_samples_x != n_samples:
-        raise ValueError("Mismatch between n_samples and x.shape[0].")
-    if G.shape != (n_features, n_features):
-        raise ValueError("G must have shape (n_features, n_features).")
-    if b.shape[0] != n_features:
-        raise ValueError("Dimensions of G and b are inconsistent.")
 
     # Start with full support
     active = np.ones(n_features, dtype=bool)

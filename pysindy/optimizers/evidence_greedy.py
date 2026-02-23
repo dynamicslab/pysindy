@@ -1,5 +1,4 @@
 """EvidenceGreedy optimizer: greedy Bayesian evidence-based sparse regression."""
-from __future__ import annotations
 
 import sys
 import warnings

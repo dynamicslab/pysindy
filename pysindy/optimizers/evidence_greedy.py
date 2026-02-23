@@ -328,9 +328,9 @@ class EvidenceGreedy(BaseOptimizer):
                 ind[tgt, :] = False
 
                 # Log evidence of the empty model (n_features=0). m_N is ignored for n_features=0.
-                log_ev = _log_evidence_from_G(
-                    G_active=np.zeros((0, 0), dtype=float),
-                    b_active=np.zeros((0,), dtype=float),
+                log_ev = _log_evidence_laplace_appx(
+                    G=np.zeros((0, 0), dtype=float),
+                    b=np.zeros((0,), dtype=float),
                     yTy=yTy,
                     n_samples=n_samples,
                     alpha=self.alpha,
@@ -395,8 +395,8 @@ class EvidenceGreedy(BaseOptimizer):
 
 
 def _ridge_map(
-    X_active: np.ndarray,
-    y_active: np.ndarray,
+    X: np.ndarray,
+    y: np.ndarray,
     alpha_prior: float,
     _sigma2: float,
     ridge_kw: dict | None = None,
@@ -422,7 +422,7 @@ def _ridge_map(
     # Follow the STLSQ pattern: use ridge_regression and handle LinAlgWarning.
     with warnings.catch_warnings(record=True) as caught:
         warnings.filterwarnings("always", category=LinAlgWarning)
-        coef = ridge_regression(X_active, y_active, lam, **kw)
+        coef = ridge_regression(X, y, lam, **kw)
 
     # If any LinAlgWarning occurred, surface a warning to the user but continue.
     for w in caught:
@@ -437,9 +437,9 @@ def _ridge_map(
     return coef
 
 
-def _log_evidence_from_G(
-    G_active: np.ndarray,
-    b_active: np.ndarray,
+def _log_evidence_laplace_appx(
+    G: np.ndarray,
+    b: np.ndarray,
     yTy: float,
     n_samples: int,
     alpha: float,
@@ -460,19 +460,19 @@ def _log_evidence_from_G(
     where
 
         ||y - Theta m_N||^2
-            = yTy - 2 m_N^T b_active + m_N^T G_active m_N
+            = yTy - 2 m_N^T b + m_N^T G m_N
 
     and
 
-        Lambda = alpha I_(n_features) + G_active / _sigma2
+        Lambda = alpha I_(n_features) + G / _sigma2
 
     Parameters
     ----------
-    G_active : ndarray, shape (n_features, n_features)
+    G : ndarray, shape (n_features, n_features)
         Gram matrix for active features 
         (i.e. Theta^T Theta restricted to active features).
 
-    b_active : ndarray, shape (n_features,)
+    b : ndarray, shape (n_features,)
         Theta^T y restricted to active features.
 
     yTy : float
@@ -498,7 +498,7 @@ def _log_evidence_from_G(
 
     """
 
-    n_features = G_active.shape[0]
+    n_features = G.shape[0]
 
     # Degenerate empty model: p(y) = N(0, _sigma2 I)
     if n_features == 0:
@@ -518,11 +518,11 @@ def _log_evidence_from_G(
     beta = 1.0 / _sigma2
 
     # Residual norm using precomputed stats:
-    #   ||y - Theta m_N||^2 = yTy - 2 m_N^T b_active + m_N^T G_active m_N
-    residual_sq = yTy - 2.0 * float(m_N.T @ b_active) + float(m_N.T @ (G_active @ m_N))
+    #   ||y - Theta m_N||^2 = yTy - 2 m_N^T b + m_N^T G m_N
+    residual_sq = yTy - 2.0 * float(m_N.T @ b) + float(m_N.T @ (G @ m_N))
 
     # log|Lambda|
-    Lambda = alpha * np.eye(n_features) + beta * G_active
+    Lambda = alpha * np.eye(n_features) + beta * G
     sign, logdet_Lambda = np.linalg.slogdet(Lambda)
     if sign <= 0:
         # Numerically bad model; treat as very low evidence.
@@ -608,9 +608,9 @@ def _backward_evidence_greedy_single(
     # Initial MAP estimate on the full support
     m_full = _ridge_map(x[:, active], y_col, alpha_prior=alpha, _sigma2=_sigma2)
 
-    log_ev = _log_evidence_from_G(
-        G_active=G,
-        b_active=b,
+    log_ev = _log_evidence_laplace_appx(
+        G=G,
+        b=b,
         yTy=yTy,
         n_samples=n_samples,
         alpha=alpha,
@@ -667,9 +667,9 @@ def _backward_evidence_greedy_single(
             else:
                 m_N = _ridge_map(x[:, mask_candidate], y_col, alpha_prior=alpha, _sigma2=_sigma2)
                 # Evaluate the empty model analytically
-            log_ev_mask = _log_evidence_from_G(
-                G_active=G[np.ix_(mask_candidate, mask_candidate)],
-                b_active=b[mask_candidate],
+            log_ev_mask = _log_evidence_laplace_appx(
+                G=G[np.ix_(mask_candidate, mask_candidate)],
+                b=b[mask_candidate],
                 yTy=yTy,
                 n_samples=n_samples,
                 alpha=alpha,

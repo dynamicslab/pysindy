@@ -1,4 +1,5 @@
 """EvidenceGreedy optimizer: greedy Bayesian evidence-based sparse regression."""
+from __future__ import annotations
 
 import sys
 import warnings
@@ -10,6 +11,9 @@ from sklearn.linear_model import ridge_regression
 
 from .base import _normalize_features
 from .base import BaseOptimizer
+
+# from .._typing import Float1D, Float2D
+# from differentiation import FiniteDifference
 
 
 class EvidenceGreedy(BaseOptimizer):
@@ -602,8 +606,7 @@ def _backward_evidence_greedy_single(
     history: list[dict[str, float]] = []
 
     # Initial MAP estimate on the full support
-    J_full = np.where(active)[0]
-    m_full = _ridge_map(x[:, J_full], y_col, alpha_prior=alpha, _sigma2=_sigma2)
+    m_full = _ridge_map(x[:, active], y_col, alpha_prior=alpha, _sigma2=_sigma2)
 
     log_ev = _log_evidence_from_G(
         G_active=G,
@@ -617,7 +620,7 @@ def _backward_evidence_greedy_single(
 
     best_log_ev = log_ev
     best_m = np.zeros(n_features, dtype=float)
-    best_m[J_full] = m_full
+    best_m[active] = m_full
     best_active = active.copy()
 
     if verbose:
@@ -658,16 +661,15 @@ def _backward_evidence_greedy_single(
         for idx in active_indices:
             mask_candidate = active.copy()
             mask_candidate[idx] = False
-            J = np.where(mask_candidate)[0]
 
-            if J.size == 0:
+            if mask_candidate.sum() == 0:
                 m_N = None
             else:
-                m_N = _ridge_map(x[:, J], y_col, alpha_prior=alpha, _sigma2=_sigma2)
+                m_N = _ridge_map(x[:, mask_candidate], y_col, alpha_prior=alpha, _sigma2=_sigma2)
                 # Evaluate the empty model analytically
-            log_ev_J = _log_evidence_from_G(
-                G_active=G[np.ix_(J, J)],
-                b_active=b[J],
+            log_ev_mask = _log_evidence_from_G(
+                G_active=G[np.ix_(mask_candidate, mask_candidate)],
+                b_active=b[mask_candidate],
                 yTy=yTy,
                 n_samples=n_samples,
                 alpha=alpha,
@@ -675,11 +677,11 @@ def _backward_evidence_greedy_single(
                 m_N=m_N,
             )
             m_full_candidate = np.zeros(n_features, dtype=float)
-            if J.size != 0:
-                m_full_candidate[J] = m_N
+            if mask_candidate.sum() != 0:
+                m_full_candidate[mask_candidate] = m_N
 
-            if log_ev_J > best_step_log_ev:
-                best_step_log_ev = log_ev_J
+            if log_ev_mask > best_step_log_ev:
+                best_step_log_ev = log_ev_mask
                 best_step_idx = int(idx)
                 best_step_m_full = m_full_candidate
                 m_hist[:, step] = m_full_candidate

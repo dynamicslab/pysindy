@@ -26,11 +26,12 @@ from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import EvidenceGreedy
 from pysindy.utils.bindy import TemporalNoisePropagation
 
+sigma_x = 1e-2
 
 def test_get_feature_names_len(data_lorenz):
     x, t = data_lorenz
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2)
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x)
 
     with pytest.raises(NotFittedError):
         model.get_feature_names()
@@ -43,8 +44,8 @@ def test_get_feature_names_len(data_lorenz):
 
 def test_not_fitted(data_1d):
     x, t = data_1d
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2)
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x)
 
     with pytest.raises(NotFittedError):
         model.predict(x)
@@ -60,18 +61,18 @@ def test_not_fitted(data_1d):
 
 def test_improper_shape_input(data_1d):
     x, t = data_1d
-    x = x + 1e-2 * np.random.randn(*x.shape)
+    x = x + sigma_x * np.random.randn(*x.shape)
 
     # Ensure model successfully handles different data shapes
-    model = BINDy(1e-2)
+    model = BINDy(sigma_x)
     model.fit(x.flatten(), t)
     check_is_fitted(model)
 
-    model = BINDy(1e-2)
+    model = BINDy(sigma_x)
     model.fit(x.flatten(), t, x_dot=x.flatten())
     check_is_fitted(model)
 
-    model = BINDy(1e-2)
+    model = BINDy(sigma_x)
     model.fit(x, t, x_dot=x.flatten())
     check_is_fitted(model)
 
@@ -86,14 +87,14 @@ def test_improper_shape_input(data_1d):
 )
 def test_mixed_inputs(data):
     x, t = data
-    x = x + 1e-2 * np.random.randn(*x.shape)
+    x = x + sigma_x * np.random.randn(*x.shape)
 
     # Scalar t
-    model = BINDy(1e-2)
+    model = BINDy(sigma_x)
     model.fit(x, t=2)
     check_is_fitted(model)
 
-    model = BINDy(1e-2)
+    model = BINDy(sigma_x)
     model.fit(x, t, x_dot=x)
     check_is_fitted(model)
 
@@ -103,8 +104,8 @@ def test_mixed_inputs(data):
 )
 def test_bad_t(data):
     x, t = data
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2)
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x)
 
     # Wrong type
     with pytest.raises(ValueError):
@@ -134,25 +135,17 @@ def test_bad_t(data):
     with pytest.raises(ValueError):
         model.fit(x, t_new)
 
-
 @pytest.mark.parametrize(
     "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
 )
-@pytest.mark.parametrize(
-    "optimizer",
-    [
-        EvidenceGreedy(),
-    ],
-)
-def test_predict(data, optimizer):
+def test_predict(data):
     x, t = data
     x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2, optimizer=optimizer)
+    model = BINDy(1e-2)
     model.fit(x, t)
     x_dot = model.predict(x)
 
     assert x.shape == x_dot.shape
-
 
 @pytest.mark.parametrize(
     "data",
@@ -164,8 +157,8 @@ def test_predict(data, optimizer):
 )
 def test_simulate(data):
     x, t = data
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2, feature_library=PolynomialLibrary(degree=1))
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x, feature_library=PolynomialLibrary(degree=1))
     model.fit(x, t)
     x1 = model.simulate(np.ravel(x[0]), t, integrator_kws={"rtol": 0.1})
     assert len(x1) == len(t)
@@ -188,8 +181,8 @@ def test_simulate(data):
 )
 def test_libraries(data_lorenz, library):
     x, t = data_lorenz
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2, feature_library=library)
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x, feature_library=library)
     model.fit(x, t)
 
     s = model.score(x, t)
@@ -198,8 +191,8 @@ def test_libraries(data_lorenz, library):
 
 def test_integration_smoothed_finite_difference(data_lorenz):
     x, t = data_lorenz
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2, differentiation_method=SmoothedFiniteDifference())
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x, differentiation_method=SmoothedFiniteDifference())
 
     model.fit(x, t=t)
 
@@ -215,12 +208,12 @@ def test_integration_smoothed_finite_difference(data_lorenz):
 )
 def test_integration_derivative_methods(data_lorenz, derivative_kws):
     x, t = data_lorenz
-    x = x + 1e-2 * np.random.randn(*x.shape)
+    x = x + sigma_x * np.random.randn(*x.shape)
     fd = SINDyDerivative(**derivative_kws)
 
-    sigma2 = TemporalNoisePropagation(fd, t, 1e-2)
+    sigma2 = TemporalNoisePropagation(fd, t, sigma_x)
     model = BINDy(
-        1e-2, optimizer=EvidenceGreedy(_sigma2=sigma2), differentiation_method=fd
+        sigma_x, optimizer=EvidenceGreedy(_sigma2=sigma2), differentiation_method=fd
     )
     model.fit(x, t=t)
 
@@ -237,8 +230,8 @@ def test_integration_derivative_methods(data_lorenz, derivative_kws):
 )
 def test_score(data):
     x, t = data
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2)
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x)
     model.fit(x, t)
 
     assert model.score(x, t) <= 1
@@ -248,14 +241,14 @@ def test_score(data):
 
 def test_fit_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
-    x = _add_noise(x, 1e-2)
-    model = BINDy(1e-2)
+    x = _add_noise(x, sigma_x)
+    model = BINDy(sigma_x)
 
     model.fit(x, t=t)
     check_is_fitted(model)
     assert model.score(x, t=t) > 0.8
 
-    model = BINDy(1e-2)
+    model = BINDy(sigma_x)
     model.fit(x, t=t, x_dot=x)
     check_is_fitted(model)
 
@@ -267,8 +260,8 @@ def test_fit_multiple_trajectories(data_multiple_trajectories):
 
 def test_predict_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
-    x = _add_noise(x, 1e-2)
-    model = BINDy(1e-2)
+    x = _add_noise(x, sigma_x)
+    model = BINDy(sigma_x)
     model.fit(x, t=t)
 
     p = model.predict(x)
@@ -277,8 +270,8 @@ def test_predict_multiple_trajectories(data_multiple_trajectories):
 
 def test_score_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
-    x = _add_noise(x, 1e-2)
-    model = BINDy(1e-2)
+    x = _add_noise(x, sigma_x)
+    model = BINDy(sigma_x)
     model.fit(x, t=t)
 
     s = model.score(x, t=t)
@@ -306,8 +299,8 @@ def test_bad_multiple_trajectories(data_multiple_trajectories):
 )
 def test_equations(data, capsys):
     x, t = data
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2)
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x)
     model.fit(x, t)
 
     out, _ = capsys.readouterr()
@@ -323,8 +316,8 @@ def test_equations(data, capsys):
 
 def test_coefficients_equals_complexity(data_lorenz):
     x, t = data_lorenz
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2)
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x)
     model.fit(x, t)
     c = model.coefficients()
     assert model.complexity == np.count_nonzero(c)
@@ -332,8 +325,8 @@ def test_coefficients_equals_complexity(data_lorenz):
 
 def test_simulate_errors(data_lorenz):
     x, t = data_lorenz
-    x = x + 1e-2 * np.random.randn(*x.shape)
-    model = BINDy(1e-2)
+    x = x + sigma_x * np.random.randn(*x.shape)
+    model = BINDy(sigma_x)
     model.fit(x, t)
 
     with pytest.raises(ValueError):
@@ -341,7 +334,7 @@ def test_simulate_errors(data_lorenz):
 
 
 def test_data_shapes():
-    model = BINDy(1e-2)
+    model = BINDy(sigma_x)
     n = 10
     x = np.ones(n)
     t = 1
@@ -356,7 +349,7 @@ def test_data_shapes():
     model.fit(x, t)
 
 
-def _add_noise(x, sigma=1e-2):
+def _add_noise(x, sigma=sigma_x):
     """Add Gaussian noise to x to arrays and list-of-arrays."""
     if isinstance(x, (list, tuple)):
         return [

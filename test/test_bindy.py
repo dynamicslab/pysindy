@@ -24,6 +24,7 @@ from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import PolynomialLibrary
 from pysindy.optimizers import EvidenceGreedy
+from pysindy.utils.bindy import TemporalNoisePropagation
 
 
 def test_get_feature_names_len(data_lorenz):
@@ -217,7 +218,7 @@ def test_integration_derivative_methods(data_lorenz, derivative_kws):
     x = x + 1e-2 * np.random.randn(*x.shape)
     fd = SINDyDerivative(**derivative_kws)
 
-    sigma2 = EvidenceGreedy.TemporalNoisePropagation(fd, t, 1e-2)
+    sigma2 = TemporalNoisePropagation(fd, t, 1e-2)
     model = BINDy(
         1e-2, optimizer=EvidenceGreedy(_sigma2=sigma2), differentiation_method=fd
     )

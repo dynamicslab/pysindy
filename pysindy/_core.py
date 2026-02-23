@@ -38,6 +38,7 @@ from .utils import drop_nan_samples
 from .utils import SampleConcatter
 from .utils import validate_control_variables
 from .utils import validate_no_reshape
+from .utils.bindy import TemporalNoisePropagation
 
 
 TrajectoryType = TypeVar("TrajectoryType", list[np.ndarray], np.ndarray)
@@ -1086,7 +1087,7 @@ class BINDy(SINDy):
         Otherwise, ``sigma_x`` is propagated through the
         ``differentiation_method`` to estimate the derivative noise variance::
 
-            _sigma2 = EvidenceGreedy.TemporalNoisePropagation(
+            _sigma2 = TemporalNoisePropagation(
                 differentiation_method, t_grid, sigma_x
             )
 
@@ -1264,7 +1265,7 @@ class BINDy(SINDy):
                         f"number of samples ({n_samples})."
                     )
             # Call TemporalNoisePropagation to compute an averaged _sigma2
-            _sigma2_i = EvidenceGreedy.TemporalNoisePropagation(
+            _sigma2_i = TemporalNoisePropagation(
                 self.differentiation_method,
                 t_grid,
                 float(self.sigma_x),

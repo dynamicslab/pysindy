@@ -5,6 +5,10 @@ import pysindy as ps
 from pysindy.differentiation import FiniteDifference
 from pysindy.optimizers import EvidenceGreedy
 
+from pysindy.utils.bindy import TemporalNoisePropagation
+
+import random
+rng = np.random.default_rng(seed=42)
 
 def lorenz(z, t):
     """Standard Lorenz system."""
@@ -20,7 +24,7 @@ def _lorenz_data(sigma_x):
     t = np.arange(0, 10, 0.01)
     x0 = np.array([-8.0, 8.0, 27.0], dtype=float)
     x = odeint(lorenz, x0, t)
-    x = x + sigma_x * np.random.normal(size=x.shape)
+    x = x + sigma_x * rng.normal(size=x.shape)
     return t, x0, x
 
 
@@ -35,6 +39,8 @@ def test_evidence_greedy_lorenz_example():
     # Time grid and data (same as in the docstring)
     t, x0, x = _lorenz_data(sigma_x)
 
+    # t = np.arange(0, 10, 0.01, dtype=float)
+    # x = np.ones((len(t), 3), dtype=float) 
     fd = FiniteDifference(
         order=6,
         d=1,
@@ -45,13 +51,13 @@ def test_evidence_greedy_lorenz_example():
     )
 
     # Compute noise variance in x_dot via temporal noise propagation
-    sigma2 = EvidenceGreedy.TemporalNoisePropagation(fd, t, sigma_x)
+    sigma2 = TemporalNoisePropagation(fd, t, sigma_x)
 
     # EvidenceGreedy optimizer with the same hyperparameters as the docstring
-    opt = EvidenceGreedy(alpha=1e-6, _sigma2=sigma2, max_iter=20)
+    opt = EvidenceGreedy(alpha=1e-6, _sigma2=sigma2, max_iter=20, unbias = True, normalize_columns = True)
 
     model = ps.SINDy(optimizer=opt)
-    model.fit(x, t=t[1] - t[0])
+    model.fit(x, t[1] - t[0])
     model.print()
 
     print(model.optimizer.ind_.T)

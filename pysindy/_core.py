@@ -1274,15 +1274,22 @@ class BINDy(SINDy):
         _sigma2_mean = float(np.mean(_sigma2_vals))
         _sigma2_mean = max(_sigma2_mean, eps)  # must be positive
 
-        # If user provided a non-EvidenceGreedy optimizer, this
-        # attribute may not exist. In that case we fail loudly,
-        # because the wrapper is specific to EvidenceGreedy.
-        if not hasattr(self.optimizer, "_sigma2"):
-            raise AttributeError(
-                "BINDy requires an optimizer with a "
-                "'_sigma2' attribute. Got optimizer of type: "
-                + type(self.optimizer).__name__
-            )
+        # If user provided a non-Bayesian optimizer, _sigma2
+        # attribute may not exist. In that case,
+        # we raise an error to avoid mathematically inconsistency
+        # with the expectation of a Bayesian optimization.
+        # NOTE: This is current commented out because checks are done 
+        # in the BINDy constructor has ensured that the optimizer is 
+        # an EvidenceGreedy instance. 
+        # If we later allow users to pass in other optimizers, 
+        # we should re-enable this check.
+        #
+        # if not hasattr(self.optimizer, "_sigma2"):
+        #     raise AttributeError(
+        #         "BINDy requires an optimizer with a "
+        #         "'_sigma2' attribute. Got optimizer of type: "
+        #         + type(self.optimizer).__name__
+        #     )
 
         # Set _sigma2 on the underlying optimizer
         self.optimizer._sigma2 = _sigma2_mean

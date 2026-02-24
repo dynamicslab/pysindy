@@ -1,7 +1,9 @@
 import numpy as np
 
-from .._typing import Float1D, Float2D
+from .._typing import Float1D
+from .._typing import Float2D
 from ..differentiation import FiniteDifference
+
 
 def TemporalNoisePropagation(
     differentiator: FiniteDifference,

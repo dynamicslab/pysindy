@@ -1066,7 +1066,7 @@ class BINDy(SINDy):
     prior on the feature coefficients, then greedily eliminates model features to
     maximize Bayesian evidence.
     
-    For more information, see <add a citation to your paper>.
+    For more information, see this paper: https://doi.org/10.1098/rspa.2024.0200 .
    
     .. seealso::
 
@@ -1077,6 +1077,7 @@ class BINDy(SINDy):
             
         `EnsembleOptimizer`
             A more low-tech, probabilistic optimizer
+
     Parameters
     ----------
     sigma_x (required): float

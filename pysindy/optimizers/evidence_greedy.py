@@ -1,5 +1,4 @@
 """EvidenceGreedy optimizer: greedy Bayesian evidence-based sparse regression."""
-
 import sys
 import warnings
 
@@ -10,12 +9,13 @@ from sklearn.linear_model import ridge_regression
 from .base import _normalize_features
 from .base import BaseOptimizer
 
+
 class EvidenceGreedy(BaseOptimizer):
     r"""
-    Sparse Regression by maximizing Bayesian evidence 
+    Sparse Regression by maximizing Bayesian evidence
     through greedy elimination of features
 
-    This optimizer performs backward model selection 
+    This optimizer performs backward model selection
     (i.e.feature elimination) driven by the
     Bayesian log evidence for a linear Gaussian model with an isotropic
     Gaussian prior on the coefficients. For each target dimension y_{tgt},
@@ -202,22 +202,25 @@ class EvidenceGreedy(BaseOptimizer):
             Target derivatives.
 
         """
-        
-        # Getting dimensions 
-        n_samples, n_features = x.shape 
-        n_targets = y.shape[1] 
 
-        # Numerical precision threshold for treating norms as zero. Also used to prevent division by zero in when normalizing sigma2 to sigma2_scaled.
+        # Getting dimensions
+        n_samples, n_features = x.shape
+        n_targets = y.shape[1]
+
+        # Numerical precision threshold for treating norms as zero.
+        # Also used to prevent division by zero in when
+        # normalizing sigma2 to sigma2_scaled.
         eps_precision = float(np.finfo(float).eps)
 
         # BaseOptimizer only normalise the library, but for the Bayesian
         # framework, we also need to normalize the targets.
         # Normalising this help make sure the parameter
-        # is also rescaled to unit order.    
+        # is also rescaled to unit order.
         y_norm, y_normalised = _normalize_features(y)
         if self.normalize_columns:
             y = y_normalised
-            yTy_all = np.ones(n_features, dtype=float)  # Since y is normalized, y^T y = n_samples
+            # Since y is normalized, y^T y = n_samples
+            yTy_all = np.ones(n_features, dtype=float)
         else:
             yTy_all = y_norm**2.0
 
@@ -233,12 +236,14 @@ class EvidenceGreedy(BaseOptimizer):
             b = B[:, tgt]  # (n_features,)
             yTy = float(yTy_all[tgt])  # scalar
 
-            # In case y is a zero vector or close to it, output as an empty model.
-            if (y_norm[tgt]**2.0 <= eps_precision):
+            # In case y is a zero vector or close to it,
+            # output as an empty model.
+            if y_norm[tgt] ** 2.0 <= eps_precision:
                 coef[tgt, :] = 0.0
                 ind[tgt, :] = False
 
-                # Log evidence of the empty model (n_features=0). m_N is ignored for n_features=0.
+                # Log evidence of the empty model (n_features=0).
+                # m_N is ignored for n_features=0.
                 log_ev = _log_evidence_laplace_appx(
                     G=np.zeros((0, 0), dtype=float),
                     b=np.zeros((0,), dtype=float),
@@ -274,7 +279,12 @@ class EvidenceGreedy(BaseOptimizer):
             else:
                 sigma2_scaled = float(self._sigma2)
 
-            coef_tgt, ind_tgt, history_tgt, coef_hist = _backward_evidence_greedy_single(
+            (
+                coef_tgt,
+                ind_tgt,
+                history_tgt,
+                coef_hist,
+            ) = _backward_evidence_greedy_single(
                 x=x,
                 y_col=y[:, tgt],
                 G=G,
@@ -380,7 +390,7 @@ def _log_evidence_laplace_appx(
     Parameters
     ----------
     G : ndarray, shape (n_features, n_features)
-        Gram matrix for active features 
+        Gram matrix for active features
         (i.e. Theta^T Theta restricted to active features).
 
     b : ndarray, shape (n_features,)
@@ -538,7 +548,7 @@ def _backward_evidence_greedy_single(
         print(
             f"[EvidenceGreedy] start: "
             f"support={np.count_nonzero(active)}, "
-            f"log_evidence={best_log_ev:.3f}"
+            f"log_evidence={best_log_ev: .3f}"
         )
 
     history.append(
@@ -576,7 +586,9 @@ def _backward_evidence_greedy_single(
             if mask_candidate.sum() == 0:
                 m_N = None
             else:
-                m_N = _ridge_map(x[:, mask_candidate], y_col, alpha_prior=alpha, _sigma2=_sigma2)
+                m_N = _ridge_map(
+                    x[:, mask_candidate], y_col, alpha_prior=alpha, _sigma2=_sigma2
+                )
                 # Evaluate the empty model analytically
             log_ev_mask = _log_evidence_laplace_appx(
                 G=G[np.ix_(mask_candidate, mask_candidate)],
@@ -603,8 +615,8 @@ def _backward_evidence_greedy_single(
                 print(
                     f"[EvidenceGreedy] stop at step {step}: "
                     f"no evidence improvement "
-                    f"(current={best_log_ev:.3f}, "
-                    f"best_candidate={best_step_log_ev:.3f})"
+                    f"(current={best_log_ev: .3f}, "
+                    f"best_candidate={best_step_log_ev: .3f})"
                 )
             break
 
@@ -618,7 +630,7 @@ def _backward_evidence_greedy_single(
             print(
                 f"[EvidenceGreedy] step {step}: removed term {best_step_idx}, "
                 f"support={np.count_nonzero(active)}, "
-                f"log_evidence={best_log_ev:.3f}"
+                f"log_evidence={best_log_ev: .3f}"
             )
 
         history.append(

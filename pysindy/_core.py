@@ -1059,22 +1059,22 @@ class DiscreteSINDy(_BaseSINDy):
 class BINDy(SINDy):
     """
     Bayesian Identification of Nonlinear Dynamical Systems (BINDy)
-    
+
     Learns a dynamical model with corrections for measurement noise
     passing through differentiation and feature library.  Maximizes a Gaussian
     (Laplace) approximation of the posterior with a weakly informed hyper
     prior on the feature coefficients, then greedily eliminates model features to
     maximize Bayesian evidence.
-    
+
     For more information, see this paper: https://doi.org/10.1098/rspa.2024.0200 .
-   
+
     .. seealso::
 
         `SBR`
             A Bayesian optimizer that uses a more sophisticated prior and Monte Carlo
-            estimation, but is slower and does not correct for noise through the features
-            and differentiation
-            
+            estimation, but is slower and does not correct for noise
+            through the features and differentiation
+
         `EnsembleOptimizer`
             A more low-tech, probabilistic optimizer
 
@@ -1232,7 +1232,7 @@ class BINDy(SINDy):
             warnings.warn(msg, UserWarning)
 
             return super().fit(x, t, x_dot=x_dot, u=u, feature_names=feature_names)
-        
+
         # Ensure we treat everything as multiple trajectories for
         # _sigma2 calculation.
         if not _check_multiple_trajectories(x, x_dot, u):
@@ -1280,10 +1280,10 @@ class BINDy(SINDy):
         # attribute may not exist. In that case,
         # we raise an error to avoid mathematically inconsistency
         # with the expectation of a Bayesian optimization.
-        # NOTE: This is current commented out because checks are done 
-        # in the BINDy constructor has ensured that the optimizer is 
-        # an EvidenceGreedy instance. 
-        # If we later allow users to pass in other optimizers, 
+        # NOTE: This is current commented out because checks are done
+        # in the BINDy constructor has ensured that the optimizer is
+        # an EvidenceGreedy instance.
+        # If we later allow users to pass in other optimizers,
         # we should re-enable this check.
         #
         # if not hasattr(self.optimizer, "_sigma2"):

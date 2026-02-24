@@ -240,30 +240,30 @@ class UniformEvenBump(TestFunctionPhi):
         return np.sum(monomials, axis=0)
 
 
-SemiTerm = tuple[
-    tuple[int, ...] | None,  # derivatives of u
-    tuple[BaseFeatureLibrary, tuple[int, ...]] | None,  # derivatives of f(u)
-    float,  # coefficient
-    tuple[int, ...],  # derivatives of phi
-]
-"""A type alias for a term in calculating the weak form of a feature.
+@dataclass(frozen=True)
+class SemiTerm:
+    """A term in calculating the weak form of a feature.
 
-Each regular feature gets multiplied by a test function and integrated.
-Depending upon the functional form of that feature integration
-results in a sum of these SemiTerms.
+    Each regular feature gets multiplied by a test function and integrated.
+    Depending upon the functional form of that feature integration
+    results in a sum of these SemiTerms.
 
-The first item is the derivative order on the system variable u.  If None,
-then the weak form includes no multiplication by u.  This differs from a
-tuple of zeros, which represents the zeroth derivative of u.
+    Attributes:
+        diff_u: The derivative order on the system variable u.  If None,
+            the weak form includes no multiplication by u.  This differs from a
+            tuple of zeros, which represents the zeroth derivative of u.
+        feat_term: The library and derivative order of a non-derivative feature.
+            If None, the weak form includes no multiplication by a non-derivative
+            feature.
+        coeff: The coefficient of the term in weak form, emerging from
+            a combination of integration by parts and the product rule.
+        diff_phi: The derivative order moved onto the test function phi.
+    """
 
-The second term is the derivative order of a non-derivative feature.  If None,
-then the weak form includes no multiplication by a non-derivative feature.
-
-The third term is the coefficient of the term in weak form, emerging from
-a combination of integration by parts and the product rule.
-
-The fourth term is the derivative order moved on the test function phi
-"""
+    diff_u: tuple[int, ...] | None
+    feat_term: tuple[BaseFeatureLibrary, tuple[int, ...]] | None
+    coeff: float
+    diff_phi: tuple[int, ...]
 
 
 class WeakSINDy(SINDy):
@@ -447,7 +447,7 @@ class WeakSINDy(SINDy):
             x_i, sub_spec, weight_map = it
             weak_feats = []
             for term in terms:
-                if isinstance(term, tuple):
+                if isinstance(term, SemiTerm):
                     weak_feats.append(_eval_semiterm(x_i, term, sub_spec, weight_map, diff_type))
                 else:
                     # term is a collection of semi-terms that sum represent
@@ -547,7 +547,7 @@ def _eval_semiterm(
     differentiation_method: type[BaseDifferentiation] | None=None
 ) -> AxesArray:
     """Calculate the value of a single SemiTerm on x across all subdomains"""
-    diff1, feat_term, coeff, diff3 = term
+    diff1, feat_term, coeff, diff3 = term.diff_u, term.feat_term, term.coeff, term.diff_phi
     weights_per_subdom = weight_map[diff3]
     st_axes = tuple(range(sub_spec.grid_ndim))
     if diff1 is None:
@@ -613,7 +613,7 @@ def _plan_weak_form(
         )
         if no_derivs:
             term_namefuncs.append(lib.get_feature_names)
-            terms.append((None, (lib, zero_deriv), 1, zero_deriv))
+            terms.append(SemiTerm(None, (lib, zero_deriv), 1, zero_deriv))
         elif isinstance(lib, PDELibrary):
             multiindices = lib.multiindices
             if time_axis:
@@ -945,7 +945,7 @@ def _integrate_by_parts(multiindices: Float2D) -> tuple[
         deriv_op = tuple(deriv_op)
         zeros = tuple(np.zeros_like(deriv_op))
         coeff = (-1) ** sum(deriv_op)
-        terms.append((zeros, None, coeff, tuple(deriv_op)))
+        terms.append(SemiTerm(zeros, None, coeff, tuple(deriv_op)))
         term_namefuncs.append(partial(make_pde_feature_names, multiindices=(deriv_op,)))
     return terms, term_namefuncs
 
@@ -1001,7 +1001,7 @@ def _integrate_product_by_parts(
                 )
             coeff = (-1) ** sum(derivs_to_move) * prod_coeff
             single_feature_terms.append(
-                (tuple(deriv_op_u), (f_lib, deriv_op_f), coeff, deriv_op_phi)
+                SemiTerm(tuple(deriv_op_u), (f_lib, deriv_op_f), coeff, deriv_op_phi)
             )
         terms.append(single_feature_terms)
     return terms, term_namefuncs

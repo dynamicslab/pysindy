@@ -24,6 +24,7 @@ from pysindy._weak import _make_domains
 from pysindy._weak import _plan_weak_form
 from pysindy._weak import convert_u_dot_integral
 from pysindy._weak import SubdomainSpecs
+from pysindy._weak import SemiTerm
 from pysindy._weak import UniformEvenBump
 from pysindy._weak import WeakSINDy
 from pysindy.differentiation import FiniteDifference
@@ -230,11 +231,11 @@ def test_integrate_by_parts():
     # Current ordering is
     # u_y, u_yy, u_x, u_xy, u_xx
     expected = [
-        ((0, 0), None, -1, (0, 1)),
-        ((0, 0), None, 1, (0, 2)),
-        ((0, 0), None, -1, (1, 0)),
-        ((0, 0), None, 1, (1, 1)),
-        ((0, 0), None, 1, (2, 0)),
+        SemiTerm((0, 0), None, -1, (0, 1)),
+        SemiTerm((0, 0), None, 1, (0, 2)),
+        SemiTerm((0, 0), None, -1, (1, 0)),
+        SemiTerm((0, 0), None, 1, (1, 1)),
+        SemiTerm((0, 0), None, 1, (2, 0)),
     ]
     assert result == expected
 
@@ -249,11 +250,11 @@ def test_integrate_product_by_parts():
     features.fit(inputs)
     result, _ = _integrate_product_by_parts(f_lib, d_lib.multiindices)
     expected = [
-        [((0, 1), (f_lib, (0, 0)), 1, (0, 0))],
-        [((0, 1), (f_lib, (0, 0)), -1, (0, 1)), ((0, 1), (f_lib, (0, 1)), -1, (0, 0))],
-        [((1, 0), (f_lib, (0, 0)), 1, (0, 0))],
-        [((1, 1), (f_lib, (0, 0)), 1, (0, 0))],
-        [((1, 0), (f_lib, (0, 0)), -1, (1, 0)), ((1, 0), (f_lib, (1, 0)), -1, (0, 0))],
+        [SemiTerm((0, 1), (f_lib, (0, 0)), 1, (0, 0))],
+        [SemiTerm((0, 1), (f_lib, (0, 0)), -1, (0, 1)), SemiTerm((0, 1), (f_lib, (0, 1)), -1, (0, 0))],
+        [SemiTerm((1, 0), (f_lib, (0, 0)), 1, (0, 0))],
+        [SemiTerm((1, 1), (f_lib, (0, 0)), 1, (0, 0))],
+        [SemiTerm((1, 0), (f_lib, (0, 0)), -1, (1, 0)), SemiTerm((1, 0), (f_lib, (1, 0)), -1, (0, 0))],
     ]
     assert result == expected
 
@@ -393,7 +394,7 @@ def test_eval_semiterm_output_shape(simple_time_domain):
     ]
     weight_map = {deriv_op: weights}
     x = AxesArray(np.ones((*sub_spec.domain.shape[:-1], 1)), sub_spec.domain.axes)
-    term = (None, None, 1.0, deriv_op)
+    term = SemiTerm(None, None, 1.0, deriv_op)
     result = _eval_semiterm(x, term, sub_spec, weight_map)
     assert result.shape == (sub_spec.n_subdomains, 1)
 
@@ -415,7 +416,7 @@ def test_eval_semiterm_phi_prime_vanishes(simple_time_domain):
     ]
     weight_map = {deriv_op: weights}
     x = AxesArray(np.ones((*sub_spec.domain.shape[:-1], 1)), sub_spec.domain.axes)
-    term = (None, None, 1.0, deriv_op)
+    term = SemiTerm(None, None, 1.0, deriv_op)
     result = _eval_semiterm(x, term, sub_spec, weight_map)
     assert_allclose(result, 0, atol=1e-10)
 

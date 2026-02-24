@@ -5,7 +5,6 @@ import warnings
 
 import numpy as np
 from scipy.linalg import LinAlgWarning
-from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import ridge_regression
 
 from .base import _normalize_features

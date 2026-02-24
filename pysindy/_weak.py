@@ -908,7 +908,7 @@ def _linear_weights(x: Float1D, d: int, phi: TestFunctionPhi) -> Float1D:
     z_i = zs[:-1]
     z_plus = zs[1:]
 
-    if any(np.abs(x) > 1.0):
+    if any(np.abs(x) > 1.0+1e-14):
         raise ValueError("Extraneous calculation; truncate to domain [-1, 1]")
 
     weights = np.zeros_like(x)

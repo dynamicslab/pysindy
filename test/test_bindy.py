@@ -28,6 +28,7 @@ from pysindy.utils.bindy import TemporalNoisePropagation
 
 sigma_x = 1e-2
 
+
 def test_get_feature_names_len(data_lorenz):
     x, t = data_lorenz
     x = x + sigma_x * np.random.randn(*x.shape)
@@ -135,6 +136,7 @@ def test_bad_t(data):
     with pytest.raises(ValueError):
         model.fit(x, t_new)
 
+
 @pytest.mark.parametrize(
     "data", [pytest.lazy_fixture("data_1d"), pytest.lazy_fixture("data_lorenz")]
 )
@@ -146,6 +148,7 @@ def test_predict(data):
     x_dot = model.predict(x)
 
     assert x.shape == x_dot.shape
+
 
 @pytest.mark.parametrize(
     "data",

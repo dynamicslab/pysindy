@@ -84,6 +84,12 @@ class SINDyPI(SR3):
         if self.unbias:
             raise ValueError("SINDyPI is incompatible with an unbiasing step")
         self.verbose_cvxpy = verbose_cvxpy
+        warnings.warn(
+            "SINDyPI (optimizer) is deprecated and will be removed in a future version."
+            " Use ParallelImplicitSINDy instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if model_subset is not None:
             if not isinstance(model_subset, list):
                 raise ValueError("Model subset must be in list format.")

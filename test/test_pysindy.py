@@ -25,6 +25,7 @@ from sklearn.utils.validation import check_is_fitted
 from pysindy import _core
 from pysindy import DiscreteSINDy
 from pysindy import SINDy
+from pysindy._sindypi import ParallelImplicitSINDy
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
@@ -549,3 +550,43 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
     model.fit(u, t=t, feature_names=["u"])
     assert abs(model.coefficients()[0, -1] - 1) < 1e-1
     assert np.all(model.coefficients()[0, :-1] == 0)
+
+
+def test_sindypi_fit(data_lorenz, capsys):
+    x, t = data_lorenz
+    model = ParallelImplicitSINDy()
+    model.fit(x, t)
+
+    # One optimizer per library feature
+    assert len(model.optimizers_) == model.n_output_features_
+
+    # Each optimizer has coef_ with n_output_features_ - 1 columns
+    for opt in model.optimizers_:
+        assert opt.coef_.shape[1] == model.n_output_features_ - 1
+
+    # lib_feature_names_ includes both state and derivative terms
+    assert len(model.lib_feature_names_) == model.n_output_features_
+    assert any("_dot" in name for name in model.lib_feature_names_)
+
+    # print produces one line per library feature
+    model.print()
+    out, _ = capsys.readouterr()
+    lines = [ln for ln in out.splitlines() if ln.strip()]
+    assert len(lines) == model.n_output_features_
+    assert all("=" in ln for ln in lines)
+
+
+def test_sindypi_multiple_trajectories(data_multiple_trajectories):
+    x_list, t_list = data_multiple_trajectories
+    model = ParallelImplicitSINDy()
+    model.fit(x_list, t_list)
+    assert len(model.optimizers_) == model.n_output_features_
+
+
+def test_sindypi_precomputed_x_dot(data_lorenz):
+    x, t = data_lorenz
+    from pysindy.differentiation import FiniteDifference
+    x_dot = FiniteDifference()(x, t)
+    model = ParallelImplicitSINDy()
+    model.fit(x, t, x_dot=x_dot)
+    assert len(model.optimizers_) == model.n_output_features_

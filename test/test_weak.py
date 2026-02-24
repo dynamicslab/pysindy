@@ -294,7 +294,6 @@ def test_convert_u_dot_integral(simple_time_domain):
         u,
         sub_spec=simple_time_domain,
         weight_map=weight_map,
-        differentiation_method=FiniteDifference,
     )
     n_points = simple_time_domain.domain.n_time
     assert_allclose(result[:, 0], np.array([expected, expected]), atol=1 / n_points)
@@ -334,10 +333,9 @@ def test_convert_u_dot_integral_explicit_x_dot(simple_time_domain):
 
     result = convert_u_dot_integral(
         u,
-        x_dot=x_dot,
+        u_dot=x_dot,
         sub_spec=simple_time_domain,
         weight_map=weight_map,
-        differentiation_method=FiniteDifference,
     )
     n_points = simple_time_domain.domain.n_time
     assert_allclose(result[:, 0], np.array([expected, expected]), atol=1 / n_points)

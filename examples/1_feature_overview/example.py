@@ -1072,29 +1072,6 @@ model.fit(u, t=dt)
 model.print()
 
 # %% [markdown]
-# ### Weak formulation system identification improves robustness to noise.
-# PySINDy also supports weak form PDE identification following Reinbold et al. (2019).
-
-# %%
-# Same library but using the weak formulation
-X, T = np.meshgrid(x, t)
-XT = np.array([X, T]).T
-pde_lib = ps.WeakPDELibrary(
-    function_library=ps.PolynomialLibrary(degree=2, include_bias=False),
-    derivative_order=3,
-    spatiotemporal_grid=XT,
-    is_uniform=True,
-)
-
-# %%
-optimizer = ps.STLSQ(threshold=0.01, alpha=1e-5, normalize_columns=True)
-model = ps.SINDy(feature_library=pde_lib, optimizer=optimizer)
-
-# Note that reshaping u is done internally
-model.fit(u, t=dt)
-model.print()
-
-# %% [markdown]
 # ### GeneralizedLibrary
 # The `GeneralizedLibrary` is meant for identifying ODEs/PDEs the depend on the spatial and/or temporal coordinates and/or nonlinear functions of derivative terms.
 #

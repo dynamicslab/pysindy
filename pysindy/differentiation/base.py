@@ -36,12 +36,12 @@ class BaseDifferentiation(BaseEstimator):
         raise NotImplementedError
 
     def __call__(self, x: FloatArray, t: FloatND | float = 1.0) -> FloatArray:
-        """
+        r"""
         Numerically differentiate data.
 
         Parameters
         ----------
-        x: array-like, shape (*n_spatial, n_samples, n_input_features)
+        x: array-like, shape (\*n_spatial, n_samples, n_input_features)
             Data to be differentiated. Rows of x should correspond to the same
             point in time.
 

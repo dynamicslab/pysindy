@@ -169,14 +169,41 @@ class TestFunctionPhi(ABC):
 
     @abstractmethod
     def phi(self, x: Float1D, d: int) -> Float1D:
-        ...
+        """Evaluate the function, differentiated d times
+
+        Parameters:
+            x: The point(s) at which to evaluate the function
+            d: derivative order
+
+        returns:
+            The value of the d-th derivative of the function at x
+        """
 
     @abstractmethod
     def phi_int(self, x: Float1D, d: int) -> Float1D:
+        """Integrate the test function, differentiated d times
+
+        Parameters:
+            x: The point(s) at which to evaluate the function
+            d: derivative order
+
+        returns:
+            The value of the d-th derivative of the integral of the test function at x
+        """
         ...
 
     @abstractmethod
     def xphi_int(self, x: Float1D, d: int) -> Float1D:
+        """Integrate the test function multiplied by x, differentiated d times
+
+        Parameters:
+            x: The point(s) at which to evaluate the function
+            d: derivative order
+
+        Returns:
+            The value of the d-th derivative of the integral of the test function
+            multiplied by x at x
+        """
         ...
 
 
@@ -198,6 +225,13 @@ class UniformEvenBump(TestFunctionPhi):
         """Evaluate the function, differentiated d times
 
         Calculated term-wise in the binomial expansion.
+
+        Parameters:
+            x: The point(s) at which to evaluate the function
+            d: derivative order
+
+        returns:
+            The value of the d-th derivative of the function at x
         """
         x = np.asarray(x)
         ks = np.arange(self.p + 1)
@@ -210,10 +244,14 @@ class UniformEvenBump(TestFunctionPhi):
         return np.sum(monomials, axis=0)
 
     def phi_int(self, x: Float1D, d: int) -> Float1D:
-        """
-        Indefinite integral of one-dimensional polynomial test
-        function (1-x**2)**p, differentiated d times, calculated
-        term-wise in the binomial expansion.
+        """Integrate the test function, differentiated d times
+        
+        Parameters:
+            x: The point(s) at which to evaluate the function
+            d: derivative order
+
+        returns:
+            The value of the d-th derivative of the integral of the test function at x
         """
         ks = np.arange(self.p + 1)
         ks = ks[np.where(2 * (self.p - ks) - d >= 0)][:, np.newaxis]
@@ -225,10 +263,15 @@ class UniformEvenBump(TestFunctionPhi):
         return np.sum(monomials, axis=0)
 
     def xphi_int(self, x: Float1D, d: int) -> Float1D:
-        """
-        Indefinite integral of one-dimensional polynomial test function
-        x*(1-x**2)**p, differentiated d times, calculated term-wise in the
-        binomial expansion.
+        """Integrate the test function multiplied by x, differentiated d times
+        
+        Parameters:
+            x: The point(s) at which to evaluate the function
+            d: derivative order
+
+        Returns:
+            The value of the d-th derivative of the integral of the test function
+            multiplied by x at x
         """
         ks = np.arange(self.p + 1)
         ks = ks[np.where(2 * (self.p - ks) - d >= 0)][:, np.newaxis]
@@ -271,6 +314,58 @@ class WeakSINDy(SINDy):
     Galerkin-Based Data-Driven Model Selection".  Here, the polynomial exponent
     decaying at the left and right boundary are the same: p==q in the manuscript's
     notation.
+
+    Example: Burgers Equation
+    --------------------------
+    >>> import numpy as np
+    >>> import pysindy as ps
+    >>> import matplotlib.pyplot as plt
+    >>> from scipy.io import loadmat
+
+    >>> data = loadmat("../examples/data/burgers.mat")
+    >>> t = np.ravel(data["t"])
+    >>> x = np.ravel(data["x"])
+    >>> u = np.real(data["usol"])
+    >>> dt = t[1] - t[0]
+    >>> dx = x[1] - x[0]
+
+    >>> u = np.reshape(u, (len(x), len(t), 1))
+    >>> st_grid = np.stack(np.meshgrid(x, t, indexing="ij"), axis=-1)
+
+    >>> # Define quadratic library with up to third order derivatives
+    >>> # on a uniform spatial grid.
+    >>> pde_lib = ps.PDELibrary(
+    >>>     derivative_order=3,
+    >>>     spatial_grid=x,
+    >>> )
+    >>> poly_lib = ps.PolynomialLibrary(degree=2, include_bias=False)
+    >>> lib = pde_lib * poly_lib
+
+    >>> optimizer = ps.STLSQ(threshold=0.1, alpha=1e-5, normalize_columns=True)
+    >>> model = ps.WeakSINDy(feature_library=lib, optimizer=optimizer)
+    >>> # according to the dimensions in spatial_grid
+    >>> model.fit(u, st_grid)
+    >>> model.print()
+    (x0)' = -1.071 x0_1 x0 +  0.800 x0_11 x0 + -1.084 x0_11 x0^2
+
+    .. plot::
+
+        import numpy as np
+        import pysindy as ps
+        import matplotlib.pyplot as plt
+        from scipy.io import loadmat
+        from pathlib import Path
+        breakpoint()
+        data = loadmat(Path(__file__).parent.parent / "examples/data/burgers.mat")
+        t = np.ravel(data["t"])
+        x = np.ravel(data["x"])
+        u = np.real(data["usol"])
+        plt.figure()
+        plt.imshow(u, aspect="auto")
+        plt.colorbar()
+        plt.figure()
+        plt.colorbar()
+
     """
 
     def __init__(
@@ -337,6 +432,46 @@ class WeakSINDy(SINDy):
         u: Optional[np.ndarray | Sequence[FloatND]] = None,
         feature_names: Optional[list[str]] = None,
     ) -> Self:
+        r"""Fit a WeakSINDy model.
+
+        Parameters
+        ----------
+        x : array-like or list of array-like, shape (\*n_spatial, n_time, \
+            n_system_coordinates).
+            Spatiotemporal state data.  Leading axes are spatial axes; the
+            second-to-last axis is time; the last axis indexes the state
+            coordinates.  Pass a list for multiple trajectories.
+        st_grids : array-like or list of array-like
+            The spatiotemporal coordinate grid corresponding to ``x``, in the
+            same shape as ``x``.  The last axis indexes the coordinate values
+            (spatial axes first, then time).  Must be provided for each
+            trajectory if ``x`` is a list.
+        x_dot : array-like or list of array-like, optional
+            Pre-computed time derivatives of ``x``, in the same shape as ``x``.
+            For static problems such as Poisson's equation, a length-1 time
+            axis is required nonetheless.
+        H_xt : float, array-like, or list thereof, optional
+            Subdomain half-widths along each spatiotemporal axis.  Passed to
+            :func:`_normalize_subdomain_dims`.  If ``None``, defaults to
+            one-twentieth of the corresponding domain length.
+        u : array-like or list of array-like, optional
+            Control variables, same leading shape as ``x``.
+        feature_names : list of str, optional
+            Names for the state-variable coordinates.  Defaults to
+            ``['x0', 'x1', ...]``.
+
+        Returns
+        -------
+        self : WeakSINDy
+            Fitted model.
+
+        Raises
+        ------
+        ValueError
+            If ``H_xt`` produces subdomains that are too large or too small,
+            or if there is insufficient data to generate ``n_subdomains``
+            subdomains with at least 2 grid points per axis.
+        """
         if not _check_multiple_trajectories(x, st_grids, x_dot, u):
             x = cast(np.ndarray, x)
             st_grids = cast(np.ndarray, st_grids)
@@ -420,14 +555,12 @@ class WeakSINDy(SINDy):
             for spec in subdomain_specs
         ]
 
-        # Need feature names and set n_output_features_ (this is same with PDE library)
         u_dot_wk = [
             convert_u_dot_integral(
                 xi,
-                x_dot=x_dot_i,
+                u_dot=x_dot_i,
                 sub_spec=spec,
                 weight_map=weights,
-                differentiation_method=diff_type,
             )
             for xi, x_dot_i, weights, spec in zip(
                 x,
@@ -481,6 +614,38 @@ class WeakSINDy(SINDy):
         integrator_kws={"method": "LSODA", "rtol": 1e-12, "atol": 1e-12},
         interpolator_kws={},
     ):
+        """Simulate the fitted ODE forward in time from an initial condition.
+
+        Only implemented for ODEs (not PDEs).
+
+        Parameters
+        ----------
+        x0 : array-like, shape (n_input_features,)
+            Initial state.
+        t : array-like, shape (n_samples,)
+            Time points at which to return the solution.
+        u : callable or array-like, optional
+            Control input.  See :meth:`SINDy.simulate` for details.
+        integrator : str, optional (default ``'solve_ivp'``)
+            ODE integrator to use.  See :meth:`SINDy.simulate` for options.
+        interpolator : callable, optional
+            Interpolator for control input.  See :meth:`SINDy.simulate`.
+        integrator_kws : dict, optional
+            Keyword arguments forwarded to the integrator.
+        interpolator_kws : dict, optional
+            Keyword arguments forwarded to the interpolator.
+
+        Returns
+        -------
+        x : np.ndarray, shape (n_samples, n_input_features)
+            Simulated trajectory.
+
+        Raises
+        ------
+        TypeError
+            If the model was trained on PDE data (``grid_ndim_ > 1``), since
+            simulation requires a pure ODE system.
+        """
         if self.grid_ndim_ > 1:
             raise TypeError("Model trained as PDE, but can only simulate ODEs")
         return super().simulate(
@@ -553,13 +718,15 @@ def _eval_semiterm(
     if diff1 is None:
         x_d = AxesArray(np.ones((*x.shape[:-1], 1)), x.axes)
     else:
-        if differentiation_method is None:
-            raise ValueError("Derivative term requested; must provide diff method")
-        x_d = PDELibrary(
-            spatial_grid=sub_spec.domain,
-            multiindices=[diff1],
-            differentiation_method=differentiation_method
-        ).fit_transform(x)
+        x_d = x
+        if any(diff1):
+            if differentiation_method is None:
+                raise ValueError("Derivative term requested; must provide diff method")
+            x_d = PDELibrary(
+                spatial_grid=sub_spec.domain,
+                multiindices=[diff1],
+                differentiation_method=differentiation_method
+            ).fit_transform(x_d)
     if feat_term is not None:
         feat_lib, diff2 = feat_term
         fx = feat_lib.fit_transform(x)
@@ -596,12 +763,41 @@ def _plan_weak_form(
 ]:
     """Plan the weak form calculation by traversing the library tree.
 
-    For each PDELibrary, we need to integrate by parts and move derivatives onto
-    the test function.  For each non-PDE library, we just multiply by phi and
-    integrate.  For a tensor of PDE and non-PDE libraries, we need to apply
-    the product rule inside integration by parts, which results in multiple
-    SemiTerms for each term in the non-PDE library.
+    Walks the (flattened) concat library and produces one :class:`SemiTerm`
+    or one ``list[SemiTerm]`` per derivative operation, together with a matching
+    list of feature-name functions.
 
+    Parameters
+    ----------
+    lib : ConcatLibrary
+        The flattened feature library produced by :func:`_flatten_libraries`.
+        Every element of ``lib.libraries`` must be either a plain (non-PDE)
+        library, a :class:`PDELibrary`, or a :class:`TensoredLibrary`
+        containing exactly one :class:`PDELibrary` and any number of
+        non-PDE libraries.
+    zero_deriv : tuple of int
+        A tuple of zeros, one per spatiotemporal axis.
+    time_axis : bool, optional (default True)
+        If ``True``, a trailing time-axis column of zeros is appended to
+        PDE multiindices before integration by parts.  Set to ``False`` for
+        static (time-free) problems.
+
+    Returns
+    -------
+    terms : list of SemiTerm or list of SemiTerm
+        One entry per library term.  A plain ``SemiTerm`` is used when no
+        product rule is needed; a ``list[SemiTerm]`` is used when the product
+        rule produces multiple additive pieces.
+    term_namefuncs : list of callable
+        One callable per entry in ``terms``.  Each callable accepts a list of
+        input-feature name strings and returns the corresponding output-feature
+        name strings.
+
+    Note
+    ----
+    Because each derivative operation produces a different SemiTerm,
+    :class:``TensoredLibrary`` only behaves correctly when the PDE library
+    is present if it is the first in the list of libraries.    
     """
     terms: list[SemiTerm | Collection[SemiTerm]] = []
     term_namefuncs = []
@@ -690,23 +886,34 @@ def _normalize_subdomain_dims(
 
 def convert_u_dot_integral(
     u: AxesArray,
-    x_dot: Optional[AxesArray] = None,
+    u_dot: Optional[AxesArray] = None,
     *,
     sub_spec: SubdomainSpecs,
     weight_map: Mapping[tuple[int, ...], list[AxesArray]],
-    differentiation_method: type[BaseDifferentiation],
 ) -> AxesArray:
-    """
-    Takes a full set of spatiotemporal fields u(x, t) and finds the weak
-    form of u_dot.
+    r"""Evaluate the weak form of the derivative of u.
 
     Using integration by parts in time with compactly-supported test
-    functions, this computes the weak time-derivative integral with the
-    sign convention from ``_integrate_by_parts``.
+    functions, this computes the weak time-derivative integral over domains
+    specified by ``sub_spec``
+    
+    .. math::
+
+        \int_\Omega u_t(x, t) \phi(x, t) d\Omega
+    
+    Parameters:
+        u: The system variable, evaluated on the spatiotemporal grid.
+        u_dot: The time derivative of the system variable, evaluated on the
+            spatiotemporal grid. If provided, ``u`` is ignored, no integration
+            by parts is performed, and the integral is evaluate directly on
+            u_dot.
+        sub_spec: The subdomains :math:`\Omega` over which to evaluate the integral
+        weight_map: The quadrature weights on each subdomain for each derivative
+            operator.
     """
-    if x_dot is not None:
+    if u_dot is not None:
         time_deriv_op = (0,) * sub_spec.grid_ndim
-        u = x_dot
+        u = u_dot
     else:
         time_deriv_op = (0,) * (sub_spec.grid_ndim - 1) + (1,)
     lhs_term = _integrate_by_parts(np.asarray([time_deriv_op]))[0][0]
@@ -716,7 +923,7 @@ def convert_u_dot_integral(
         lhs_term,
         sub_spec,
         weight_map,
-        differentiation_method,
+        None,
     )
 
 
@@ -750,6 +957,38 @@ def _set_up_weights(
 def _make_domains(
     st_grid: AxesArray, subdomain_dims: AxesArray, n_subdomains: int
 ) -> SubdomainSpecs:
+    """Randomly sample subdomains from a spatiotemporal grid.
+
+    Centers are drawn uniformly at random such that each subdomain lies
+    strictly within the global domain.  Any candidate whose bounding box
+    contains fewer than 2 grid points along any axis is resampled.  The
+    subdomain boundaries are then snapped to the nearest grid points.
+
+    Parameters
+    ----------
+    st_grid : AxesArray, shape (..., n_coord)
+        Dense spatiotemporal meshgrid.  All axes except the last index the
+        grid points; the last axis holds the coordinate values (spatial axes
+        first, then time).
+    subdomain_dims : AxesArray, shape (grid_ndim,)
+        Half-widths of subdomains along each spatiotemporal axis, in the
+        same units as ``st_grid``.
+    n_subdomains : int
+        Number of subdomains to generate.
+
+    Returns
+    -------
+    SubdomainSpecs
+        Description of all sampled subdomains.  See :class:`SubdomainSpecs`
+        for the meaning of each field.
+
+    Raises
+    ------
+    RuntimeError
+        If ``2 * n_subdomains`` resampling attempts are exhausted without
+        successfully placing all ``n_subdomains`` subdomains; this typically
+        means the grid is too coarse or ``subdomain_dims`` is too large.
+    """
     xt1, xt2 = _get_spatial_endpoints(st_grid)
     grid_ndim = st_grid.ndim - 1
     domain_centers = AxesArray(

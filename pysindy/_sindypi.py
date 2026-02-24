@@ -174,12 +174,6 @@ class ParallelImplicitSINDy(BaseEstimator):
     def print(self, precision: int = 3, **kwargs) -> None:
         """Print all SINDy-PI candidate models.
 
-        For each library feature ``f_j``, prints the equation::
-
-            (f_j) = c_1 f_1 + ... + c_{j-1} f_{j-1} + c_{j+1} f_{j+1} + ...
-
-        where the coefficients come from ``optimizers_[j]``.
-
         Parameters
         ----------
         precision : int, optional (default 3)

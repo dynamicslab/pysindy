@@ -1071,12 +1071,12 @@ class BINDy(SINDy):
     .. seealso::
 
         `SBR`
-            A Bayesian optimizer that uses a more sophisticated prior and Monte Carlo
-            estimation, but is slower and does not correct for noise
-            through the features and differentiation
+            A Bayesian optimizer that uses a more sophisticated sparsifying prior
+            and Monte Carlo sampling. Slower but more accurate.
 
         `EnsembleOptimizer`
-            A more low-tech, probabilistic optimizer
+            Model sparsification by b(r)agging.
+            Empirically approximating Bayesian method.
 
     Parameters
     ----------

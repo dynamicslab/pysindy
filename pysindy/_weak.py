@@ -331,31 +331,40 @@ class WeakSINDy(SINDy):
         self,
         x: np.ndarray | Sequence[FloatND],
         st_grids: np.ndarray | Sequence[np.ndarray],
+        x_dot: Optional[np.ndarray | Sequence[FloatND]] = None,
         *,
         H_xt: Optional[float | FloatND | Sequence[FloatND]] = None,
         u: Optional[np.ndarray | Sequence[FloatND]] = None,
         feature_names: Optional[list[str]] = None,
     ) -> Self:
-        if not _check_multiple_trajectories(x, st_grids, None, u):
+        if not _check_multiple_trajectories(x, st_grids, x_dot, u):
             x = cast(np.ndarray, x)
             st_grids = cast(np.ndarray, st_grids)
             u = cast(Optional[np.ndarray], u)
-            x, st_grids, _, u = _adapt_to_multiple_trajectories(x, st_grids, None, u)
+            x, st_grids, x_dot, u = _adapt_to_multiple_trajectories(x, st_grids, x_dot, u)
         x = [standardize_shape(xi) for xi in x]
         st_grids = [standardize_shape(grid) for grid in st_grids]
+        if x_dot is not None:
+            x_dot = [standardize_shape(x_dot_i) for x_dot_i in x_dot]
         if u is not None:
             u = [standardize_shape(ui) for ui in u]
-        _validate_inputs(x, st_grids, None, u)
+        _validate_inputs(x, st_grids, x_dot, u)
 
         self.feature_names_ = feature_names
-
         if u is None:
             self.n_control_features_ = 0
         else:
             u = validate_control_variables(x, u)
             self.n_control_features_ = u[0].n_coord  # type: ignore
 
-        # Here's where we do the fancy stuff!
+        # For statics problems, adjust all data structures to eliminate the time axis
+        if x_dot is not None and all(x_dot_i.n_time == 1 for x_dot_i in x_dot):
+            # remove time axis from all data and multiindices
+            x = [xi[..., 0, :] for xi in x]
+            x_dot = [x_dot_i[..., 0, :] for x_dot_i in x_dot]
+            st_grids = [st_grid[..., 0, :-1] for st_grid in st_grids]
+
+
         subdomain_dims = _normalize_subdomain_dims(st_grids, H_xt)
         subdomain_specs = [
             _make_domains(grid, sub_dim, self.n_subdomains)
@@ -364,14 +373,21 @@ class WeakSINDy(SINDy):
         grid_ndim = subdomain_specs[0].grid_ndim
         self.grid_ndim_ = grid_ndim
 
-        # spatially smooth
+        # even though we don't need to differentiate x
+        # We can still smooth it.
         time_slice = (*(0,) * (grid_ndim - 1), slice(None), -1)
         t = [st_grid[*time_slice] for st_grid in st_grids]
-        self.differentiation_method.axis=x[0].ax_time
-        x_smooth: list[AxesArray] = []
-        for xi, ti in _zip_like_sequence(x, t):
-            self.differentiation_method(xi, ti)
-            x_smooth.append(self.differentiation_method.smoothed_x_)
+        if x_dot is None:
+            self.differentiation_method.axis=x[0].ax_time
+            x_smooth: list[AxesArray] = []
+            for xi, ti in _zip_like_sequence(x, t):
+                self.differentiation_method(xi, ti)
+                x_smooth.append(self.differentiation_method.smoothed_x_)
+            time_deriv = np.zeros((1, grid_ndim), dtype=int)
+            time_deriv[..., -1] = 1
+        else:
+            x_smooth = x
+            time_deriv = np.zeros((0, grid_ndim), dtype=int)
 
         # Weak should be subclass of PDEFIND?  Or PDELib.transform gives placeholders?
         def get_PDElib(lib) -> Literal[False] | PDELibrary:
@@ -386,15 +402,12 @@ class WeakSINDy(SINDy):
         pde_lib = get_PDElib(self.feature_library)
         if pde_lib:
             multiindices = pde_lib.multiindices  # type: ignore
-            time_zeros = np.zeros((len(multiindices), 1), dtype=int)
-            time_deriv = np.zeros((1, multiindices.shape[1] + 1), dtype=int)
-            time_deriv[0, -1] = 1
-            multiindices = np.hstack((multiindices, time_zeros))
-            multiindices = np.vstack((multiindices, time_deriv))
+            if x_dot is None:
+                time_zeros = np.zeros((len(multiindices), 1), dtype=int)
+                multiindices = np.hstack((multiindices, time_zeros))
+                multiindices = np.vstack((multiindices, time_deriv))
             diff_type = pde_lib.differentiation_method
         else:
-            time_deriv = np.zeros((1, subdomain_specs[0].grid_ndim), dtype=int)
-            time_deriv[0, -1] = 1
             multiindices = time_deriv
             diff_type = FiniteDifference
 
@@ -411,18 +424,23 @@ class WeakSINDy(SINDy):
         u_dot_wk = [
             convert_u_dot_integral(
                 xi,
-                spec,
-                weights,
-                diff_type,
-                tuple(time_deriv[0]),
+                x_dot=x_dot_i,
+                sub_spec=spec,
+                weight_map=weights,
+                differentiation_method=diff_type,
             )
-            for xi, weights, spec in zip(x, weights_per_deriv_op, subdomain_specs)
+            for xi, x_dot_i, weights, spec in zip(
+                x,
+                x_dot if x_dot is not None else [None] * len(x),
+                weights_per_deriv_op,
+                subdomain_specs,
+            )
         ]
         self.sorted_lib_ = _flatten_libraries(self.feature_library)
         self.sorted_lib_.fit(x_smooth[0])
         self.feature_library = self.sorted_lib_ # flattening affects term ordering
         terms: list[SemiTerm | Collection[SemiTerm]] = []
-        terms, term_namefuncs = _plan_weak_form(self.sorted_lib_, zero_deriv)
+        terms, term_namefuncs = _plan_weak_form(self.sorted_lib_, zero_deriv, bool(time_deriv.any()))
 
         rhs_trajectories = []
         for it in zip(x_smooth, subdomain_specs, weights_per_deriv_op, strict=True):
@@ -571,7 +589,7 @@ def _eval_semiterm(
 
 
 def _plan_weak_form(
-    lib: ConcatLibrary, zero_deriv: tuple[Literal[0], ...]
+    lib: ConcatLibrary, zero_deriv: tuple[Literal[0], ...], time_axis: bool=True
 ) -> tuple[
     list[SemiTerm | Collection[SemiTerm]],
     list[Callable[[list[str]], list[str]]]
@@ -598,9 +616,10 @@ def _plan_weak_form(
             terms.append((None, (lib, zero_deriv), 1, zero_deriv))
         elif isinstance(lib, PDELibrary):
             multiindices = lib.multiindices
-            multiindices = np.hstack(
-                (multiindices, np.zeros((len(multiindices), 1), dtype=int))
-            )
+            if time_axis:
+                multiindices = np.hstack(
+                    (multiindices, np.zeros((len(multiindices), 1), dtype=int))
+                )
             new_terms, new_namefuncs = _integrate_by_parts(multiindices)
             term_namefuncs.extend(new_namefuncs)
             terms.extend(new_terms)
@@ -609,9 +628,10 @@ def _plan_weak_form(
                 sublib for sublib in lib.libraries if isinstance(sublib, PDELibrary)
             )
             multiindices = pde_lib.multiindices
-            multiindices = np.hstack(
-                (multiindices, np.zeros((len(multiindices), 1), dtype=int))
-            )
+            if time_axis:
+                multiindices = np.hstack(
+                    (multiindices, np.zeros((len(multiindices), 1), dtype=int))
+                )
             non_pde_lib = TensoredLibrary(
                 [
                     sublib for sublib in lib.libraries
@@ -670,10 +690,11 @@ def _normalize_subdomain_dims(
 
 def convert_u_dot_integral(
     u: AxesArray,
+    x_dot: Optional[AxesArray] = None,
+    *,
     sub_spec: SubdomainSpecs,
     weight_map: Mapping[tuple[int, ...], list[AxesArray]],
     differentiation_method: type[BaseDifferentiation],
-    time_deriv_op: tuple[int, ...],
 ) -> AxesArray:
     """
     Takes a full set of spatiotemporal fields u(x, t) and finds the weak
@@ -683,11 +704,12 @@ def convert_u_dot_integral(
     functions, this computes the weak time-derivative integral with the
     sign convention from ``_integrate_by_parts``.
     """
-    lhs_terms, _ = _integrate_by_parts(np.asarray([time_deriv_op]))
-    lhs_term = lhs_terms[0]
-    _, _, _, lhs_deriv_op = lhs_term
-    if lhs_deriv_op != time_deriv_op:
-        raise RuntimeError("Inconsistent derivative operator in weak time integral")
+    if x_dot is not None:
+        time_deriv_op = (0,) * sub_spec.grid_ndim
+        u = x_dot
+    else:
+        time_deriv_op = (0,) * (sub_spec.grid_ndim - 1) + (1,)
+    lhs_term = _integrate_by_parts(np.asarray([time_deriv_op]))[0][0]
 
     return _eval_semiterm(
         u,
@@ -886,8 +908,8 @@ def _linear_weights(x: Float1D, d: int, phi: TestFunctionPhi) -> Float1D:
     z_i = zs[:-1]
     z_plus = zs[1:]
 
-    # if any(np.abs(x) > 1.0):
-    #     raise ValueError("Extraneous calculation; truncate to domain [-1, 1]")
+    if any(np.abs(x) > 1.0):
+        raise ValueError("Extraneous calculation; truncate to domain [-1, 1]")
 
     weights = np.zeros_like(x)
     const_term1 = x_plus / (x_plus - x_i) * (w_plus - w_i)

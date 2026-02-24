@@ -20,6 +20,7 @@ from pysindy._weak import _get_spatial_endpoints
 from pysindy._weak import _integrate_by_parts
 from pysindy._weak import _integrate_product_by_parts
 from pysindy._weak import _linear_weights
+from pysindy._weak import _make_domains
 from pysindy._weak import _plan_weak_form
 from pysindy._weak import convert_u_dot_integral
 from pysindy._weak import SubdomainSpecs
@@ -290,10 +291,52 @@ def test_convert_u_dot_integral(simple_time_domain):
 
     result = convert_u_dot_integral(
         u,
-        simple_time_domain,
-        weight_map,
-        FiniteDifference,
-        deriv_op,
+        sub_spec=simple_time_domain,
+        weight_map=weight_map,
+        differentiation_method=FiniteDifference,
+    )
+    n_points = simple_time_domain.domain.n_time
+    assert_allclose(result[:, 0], np.array([expected, expected]), atol=1 / n_points)
+
+
+def test_convert_u_dot_integral_explicit_x_dot(simple_time_domain):
+
+    xl, xu = simple_time_domain.domain[0, 0], simple_time_domain.domain[-1, 0]
+    test_func = UniformEvenBump(4)
+    deriv_op = cast(tuple[int, ...], (0,))
+    y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)
+
+    def true_u(x):
+        return x**2
+
+    def true_udot(x):
+        return 2 * x
+
+    def integrand(x):
+        return true_udot(x) * test_func.phi(y_of_x(x))
+
+    u = true_u(simple_time_domain.domain)
+    x_dot = true_udot(simple_time_domain.domain)
+    expected, _ = quad(integrand, xl, xu)
+
+    weights = [
+        _derivative_weights(
+            _dense_to_open_mesh(simple_time_domain.subgrids_scaled[subdomain]),
+            simple_time_domain.subgrid_dims[subdomain],
+            tuple(simple_time_domain.subgrid_shapes[subdomain]),
+            deriv_op,
+            test_func,
+        )
+        for subdomain in range(simple_time_domain.n_subdomains)
+    ]
+    weight_map = {deriv_op: weights}
+
+    result = convert_u_dot_integral(
+        u,
+        x_dot=x_dot,
+        sub_spec=simple_time_domain,
+        weight_map=weight_map,
+        differentiation_method=FiniteDifference,
     )
     n_points = simple_time_domain.domain.n_time
     assert_allclose(result[:, 0], np.array([expected, expected]), atol=1 / n_points)

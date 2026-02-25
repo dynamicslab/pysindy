@@ -1263,7 +1263,7 @@ class BINDy(SINDy):
 
         # Ensure we treat everything as multiple trajectories for
         # _sigma2 calculation.
-        if not _check_multiple_trajectories(x, x_dot, u):
+        if not _check_multiple_trajectories(x, t, x_dot, u):
             x_list, t_list, _, _ = _adapt_to_multiple_trajectories(x, t, x_dot, u)
         else:
             x_list, t_list = x, t

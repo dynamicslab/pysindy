@@ -61,7 +61,7 @@ def TemporalNoisePropagation(
     X_probe = np.eye(n_samples, dtype=float)
 
     # Reconstruct L_dt as the image of the identity under the operator.
-    L_dt = differentiator._differentiate(X_probe, t)
+    L_dt = differentiator(X_probe, t)
 
     if L_dt.shape != (n_samples, n_samples):
         raise RuntimeError(

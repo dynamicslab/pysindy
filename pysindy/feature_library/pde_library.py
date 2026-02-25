@@ -1,17 +1,15 @@
-import warnings
 from collections.abc import Sequence
 from itertools import product as iproduct
-from typing import Optional, Self
+from typing import Optional
+from typing import Self
 
 import numpy as np
-from numpy.typing import NDArray
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import AxesArray
 from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
-from .polynomial_library import PolynomialLibrary
 from pysindy.differentiation import FiniteDifference
 
 
@@ -77,9 +75,7 @@ class PDELibrary(BaseFeatureLibrary):
             raise ValueError("The derivative order must be >0")
 
         if spatial_grid is None or (derivative_order == 0 and multiindices is None):
-            raise ValueError(
-                "Spatial grid and the derivatives must be initialized."
-            )
+            raise ValueError("Spatial grid and the derivatives must be initialized.")
 
         if spatial_grid.ndim == 1:
             spatial_grid = spatial_grid[:, np.newaxis]
@@ -89,7 +85,6 @@ class PDELibrary(BaseFeatureLibrary):
         # list of derivatives
         self.grid_ndim = spatial_grid.ndim - 1
         indices = self.grid_ndim * (range(derivative_order + 1),)
-
 
         if multiindices is None:
             multiindices = []
@@ -104,7 +99,9 @@ class PDELibrary(BaseFeatureLibrary):
         self.multiindices = multiindices
         self.spatial_grid = AxesArray(spatial_grid, comprehend_axes(spatial_grid))
 
-    def get_feature_names(self, input_features: Optional[list[str]]=None) -> list[str]:
+    def get_feature_names(
+        self, input_features: Optional[list[str]] = None
+    ) -> list[str]:
         """Return feature names for output features.
 
         Parameters
@@ -122,7 +119,6 @@ class PDELibrary(BaseFeatureLibrary):
             check_is_fitted(self)
             n_features = self.n_features_in_
             input_features = ["x%d" % i for i in range(n_features)]
-
 
         return make_pde_feature_names(input_features, self.multiindices)
 
@@ -185,16 +181,19 @@ class PDELibrary(BaseFeatureLibrary):
                 for axis in range(self.grid_ndim):
                     order = multiindex[axis]
                     if order > 0:
-                        s = [0 if ax != axis else slice(None) for ax in range(self.grid_ndim)]
+                        s = [
+                            0 if ax != axis else slice(None)
+                            for ax in range(self.grid_ndim)
+                        ]
                         axis_vals = self.spatial_grid[*s, axis]
 
                         differentiator = self.differentiation_method(
-                            d=order, axis=axis, **self.diff_kwargs,
+                            d=order,
+                            axis=axis,
+                            **self.diff_kwargs,
                         )
                         derivs = differentiator(derivs, axis_vals)
-                xp[
-                    ..., library_idx : library_idx + n_features
-                ] = derivs
+                xp[..., library_idx : library_idx + n_features] = derivs
                 library_idx += n_features
 
             xp_full.append(xp)
@@ -209,19 +208,19 @@ def make_pde_feature_names(
 ) -> list[str]:
     """
     Arguments:
-    input_features: String names for system coodinates.
+    input_features: String names for system coordinates.
     multiindices: 2D array reflecting the differentiation features
     """
+
     def derivative_string(multiindex: tuple[int]):
         subscript = ""
         for axis in range(len(multiindex)):
             str_deriv = str(axis + 1)
             subscript += str_deriv * multiindex[axis]
         return subscript
+
     feat_names = []
     for multiindex in multiindices:
         for sys_coord in input_features:
-            feat_names.append(
-                sys_coord + "_" + derivative_string(multiindex)
-            )
+            feat_names.append(sys_coord + "_" + derivative_string(multiindex))
     return feat_names

@@ -1,8 +1,10 @@
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 
 import sindy_exp
 
 import pysindy as ps
+
 
 class LorenzMixin:
     def make_data(self):
@@ -17,7 +19,6 @@ class LorenzMixin:
 
 
 class DefaultBM(ABC):
-
     @abstractmethod
     def make_data(self) -> None:
         ...
@@ -25,7 +26,6 @@ class DefaultBM(ABC):
     @abstractmethod
     def make_model(self) -> None:
         ...
-
 
     def setup(self):
         self.make_data()
@@ -47,33 +47,38 @@ class DefaultBM(ABC):
 
     def time_fit_predict(self):
         self.model.fit([self.x], [self.t])
-        preds = self.model.predict(self.x)
+        self.model.predict(self.x)
 
     def peakmem_fit_predict(self):
         self.model.fit([self.x], [self.t])
-        preds = self.model.predict(self.x)
+        self.model.predict(self.x)
 
     def track_score_fit_predict(self):
         self.model.fit([self.x], [self.t])
-        preds = self.model.predict(self.x)
+        self.model.predict(self.x)
         metrics = sindy_exp.pred_metrics(
             self.model, self.x, self.x_dot_true  # type: ignore
         )
         return metrics["pred_l2_fro"]
 
+
 class SINDyMixin:
     def make_model(self):
         self.model = ps.SINDy()
 
+
 class SINDyLorenz(LorenzMixin, SINDyMixin, DefaultBM):
     pass
+
 
 class WeakMixin:
     def make_model(self):
         self.model = ps.WeakSINDy()
 
+
 class WeakLorenz(LorenzMixin, WeakMixin, DefaultBM):
     pass
+
 
 # class WeakHeat:
 

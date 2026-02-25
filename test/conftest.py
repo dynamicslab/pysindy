@@ -338,7 +338,6 @@ def generalized_library():
 
 @pytest.fixture
 def ode_library():
-
     return PDELibrary()
 
 

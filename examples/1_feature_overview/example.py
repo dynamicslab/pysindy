@@ -261,7 +261,7 @@ model.print()
 library = ps.PolynomialLibrary()
 library.fit([ps.AxesArray(x_train, {"ax_sample": 0, "ax_coord": 1})])
 n_features = library.n_output_features_
-print(f"Features ({n_features}):", library.get_feature_names())
+print(f"Features ({n_features}): ", library.get_feature_names())
 
 # %%
 # Set constraints
@@ -559,7 +559,7 @@ plt.show()
 # Rather than using one of PySINDy's built-in differentiators, you can compute numerical derivatives using a method of your choice then pass them directly to the `fit` method. This option also enables you to use derivative data obtained directly from experiments.
 
 # %%
-x_dot_precomputed = ps.FiniteDifference()._differentiate(x_train, t_train)
+x_dot_precomputed = ps.FiniteDifference()(x_train, t_train)
 
 model = ps.SINDy()
 model.fit(x_train, t=t_train, x_dot=x_dot_precomputed)
@@ -588,7 +588,6 @@ kdV = loadmat(data / "kdv.mat")
 t = np.ravel(kdV["t"])
 X = np.ravel(kdV["x"])
 x = np.real(kdV["usol"])
-dt_kdv = t[1] - t[0]
 
 # Plot x and x_dot
 plt.figure()
@@ -597,7 +596,7 @@ plt.xlabel("t", fontsize=16)
 plt.ylabel("X", fontsize=16)
 plt.title(r"$u(x, t)$", fontsize=16)
 plt.figure()
-x_dot = ps.FiniteDifference(axis=1)._differentiate(x, t=dt_kdv)
+x_dot = ps.FiniteDifference(axis=1)(x, t=t)
 
 plt.pcolormesh(t, X, x_dot)
 plt.xlabel("t", fontsize=16)
@@ -1044,7 +1043,7 @@ x = np.ravel(data["x"])
 u = np.real(data["usol"])
 dt = t[1] - t[0]
 dx = x[1] - x[0]
-u_dot = ps.FiniteDifference(axis=-1)._differentiate(u, t=dt)
+u_dot = ps.FiniteDifference(axis=-1)(u, t=t)
 
 # Plot the spatiotemporal data
 plt.figure()
@@ -1058,17 +1057,16 @@ u = np.reshape(u, (len(x), len(t), 1))
 # Define quadratic library with up to third order derivatives
 # on a uniform spatial grid. Do not include a constant term in the function_library!
 pde_lib = ps.PDELibrary(
-    function_library=ps.PolynomialLibrary(degree=2, include_bias=False),
     derivative_order=3,
     spatial_grid=x,
     diff_kwargs={"is_uniform": True, "periodic": True},
 )
-
+poly_lib = ps.PolynomialLibrary(degree=2, include_bias=False)
 optimizer = ps.STLSQ(threshold=0.1, alpha=1e-5, normalize_columns=True)
-model = ps.SINDy(feature_library=pde_lib, optimizer=optimizer)
+model = ps.SINDy(feature_library=pde_lib * poly_lib, optimizer=optimizer)
 # Note that the dimensions of u are reshaped internally,
 # according to the dimensions in spatial_grid
-model.fit(u, t=dt)
+model.fit(u, t=t)
 model.print()
 
 # %% [markdown]
@@ -1137,8 +1135,8 @@ plt.title(r"$\phi(x, y)$")
 plt.colorbar()
 
 # Make del^2 phi and plot various quantities
-phi_xx = ps.FiniteDifference(d=2, axis=0)._differentiate(phi, dx)
-phi_yy = ps.FiniteDifference(d=2, axis=1)._differentiate(phi, dy)
+phi_xx = ps.FiniteDifference(d=2, axis=0)(phi, x)
+phi_yy = ps.FiniteDifference(d=2, axis=1)(phi, y)
 plt.subplot(1, 5, 3)
 plt.imshow(phi_xx, aspect="auto", origin="lower")
 plt.title(r"$\phi_{xx}(x, y)$")
@@ -1159,7 +1157,6 @@ poly_library = ps.PolynomialLibrary(include_bias=False)
 fourier_library = ps.FourierLibrary()
 X_mesh, Y_mesh = np.meshgrid(x, y)
 pde_library = ps.PDELibrary(
-    function_library=ps.CustomLibrary(library_functions=[], function_names=[]),
     derivative_order=1,
     spatial_grid=np.asarray([X_mesh, Y_mesh]).T,
 )

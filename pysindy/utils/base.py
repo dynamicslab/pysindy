@@ -115,7 +115,9 @@ def validate_no_reshape(x: FloatND, st_grid: Union[float, np.ndarray]) -> None:
         raise ValueError("t must be a scalar or array-like.")
 
 
-def validate_control_variables(x: Sequence[AxesArray], u: Sequence[AxesArray]) -> list[AxesArray]:
+def validate_control_variables(
+    x: Sequence[AxesArray], u: Sequence[AxesArray]
+) -> list[AxesArray]:
     """Ensure that control variables u are compatible with the data x.
 
     Args:
@@ -255,7 +257,6 @@ def _prox_l1(
     x: NDArray[np.float64],
     regularization_weight: Union[float, NDArray[np.float64]],
 ):
-
     return np.sign(x) * np.maximum(np.abs(x) - regularization_weight, 0)
 
 

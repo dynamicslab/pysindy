@@ -10,8 +10,6 @@ from scipy.integrate import quad
 from pysindy import AxesArray
 from pysindy import PDELibrary
 from pysindy import PolynomialLibrary
-from pysindy import STLSQ
-from pysindy._typing import Float1D
 from pysindy._weak import _dense_to_open_mesh
 from pysindy._weak import _derivative_weights
 from pysindy._weak import _eval_semiterm
@@ -20,14 +18,12 @@ from pysindy._weak import _get_spatial_endpoints
 from pysindy._weak import _integrate_by_parts
 from pysindy._weak import _integrate_product_by_parts
 from pysindy._weak import _linear_weights
-from pysindy._weak import _make_domains
 from pysindy._weak import _plan_weak_form
 from pysindy._weak import convert_u_dot_integral
-from pysindy._weak import SubdomainSpecs
 from pysindy._weak import SemiTerm
+from pysindy._weak import SubdomainSpecs
 from pysindy._weak import UniformEvenBump
 from pysindy._weak import WeakSINDy
-from pysindy.differentiation import FiniteDifference
 from pysindy.feature_library import ConcatLibrary
 from pysindy.feature_library import FourierLibrary
 from pysindy.feature_library import TensoredLibrary
@@ -117,7 +113,7 @@ def test_integrate_domain1d(true_f, p, deriv_op):
     grid1d = np.linspace(2, 5, 30)
     test_func = UniformEvenBump(p)
     xl, xu = grid1d[0], grid1d[-1]
-    y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)
+    y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)  # noqa: E731
     dy_dx = 2 / (xu - xl)
 
     def integrand(x):
@@ -157,8 +153,8 @@ def test_integrate_domain2d(true_f, p, deriv_op):
     test_func = UniformEvenBump(p)
 
     xl, xu, yl, yu = grid1d[0][0], grid1d[0][-1], grid1d[1][0], grid1d[1][-1]
-    u_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)
-    u_of_y = lambda y: -1 + 2 * (y - yl) / (yu - yl)
+    u_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)  # noqa: E731
+    u_of_y = lambda y: -1 + 2 * (y - yl) / (yu - yl)  # noqa: E731
     du_dx = 2 / (xu - xl)
     du_dy = 2 / (yu - yl)
 
@@ -204,10 +200,10 @@ def test_flatten_libraries():
     assert len(result.libraries) == 2
     assert isinstance(result.libraries[0], TensoredLibrary)
     assert isinstance(result.libraries[1], TensoredLibrary)
-    assert type(result.libraries[0].libraries[0]) == PolynomialLibrary
-    assert type(result.libraries[0].libraries[1]) == FourierLibrary
-    assert type(result.libraries[1].libraries[0]) == PDELibrary
-    assert type(result.libraries[1].libraries[1]) == PolynomialLibrary
+    assert type(result.libraries[0].libraries[0]) is PolynomialLibrary
+    assert type(result.libraries[0].libraries[1]) is FourierLibrary
+    assert type(result.libraries[1].libraries[0]) is PDELibrary
+    assert type(result.libraries[1].libraries[1]) is PolynomialLibrary
 
 
 def test_weak_class(data_1d_random_pde):
@@ -251,20 +247,25 @@ def test_integrate_product_by_parts():
     result, _ = _integrate_product_by_parts(f_lib, d_lib.multiindices)
     expected = [
         [SemiTerm((0, 1), (f_lib, (0, 0)), 1, (0, 0))],
-        [SemiTerm((0, 1), (f_lib, (0, 0)), -1, (0, 1)), SemiTerm((0, 1), (f_lib, (0, 1)), -1, (0, 0))],
+        [
+            SemiTerm((0, 1), (f_lib, (0, 0)), -1, (0, 1)),
+            SemiTerm((0, 1), (f_lib, (0, 1)), -1, (0, 0)),
+        ],
         [SemiTerm((1, 0), (f_lib, (0, 0)), 1, (0, 0))],
         [SemiTerm((1, 1), (f_lib, (0, 0)), 1, (0, 0))],
-        [SemiTerm((1, 0), (f_lib, (0, 0)), -1, (1, 0)), SemiTerm((1, 0), (f_lib, (1, 0)), -1, (0, 0))],
+        [
+            SemiTerm((1, 0), (f_lib, (0, 0)), -1, (1, 0)),
+            SemiTerm((1, 0), (f_lib, (1, 0)), -1, (0, 0)),
+        ],
     ]
     assert result == expected
 
 
 def test_convert_u_dot_integral(simple_time_domain):
-
     xl, xu = simple_time_domain.domain[0, 0], simple_time_domain.domain[-1, 0]
     test_func = UniformEvenBump(4)
     deriv_op = cast(tuple[int, ...], (1,))
-    y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)
+    y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)  # noqa: E731
 
     def true_u(x):
         return x**2
@@ -300,11 +301,10 @@ def test_convert_u_dot_integral(simple_time_domain):
 
 
 def test_convert_u_dot_integral_explicit_x_dot(simple_time_domain):
-
     xl, xu = simple_time_domain.domain[0, 0], simple_time_domain.domain[-1, 0]
     test_func = UniformEvenBump(4)
     deriv_op = cast(tuple[int, ...], (0,))
-    y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)
+    y_of_x = lambda x: -1 + 2 * (x - xl) / (xu - xl)  # noqa: E731
 
     def true_u(x):
         return x**2
@@ -398,7 +398,7 @@ def test_eval_semiterm_output_shape(simple_time_domain):
 
 
 def test_eval_semiterm_phi_prime_vanishes(simple_time_domain):
-    """Integrating a constant against phi' gives zero since phi vanishes at boundaries."""
+    """Integrating a constant against phi': phi vanishes at boundaries."""
     sub_spec = simple_time_domain
     deriv_op = cast(tuple[int, ...], (1,))
     test_func = UniformEvenBump(4)

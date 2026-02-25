@@ -586,6 +586,7 @@ def test_sindypi_multiple_trajectories(data_multiple_trajectories):
 def test_sindypi_precomputed_x_dot(data_lorenz):
     x, t = data_lorenz
     from pysindy.differentiation import FiniteDifference
+
     x_dot = FiniteDifference()(x, t)
     model = ParallelImplicitSINDy()
     model.fit(x, t, x_dot=x_dot)

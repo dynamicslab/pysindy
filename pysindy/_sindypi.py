@@ -28,7 +28,6 @@ from .feature_library import PolynomialLibrary
 from .feature_library.base import BaseFeatureLibrary
 from .optimizers import STLSQ
 from .optimizers.base import BaseOptimizer
-from .utils import AxesArray
 from .utils import SampleConcatter
 
 
@@ -199,5 +198,5 @@ class ParallelImplicitSINDy(BaseEstimator):
             components = [_fmt(c, name) for c, name in zip(coef, rhs_names)]
             rhs = " + ".join(filter(bool, components))
             if not rhs:
-                rhs = f"{0:.{precision}f}"
+                rhs = f"{0: .{precision}f}"
             print(f"({lhs}) = {rhs}", **kwargs)

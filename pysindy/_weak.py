@@ -55,8 +55,6 @@ from dataclasses import dataclass
 from functools import partial
 from itertools import chain
 from itertools import product as iproduct
-from itertools import repeat
-from typing import Any
 from typing import Callable
 from typing import cast
 from typing import final
@@ -64,11 +62,9 @@ from typing import Literal
 from typing import Optional
 
 import numpy as np
-from scipy.interpolate import interp1d
 from scipy.special import binom
 from scipy.special import perm
 from sklearn.base import check_is_fitted
-from sklearn.metrics import r2_score
 from typing_extensions import Self
 
 from ._core import _adapt_to_multiple_trajectories
@@ -81,7 +77,6 @@ from ._core import validate_control_variables
 from ._typing import Float1D
 from ._typing import Float2D
 from ._typing import FloatND
-from ._typing import TrajectoryType
 from .differentiation import FiniteDifference
 from .differentiation.base import BaseDifferentiation
 from .feature_library import ConcatLibrary
@@ -161,7 +156,6 @@ class SubdomainSpecs:
 
 @dataclass(frozen=True)
 class TestFunctionPhi(ABC):
-
     @property
     @abstractmethod
     def max_order(self) -> int:
@@ -211,6 +205,7 @@ class TestFunctionPhi(ABC):
 @dataclass(frozen=True)
 class UniformEvenBump(TestFunctionPhi):
     """The uniform even bump function, (1-x**2)**p"""
+
     p: int
 
     def __post_init__(self):
@@ -221,7 +216,7 @@ class UniformEvenBump(TestFunctionPhi):
     def max_order(self) -> int:
         return self.p
 
-    def phi(self, x: float | Float1D, d: int=0) -> Float1D:
+    def phi(self, x: float | Float1D, d: int = 0) -> Float1D:
         """Evaluate the function, differentiated d times
 
         Calculated term-wise in the binomial expansion.
@@ -245,7 +240,7 @@ class UniformEvenBump(TestFunctionPhi):
 
     def phi_int(self, x: Float1D, d: int) -> Float1D:
         """Integrate the test function, differentiated d times
-        
+
         Parameters:
             x: The point(s) at which to evaluate the function
             d: derivative order
@@ -264,7 +259,7 @@ class UniformEvenBump(TestFunctionPhi):
 
     def xphi_int(self, x: Float1D, d: int) -> Float1D:
         """Integrate the test function multiplied by x, differentiated d times
-        
+
         Parameters:
             x: The point(s) at which to evaluate the function
             d: derivative order
@@ -381,7 +376,7 @@ class WeakSINDy(SINDy):
         super().__init__(
             optimizer=optimizer,
             feature_library=feature_library,
-            differentiation_method=differentiation_method
+            differentiation_method=differentiation_method,
         )
         self.n_subdomains = n_subdomains
         self.test_fn = test_fn
@@ -476,7 +471,9 @@ class WeakSINDy(SINDy):
             x = cast(np.ndarray, x)
             st_grids = cast(np.ndarray, st_grids)
             u = cast(Optional[np.ndarray], u)
-            x, st_grids, x_dot, u = _adapt_to_multiple_trajectories(x, st_grids, x_dot, u)
+            x, st_grids, x_dot, u = _adapt_to_multiple_trajectories(
+                x, st_grids, x_dot, u
+            )
         x = [standardize_shape(xi) for xi in x]
         st_grids = [standardize_shape(grid) for grid in st_grids]
         if x_dot is not None:
@@ -492,13 +489,12 @@ class WeakSINDy(SINDy):
             u = validate_control_variables(x, u)
             self.n_control_features_ = u[0].n_coord  # type: ignore
 
-        # For statics problems, adjust all data structures to eliminate the time axis
+        # For static problems, adjust all data structures to eliminate the time axis
         if x_dot is not None and all(x_dot_i.n_time == 1 for x_dot_i in x_dot):
             # remove time axis from all data and multiindices
             x = [xi[..., 0, :] for xi in x]
             x_dot = [x_dot_i[..., 0, :] for x_dot_i in x_dot]
             st_grids = [st_grid[..., 0, :-1] for st_grid in st_grids]
-
 
         subdomain_dims = _normalize_subdomain_dims(st_grids, H_xt)
         subdomain_specs = [
@@ -513,7 +509,7 @@ class WeakSINDy(SINDy):
         time_slice = (*(0,) * (grid_ndim - 1), slice(None), -1)
         t = [st_grid[*time_slice] for st_grid in st_grids]
         if x_dot is None:
-            self.differentiation_method.axis=x[0].ax_time
+            self.differentiation_method.axis = x[0].ax_time
             x_smooth: list[AxesArray] = []
             for xi, ti in _zip_like_sequence(x, t):
                 self.differentiation_method(xi, ti)
@@ -571,9 +567,11 @@ class WeakSINDy(SINDy):
         ]
         self.sorted_lib_ = _flatten_libraries(self.feature_library)
         self.sorted_lib_.fit(x_smooth[0])
-        self.feature_library = self.sorted_lib_ # flattening affects term ordering
+        self.feature_library = self.sorted_lib_  # flattening affects term ordering
         terms: list[SemiTerm | Collection[SemiTerm]] = []
-        terms, term_namefuncs = _plan_weak_form(self.sorted_lib_, zero_deriv, bool(time_deriv.any()))
+        terms, term_namefuncs = _plan_weak_form(
+            self.sorted_lib_, zero_deriv, bool(time_deriv.any())
+        )
 
         rhs_trajectories = []
         for it in zip(x_smooth, subdomain_specs, weights_per_deriv_op, strict=True):
@@ -581,12 +579,15 @@ class WeakSINDy(SINDy):
             weak_feats = []
             for term in terms:
                 if isinstance(term, SemiTerm):
-                    weak_feats.append(_eval_semiterm(x_i, term, sub_spec, weight_map, diff_type))
+                    weak_feats.append(
+                        _eval_semiterm(x_i, term, sub_spec, weight_map, diff_type)
+                    )
                 else:
                     # term is a collection of semi-terms that sum represent
                     # product rule terms.
                     parts = [
-                        _eval_semiterm(x_i, part, sub_spec, weight_map, diff_type) for part in term
+                        _eval_semiterm(x_i, part, sub_spec, weight_map, diff_type)
+                        for part in term
                     ]
                     weak_feats.append(sum(parts))
             weak_feats = AxesArray(
@@ -652,7 +653,6 @@ class WeakSINDy(SINDy):
             x0, t, u, integrator, interpolator, integrator_kws, interpolator_kws
         )
 
-
     def get_feature_names(self) -> list[str]:
         """
         Get a list of names of features used by SINDy model.
@@ -709,10 +709,15 @@ def _eval_semiterm(
     term: SemiTerm,
     sub_spec: SubdomainSpecs,
     weight_map: Mapping[tuple[int, ...], list[AxesArray]],
-    differentiation_method: type[BaseDifferentiation] | None=None
+    differentiation_method: type[BaseDifferentiation] | None = None,
 ) -> AxesArray:
     """Calculate the value of a single SemiTerm on x across all subdomains"""
-    diff1, feat_term, coeff, diff3 = term.diff_u, term.feat_term, term.coeff, term.diff_phi
+    diff1, feat_term, coeff, diff3 = (
+        term.diff_u,
+        term.feat_term,
+        term.coeff,
+        term.diff_phi,
+    )
     weights_per_subdom = weight_map[diff3]
     st_axes = tuple(range(sub_spec.grid_ndim))
     if diff1 is None:
@@ -725,7 +730,7 @@ def _eval_semiterm(
             x_d = PDELibrary(
                 spatial_grid=sub_spec.domain,
                 multiindices=[diff1],
-                differentiation_method=differentiation_method
+                differentiation_method=differentiation_method,
             ).fit_transform(x_d)
     if feat_term is not None:
         feat_lib, diff2 = feat_term
@@ -736,16 +741,13 @@ def _eval_semiterm(
             fx = PDELibrary(
                 spatial_grid=sub_spec.domain,
                 multiindices=[diff2],
-                differentiation_method=differentiation_method
+                differentiation_method=differentiation_method,
             ).fit_transform(fx)
     else:
         fx = AxesArray(np.ones((*x.shape[:-1], 1)), x.axes)
 
     # Tensor product along last (coordinate) axis
-    xt = np.reshape(
-        x_d[..., :, "coord"] * fx[..., "coord", :],
-        (*x_d.shape[:-1], -1)
-    )
+    xt = np.reshape(x_d[..., :, "coord"] * fx[..., "coord", :], (*x_d.shape[:-1], -1))
 
     x_subdoms = [xt[np.ix_(*inds)] for inds in sub_spec.axis_inds_per_subdom]
     weak_feat = [
@@ -756,10 +758,9 @@ def _eval_semiterm(
 
 
 def _plan_weak_form(
-    lib: ConcatLibrary, zero_deriv: tuple[Literal[0], ...], time_axis: bool=True
+    lib: ConcatLibrary, zero_deriv: tuple[Literal[0], ...], time_axis: bool = True
 ) -> tuple[
-    list[SemiTerm | Collection[SemiTerm]],
-    list[Callable[[list[str]], list[str]]]
+    list[SemiTerm | Collection[SemiTerm]], list[Callable[[list[str]], list[str]]]
 ]:
     """Plan the weak form calculation by traversing the library tree.
 
@@ -797,7 +798,7 @@ def _plan_weak_form(
     ----
     Because each derivative operation produces a different SemiTerm,
     :class:``TensoredLibrary`` only behaves correctly when the PDE library
-    is present if it is the first in the list of libraries.    
+    is present if it is the first in the list of libraries.
     """
     terms: list[SemiTerm | Collection[SemiTerm]] = []
     term_namefuncs = []
@@ -830,14 +831,18 @@ def _plan_weak_form(
                 )
             non_pde_lib = TensoredLibrary(
                 [
-                    sublib for sublib in lib.libraries
+                    sublib
+                    for sublib in lib.libraries
                     if not isinstance(sublib, PDELibrary)
                 ]
             )
-            new_terms, new_namefuncs = _integrate_product_by_parts(non_pde_lib, multiindices)
+            new_terms, new_namefuncs = _integrate_product_by_parts(
+                non_pde_lib, multiindices
+            )
             terms.extend(new_terms)
             term_namefuncs.extend(new_namefuncs)
     return terms, term_namefuncs
+
 
 def _normalize_subdomain_dims(
     st_grids: list[AxesArray],
@@ -896,11 +901,11 @@ def convert_u_dot_integral(
     Using integration by parts in time with compactly-supported test
     functions, this computes the weak time-derivative integral over domains
     specified by ``sub_spec``
-    
+
     .. math::
 
         \int_\Omega u_t(x, t) \phi(x, t) d\Omega
-    
+
     Parameters:
         u: The system variable, evaluated on the spatiotemporal grid.
         u_dot: The time derivative of the system variable, evaluated on the
@@ -941,7 +946,8 @@ def _set_up_weights(
 ) -> dict[tuple[int, ...], list[AxesArray]]:
     """Create the quadrature weights for each integral.
 
-    Integrals over domain cells are approximated as dot products of weights and the input data.
+    Integrals over domain cells are approximated as dot products of weights and
+    the input data.
     """
     weight_lookup: dict[tuple[int, ...], list[AxesArray]] = defaultdict(list)
     for deriv_op in multiindices:
@@ -1127,7 +1133,6 @@ def _derivative_weights(
     return AxesArray(weights_nd, ax_labels)
 
 
-
 def _linear_weights(x: Float1D, d: int, phi: TestFunctionPhi) -> Float1D:
     """
     One-dimensional weights for integration against the dth derivative
@@ -1147,7 +1152,7 @@ def _linear_weights(x: Float1D, d: int, phi: TestFunctionPhi) -> Float1D:
     z_i = zs[:-1]
     z_plus = zs[1:]
 
-    if any(np.abs(x) > 1.0+1e-14):
+    if any(np.abs(x) > 1.0 + 1e-14):
         raise ValueError("Extraneous calculation; truncate to domain [-1, 1]")
 
     weights = np.zeros_like(x)
@@ -1174,9 +1179,9 @@ def _dense_to_open_mesh(meshgrid: AxesArray) -> list[AxesArray]:
     return openmesh
 
 
-def _integrate_by_parts(multiindices: Float2D) -> tuple[
-    list[SemiTerm], list[Callable[[list[str]], list[str]]]
-]:
+def _integrate_by_parts(
+    multiindices: Float2D,
+) -> tuple[list[SemiTerm], list[Callable[[list[str]], list[str]]]]:
     """Move derivatives from each PDE term to test function"""
     terms: list[SemiTerm] = []
     term_namefuncs: list[Callable[[list[str]], list[str]]] = []
@@ -1191,9 +1196,7 @@ def _integrate_by_parts(multiindices: Float2D) -> tuple[
 
 def _integrate_product_by_parts(
     f_lib: BaseFeatureLibrary, multiindices: Float2D
-) -> tuple[
-    list[Collection[SemiTerm]], list[Callable[[list[str]], list[str]]]
-]:
+) -> tuple[list[Collection[SemiTerm]], list[Callable[[list[str]], list[str]]]]:
     r"""Move derivatives from each PDE term to test function
 
     \int f(u) * u^(d) * phi dx
@@ -1203,8 +1206,10 @@ def _integrate_product_by_parts(
     """
     terms: list[Collection[SemiTerm]] = []
     term_namefuncs: list[Callable[[list[str]], list[str]]] = []
+
     class _MockPDELib(PDELibrary):
         """A PDE-like library that doesn't fit but can create feature names"""
+
         def __init__(self, multiindices):
             self.multiindices = multiindices
 
@@ -1214,11 +1219,14 @@ def _integrate_product_by_parts(
         def get_feature_names(self, input_features: list[str]) -> list[str]:
             return make_pde_feature_names(input_features, self.multiindices)
 
-    def mock_tensored_names(lib1: BaseFeatureLibrary, lib2: BaseFeatureLibrary) -> Callable[[list[str]], list[str]]:
+    def mock_tensored_names(
+        lib1: BaseFeatureLibrary, lib2: BaseFeatureLibrary
+    ) -> Callable[[list[str]], list[str]]:
         def make_names(input_features: list[str]) -> list[str]:
             lib1_names = lib1.get_feature_names(input_features)
             lib2_names = lib2.get_feature_names(input_features)
             return list(f"{n1} {n2}" for n1, n2 in iproduct(lib1_names, lib2_names))
+
         return make_names
 
     for deriv_op in multiindices:
@@ -1258,9 +1266,7 @@ def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
     """
 
     if isinstance(library, TensoredLibrary):
-        sublibs = [
-            _flatten_libraries(lib1).libraries for lib1 in library.libraries
-        ]
+        sublibs = [_flatten_libraries(lib1).libraries for lib1 in library.libraries]
         sum_of_products: list[TensoredLibrary] = []
         for combo in iproduct(*sublibs):
             new_prod: list[BaseFeatureLibrary] = []
@@ -1275,9 +1281,7 @@ def _flatten_libraries(library: BaseFeatureLibrary) -> ConcatLibrary:
         return ConcatLibrary(sum_of_products)
 
     elif isinstance(library, ConcatLibrary):
-        sublibs = [
-            _flatten_libraries(lib1).libraries for lib1 in library.libraries
-        ]
+        sublibs = [_flatten_libraries(lib1).libraries for lib1 in library.libraries]
         return ConcatLibrary(list(chain.from_iterable(sublibs)))
     else:
         return ConcatLibrary([library])

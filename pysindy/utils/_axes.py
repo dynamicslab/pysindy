@@ -572,7 +572,7 @@ def einsum(
 
     for char in rscript.replace("...", "."):
         if char == ".":
-            ellipsis_names=[]
+            ellipsis_names = []
             for script_names in allscript_names:
                 ellipsis_candidate = script_names.get("...", [])
                 if not ellipsis_names:

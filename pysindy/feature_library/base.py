@@ -2,7 +2,6 @@
 Base class for feature library classes.
 """
 import abc
-import warnings
 from functools import wraps
 from itertools import repeat
 from typing import Optional
@@ -146,6 +145,7 @@ class EmptyLibrary(BaseFeatureLibrary):
 
     def get_feature_names(self, input_features=None) -> list[str]:
         return []
+
 
 def x_sequence_or_item(wrapped_func):
     """Allow a feature library's method to handle list or item inputs."""

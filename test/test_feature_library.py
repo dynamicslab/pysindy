@@ -666,6 +666,7 @@ def test_1D_weak_pdes():
     )
     pde_library_helper(pde_lib, u, t)
 
+
 @pytest.mark.skip
 def test_sindypi_library(data_lorenz):
     x, t = data_lorenz

@@ -6,7 +6,6 @@ from types import NoneType
 from typing import cast
 from typing import Optional
 from typing import Sequence
-from typing import TypeVar
 from typing import Union
 
 import numpy as np
@@ -45,7 +44,6 @@ from .utils.bindy import TemporalNoisePropagation
 
 
 class _BaseSINDy(BaseEstimator, ABC):
-
     feature_library: BaseFeatureLibrary
     optimizer: _BaseOptimizer
     # Hacks to remove later
@@ -514,7 +512,6 @@ class SINDy(_BaseSINDy):
         x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
         return metric(x_dot, x_dot_predict, **metric_kws)
 
-
     # Once WeakPDEibrary removed, this can be inlined to just call differentiation
     def _process_trajectories(
         self, x: list[AxesArray], t: list[AxesArray], x_dot: Optional[list[AxesArray]]
@@ -876,7 +873,6 @@ class DiscreteSINDy(_BaseSINDy):
             u = [standardize_shape(ui) for ui in u]
         _validate_inputs(x, t, x_next, u)
 
-
         if x_next is None:
             x_next = [xi[1:] for xi in x]
             x = [xi[:-1] for xi in x]
@@ -1004,7 +1000,6 @@ class DiscreteSINDy(_BaseSINDy):
         if x_next is not None:
             x_next = [standardize_shape(xnext_i) for xnext_i in x_next]
         _validate_inputs(x, t, x_next, u)
-
 
         x_next_predict = self.predict(x, u)
 
@@ -1343,11 +1338,12 @@ def _zip_like_sequence(x, t):
     else:
         return product(x, [t])
 
+
 def _check_multiple_trajectories(
     x: TrajectoryType,
     st_grid: Optional[TrajectoryType | float],
     x_dot: Optional[TrajectoryType],
-    u: Optional[TrajectoryType]
+    u: Optional[TrajectoryType],
 ) -> bool:
     """Determine if data contains multiple trajectories
 

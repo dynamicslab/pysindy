@@ -9,6 +9,9 @@
     "results_dir": ".asv/results",
     "html_dir": ".asv/html",
     "show_commit_url": "https://github.com/$OWNER/$REPO/commit/",
+    "install_command": [
+        "in-dir={env_dir} python -m pip install {wheel_file}[dev,miosr,cvxpy,sbr]"
+    ],
     "build_command": [
         "python -m build --outdir {build_cache_dir} {build_dir}"
     ]

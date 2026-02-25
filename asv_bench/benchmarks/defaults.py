@@ -2,6 +2,7 @@ from abc import ABC
 from abc import abstractmethod
 
 import sindy_exp
+from asv_runner.benchmarks.mark import SkipNotImplemented
 
 import pysindy as ps
 
@@ -39,6 +40,8 @@ class DefaultBM(ABC):
 
     def track_score_fit(self):
         self.model.fit([self.x], [self.t])
+        if not hasattr(self.model, "feature_names_"):
+            raise SkipNotImplemented
         true_ode_align, est_ode_align = sindy_exp._utils.unionize_coeff_dicts(
             self.model, self.true_eqns
         )
@@ -73,6 +76,8 @@ class SINDyLorenz(LorenzMixin, SINDyMixin, DefaultBM):
 
 class WeakMixin:
     def make_model(self):
+        if not hasattr(ps, "WeakSINDy"):
+            raise SkipNotImplemented
         self.model = ps.WeakSINDy()
 
 

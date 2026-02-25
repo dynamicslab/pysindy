@@ -3,6 +3,7 @@ from itertools import product as iproduct
 import numpy as np
 import sindy_exp
 import sympy as sp
+from asv_runner.benchmarks.mark import SkipNotImplemented
 
 import pysindy as ps
 
@@ -64,6 +65,8 @@ class PDEFindSteady:
             optimizer=self.optimizer,
         )
         model.fit(self.U, t=0.01, x_dot=self.lhs, feature_names=["u"])
+        if not hasattr(model, "feature_names_"):
+            raise SkipNotImplemented
         true_coeff, model_coeff = sindy_exp._utils.unionize_coeff_dicts(
             model, self.true_coeff
         )
@@ -86,6 +89,9 @@ class PDEFindSteady:
         model.fit(self.U, t=0.01, x_dot=self.lhs, feature_names=["u"])
 
     def time_weak_steady(self):
+        if not hasattr(ps, "WeakSINDy"):
+            # So ASV continuous can function
+            raise SkipNotImplemented
         model = ps.WeakSINDy(
             differentiation_method=self.differentiation_method,
             feature_library=self.feature_library,
@@ -94,6 +100,9 @@ class PDEFindSteady:
         model.fit(self.U, st_grids=self.st_grid, x_dot=self.lhs, feature_names=["u"])
 
     def peakmem_weak_steady(self):
+        if not hasattr(ps, "WeakSINDy"):
+            # So ASV continuous can function
+            raise SkipNotImplemented
         model = ps.WeakSINDy(
             differentiation_method=self.differentiation_method,
             feature_library=self.feature_library,
@@ -102,6 +111,9 @@ class PDEFindSteady:
         model.fit(self.U, st_grids=self.st_grid, x_dot=self.lhs, feature_names=["u"])
 
     def track_weak_steady(self):
+        if not hasattr(ps, "WeakSINDy"):
+            # So ASV continuous can function
+            raise SkipNotImplemented
         model = ps.WeakSINDy(
             differentiation_method=self.differentiation_method,
             feature_library=self.feature_library,

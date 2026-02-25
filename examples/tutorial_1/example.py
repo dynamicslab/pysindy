@@ -138,8 +138,8 @@ X2 = np.stack((x2, y2), axis=-1)
 print(f"First trajectory has {len(t)} timepoints")
 print(f"Second trajectory has {len(t2)} timepoints")
 print(
-    f"Since time intervals are not the same (dt1={t[1]-t[0]:.4f},"
-    f"dt2={t2[1]-t2[0]:.4f}), we can't just pass t=dt"
+    f"Since time intervals are not the same (dt1={t[1] - t[0]:.4f},"
+    f"dt2={t2[1] - t2[0]:.4f}), we can't just pass t=dt"
 )
 
 model.fit([X, X2], [t, t2], feature_names=["x", "y"])

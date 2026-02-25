@@ -50,7 +50,7 @@ dev = [
     "pre-commit",
     "hypothesis",
     "jupyter-contrib-nbextensions",
-    "sindy_exp",
+    "sindy_exp>=0.3.1",
 ]
 docs = [
     "ipython",

@@ -20,10 +20,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
-      - name: Linting
-        run: |
-          pip install pre-commit
-          pre-commit run --all-files
+      - uses: pre-commit/action@v3.0.1
 
   build:
     name: Build

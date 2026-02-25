@@ -127,15 +127,18 @@ jobs:
       contents: write   # gh-pages publishing
 
     steps:
+    # checkout code
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # ASV history
 
+    # Get Python
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
+    # Restore environment if it's cached
     - name: Cache pip
       uses: actions/cache@v4
       with:
@@ -144,12 +147,14 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
+    # Otherwise, restore environment
     - name: Install dependencies
       run: |
         pip install --upgrade pip
         pip install .[dev]
         pip install asv
 
+    # Restore any cached ASV environments
     - name: Cache ASV environments
       uses: actions/cache@v4
       with:
@@ -158,11 +163,13 @@ jobs:
         restore-keys: |
           asv-${{ runner.os }}-py${{ matrix.python-version }}-
 
+    # Detect machine information for benchmarks
     - name: Setup ASV machine
       run: |
         cd asv_bench
         asv machine --yes
 
+    # Check regressions of any benchmarks
     - name: Check regression
       if: github.event_name == 'pull_request'
       run: |
@@ -170,16 +177,43 @@ jobs:
         git fetch origin $GITHUB_BASE_REF:base $GITHUB_REF:pr
         asv continuous base pr -e
 
+    # This whole second section should be a separate workflow, triggered by
+    # commit to main, not PRs
+    # Checkout gh-pages into a side folder (if it exists)
+    - uses: actions/checkout@v4
+      continue-on-error: true
+      with:
+        ref: gh-pages
+        path: gh-pages
+
+    # Restore historical ASV results into workspace
+    - name: Restore ASV history
+      run: |
+        mkdir -p asv_bench/.asv/results
+        if [ -d gh-pages/.asv/results ]; then
+          rsync -a gh-pages/.asv/results/ asv_bench/.asv/results/
+        fi
+
+    # Generate website benchmark results for new commits
     - name: Run benchmarks on main
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         cd asv_bench
-        asv run
+        asv run --skip-existing-successful
         asv publish
+
+    # Stage site payload: html + updated results
+    - name: Prepare Pages payload
+      run: |
+        rm -rf pages && mkdir -p pages/.asv
+        rsync -a asv_bench/.asv/html/ pages/
+        rsync -a asv_bench/.asv/results/ pages/.asv/results/
+
+    # Deploy
     - name: Deploy ASV dashboard to gh-pages
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: asv_bench/.asv/html
-        force_orphan: true
+        force_orphan: false

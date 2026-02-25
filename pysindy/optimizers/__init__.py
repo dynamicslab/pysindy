@@ -1,10 +1,12 @@
 from .base import BaseOptimizer
 from .base import EnsembleOptimizer
+from .evidence_greedy import EvidenceGreedy
 from .frols import FROLS
 from .sr3 import SR3
 from .ssr import SSR
 from .stlsq import STLSQ
 from .wrapped_optimizer import WrappedOptimizer
+
 
 try:
     from ._constrained_sr3 import ConstrainedSR3
@@ -46,4 +48,5 @@ __all__ = [
     "SINDyPI",
     "MIOSR",
     "SBR",
+    "EvidenceGreedy",
 ]

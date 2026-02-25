@@ -25,6 +25,7 @@ from pysindy.feature_library import SINDyPILibrary
 from pysindy.optimizers import BaseOptimizer
 from pysindy.optimizers import ConstrainedSR3
 from pysindy.optimizers import EnsembleOptimizer
+from pysindy.optimizers import EvidenceGreedy  # changes
 from pysindy.optimizers import FROLS
 from pysindy.optimizers import MIOSR
 from pysindy.optimizers import SBR
@@ -100,6 +101,7 @@ def _align_optimizer_and_1dfeatures(
         (TrappingSR3, True),
         (DummyLinearModel, False),
         (SBR, True),
+        (EvidenceGreedy, True),  # changes
     ],
 )
 def test_supports_multiple_targets(cls, support):
@@ -127,6 +129,13 @@ def data(request):
         DummyLinearModel(),
         MIOSR(),
         SBR(num_warmup=10, num_samples=10),
+        EvidenceGreedy(
+            alpha=1.0,
+            _sigma2=1e-2,
+            max_iter=100,
+            normalize_columns=True,
+            unbias=False,
+        ),  # changes
     ],
     ids=lambda param: type(param),
 )

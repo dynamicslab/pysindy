@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Linting
         run: |
           pip install pre-commit
@@ -34,7 +34,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: "3.12"
     - name: build
       run: pip install .
     - name: test import
@@ -51,7 +51,7 @@ jobs:
     - name: "Set up Python"
       uses: actions/setup-python@v4
       with:
-          python-version: "3.11"
+          python-version: "3.12"
     - name: Install doc dependencies
       run: |
         sudo apt-get update -y
@@ -72,7 +72,6 @@ jobs:
 
   tests:
     name: Tests
-    needs: linting
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

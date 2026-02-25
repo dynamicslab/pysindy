@@ -350,15 +350,12 @@ class WeakSINDy(SINDy):
         import matplotlib.pyplot as plt
         from scipy.io import loadmat
         from pathlib import Path
-        breakpoint()
-        data = loadmat(Path(__file__).parent.parent / "examples/data/burgers.mat")
+        data = loadmat(Path().resolve().parent.parent / "examples/data/burgers.mat")
         t = np.ravel(data["t"])
         x = np.ravel(data["x"])
         u = np.real(data["usol"])
         plt.figure()
         plt.imshow(u, aspect="auto")
-        plt.colorbar()
-        plt.figure()
         plt.colorbar()
 
     """

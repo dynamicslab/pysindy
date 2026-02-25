@@ -96,7 +96,7 @@ def test_integral_weights(p, d, n_grid):
         return x**2
 
     test_func = UniformEvenBump(p)
-    expected = quad(lambda x: true_f(x) * test_func.phi(np.array([x]), d), -1, 1)[0]
+    expected = quad(lambda x: true_f(x) * test_func.phi(np.array([x]), d)[0], -1, 1)[0]
     x_i = np.linspace(-1, 1, n_grid)
     f_i = true_f(x_i)
     weights = _linear_weights(x_i, d, test_func)
@@ -119,7 +119,7 @@ def test_integrate_domain1d(true_f, p, deriv_op):
     def integrand(x):
         return (
             true_f(x)
-            * test_func.phi(np.array([y_of_x(x)]), deriv_op[0])
+            * test_func.phi(np.array([y_of_x(x)]), deriv_op[0])[0]
             * dy_dx ** deriv_op[0]
         )
 
@@ -161,8 +161,8 @@ def test_integrate_domain2d(true_f, p, deriv_op):
     def integrand(y, x):  # yes... y, then x
         return (
             true_f(x, y)
-            * test_func.phi(np.array([u_of_x(x)]), deriv_op[0])
-            * test_func.phi(np.array([u_of_y(y)]), deriv_op[1])
+            * test_func.phi(np.array([u_of_x(x)]), deriv_op[0])[0]
+            * test_func.phi(np.array([u_of_y(y)]), deriv_op[1])[0]
             * du_dx ** deriv_op[0]
             * du_dy ** deriv_op[1]
         )
@@ -274,7 +274,7 @@ def test_convert_u_dot_integral(simple_time_domain):
         return 2 * x
 
     def integrand(x):
-        return true_udot(x) * test_func.phi(y_of_x(x))
+        return true_udot(x) * test_func.phi(y_of_x(x))[0]
 
     u = true_u(simple_time_domain.domain)
     expected, _ = quad(integrand, xl, xu)
@@ -313,7 +313,7 @@ def test_convert_u_dot_integral_explicit_x_dot(simple_time_domain):
         return 2 * x
 
     def integrand(x):
-        return true_udot(x) * test_func.phi(y_of_x(x))
+        return true_udot(x) * test_func.phi(y_of_x(x))[0]
 
     u = true_u(simple_time_domain.domain)
     x_dot = true_udot(simple_time_domain.domain)

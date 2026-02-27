@@ -413,6 +413,7 @@ class WeakSINDy(SINDy):
         for k, v in kwargs.items():
             setattr(self, k, v)
         self.__post_init()
+        return self
 
     def fit(
         self,
@@ -799,17 +800,17 @@ def _plan_weak_form(
     """
     terms: list[SemiTerm | Collection[SemiTerm]] = []
     term_namefuncs = []
-    for lib in lib.libraries:
+    for sublib in lib.libraries:
         no_derivs = (
-            isinstance(lib, TensoredLibrary)
-            and not any(isinstance(lib, PDELibrary) for lib in lib.libraries)
-            or not isinstance(lib, (PDELibrary, TensoredLibrary))
+            isinstance(sublib, TensoredLibrary)
+            and not any(isinstance(ssl, PDELibrary) for ssl in sublib.libraries)
+            or not isinstance(sublib, (PDELibrary, TensoredLibrary))
         )
         if no_derivs:
-            term_namefuncs.append(lib.get_feature_names)
-            terms.append(SemiTerm(None, (lib, zero_deriv), 1, zero_deriv))
-        elif isinstance(lib, PDELibrary):
-            multiindices = lib.multiindices
+            term_namefuncs.append(sublib.get_feature_names)
+            terms.append(SemiTerm(None, (sublib, zero_deriv), 1, zero_deriv))
+        elif isinstance(sublib, PDELibrary):
+            multiindices = sublib.multiindices
             if time_axis:
                 multiindices = np.hstack(
                     (multiindices, np.zeros((len(multiindices), 1), dtype=int))
@@ -819,7 +820,9 @@ def _plan_weak_form(
             terms.extend(new_terms)
         else:
             pde_lib = next(
-                sublib for sublib in lib.libraries if isinstance(sublib, PDELibrary)
+                subsublib
+                for subsublib in sublib.libraries
+                if isinstance(subsublib, PDELibrary)
             )
             multiindices = pde_lib.multiindices
             if time_axis:
@@ -828,9 +831,9 @@ def _plan_weak_form(
                 )
             non_pde_lib = TensoredLibrary(
                 [
-                    sublib
-                    for sublib in lib.libraries
-                    if not isinstance(sublib, PDELibrary)
+                    subsublib
+                    for subsublib in sublib.libraries
+                    if not isinstance(subsublib, PDELibrary)
                 ]
             )
             new_terms, new_namefuncs = _integrate_product_by_parts(

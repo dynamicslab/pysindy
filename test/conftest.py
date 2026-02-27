@@ -337,11 +337,6 @@ def generalized_library():
 
 
 @pytest.fixture
-def ode_library():
-    return PDELibrary()
-
-
-@pytest.fixture
 def pde_library(data_lorenz):
     _, spatial_grid = data_lorenz
 

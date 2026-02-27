@@ -141,7 +141,7 @@ class EmptyLibrary(BaseFeatureLibrary):
 
     def transform(self, x):
         check_is_fitted(self)
-        return np.empty((x.shape[:-1], 0))
+        return np.empty((*x.shape[:-1], 0))
 
     def get_feature_names(self, input_features=None) -> list[str]:
         return []

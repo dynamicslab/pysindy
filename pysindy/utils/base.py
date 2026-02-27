@@ -155,9 +155,10 @@ def validate_control_variables(
             else:
                 control_spatial = None
         if control_spatial != n_spatial:
-            "control variables u must have same number of spatial points as x."
+            msg = "control variables u must have same number of spatial points as x."
             f"u has {u.n_spatial} points along spatial axes, respectively. "
             f"x has {n_spatial} points along spatial axes, respectively"
+            raise ValueError(msg)
 
         return u
 

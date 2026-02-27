@@ -49,7 +49,7 @@ class PDEFindSteady:
         self.spatial_grid = spatial_grid
         st_grid = spatial_grid[..., "time", :]
         time_mesh = np.zeros_like(st_grid[..., :1])
-        self.st_grid = np.concat((st_grid, time_mesh), axis=-1)
+        self.st_grid = np.concatenate((st_grid, time_mesh), axis=-1)
         self.lhs = np.ones_like(self.st_grid[..., :1])
         self.differentiation_method = ps.FiniteDifference(order=2)
         self.feature_library = ps.PDELibrary(

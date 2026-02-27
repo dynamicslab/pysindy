@@ -6,11 +6,12 @@ from typing import Self
 import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
+from ..differentiation import FiniteDifference
+from ..differentiation.base import BaseDifferentiation
 from ..utils import AxesArray
 from ..utils import comprehend_axes
 from .base import BaseFeatureLibrary
 from .base import x_sequence_or_item
-from pysindy.differentiation import FiniteDifference
 
 
 class PDELibrary(BaseFeatureLibrary):
@@ -26,18 +27,12 @@ class PDELibrary(BaseFeatureLibrary):
         The spatial grid for computing derivatives.  Final argument is
         assumed to be spatial grid dimension.
 
-    include_interaction : boolean, optional (default True)
-        This is a different than the use for the PolynomialLibrary. If true,
-        it generates all the mixed derivative terms. If false, the library
-        will consist of only pure no-derivative terms and pure derivative
-        terms, with no mixed terms.
-
     multiindices : list of integer arrays,  (default None)
         Overrides the derivative_order to customize the included derivative
         orders. Each integer array indicates the order of differentiation
         along the corresponding axis for each derivative term.
 
-    differentiation_method : callable,  (default FiniteDifference)
+    differentiation_method:
         Spatial differentiation method.
 
      diff_kwargs: dictionary,  (default {})
@@ -64,7 +59,7 @@ class PDELibrary(BaseFeatureLibrary):
         derivative_order=1,
         spatial_grid=None,
         multiindices=None,
-        differentiation_method=FiniteDifference,
+        differentiation_method: type[BaseDifferentiation] = FiniteDifference,
         diff_kwargs={},
     ):
         self.derivative_order = derivative_order
@@ -72,7 +67,7 @@ class PDELibrary(BaseFeatureLibrary):
         self.differentiation_method = differentiation_method
         self.diff_kwargs = diff_kwargs
         if derivative_order < 0:
-            raise ValueError("The derivative order must be >0")
+            raise ValueError("The derivative order must be >=0")
 
         if spatial_grid is None or (derivative_order == 0 and multiindices is None):
             raise ValueError("Spatial grid and the derivatives must be initialized.")

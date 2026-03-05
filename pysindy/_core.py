@@ -28,6 +28,7 @@ try:  # Waiting on PEP 690 to lazy import CVXPY
 except ImportError:
     sindy_pi_flag = False
 from .optimizers import STLSQ
+from .optimizers import EvidenceGreedy
 from .optimizers.base import _BaseOptimizer
 from .optimizers.base import BaseOptimizer
 from .utils import AxesArray
@@ -37,6 +38,7 @@ from .utils import drop_nan_samples
 from .utils import SampleConcatter
 from .utils import validate_control_variables
 from .utils import validate_no_reshape
+from .utils.bindy import TemporalNoisePropagation
 
 
 TrajectoryType = TypeVar("TrajectoryType", list[np.ndarray], np.ndarray)
@@ -1128,6 +1130,250 @@ class DiscreteSINDy(_BaseSINDy):
                 if check_stop_condition(x[i]):
                     return x[: i + 1]
         return x
+
+
+class BINDy(SINDy):
+    """
+    Bayesian Identification of Nonlinear Dynamical Systems (BINDy)
+
+    Learns a dynamical model with corrections for measurement noise
+    passing through differentiation and feature library.  Maximizes a Gaussian
+    (Laplace) approximation of the posterior with a weakly informed hyper
+    prior on the feature coefficients, then greedily eliminates model features to
+    maximize Bayesian evidence.
+
+    For more information, see this paper: https://doi.org/10.1098/rspa.2024.0200 .
+
+    .. seealso::
+
+        `SBR`
+            A Bayesian optimizer that uses a more sophisticated sparsifying prior
+            and Monte Carlo sampling. Slower but more accurate.
+
+        `EnsembleOptimizer`
+            Model sparsification by b(r)agging.
+            Empirically approximating Bayesian method.
+
+    Parameters
+    ----------
+    sigma_x (required): float
+        Measurement noise standard deviation (std) for the state measurements
+        ``x``. If ``x_dot`` is provided, ``sigma_x`` is used to set the noise
+        variance ``optimizer._sigma2 = sigma_x**2``.
+
+        Otherwise, ``sigma_x`` is propagated through the
+        ``differentiation_method`` to estimate the derivative noise variance::
+
+            _sigma2 = TemporalNoisePropagation(
+                differentiation_method, t_grid, sigma_x
+            )
+
+        For multiple trajectories, ``_sigma2`` is computed per trajectory and
+        averaged.
+
+
+    optimizer
+        Optimization method used to fit the SINDy model. This must be a class
+        extending :class:`pysindy.optimizers.BaseOptimizer`.
+        The default is :class:`pysindy.optimizers.EvidenceGreedy`.
+
+    feature_library
+        Feature library object used to specify candidate right-hand side features.
+        This must be a class extending
+        :class:`pysindy.feature_library.base.BaseFeatureLibrary`.
+        The default option is :class:`pysindy.feature_library.PolynomialLibrary`.
+
+    differentiation_method
+        Method for differentiating the data. This must be a class extending
+        :class:`pysindy.differentiation.base.BaseDifferentiation` class.
+        It must also be a linear method.
+        The default option is centered finite differences.
+
+    Attributes
+    ----------
+    model : ``sklearn.pipeline.Pipeline``
+        The fitted SINDy model pipeline.
+
+    n_input_features_ : int
+        The total number of input features.
+
+    n_output_features_ : int
+        The total number of output features.
+
+    n_control_features_ : int
+        The total number of control input features.
+
+    feature_names : list of str or None
+        Names for the input features.
+
+    Notes
+    -----
+    Noise propagation from measurement noise ``sigma_x`` to the derivative
+    noise variance used by the regression (``optimizer._sigma2``) is only
+    performed when:
+
+    1. ``x_dot`` is not provided, and derivatives are estimated internally.
+    2. ``differentiation_method`` is linear (e.g.,
+       :class:`~pysindy.differentiation.FiniteDifference` or
+       :class:`~pysindy.differentiation.SmoothedFiniteDifference`).
+
+    Spectral differentiation is currently not supported for noise
+    propagation.
+
+
+
+    - FiniteDifference is strongly recommended for EvidenceGreedy because the
+      noise propagation algorithm assumes a linear differential operator. If you
+      use a different differentiator, set ``optimizer._sigma2`` manually.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from scipy.integrate import odeint
+    >>> import pysindy as ps
+    >>> from pysindy.differentiation import FiniteDifference
+    >>> from pysindy.optimizers import EvidenceGreedy
+    >>>
+    >>> def lorenz(z, t):
+    ...     x, y, z_ = z
+    ...     return [10.0 * (y - x), x * (28.0 - z_) - y, x * y - 8.0 / 3.0 * z_]
+    >>>
+    >>> t = np.arange(0, 10, 0.01)
+    >>> x0 = np.array([-8.0, 8.0, 27.0])
+    >>> sigma_x = 0.01
+    >>> x = odeint(lorenz, x0, t)
+    >>> x = x + sigma_x * np.random.normal(size=x.shape) # add noise
+    >>> dt = t[1] - t[0]
+    >>>
+    >>> model = ps.BINDy(sigma_x=sigma_x) # You MUST specify sigma_x
+    >>> model.fit(x, t=dt)
+    >>> model.print()
+
+    """
+
+    def __init__(
+        self,
+        sigma_x: float,
+        optimizer: Optional[EvidenceGreedy] = None,
+        feature_library: Optional[BaseFeatureLibrary] = None,
+        differentiation_method: Optional[FiniteDifference] = None,
+        # Only support differentiation methods that are linear.
+        # # TODO: FiniteDifference and SmoothedFiniteDifference are included
+        # as it's under FiniteDifference, but what about SpectralDerivative?
+    ):
+        if optimizer is None:
+            optimizer = EvidenceGreedy(
+                alpha=1.0,
+                _sigma2=sigma_x**2,
+                max_iter=None,
+                normalize_columns=True,
+                unbias=False,
+                verbose=False,
+            )
+        self.optimizer = optimizer
+
+        if feature_library is None:
+            feature_library = PolynomialLibrary()
+        self.feature_library = feature_library
+
+        # Match the continuous-time convention used by SINDy:
+        if differentiation_method is None:
+            differentiation_method = FiniteDifference(axis=-2)
+        self.differentiation_method = differentiation_method
+
+        self.sigma_x = sigma_x
+
+    def fit(
+        self,
+        x,
+        t,
+        x_dot=None,
+        u=None,
+        feature_names: Optional[list[str]] = None,
+    ):
+        """
+        Fit an BINDy model.
+
+        See :meth:`pysindy.SINDy.fit` for full parameter documentation.
+        """
+
+        # If derivatives are supplied, sigma_x does not define derivative-noise.
+        if x_dot is not None:
+            self.optimizer._sigma2 = self.sigma_x**2
+            msg = (
+                "BINDy: Noise is not propagated through the differentiation method. "
+                "Assuming noise variance from specified sigma_x. "
+                f"_sigma2 value used: {self.optimizer._sigma2}"
+            )
+            warnings.warn(msg, UserWarning)
+
+            return super().fit(x, t, x_dot=x_dot, u=u, feature_names=feature_names)
+
+        # Ensure we treat everything as multiple trajectories for
+        # _sigma2 calculation.
+        if not _check_multiple_trajectories(x, x_dot, u):
+            x_list, t_list, _, _ = _adapt_to_multiple_trajectories(x, t, x_dot, u)
+        else:
+            x_list, t_list = x, t
+
+        _sigma2_vals = []
+        eps = float(np.finfo(float).eps)
+
+        for xi, ti in _zip_like_sequence(x_list, t_list):
+            xi_arr = np.asarray(xi)
+            if xi_arr.ndim == 1:
+                n_samples = xi_arr.shape[0]
+            else:
+                n_samples = xi_arr.shape[-2]
+
+            # Build a time grid for _sigma2 mapping
+            if np.isscalar(ti):
+                dt = float(ti)
+                if dt <= 0:
+                    raise ValueError("t (dt) must be positive.")
+                t_grid = np.arange(n_samples, dtype=float) * dt
+            else:
+                t_grid = np.asarray(ti, dtype=float)
+                if t_grid.ndim != 1:
+                    raise ValueError("t must be a 1D array of time points.")
+                if len(t_grid) != n_samples:
+                    raise ValueError(
+                        f"Length of t ({len(t_grid)}) does not match "
+                        f"number of samples ({n_samples})."
+                    )
+            # Call TemporalNoisePropagation to compute an averaged _sigma2
+            _sigma2_i = TemporalNoisePropagation(
+                self.differentiation_method,
+                t_grid,
+                float(self.sigma_x),
+            )
+            _sigma2_vals.append(float(_sigma2_i))
+
+        _sigma2_mean = float(np.mean(_sigma2_vals))
+        _sigma2_mean = max(_sigma2_mean, eps)  # must be positive
+
+        # If user provided a non-Bayesian optimizer, _sigma2
+        # attribute may not exist. In that case,
+        # we raise an error to avoid mathematically inconsistency
+        # with the expectation of a Bayesian optimization.
+        # NOTE: This is current commented out because checks are done
+        # in the BINDy constructor has ensured that the optimizer is
+        # an EvidenceGreedy instance.
+        # If we later allow users to pass in other optimizers,
+        # we should re-enable this check.
+        #
+        # if not hasattr(self.optimizer, "_sigma2"):
+        #     raise AttributeError(
+        #         "BINDy requires an optimizer with a "
+        #         "'_sigma2' attribute. Got optimizer of type: "
+        #         + type(self.optimizer).__name__
+        #     )
+
+        # Set _sigma2 on the underlying optimizer
+        self.optimizer._sigma2 = _sigma2_mean
+
+        # Now run the standard SINDy fitting pipeline.
+        return super().fit(x, t, x_dot=x_dot, u=u, feature_names=feature_names)
 
 
 def _zip_like_sequence(x, t):

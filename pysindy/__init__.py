@@ -14,6 +14,7 @@ from . import utils
 
 from ._core import SINDy
 from ._core import DiscreteSINDy
+from ._core import BINDy
 from ._core import AxesArray
 from .differentiation import BaseDifferentiation
 from .differentiation import FiniteDifference
@@ -68,6 +69,7 @@ except (ImportError, NameError):
 __all__ = [
     "SINDy",
     "DiscreteSINDy",
+    "BINDy",
     "differentiation",
     "feature_library",
     "optimizers",

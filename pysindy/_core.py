@@ -1378,8 +1378,8 @@ def _check_multiple_trajectories(
     )
     if mixed_trajectories:
         raise TypeError(
-            "If x, t, x_dot, or u are a Sequence of trajectories, each must be a"
-            " Sequence of trajectories or None."
+            "If x, t, x_dot, u, or other arguments are a Sequence of trajectories, all"
+            " must be a Sequence of trajectories or None."
         )
     if isinstance(x, Sequence):
         matching_lengths = (x_dot is None or len(x) == len(x_dot)) and (

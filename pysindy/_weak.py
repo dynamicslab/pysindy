@@ -421,7 +421,7 @@ class WeakSINDy(SINDy):
         st_grids: np.ndarray | Sequence[np.ndarray],
         x_dot: Optional[np.ndarray | Sequence[FloatND]] = None,
         *,
-        H_xt: Optional[float | FloatND | Sequence[FloatND]] = None,
+        H_xt: Optional[float | Float1D | Sequence[float | Float1D]] = None,
         u: Optional[np.ndarray | Sequence[FloatND]] = None,
         feature_names: Optional[list[str]] = None,
     ) -> Self:
@@ -429,25 +429,26 @@ class WeakSINDy(SINDy):
 
         Parameters
         ----------
-        x : array-like or list of array-like, shape (\*n_spatial, n_time, \
+        x : array-like or list thereof, shape (\*n_spatial, n_time, \
             n_system_coordinates).
             Spatiotemporal state data.  Leading axes are spatial axes; the
             second-to-last axis is time; the last axis indexes the state
             coordinates.  Pass a list for multiple trajectories.
-        st_grids : array-like or list of array-like
+        st_grids : array-like or list thereof
             The spatiotemporal coordinate grid corresponding to ``x``, in the
             same shape as ``x``.  The last axis indexes the coordinate values
             (spatial axes first, then time).  Must be provided for each
             trajectory if ``x`` is a list.
-        x_dot : array-like or list of array-like, optional
+        x_dot : array-like or list thereof, optional
             Pre-computed time derivatives of ``x``, in the same shape as ``x``.
             For static problems such as Poisson's equation, a length-1 time
             axis is required nonetheless.
         H_xt : float, array-like, or list thereof, optional
             Subdomain half-widths along each spatiotemporal axis.  Passed to
             :func:`_normalize_subdomain_dims`.  If ``None``, defaults to
-            one-twentieth of the corresponding domain length.
-        u : array-like or list of array-like, optional
+            one-twentieth of the corresponding domain length.  If scalar,
+            used for all dimensions
+        u : array-like or list thereof, optional
             Control variables, same leading shape as ``x``.
         feature_names : list of str, optional
             Names for the state-variable coordinates.  Defaults to
@@ -469,9 +470,13 @@ class WeakSINDy(SINDy):
             x = cast(np.ndarray, x)
             st_grids = cast(np.ndarray, st_grids)
             u = cast(Optional[np.ndarray], u)
+            _check_multiple_trajectories(x, None, H_xt, None)
             x, st_grids, x_dot, u = _adapt_to_multiple_trajectories(
                 x, st_grids, x_dot, u
             )
+            if H_xt is not None:
+                H_xt = [H_xt]
+        H_xt = cast(Optional[Sequence[float | Float1D]], H_xt)
         x = [standardize_shape(xi) for xi in x]
         st_grids = [standardize_shape(grid) for grid in st_grids]
         if x_dot is not None:
@@ -511,7 +516,8 @@ class WeakSINDy(SINDy):
             x_smooth: list[AxesArray] = []
             for xi, ti in _zip_like_sequence(x, t):
                 self.differentiation_method(xi, ti)
-                x_smooth.append(self.differentiation_method.smoothed_x_)
+                smoothed = self.differentiation_method.smoothed_x_
+                x_smooth.append(AxesArray(smoothed, axes=xi.axes))
             time_deriv = np.zeros((1, grid_ndim), dtype=int)
             time_deriv[..., -1] = 1
         else:
@@ -846,47 +852,49 @@ def _plan_weak_form(
 
 def _normalize_subdomain_dims(
     st_grids: list[AxesArray],
-    subdomain_dims: Optional[float | FloatND | Sequence[FloatND]],
+    subdomain_dims: Optional[Sequence[float | Float1D]],
 ) -> list[AxesArray]:
-    """Convert subdomain_dims from various user types to a list of arrays"""
-    n_traj = len(st_grids)
+    """Convert subdomain_dims from various input types to a list of 1-D arrays"""
     grid_ndim = st_grids[0].ndim - 1
     xts = [_get_spatial_endpoints(grid) for grid in st_grids]
-    L_xts = [xt2 - xt1 for xt1, xt2 in xts]
+    L_xts = cast(list[AxesArray], [xt2 - xt1 for xt1, xt2 in xts])
+
     if subdomain_dims is not None:
-        if np.isscalar(subdomain_dims):
-            subdomain_dims = [
-                AxesArray(np.array(grid_ndim * [subdomain_dims]), {"ax_coord": 0})
-                for _ in range(n_traj)
-            ]
-        elif isinstance(subdomain_dims, np.ndarray):
-            subdomain_dims = [
-                AxesArray(subdomain_dims, {"ax_coord": 0}) for _ in range(n_traj)
-            ]
-        else:
-            subdomain_dims = cast(Sequence[FloatND], subdomain_dims)
-            subdomain_dims = [AxesArray(dim, {"ax_coord": 0}) for dim in subdomain_dims]
-        if any([grid_ndim != len(dims) for dims in subdomain_dims]):
+        normalized_dims: list[AxesArray] = []
+        for dim in subdomain_dims:
+            if isinstance(dim, (float, int)):
+                normalized_dims.append(
+                    AxesArray(np.array(grid_ndim * [dim]), {"ax_coord": 0})
+                )
+            elif isinstance(dim, np.ndarray):
+                normalized_dims.append(AxesArray(dim, {"ax_coord": 0}))
+            else:
+                raise ValueError(
+                    "input subdomain dimensions must be a float, a 1-D array, lists "
+                    "thereof, or None"
+                )
+
+        if any([grid_ndim != len(dims) for dims in normalized_dims]):
             raise ValueError(
                 "The user-defined grid (spatiotemporal_grid) and "
                 "the user-defined sizes of the subdomains for the "
                 "weak form do not have the same # of spatiotemporal "
                 "dimensions. For instance, if spatiotemporal_grid is 4D, "
-                "then subdomain_dims should contain a list of four "
-                "subdomain lengths."
+                "then subdomain_dims should either be a scalar or contain"
+                "an array of four subdomain lengths."
             )
-        if any([(dim < 0).any() for dim in subdomain_dims]):
+        if any([(dim < 0).any() for dim in normalized_dims]):
             raise ValueError("subdomain dimensions must be positive numbers.")
         elif any(
-            [(dim >= L_xt / 2.0).any() for dim, L_xt in zip(subdomain_dims, L_xts)]
+            [(dim >= L_xt / 2.0).any() for dim, L_xt in zip(normalized_dims, L_xts)]
         ):
             raise ValueError(
                 "Some subdomain dimension is larger than half the "
                 "corresponding grid dimension."
             )
     else:
-        subdomain_dims = [L_xt / 20.0 for L_xt in L_xts]
-    return subdomain_dims
+        normalized_dims = cast(list[AxesArray], [L_xt / 20.0 for L_xt in L_xts])
+    return normalized_dims
 
 
 def convert_u_dot_integral(

@@ -846,8 +846,10 @@ class SampleConcatter(TransformerMixin):
         return weights.reshape(-1)
 
 
-def concat_sample_axis(x_list: List[AxesArray]):
+def concat_sample_axis(x_list: List[AxesArray], flatten=False):
     """Concatenate all trajectories and axes used to create samples."""
+    if x_list is None:
+        return None
     new_arrs = []
     for x in x_list:
         sample_ax_names = ("ax_spatial", "ax_time", "ax_sample")

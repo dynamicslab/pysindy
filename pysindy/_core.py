@@ -35,7 +35,6 @@ from .utils import AxesArray
 from .utils import comprehend_axes
 from .utils import concat_sample_axis
 from .utils import drop_nan_samples
-from .utils import SampleConcatter
 from .utils import validate_control_variables
 from .utils import validate_no_reshape
 from .utils.bindy import TemporalNoisePropagation
@@ -122,7 +121,7 @@ class _BaseSINDy(BaseEstimator, ABC):
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
         x_feat = self.feature_library.transform(x)
-        x_feat = [SampleConcatter().fit_transform([xi]) for xi in x_feat]
+        x_feat = [concat_sample_axis([xi]) for xi in x_feat]
 
         result = [self.optimizer.predict(xi) for xi in x_feat]
         result = [
@@ -418,9 +417,12 @@ class SINDy(_BaseSINDy):
 
         x_dot = concat_sample_axis(x_dot)
         x_list = self.feature_library.fit_transform(x)
-        sc = SampleConcatter()
-        x = sc.fit_transform(x_list)
-        w_concat = sc.transform_sample_weight(sample_weight)
+        x = concat_sample_axis(x_list)
+        w_concat = (
+            concat_sample_axis(sample_weight).reshape(-1)
+            if sample_weight is not None
+            else None
+        )
         self.optimizer.fit(x, x_dot, sample_weight=w_concat)
         self._fit_shape()
 
@@ -530,15 +532,15 @@ class SINDy(_BaseSINDy):
 
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)
+        w_concat = concat_sample_axis(sample_weight)
 
-        x_dot, x_dot_predict, good_idx = drop_nan_samples(
-            x_dot, x_dot_predict, return_indices=True
-        )
-
-        if sample_weight is not None:
-            sc = SampleConcatter()
-            w_concat = sc.transform_sample_weight(sample_weight)
-            metric_kws["sample_weight"] = w_concat[good_idx]
+        if w_concat is not None:
+            x_dot, x_dot_predict, w_concat = drop_nan_samples(
+                x_dot, x_dot_predict, w=w_concat
+            )
+            metric_kws["sample_weight"] = w_concat.reshape(-1)
+        else:
+            x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
 
         return metric(x_dot, x_dot_predict, **metric_kws)
 
@@ -924,11 +926,14 @@ class DiscreteSINDy(_BaseSINDy):
         self.feature_names = feature_names
 
         x_next = concat_sample_axis(x_next)
-        x_list = self.feature_library.fit_transform(x)
-        sc = SampleConcatter()
-        x = sc.fit_transform(x_list)
+        x = self.feature_library.fit_transform(x)
+        x = concat_sample_axis(x)
 
-        w_concat = sc.transform_sample_weight(sample_weight)
+        w_concat = (
+            concat_sample_axis(sample_weight).reshape(-1)
+            if sample_weight is not None
+            else None
+        )
 
         self.optimizer.fit(x, x_next, sample_weight=w_concat)
         self._fit_shape()
@@ -1057,15 +1062,15 @@ class DiscreteSINDy(_BaseSINDy):
 
         x_next = concat_sample_axis(x_next)
         x_next_predict = concat_sample_axis(x_next_predict)
+        w_concat = concat_sample_axis(sample_weight)
 
-        x_next, x_next_predict, good_idx = drop_nan_samples(
-            x_next, x_next_predict, return_indices=True
-        )
-
-        if sample_weight is not None:
-            sc = SampleConcatter()
-            w_concat = sc.transform_sample_weight(sample_weight)
-            metric_kws["sample_weight"] = w_concat[good_idx]
+        if w_concat is not None:
+            x_next, x_next_predict, w_concat = drop_nan_samples(
+                x_next, x_next_predict, w=w_concat
+            )
+            metric_kws["sample_weight"] = w_concat.reshape(-1)
+        else:
+            x_next, x_next_predict = drop_nan_samples(x_next, x_next_predict)
 
         return metric(x_next, x_next_predict, **metric_kws)
 

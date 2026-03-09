@@ -582,6 +582,24 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
     assert np.all(model.coefficients()[0, :-1] == 0)
 
 
+def _fit_model(model, x, t_step, *, x_dot=None, sample_weight=None):
+    kwargs = {"t": t_step}
+    if x_dot is not None:
+        kwargs["x_dot"] = x_dot
+    if sample_weight is not None:
+        kwargs["sample_weight"] = sample_weight
+    model.fit(x, **kwargs)
+
+
+def _score_model(model, x, t_step, *, x_dot=None, sample_weight=None):
+    kwargs = {"t": t_step}
+    if x_dot is not None:
+        kwargs["x_dot"] = x_dot
+    if sample_weight is not None:
+        kwargs["sample_weight"] = sample_weight
+    return model.score(x, **kwargs)
+
+
 @pytest.mark.parametrize(
     "model_cls,t_step",
     [
@@ -592,38 +610,26 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
 def test_sample_weight_fit(data_2d_linear, model_cls, t_step):
     (x_a, xdot_a), (x_b, xdot_b) = data_2d_linear
     x_trajs = [x_a, x_a, x_b]
-
     xdot_trajs = [xdot_a, xdot_a, xdot_b]
     sample_weight = [
         np.ones((len(x_a), 1)),
         np.ones((len(x_a), 1)),
         10 * np.ones((len(x_b), 1)),
     ]
+    fit_x_dot = xdot_trajs if model_cls is SINDy else None
 
     model = model_cls(optimizer=LinearRegression(fit_intercept=False))
-    if model_cls is SINDy:
-        model.fit(x_trajs, t=t_step, x_dot=xdot_trajs)
-        coef_unweighted = np.copy(model.optimizer.coef_)
-        model.fit(x_trajs, t=t_step, x_dot=xdot_trajs, sample_weight=sample_weight)
-        coef_weighted = np.copy(model.optimizer.coef_)
-    else:
-        model.fit(x_trajs, t=t_step)
-        coef_unweighted = np.copy(model.optimizer.coef_)
-        model.fit(x_trajs, t=t_step, sample_weight=sample_weight)
-        coef_weighted = np.copy(model.optimizer.coef_)
+    _fit_model(model, x_trajs, t_step, x_dot=fit_x_dot)
+    coef_unweighted = np.copy(model.optimizer.coef_)
+    _fit_model(model, x_trajs, t_step, x_dot=fit_x_dot, sample_weight=sample_weight)
+    coef_weighted = np.copy(model.optimizer.coef_)
 
     model_A = model_cls(optimizer=LinearRegression(fit_intercept=False))
-    if model_cls is SINDy:
-        model_A.fit([x_a], t=t_step, x_dot=[xdot_a])
-    else:
-        model_A.fit([x_a], t=t_step)
+    _fit_model(model_A, [x_a], t_step, x_dot=[xdot_a] if model_cls is SINDy else None)
     coef_A = np.copy(model_A.optimizer.coef_)
 
     model_B = model_cls(optimizer=LinearRegression(fit_intercept=False))
-    if model_cls is SINDy:
-        model_B.fit([x_b], t=t_step, x_dot=[xdot_b])
-    else:
-        model_B.fit([x_b], t=t_step)
+    _fit_model(model_B, [x_b], t_step, x_dot=[xdot_b] if model_cls is SINDy else None)
     coef_B = np.copy(model_B.optimizer.coef_)
 
     expected_unweighted = (2 * coef_A + coef_B) / 3.0
@@ -639,40 +645,28 @@ def test_sample_weight_fit(data_2d_linear, model_cls, t_step):
 @pytest.mark.parametrize(
     "model_cls,t_step",
     [
-        # (SINDy, 0.1),
+        (SINDy, 0.1),
         (DiscreteSINDy, 1),
     ],
 )
 def test_sample_weight_score(data_2d_linear, model_cls, t_step):
     (x_a, xdot_a), (x_b, xdot_b) = data_2d_linear
     x_trajs = [x_a, x_b]
+    xdot_trajs = [xdot_a, xdot_b]
+    sample_weight = [
+        0.1 * np.ones((len(x_a), 1)),
+        np.ones((len(x_b), 1)),
+    ]
+    score_x_dot = xdot_trajs if model_cls is SINDy else None
 
-    if model_cls is SINDy:
-        xdot_trajs = [xdot_a, xdot_b]
-        sample_weight = [
-            0.1 * np.ones((len(x_a), 1)),
-            np.ones((len(x_b), 1)),
-        ]
-        model = SINDy(optimizer=LinearRegression(fit_intercept=False))
-        model.fit(x_trajs, t=t_step, x_dot=xdot_trajs)
-        score_unweighted = model.score(x_trajs, t=t_step, x_dot=xdot_trajs)
+    model = model_cls(optimizer=LinearRegression(fit_intercept=False))
+    _fit_model(model, x_trajs, t_step, x_dot=score_x_dot)
+    score_unweighted = _score_model(model, x_trajs, t_step, x_dot=score_x_dot)
 
-        model.fit(x_trajs, t=t_step, x_dot=xdot_trajs, sample_weight=sample_weight)
-        score_weighted = model.score(
-            x_trajs, t=t_step, x_dot=xdot_trajs, sample_weight=sample_weight
-        )
-
-    else:  # DiscreteSINDy
-        sample_weight = [
-            0.1 * np.ones((len(x_a), 1)),
-            np.ones((len(x_b), 1)),
-        ]
-        model = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
-        model.fit(x_trajs, t=t_step)
-        score_unweighted = model.score(x_trajs, t=t_step)
-
-        model.fit(x_trajs, t=t_step, sample_weight=sample_weight)
-        score_weighted = model.score(x_trajs, t=t_step, sample_weight=sample_weight)
+    _fit_model(model, x_trajs, t_step, x_dot=score_x_dot, sample_weight=sample_weight)
+    score_weighted = _score_model(
+        model, x_trajs, t_step, x_dot=score_x_dot, sample_weight=sample_weight
+    )
 
     for s in [score_unweighted, score_weighted]:
         assert isinstance(s, float)

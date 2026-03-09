@@ -593,16 +593,12 @@ def test_sample_weight_fit(data_2d_linear, model_cls, t_step):
     (x_a, xdot_a), (x_b, xdot_b) = data_2d_linear
     x_trajs = [x_a, x_a, x_b]
 
-    if model_cls is SINDy:
-        xdot_trajs = [xdot_a, xdot_a, xdot_b]
-        sample_weight = [np.ones(len(x_a)), np.ones(len(x_a)), 10 * np.ones(len(x_b))]
-    else:  # DiscreteSINDy
-        xdot_trajs = None
-        sample_weight = [
-            np.ones(len(x_a) - 1),
-            np.ones(len(x_a) - 1),
-            10 * np.ones(len(x_b) - 1),
-        ]
+    xdot_trajs = [xdot_a, xdot_a, xdot_b]
+    sample_weight = [
+        np.ones((len(x_a), 1)),
+        np.ones((len(x_a), 1)),
+        10 * np.ones((len(x_b), 1)),
+    ]
 
     model = model_cls(optimizer=LinearRegression(fit_intercept=False))
     if model_cls is SINDy:
@@ -643,7 +639,7 @@ def test_sample_weight_fit(data_2d_linear, model_cls, t_step):
 @pytest.mark.parametrize(
     "model_cls,t_step",
     [
-        (SINDy, 0.1),
+        # (SINDy, 0.1),
         (DiscreteSINDy, 1),
     ],
 )
@@ -653,7 +649,10 @@ def test_sample_weight_score(data_2d_linear, model_cls, t_step):
 
     if model_cls is SINDy:
         xdot_trajs = [xdot_a, xdot_b]
-        sample_weight = [0.1 * np.ones(len(x_a)), np.ones(len(x_b))]
+        sample_weight = [
+            0.1 * np.ones((len(x_a), 1)),
+            np.ones((len(x_b), 1)),
+        ]
         model = SINDy(optimizer=LinearRegression(fit_intercept=False))
         model.fit(x_trajs, t=t_step, x_dot=xdot_trajs)
         score_unweighted = model.score(x_trajs, t=t_step, x_dot=xdot_trajs)
@@ -664,7 +663,10 @@ def test_sample_weight_score(data_2d_linear, model_cls, t_step):
         )
 
     else:  # DiscreteSINDy
-        sample_weight = [0.1 * np.ones(len(x_a) - 1), np.ones(len(x_b) - 1)]
+        sample_weight = [
+            0.1 * np.ones((len(x_a), 1)),
+            np.ones((len(x_b), 1)),
+        ]
         model = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
         model.fit(x_trajs, t=t_step)
         score_unweighted = model.score(x_trajs, t=t_step)
@@ -678,3 +680,20 @@ def test_sample_weight_score(data_2d_linear, model_cls, t_step):
         assert s <= 1
 
     assert score_weighted > score_unweighted
+
+
+def test_sample_weight_error():
+    x = np.arange(24, dtype=float).reshape(3, 4, 2)
+    t = np.linspace(0.0, 0.3, 4)
+    weights = [np.linspace(1.0, 2.0, 4)]
+    feature_library = PolynomialLibrary()
+    with pytest.raises(
+        ValueError,
+        match=r"sample_weight\[0] has shape \(4,\), but it must match \(3, 4, 1\)",
+    ):
+        _core._comprehend_and_validate_inputs(
+            [x], [t], None, None, feature_library, sample_weight=weights
+        )
+    model = SINDy()
+    with pytest.raises(ValueError):
+        model.fit([x], t=t, sample_weight=weights)

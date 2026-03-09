@@ -104,7 +104,9 @@ class _BaseSINDy(BaseEstimator, ABC):
         else:
             multiple_trajectories = True
 
-        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
+        x, _, u, _ = _comprehend_and_validate_inputs(
+            x, 1, None, u, self.feature_library
+        )
 
         check_is_fitted(self)
         if self.n_control_features_ > 0 and u is None:
@@ -381,7 +383,10 @@ class SINDy(_BaseSINDy):
             Names for the input features (e.g. :code:`['x', 'y', 'z']`).
             If None, will use :code:`['x0', 'x1', ...]`.
 
-        sample_weight : list of 1D array-like, shape (n_samples, ).
+        sample_weight : list of array-like
+            Each entry must match the spatial/time shape of the corresponding
+            trajectory (i.e., have the same axes as ``x`` with the coordinate
+            axis collapsed to length 1). Automatic broadcasting is not applied.
             Weights to give to the samples to give more importance
             to less noisy or more informative samples.
 
@@ -394,8 +399,8 @@ class SINDy(_BaseSINDy):
             x, t, x_dot, u, sample_weight = _adapt_to_multiple_trajectories(
                 x, t, x_dot, u, sample_weight
             )
-        x, x_dot, u = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library
+        x, x_dot, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library, sample_weight
         )
 
         if x_dot is None:
@@ -415,12 +420,7 @@ class SINDy(_BaseSINDy):
         x_list = self.feature_library.fit_transform(x)
         sc = SampleConcatter()
         x = sc.fit_transform(x_list)
-        w_concat = (
-            sc.transform_sample_weight(x_list, sample_weight)
-            if sample_weight is not None
-            else None
-        )
-
+        w_concat = sc.transform_sample_weight(sample_weight)
         self.optimizer.fit(x, x_dot, sample_weight=w_concat)
         self._fit_shape()
 
@@ -498,7 +498,10 @@ class SINDy(_BaseSINDy):
             <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
             for more options.
 
-        sample_weight : list of 1D array-like, shape (n_samples, ).
+        sample_weight : list of array-like
+            Each entry must match the spatial/time shape of the corresponding
+            trajectory (same axes as ``x`` with the coordinate axis collapsed
+            to length 1). Automatic broadcasting is not applied.
             Weights to give to the samples to give more importance
             to less noisy or more informative samples.
 
@@ -516,8 +519,8 @@ class SINDy(_BaseSINDy):
             x, t, x_dot, u, sample_weight = _adapt_to_multiple_trajectories(
                 x, t, x_dot, u, sample_weight
             )
-        x, x_dot, u = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library
+        x, x_dot, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library, sample_weight
         )
 
         x_dot_predict = self.predict(x, u)
@@ -534,7 +537,7 @@ class SINDy(_BaseSINDy):
 
         if sample_weight is not None:
             sc = SampleConcatter()
-            w_concat = sc.transform_sample_weight(x, sample_weight)
+            w_concat = sc.transform_sample_weight(sample_weight)
             metric_kws["sample_weight"] = w_concat[good_idx]
 
         return metric(x_dot, x_dot_predict, **metric_kws)
@@ -881,7 +884,10 @@ class DiscreteSINDy(_BaseSINDy):
             Names for the input features (e.g. :code:`['x', 'y', 'z']`).
             If None, will use :code:`['x0', 'x1', ...]`.
 
-        sample_weight : list of 1D array-like, shape (n_samples, ).
+        sample_weight : list of array-like
+            Each entry must match the spatial/time shape of the corresponding
+            trajectory (same axes as ``x`` with the coordinate axis collapsed
+            to length 1). Automatic broadcasting is not applied.
             Weights to give to the samples to give more importance
             to less noisy or more informative samples.
 
@@ -894,8 +900,8 @@ class DiscreteSINDy(_BaseSINDy):
             x, t, x_next, u, sample_weight = _adapt_to_multiple_trajectories(
                 x, t, x_next, u, sample_weight
             )
-        x, x_next, u = _comprehend_and_validate_inputs(
-            x, t, x_next, u, self.feature_library
+        x, x_next, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library, sample_weight
         )
 
         if x_next is None:
@@ -903,6 +909,8 @@ class DiscreteSINDy(_BaseSINDy):
             x = [xi[:-1] for xi in x]
             if u is not None:
                 u = [ui[:-1] for ui in u]
+            if sample_weight is not None:
+                sample_weight = [wi[1:] for wi in sample_weight]
 
         # Append control variables
         if u is None:
@@ -920,11 +928,7 @@ class DiscreteSINDy(_BaseSINDy):
         sc = SampleConcatter()
         x = sc.fit_transform(x_list)
 
-        w_concat = (
-            sc.transform_sample_weight(x_list, sample_weight)
-            if sample_weight is not None
-            else None
-        )
+        w_concat = sc.transform_sample_weight(sample_weight)
 
         self.optimizer.fit(x, x_next, sample_weight=w_concat)
         self._fit_shape()
@@ -1020,7 +1024,10 @@ class DiscreteSINDy(_BaseSINDy):
             <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
             for more options.
 
-        sample_weight : list of 1D array-like, shape (n_samples, ).
+        sample_weight : list of array-like
+            Each entry must match the spatial/time shape of the corresponding
+            trajectory (same axes as ``x`` with the coordinate axis collapsed
+            to length 1). Automatic broadcasting is not applied.
             Weights to give to the samples to give more importance
             to less noisy or more informative samples.
 
@@ -1037,8 +1044,8 @@ class DiscreteSINDy(_BaseSINDy):
             x, t, x_next, u, sample_weight = _adapt_to_multiple_trajectories(
                 x, t, x_next, u, sample_weight
             )
-        x, x_next, u = _comprehend_and_validate_inputs(
-            x, t, x_next, u, self.feature_library
+        x, x_next, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library, sample_weight
         )
 
         x_next_predict = self.predict(x, u)
@@ -1057,7 +1064,7 @@ class DiscreteSINDy(_BaseSINDy):
 
         if sample_weight is not None:
             sc = SampleConcatter()
-            w_concat = sc.transform_sample_weight(x, sample_weight)
+            w_concat = sc.transform_sample_weight(sample_weight)
             metric_kws["sample_weight"] = w_concat[good_idx]
 
         return metric(x_next, x_next_predict, **metric_kws)
@@ -1312,7 +1319,7 @@ class BINDy(SINDy):
         # Ensure we treat everything as multiple trajectories for
         # _sigma2 calculation.
         if not _check_multiple_trajectories(x, x_dot, u):
-            x_list, t_list, _, _ = _adapt_to_multiple_trajectories(x, t, x_dot, u)
+            x_list, t_list, _, _, _ = _adapt_to_multiple_trajectories(x, t, x_dot, u)
         else:
             x_list, t_list = x, t
 
@@ -1460,7 +1467,9 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u, sample_weight=None) -> tuple
     return x, t, x_dot, u, sample_weight
 
 
-def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
+def _comprehend_and_validate_inputs(
+    x, t, x_dot, u, feature_library, sample_weight=None
+):
     """Validate input types, reshape arrays, and label axes"""
 
     def comprehend_and_validate(arr, t):
@@ -1511,4 +1520,32 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
             )
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
 
-    return x, x_dot, u
+    if sample_weight is not None:
+        validated_weights = []
+        for traj_idx, (xi, wi) in enumerate(zip(x, sample_weight)):
+            weight_arr = np.asarray(wi, dtype=float)
+            if weight_arr.ndim == 0:
+                raise ValueError(
+                    "sample_weight must be array-like with at least one dimension."
+                )
+
+            target_shape = list(xi.shape)
+            target_shape[xi.ax_coord] = 1
+            target_shape_tuple = tuple(target_shape)
+
+            if weight_arr.shape != target_shape_tuple:
+                raise ValueError(
+                    f"sample_weight[{traj_idx}] has shape {weight_arr.shape}, "
+                    "but it must "
+                    f"match {target_shape_tuple} to align with the "
+                    "spatial/time axes of "
+                    f"x[{traj_idx}] (shape {tuple(xi.shape)}). Please reshape "
+                    "your weights before passing them to SINDy."
+                )
+
+            weight_arr = AxesArray(weight_arr, xi.axes)
+            weight_arr = validate_no_reshape(weight_arr)
+            validated_weights.append(weight_arr)
+        sample_weight = validated_weights
+
+    return x, x_dot, u, sample_weight

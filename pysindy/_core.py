@@ -908,8 +908,6 @@ class DiscreteSINDy(_BaseSINDy):
             x = [xi[:-1] for xi in x]
             if u is not None:
                 u = [ui[:-1] for ui in u]
-            if sample_weight is not None:
-                sample_weight = [wi[1:] for wi in sample_weight]
 
         # Append control variables
         if u is None:

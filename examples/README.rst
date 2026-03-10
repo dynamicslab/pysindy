@@ -47,6 +47,17 @@ Some are copied from another repository that contains dependency information and
 potentially a greater description.
 
 
+`Partial Differential Equations <./howto_PDE/example.ipynb>`_
+-------------------------------------------------------------------------------------------------------------------------------
+This notebook shows how to use PySINDy to identify partial differential equations (PDEs)
+from spatiotemporal data.  It presents PDEFIND, WeakSINDy, and Trapping on reduced-order
+models.
+
+.. toctree::
+    :hidden:
+    :maxdepth: 1
+
+    ./howto_PDE/example
 
 `Scikit-learn compatibility <./4_scikit_learn_compatibility/example.ipynb>`_
 -------------------------------------------------------------------------------------------------------------------------------
@@ -92,16 +103,6 @@ This notebook applies the ``SINDyPI`` optimizer to a simple implicit ODE and was
 
     ./9_sindypi_with_sympy/example
 
-`PDEFIND <./10_PDEFIND_examples/example.ipynb>`_
-----------------------------------------------------------------------------------------------
-This notebook applies the PDEFIND algorithm (SINDy for PDE identification) to a number of PDEs, and was originally proposed in this paper: Rudy, Samuel H., et al. "Data-driven discovery of partial differential equations." Science Advances 3.4 (2017): e1602614.
-
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./10_PDEFIND_examples/example
-
 `Greedy Algorithms <./11_SSR_FROLS_examples/example.ipynb>`_
 -----------------------------------------------------------------------------------------------------
 This notebook uses the step-wise sparse regression (SSR) and forward-regression orthogonal least-squares (FROLS) algorithms, which are greedy algorithms that iteratively truncate (or add) one nonzero coefficient at each algorithm iteration.
@@ -111,16 +112,6 @@ This notebook uses the step-wise sparse regression (SSR) and forward-regression 
     :maxdepth: 1
 
     ./11_SSR_FROLS_examples/example
-
-`Weak formulation SINDy <./12_weakform_SINDy_examples/example.ipynb>`_
---------------------------------------------------------------------------------------------------------------
-This notebook uses SINDy to identify the weak-formulation of a system of ODEs or PDEs, adding significant robustness against noise in the data.
-
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./12_weakform_SINDy_examples/example
 
 `Model ensembles <./13_ensembling/example.ipynb>`_
 ----------------------------------------------------------------------------------------------
@@ -197,6 +188,15 @@ They may require substantial computing resources.
 
     Use the ``ConstrainedSR3`` optimizer to build a constrained model for the temporal
     POD modes of a plasma simulation.
+
+
+.. pysindy-example::
+    :key: pdes
+    :title: More advanced PDE examples
+
+    PDEFind and WeakSINDy applied to a greater variety of PDEs, reproducing results
+    from relevant papers.  Includes 2D and 3D reaction-diffusion systems.
+
 
 .. pysindy-example::
     :key: trapping

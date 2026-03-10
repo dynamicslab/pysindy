@@ -136,8 +136,7 @@ def drop_nan_samples(x, y, w=None):
     y = y.take(good_sample_ind, axis=y.ax_sample)
     if w is not None:
         w = w.take(good_sample_ind, axis=w.ax_sample)
-        return x, y, w
-    return x, y
+    return x, y, w
 
 
 def reorder_constraints(arr, n_features, output_order="feature"):

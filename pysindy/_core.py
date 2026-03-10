@@ -533,14 +533,11 @@ class SINDy(_BaseSINDy):
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)
         w_concat = concat_sample_axis(sample_weight)
-
+        x_dot, x_dot_predict, w_concat = drop_nan_samples(
+            x_dot, x_dot_predict, w=w_concat
+        )
         if w_concat is not None:
-            x_dot, x_dot_predict, w_concat = drop_nan_samples(
-                x_dot, x_dot_predict, w=w_concat
-            )
             metric_kws["sample_weight"] = w_concat.reshape(-1)
-        else:
-            x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
 
         return metric(x_dot, x_dot_predict, **metric_kws)
 
@@ -1063,14 +1060,11 @@ class DiscreteSINDy(_BaseSINDy):
         x_next = concat_sample_axis(x_next)
         x_next_predict = concat_sample_axis(x_next_predict)
         w_concat = concat_sample_axis(sample_weight)
-
+        x_next, x_next_predict, w_concat = drop_nan_samples(
+            x_next, x_next_predict, w=w_concat
+        )
         if w_concat is not None:
-            x_next, x_next_predict, w_concat = drop_nan_samples(
-                x_next, x_next_predict, w=w_concat
-            )
             metric_kws["sample_weight"] = w_concat.reshape(-1)
-        else:
-            x_next, x_next_predict = drop_nan_samples(x_next, x_next_predict)
 
         return metric(x_next, x_next_predict, **metric_kws)
 

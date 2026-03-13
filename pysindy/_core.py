@@ -117,6 +117,7 @@ class _BaseSINDy(BaseEstimator, ABC):
                 " not used when the model was fit"
             )
             u = None
+        input_shapes = [xi.shape for xi in x]
         if u is not None:
             u = validate_control_variables(x, u)
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
@@ -125,7 +126,7 @@ class _BaseSINDy(BaseEstimator, ABC):
         x_feat = [SampleConcatter().fit_transform([xi]) for xi in x_feat]
 
         result = [self.optimizer.predict(xi) for xi in x_feat]
-        result = [np.reshape(pred, xi.shape) for pred, xi in zip(result, x)]
+        result = [np.reshape(pred, shp) for pred, shp in zip(result, input_shapes)]
 
         # Kept for backwards compatibility.
         if not multiple_trajectories:
@@ -393,22 +394,27 @@ class SINDy(_BaseSINDy):
         _validate_inputs(x, t, x_dot, u)
 
         if x_dot is None:
-            x, x_dot = self._process_trajectories(x, t, x_dot)
+            x_smooth, x_dot = self._process_trajectories(x, t, x_dot)
+        else:
+            x_smooth = x
 
         if u is None:
             self.n_control_features_ = 0
         else:
-            u = validate_control_variables(x, u)
+            u = validate_control_variables(x_smooth, u)
             self.n_control_features_ = cast(int, u[0].n_coord)
 
-            x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
+            x_smooth = [
+                np.concatenate((xi, ui), axis=xi.ax_coord)
+                for xi, ui in zip(x_smooth, u)
+            ]
 
         self.feature_names_ = feature_names
 
         x_dot = concat_sample_axis(x_dot)
-        x = self.feature_library.fit_transform(x)
-        x = SampleConcatter().fit_transform(x)
-        self.optimizer.fit(x, x_dot)
+        f_of_x = self.feature_library.fit_transform(x_smooth)
+        features = SampleConcatter().fit_transform(f_of_x)
+        self.optimizer.fit(features, x_dot)
         self._fit_shape()
 
         return self
@@ -498,6 +504,10 @@ class SINDy(_BaseSINDy):
         _validate_inputs(x, t, x_dot, u)
 
         x_dot_predict = self.predict(x, u)
+
+        x_dot_predict = [
+            AxesArray(arr, axes=xi.axes) for arr, xi in zip(x_dot_predict, x)
+        ]
 
         if x_dot is None:
             x, x_dot = self._process_trajectories(x, t, x_dot)
@@ -998,6 +1008,9 @@ class DiscreteSINDy(_BaseSINDy):
         _validate_inputs(x, t, x_next, u)
 
         x_next_predict = self.predict(x, u)
+        x_next_predict = [
+            AxesArray(arr, axes=xi.axes) for arr, xi in zip(x_next_predict, x)
+        ]
 
         if x_next is None:
             x_next_predict = [xd[:-1] for xd in x_next_predict]

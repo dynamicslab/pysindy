@@ -126,10 +126,7 @@ class _BaseSINDy(BaseEstimator, ABC):
         x_feat = [SampleConcatter().fit_transform([xi]) for xi in x_feat]
 
         result = [self.optimizer.predict(xi) for xi in x_feat]
-        result = [
-            self.feature_library.reshape_samples_to_spatial_grid(pred)
-            for pred in result
-        ]
+        result = [np.reshape(pred, xi.shape) for pred, xi in zip(result, x)]
 
         # Kept for backwards compatibility.
         if not multiple_trajectories:

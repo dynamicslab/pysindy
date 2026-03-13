@@ -46,7 +46,6 @@ from .utils.bindy import TemporalNoisePropagation
 class _BaseSINDy(BaseEstimator, ABC):
     feature_library: BaseFeatureLibrary
     optimizer: _BaseOptimizer
-    # Hacks to remove later
     n_control_features_: int = 0
 
     def __init__(

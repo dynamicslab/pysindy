@@ -18,6 +18,9 @@ class WeakPDELibrary(BaseFeatureLibrary):
     """Generate a weak formulation library with custom functions and,
        optionally, any spatial derivatives in arbitrary dimensions.
 
+       This is now deprecated - use WeakSINDy for all new problems.  WeakPDELibrary
+       continues to exist as some functionality is not yet compatible with WeakSINDy.
+
        The features in the weak formulation are integrals of derivatives of input data
        multiplied by a test function phi, which are evaluated on K subdomains
        randomly sampled across the spatiotemporal grid. Each subdomain

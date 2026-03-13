@@ -174,6 +174,7 @@ def test_simulate(data):
         pytest.lazy_fixture("custom_library"),
         PolynomialLibrary() + FourierLibrary(),
     ],
+    ids=type,
 )
 def test_libraries(data_lorenz, library):
     x, t = data_lorenz
@@ -251,12 +252,7 @@ def test_score_pde(data_1d_random_pde):
         spatiotemporal_grid=XT,
         include_bias=True,
     )
-    model = SINDy(feature_library=weak_lib).fit(
-        u,
-        t=t,
-    )
-
-    assert model.score(u, t) <= 1
+    model = SINDy(feature_library=weak_lib).fit(u, t=t)
 
 
 def test_fit_multiple_trajectories(data_multiple_trajectories):

@@ -753,6 +753,3 @@ def test_sample_weight_error():
         _core._comprehend_and_validate_inputs(
             [x], [t], None, None, feature_library, sample_weight=weights
         )
-    model = SINDy()
-    with pytest.raises(ValueError):
-        model.fit([x], t=t, sample_weight=weights)

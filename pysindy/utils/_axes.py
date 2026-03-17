@@ -825,7 +825,7 @@ def comprehend_axes(x):
     return axes
 
 
-def concat_sample_axis(x_list: List[AxesArray]):
+def concat_sample_axis(x_list: Optional[List[AxesArray]]):
     """Concatenate all trajectories and axes used to create samples."""
     if x_list is None:
         return None

@@ -69,7 +69,6 @@ from typing import Union
 
 import numpy as np
 from numpy.typing import NDArray
-from sklearn.base import TransformerMixin
 
 HANDLED_FUNCTIONS = {}
 
@@ -826,22 +825,10 @@ def comprehend_axes(x):
     return axes
 
 
-class SampleConcatter(TransformerMixin):
-    def __init__(self):
-        pass
-
-    def fit(self, x_list, y_list=None):
-        return self
-
-    def __sklearn_is_fitted__(self):
-        return True
-
-    def transform(self, x_list):
-        return concat_sample_axis(x_list)
-
-
-def concat_sample_axis(x_list: List[AxesArray]):
+def concat_sample_axis(x_list: Optional[List[AxesArray]]):
     """Concatenate all trajectories and axes used to create samples."""
+    if x_list is None:
+        return None
     new_arrs = []
     for x in x_list:
         sample_ax_names = ("ax_spatial", "ax_time", "ax_sample")

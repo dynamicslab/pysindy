@@ -35,7 +35,6 @@ from .utils import AxesArray
 from .utils import comprehend_axes
 from .utils import concat_sample_axis
 from .utils import drop_nan_samples
-from .utils import SampleConcatter
 from .utils import validate_control_variables
 from .utils import validate_no_reshape
 from .utils.bindy import TemporalNoisePropagation
@@ -99,12 +98,14 @@ class _BaseSINDy(BaseEstimator, ABC):
             Predicted right hand side of the dynamical system
         """
         if not _check_multiple_trajectories(x, None, u):
-            x, _, _, u = _adapt_to_multiple_trajectories(x, None, None, u)
+            x, _, _, u, _ = _adapt_to_multiple_trajectories(x, None, None, u)
             multiple_trajectories = False
         else:
             multiple_trajectories = True
 
-        x, _, u = _comprehend_and_validate_inputs(x, 1, None, u, self.feature_library)
+        x, _, u, _ = _comprehend_and_validate_inputs(
+            x, 1, None, u, self.feature_library
+        )
 
         check_is_fitted(self)
         if self.n_control_features_ > 0 and u is None:
@@ -120,7 +121,7 @@ class _BaseSINDy(BaseEstimator, ABC):
             x = [np.concatenate((xi, ui), axis=xi.ax_coord) for xi, ui in zip(x, u)]
 
         x_feat = self.feature_library.transform(x)
-        x_feat = [SampleConcatter().fit_transform([xi]) for xi in x_feat]
+        x_feat = [concat_sample_axis([xi]) for xi in x_feat]
 
         result = [self.optimizer.predict(xi) for xi in x_feat]
         result = [
@@ -339,6 +340,7 @@ class SINDy(_BaseSINDy):
         x_dot=None,
         u=None,
         feature_names: Optional[list[str]] = None,
+        sample_weight: Optional[TrajectoryType] = None,
     ):
         """
         Fit a SINDy model.
@@ -380,15 +382,24 @@ class SINDy(_BaseSINDy):
             Names for the input features (e.g. :code:`['x', 'y', 'z']`).
             If None, will use :code:`['x0', 'x1', ...]`.
 
+        sample_weight : list of array-like
+            Each entry must match the spatial/time shape of the corresponding
+            trajectory (i.e., have the same axes as ``x`` with the coordinate
+            axis collapsed to length 1). Automatic broadcasting is not applied.
+            Weights to give to the samples to give more importance
+            to less noisy or more informative samples.
+
         Returns
         -------
         self: a fitted :class:`SINDy` instance
         """
 
-        if not _check_multiple_trajectories(x, x_dot, u):
-            x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
-        x, x_dot, u = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library
+        if not _check_multiple_trajectories(x, x_dot, u, sample_weight):
+            x, t, x_dot, u, sample_weight = _adapt_to_multiple_trajectories(
+                x, t, x_dot, u, sample_weight
+            )
+        x, x_dot, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library, sample_weight
         )
 
         if x_dot is None:
@@ -405,9 +416,12 @@ class SINDy(_BaseSINDy):
         self.feature_names = feature_names
 
         x_dot = concat_sample_axis(x_dot)
-        x = self.feature_library.fit_transform(x)
-        x = SampleConcatter().fit_transform(x)
-        self.optimizer.fit(x, x_dot)
+        x_list = self.feature_library.fit_transform(x)
+        x = concat_sample_axis(x_list)
+        w_concat = concat_sample_axis(sample_weight)
+        x, x_dot, w_concat = drop_nan_samples(x, x_dot, w=w_concat)
+        w_concat = w_concat.reshape(-1) if w_concat is not None else None
+        self.optimizer.fit(x, x_dot, sample_weight=w_concat)
         self._fit_shape()
 
         return self
@@ -441,7 +455,16 @@ class SINDy(_BaseSINDy):
                 names = f"{lhs[i]}"
             print(f"{names} = {eqn}", **kwargs)
 
-    def score(self, x, t, x_dot=None, u=None, metric=r2_score, **metric_kws):
+    def score(
+        self,
+        x,
+        t,
+        x_dot=None,
+        u=None,
+        metric=r2_score,
+        sample_weight: Optional[TrajectoryType] = None,
+        **metric_kws,
+    ):
         """
         Returns a score for the time derivative prediction produced by the model.
 
@@ -475,8 +498,16 @@ class SINDy(_BaseSINDy):
             <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
             for more options.
 
+        sample_weight : list of array-like
+            Each entry must match the spatial/time shape of the corresponding
+            trajectory (same axes as ``x`` with the coordinate axis collapsed
+            to length 1). Automatic broadcasting is not applied.
+            Weights to give to the samples to give more importance
+            to less noisy or more informative samples.
+
         metric_kws: dict, optional
             Optional keyword arguments to pass to the metric function.
+
 
         Returns
         -------
@@ -484,10 +515,12 @@ class SINDy(_BaseSINDy):
             Metric function value for the model prediction of x_dot.
         """
 
-        if not _check_multiple_trajectories(x, x_dot, u):
-            x, t, x_dot, u = _adapt_to_multiple_trajectories(x, t, x_dot, u)
-        x, x_dot, u = _comprehend_and_validate_inputs(
-            x, t, x_dot, u, self.feature_library
+        if not _check_multiple_trajectories(x, x_dot, u, sample_weight):
+            x, t, x_dot, u, sample_weight = _adapt_to_multiple_trajectories(
+                x, t, x_dot, u, sample_weight
+            )
+        x, x_dot, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_dot, u, self.feature_library, sample_weight
         )
 
         x_dot_predict = self.predict(x, u)
@@ -497,8 +530,13 @@ class SINDy(_BaseSINDy):
 
         x_dot = concat_sample_axis(x_dot)
         x_dot_predict = concat_sample_axis(x_dot_predict)
+        w_concat = concat_sample_axis(sample_weight)
+        x_dot, x_dot_predict, w_concat = drop_nan_samples(
+            x_dot, x_dot_predict, w=w_concat
+        )
+        if w_concat is not None:
+            metric_kws["sample_weight"] = w_concat.reshape(-1)
 
-        x_dot, x_dot_predict = drop_nan_samples(x_dot, x_dot_predict)
         return metric(x_dot, x_dot_predict, **metric_kws)
 
     def _process_trajectories(self, x, t, x_dot):
@@ -801,6 +839,7 @@ class DiscreteSINDy(_BaseSINDy):
         x_next=None,
         u=None,
         feature_names: Optional[list[str]] = None,
+        sample_weight: Optional[TrajectoryType] = None,
     ):
         """
         Fit a DiscreteSINDy model.
@@ -842,15 +881,24 @@ class DiscreteSINDy(_BaseSINDy):
             Names for the input features (e.g. :code:`['x', 'y', 'z']`).
             If None, will use :code:`['x0', 'x1', ...]`.
 
+        sample_weight : list of array-like
+            Each entry must match the spatial/time shape of the corresponding
+            trajectory (same axes as ``x`` with the coordinate axis collapsed
+            to length 1). Automatic broadcasting is not applied.
+            Weights to give to the samples to give more importance
+            to less noisy or more informative samples.
+
         Returns
         -------
         self: a fitted :class:`DiscreteSINDy` instance
         """
 
-        if not _check_multiple_trajectories(x, x_next, u):
-            x, t, x_next, u = _adapt_to_multiple_trajectories(x, t, x_next, u)
-        x, x_next, u = _comprehend_and_validate_inputs(
-            x, t, x_next, u, self.feature_library
+        if not _check_multiple_trajectories(x, x_next, u, sample_weight):
+            x, t, x_next, u, sample_weight = _adapt_to_multiple_trajectories(
+                x, t, x_next, u, sample_weight
+            )
+        x, x_next, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library, sample_weight
         )
 
         if x_next is None:
@@ -872,8 +920,13 @@ class DiscreteSINDy(_BaseSINDy):
 
         x_next = concat_sample_axis(x_next)
         x = self.feature_library.fit_transform(x)
-        x = SampleConcatter().fit_transform(x)
-        self.optimizer.fit(x, x_next)
+        x = concat_sample_axis(x)
+
+        w_concat = concat_sample_axis(sample_weight)
+        x, x_next, w_concat = drop_nan_samples(x, x_next, w=w_concat)
+        w_concat = w_concat.reshape(-1) if w_concat is not None else None
+
+        self.optimizer.fit(x, x_next, sample_weight=w_concat)
         self._fit_shape()
 
         return self
@@ -931,7 +984,16 @@ class DiscreteSINDy(_BaseSINDy):
             names = f"({feature_names[i]})[k+1]"
             print(f"{names} = {eqn}", **kwargs)
 
-    def score(self, x, t, u=None, x_next=None, metric=r2_score, **metric_kws):
+    def score(
+        self,
+        x,
+        t,
+        u=None,
+        x_next=None,
+        metric=r2_score,
+        sample_weight: Optional[TrajectoryType] = None,
+        **metric_kws,
+    ):
         """
         Returns a score for the next state prediction produced by the model.
 
@@ -958,6 +1020,13 @@ class DiscreteSINDy(_BaseSINDy):
             <https://scikit-learn.org/stable/modules/model_evaluation.html>`_
             for more options.
 
+        sample_weight : list of array-like
+            Each entry must match the spatial/time shape of the corresponding
+            trajectory (same axes as ``x`` with the coordinate axis collapsed
+            to length 1). Automatic broadcasting is not applied.
+            Weights to give to the samples to give more importance
+            to less noisy or more informative samples.
+
         metric_kws: dict, optional
             Optional keyword arguments to pass to the metric function.
 
@@ -967,10 +1036,12 @@ class DiscreteSINDy(_BaseSINDy):
             Metric function value for the model prediction of x_next.
         """
 
-        if not _check_multiple_trajectories(x, x_next, u):
-            x, t, x_next, u = _adapt_to_multiple_trajectories(x, t, x_next, u)
-        x, x_next, u = _comprehend_and_validate_inputs(
-            x, t, x_next, u, self.feature_library
+        if not _check_multiple_trajectories(x, x_next, u, sample_weight):
+            x, t, x_next, u, sample_weight = _adapt_to_multiple_trajectories(
+                x, t, x_next, u, sample_weight
+            )
+        x, x_next, u, sample_weight = _comprehend_and_validate_inputs(
+            x, t, x_next, u, self.feature_library, sample_weight
         )
 
         x_next_predict = self.predict(x, u)
@@ -982,8 +1053,13 @@ class DiscreteSINDy(_BaseSINDy):
 
         x_next = concat_sample_axis(x_next)
         x_next_predict = concat_sample_axis(x_next_predict)
+        w_concat = concat_sample_axis(sample_weight)
+        x_next, x_next_predict, w_concat = drop_nan_samples(
+            x_next, x_next_predict, w=w_concat
+        )
+        if w_concat is not None:
+            metric_kws["sample_weight"] = w_concat.reshape(-1)
 
-        x_next, x_next_predict = drop_nan_samples(x_next, x_next_predict)
         return metric(x_next, x_next_predict, **metric_kws)
 
     def simulate(
@@ -1236,7 +1312,7 @@ class BINDy(SINDy):
         # Ensure we treat everything as multiple trajectories for
         # _sigma2 calculation.
         if not _check_multiple_trajectories(x, x_dot, u):
-            x_list, t_list, _, _ = _adapt_to_multiple_trajectories(x, t, x_dot, u)
+            x_list, t_list, _, _, _ = _adapt_to_multiple_trajectories(x, t, x_dot, u)
         else:
             x_list, t_list = x, t
 
@@ -1311,13 +1387,14 @@ def _zip_like_sequence(x, t):
         return product(x, [t])
 
 
-def _check_multiple_trajectories(x, x_dot, u) -> bool:
+def _check_multiple_trajectories(x, x_dot, u, sample_weight=None) -> bool:
     """Determine if data contains multiple trajectories
 
     Args:
         x: Samples from which to make predictions.
         x_dot: Pre-computed derivatives of the samples.
         u: Control variables
+        sample_weight: Optional, weights for sample importance
 
     Returns:
         whether data has multiple trajectories
@@ -1335,23 +1412,30 @@ def _check_multiple_trajectories(x, x_dot, u) -> bool:
         and not isinstance(x, Sequence)
         or isinstance(u, Sequence)
         and not isinstance(x, Sequence)
+        or isinstance(sample_weight, Sequence)
+        and not isinstance(x, Sequence)
     )
     if mixed_trajectories:
         raise TypeError(
-            "If x, x_dot, or u are a Sequence of trajectories, each must be a Sequence"
+            "If x, x_dot, u or sample_weight are a"
+            " Sequence of trajectories, each must be a Sequence"
             " of trajectories or None."
         )
     if isinstance(x, Sequence):
-        matching_lengths = (x_dot is None or len(x) == len(x_dot)) and (
-            u is None or len(x) == len(u)
+        matching_lengths = (
+            (x_dot is None or len(x) == len(x_dot))
+            and (u is None or len(x) == len(u))
+            and (sample_weight is None or len(x) == len(sample_weight))
         )
         if not matching_lengths:
-            raise ValueError("x, x_dot and/or u have mismatched number of trajectories")
+            raise ValueError(
+                "x, x_dot, u or sample_weight have mismatched number of trajectories"
+            )
         return True
     return False
 
 
-def _adapt_to_multiple_trajectories(x, t, x_dot, u) -> tuple:
+def _adapt_to_multiple_trajectories(x, t, x_dot, u, sample_weight=None) -> tuple:
     """Adapt model data to that multiple_trajectories.
 
     Args:
@@ -1359,22 +1443,26 @@ def _adapt_to_multiple_trajectories(x, t, x_dot, u) -> tuple:
         t: Time step between samples or array of collection times.
         x_dot: Pre-computed derivatives of the samples.
         u: Control variables
+        sample_weight: Optional, weights for sample importance
 
     Returns:
         Tuple of updated x, t, x_dot, u
     """
     x = [x]
-    # if t is not a dt
     if not isinstance(t, np.ScalarType):
         t = [t]
     if x_dot is not None:
         x_dot = [x_dot]
     if u is not None:
         u = [u]
-    return x, t, x_dot, u
+    if sample_weight is not None:
+        sample_weight = [sample_weight]
+    return x, t, x_dot, u, sample_weight
 
 
-def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
+def _comprehend_and_validate_inputs(
+    x, t, x_dot, u, feature_library, sample_weight=None
+):
     """Validate input types, reshape arrays, and label axes"""
 
     def comprehend_and_validate(arr, t):
@@ -1424,4 +1512,33 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
                 ValueError("Could not reshape control input to match the input data.")
             )
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
-    return x, x_dot, u
+
+    if sample_weight is not None:
+        validated_weights = []
+        for traj_idx, (xi, wi) in enumerate(zip(x, sample_weight)):
+            weight_arr = np.asarray(wi, dtype=float)
+            if weight_arr.ndim == 0:
+                raise ValueError(
+                    "sample_weight must be array-like with at least one dimension."
+                )
+
+            target_shape = list(xi.shape)
+            target_shape[xi.ax_coord] = 1
+            target_shape_tuple = tuple(target_shape)
+
+            if weight_arr.shape != target_shape_tuple:
+                raise ValueError(
+                    f"sample_weight[{traj_idx}] has shape {weight_arr.shape}, "
+                    "but it must "
+                    f"match {target_shape_tuple} to align with the "
+                    "spatial/time axes of "
+                    f"x[{traj_idx}] (shape {tuple(xi.shape)}). Please reshape "
+                    "your weights before passing them to SINDy."
+                )
+
+            weight_arr = AxesArray(weight_arr, xi.axes)
+            weight_arr = validate_no_reshape(weight_arr)
+            validated_weights.append(weight_arr)
+        sample_weight = validated_weights
+
+    return x, x_dot, u, sample_weight

@@ -18,6 +18,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Lasso
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils.validation import check_is_fitted
@@ -579,3 +580,176 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
     model.fit(u, t=t, feature_names=["u"])
     assert abs(model.coefficients()[0, -1] - 1) < 1e-1
     assert np.all(model.coefficients()[0, :-1] == 0)
+
+
+def test_sample_weight_fit_continuous(data_2d_linear):
+    (x_a, xdot_a), (x_b, xdot_b) = data_2d_linear
+    x_trajs = [x_a, x_a, x_b]
+    xdot_trajs = [xdot_a, xdot_a, xdot_b]
+    sample_weight = [
+        np.ones((len(x_a), 1)),
+        np.ones((len(x_a), 1)),
+        10 * np.ones((len(x_b), 1)),
+    ]
+
+    model = SINDy(optimizer=LinearRegression(fit_intercept=False))
+    model.fit(x_trajs, t=0.1, x_dot=xdot_trajs)
+    coef_unweighted = np.copy(model.optimizer.coef_)
+    model.fit(x_trajs, t=0.1, x_dot=xdot_trajs, sample_weight=sample_weight)
+    coef_weighted = np.copy(model.optimizer.coef_)
+
+    model_a = SINDy(optimizer=LinearRegression(fit_intercept=False))
+    model_a.fit([x_a], t=0.1, x_dot=[xdot_a])
+    coef_a = np.copy(model_a.optimizer.coef_)
+
+    model_b = SINDy(optimizer=LinearRegression(fit_intercept=False))
+    model_b.fit([x_b], t=0.1, x_dot=[xdot_b])
+    coef_b = np.copy(model_b.optimizer.coef_)
+
+    expected_unweighted = (2 * coef_a + coef_b) / 3.0
+    expected_weighted = (2 * coef_a + 10 * coef_b) / 12.0
+
+    assert np.allclose(coef_unweighted, expected_unweighted, rtol=1e-2, atol=1e-6)
+    assert np.allclose(coef_weighted, expected_weighted, rtol=1e-2, atol=1e-6)
+    assert np.linalg.norm(coef_weighted - coef_b) < np.linalg.norm(
+        coef_unweighted - coef_b
+    )
+
+
+def test_sample_weight_fit_discrete(data_2d_linear):
+    (x_a, _), (x_b, _) = data_2d_linear
+    x_trajs = [x_a, x_a, x_b]
+    x_next_trajs = [x[1:] for x in x_trajs]
+    x_trajs = [x[:-1] for x in x_trajs]
+    sample_weight = [
+        np.ones((len(x_trajs[0]), 1)),
+        np.ones((len(x_trajs[1]), 1)),
+        10 * np.ones((len(x_trajs[2]), 1)),
+    ]
+
+    model = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
+    model.fit(x_trajs, t=1, x_next=x_next_trajs)
+    coef_unweighted = np.copy(model.optimizer.coef_)
+    model.fit(x_trajs, t=1, x_next=x_next_trajs, sample_weight=sample_weight)
+    coef_weighted = np.copy(model.optimizer.coef_)
+
+    model_a = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
+    model_a.fit([x_trajs[0]], t=1, x_next=[x_next_trajs[0]])
+    coef_a = np.copy(model_a.optimizer.coef_)
+
+    model_b = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
+    model_b.fit([x_trajs[2]], t=1, x_next=[x_next_trajs[2]])
+    coef_b = np.copy(model_b.optimizer.coef_)
+
+    expected_unweighted = (2 * coef_a + coef_b) / 3.0
+    expected_weighted = (2 * coef_a + 10 * coef_b) / 12.0
+
+    assert np.allclose(coef_unweighted, expected_unweighted, rtol=1e-2, atol=1e-6)
+    assert np.allclose(coef_weighted, expected_weighted, rtol=1e-2, atol=1e-6)
+    assert np.linalg.norm(coef_weighted - coef_b) < np.linalg.norm(
+        coef_unweighted - coef_b
+    )
+
+
+def test_sample_weight_score_continuous(data_2d_linear):
+    (x_a, xdot_a), (x_b, xdot_b) = data_2d_linear
+
+    model = SINDy(optimizer=LinearRegression(fit_intercept=False))
+    model.fit([x_a], t=0.1, x_dot=[xdot_a])
+
+    score_a = model.score([x_a], t=0.1, x_dot=[xdot_a])
+    score_b = model.score([x_b], t=0.1, x_dot=[xdot_b])
+    score_unweighted = model.score([x_a, x_b], t=0.1, x_dot=[xdot_a, xdot_b])
+
+    score_weighted_to_a = model.score(
+        [x_a, x_b],
+        t=0.1,
+        x_dot=[xdot_a, xdot_b],
+        sample_weight=[
+            10 * np.ones((len(x_a), 1)),
+            np.ones((len(x_b), 1)),
+        ],
+    )
+    score_weighted_to_b = model.score(
+        [x_a, x_b],
+        t=0.1,
+        x_dot=[xdot_a, xdot_b],
+        sample_weight=[
+            np.ones((len(x_a), 1)),
+            10 * np.ones((len(x_b), 1)),
+        ],
+    )
+
+    for s in [
+        score_a,
+        score_b,
+        score_unweighted,
+        score_weighted_to_a,
+        score_weighted_to_b,
+    ]:
+        assert isinstance(s, float)
+        assert np.isfinite(s)
+        assert s <= 1
+
+    assert score_a >= score_b
+    assert score_weighted_to_a >= score_unweighted >= score_weighted_to_b
+
+
+def test_sample_weight_score_discrete(data_2d_linear):
+    (x_a, _), (x_b, _) = data_2d_linear
+    x_a, x_next_a = x_a[:-1], x_a[1:]
+    x_b, x_next_b = x_b[:-1], x_b[1:]
+
+    model = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
+    model.fit([x_a], t=1, x_next=[x_next_a])
+
+    score_a = model.score([x_a], t=1, x_next=[x_next_a])
+    score_b = model.score([x_b], t=1, x_next=[x_next_b])
+    score_unweighted = model.score([x_a, x_b], t=1, x_next=[x_next_a, x_next_b])
+
+    score_weighted_to_a = model.score(
+        [x_a, x_b],
+        t=1,
+        x_next=[x_next_a, x_next_b],
+        sample_weight=[
+            10 * np.ones((len(x_a), 1)),
+            np.ones((len(x_b), 1)),
+        ],
+    )
+    score_weighted_to_b = model.score(
+        [x_a, x_b],
+        t=1,
+        x_next=[x_next_a, x_next_b],
+        sample_weight=[
+            np.ones((len(x_a), 1)),
+            10 * np.ones((len(x_b), 1)),
+        ],
+    )
+
+    for s in [
+        score_a,
+        score_b,
+        score_unweighted,
+        score_weighted_to_a,
+        score_weighted_to_b,
+    ]:
+        assert isinstance(s, float)
+        assert np.isfinite(s)
+        assert s <= 1
+
+    assert score_a >= score_b
+    assert score_weighted_to_a >= score_unweighted >= score_weighted_to_b
+
+
+def test_sample_weight_error():
+    x = np.arange(24, dtype=float).reshape(3, 4, 2)
+    t = np.linspace(0.0, 0.3, 4)
+    weights = [np.linspace(1.0, 2.0, 4)]
+    feature_library = PolynomialLibrary()
+    with pytest.raises(
+        ValueError,
+        match=r"sample_weight\[0] has shape \(4,\), but it must match \(3, 4, 1\)",
+    ):
+        _core._comprehend_and_validate_inputs(
+            [x], [t], None, None, feature_library, sample_weight=weights
+        )

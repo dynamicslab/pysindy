@@ -1,7 +1,6 @@
 from ._axes import AxesArray
 from ._axes import comprehend_axes
 from ._axes import concat_sample_axis
-from ._axes import SampleConcatter
 from ._axes import wrap_axes
 from .base import capped_simplex_projection
 from .base import drop_nan_samples
@@ -47,7 +46,6 @@ from .odes import yeast
 
 __all__ = [
     "AxesArray",
-    "SampleConcatter",
     "concat_sample_axis",
     "wrap_axes",
     "comprehend_axes",

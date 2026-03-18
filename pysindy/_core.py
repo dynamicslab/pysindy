@@ -418,11 +418,9 @@ class SINDy(_BaseSINDy):
         x_dot = concat_sample_axis(x_dot)
         x_list = self.feature_library.fit_transform(x)
         x = concat_sample_axis(x_list)
-        w_concat = (
-            concat_sample_axis(sample_weight).reshape(-1)
-            if sample_weight is not None
-            else None
-        )
+        w_concat = concat_sample_axis(sample_weight)
+        x, x_dot, w_concat = drop_nan_samples(x, x_dot, w=w_concat)
+        w_concat = w_concat.reshape(-1) if w_concat is not None else None
         self.optimizer.fit(x, x_dot, sample_weight=w_concat)
         self._fit_shape()
 
@@ -924,11 +922,9 @@ class DiscreteSINDy(_BaseSINDy):
         x = self.feature_library.fit_transform(x)
         x = concat_sample_axis(x)
 
-        w_concat = (
-            concat_sample_axis(sample_weight).reshape(-1)
-            if sample_weight is not None
-            else None
-        )
+        w_concat = concat_sample_axis(sample_weight)
+        x, x_next, w_concat = drop_nan_samples(x, x_next, w=w_concat)
+        w_concat = w_concat.reshape(-1) if w_concat is not None else None
 
         self.optimizer.fit(x, x_next, sample_weight=w_concat)
         self._fit_shape()

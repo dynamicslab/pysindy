@@ -20,7 +20,6 @@ from sklearn.utils.validation import check_X_y
 from .._typing import Float2D
 from .._typing import FloatDType
 from ..utils import AxesArray
-from ..utils import drop_nan_samples
 
 NFeat = NewType("NFeat", int)
 NTarget = NewType("NTarget", int)
@@ -209,7 +208,6 @@ class BaseOptimizer(LinearRegression, _BaseOptimizer):
         if sample_weight is not None:
             sample_weight_axes = {"ax_sample": 0}
             sample_weight = AxesArray(np.asarray(sample_weight), sample_weight_axes)
-        x_, y, sample_weight = drop_nan_samples(x_, y, sample_weight)
         x_, y = check_X_y(x_, y, accept_sparse=[], y_numeric=True, multi_output=True)
 
         x, y, X_offset, y_offset, _, sample_weight_sqrt = _preprocess_data(

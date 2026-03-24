@@ -471,8 +471,8 @@ class WeakSINDy(SINDy):
             st_grids = cast(np.ndarray, st_grids)
             u = cast(Optional[np.ndarray], u)
             _check_multiple_trajectories(x, None, H_xt, None)
-            x, st_grids, x_dot, u = _adapt_to_multiple_trajectories(
-                x, st_grids, x_dot, u
+            x, st_grids, x_dot, u, _ = _adapt_to_multiple_trajectories(
+                x, st_grids, x_dot, u, None
             )
             if H_xt is not None:
                 H_xt = [H_xt]

@@ -214,6 +214,18 @@ def test_weak_class(data_1d_random_pde):
     lib = f_lib + u_lib + f_lib * u_lib
     model = WeakSINDy(feature_library=lib)
 
+    model.fit(x=u, st_grids=mesh)
+    model.print()
+
+
+def test_weak_class_multiple_trajectories(data_1d_random_pde):
+    t, x, u, u_dot = data_1d_random_pde
+    mesh = np.stack(np.meshgrid(x, t, indexing="ij"), axis=-1)
+    f_lib = PolynomialLibrary()
+    u_lib = PDELibrary(derivative_order=2, spatial_grid=x)
+    lib = f_lib + u_lib + f_lib * u_lib
+    model = WeakSINDy(feature_library=lib)
+
     model.fit(x=[u], st_grids=[mesh])
     model.print()
 

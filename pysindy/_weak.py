@@ -602,7 +602,7 @@ class WeakSINDy(SINDy):
         # Fit the optimizer!
         lhs = concat_sample_axis(u_dot_wk)
         rhs = concat_sample_axis(rhs_trajectories)
-        lhs, rhs = drop_nan_samples(lhs, rhs)
+        lhs, rhs, _ = drop_nan_samples(lhs, rhs, None)
 
         self.optimizer.fit(rhs, lhs)
         self.feature_library.fit(x[0])

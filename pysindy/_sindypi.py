@@ -9,6 +9,7 @@ SINDy-PI: a robust algorithm for parallel implicit sparse identification of
 nonlinear dynamics. Proceedings of the Royal Society A, 476(2242), 20200279.
 """
 from copy import deepcopy
+from typing import cast
 from typing import Optional
 from typing import Sequence
 
@@ -22,13 +23,16 @@ from ._core import _check_multiple_trajectories
 from ._core import _validate_inputs
 from ._core import _zip_like_sequence
 from ._core import standardize_shape
+from ._typing import TrajectoryType
 from .differentiation import FiniteDifference
 from .differentiation.base import BaseDifferentiation
 from .feature_library import PolynomialLibrary
 from .feature_library.base import BaseFeatureLibrary
 from .optimizers import STLSQ
 from .optimizers.base import BaseOptimizer
-from .utils import SampleConcatter
+from .utils import concat_sample_axis
+from .utils import drop_nan_samples
+from .utils import validate_control_variables
 
 
 class ParallelImplicitSINDy(BaseEstimator):
@@ -82,8 +86,11 @@ class ParallelImplicitSINDy(BaseEstimator):
         self,
         x,
         t: float | np.ndarray | Sequence[np.ndarray],
+        *,
         x_dot=None,
+        u=None,
         feature_names: Optional[list[str]] = None,
+        sample_weight: Optional[TrajectoryType] = None,
     ) -> Self:
         """Fit one SINDy-PI model per library feature column.
 
@@ -98,23 +105,32 @@ class ParallelImplicitSINDy(BaseEstimator):
         x_dot : array-like or list of array-like, optional
             Pre-computed time derivatives.  If ``None``, derivatives are
             computed from ``x`` using ``differentiation_method``.
+        u: array-like or list of array-like
+            Control variables/inputs. If training data contains multiple
+            trajectories (i.e. if x is a list of array-like), then u should be
+            a list containing control variable data for each trajectory.
+            Individual trajectories may contain different numbers of samples.
         feature_names : list of str, optional
             Names for the *state* variables.  Derivative names are formed by
             appending ``'_dot'``.  Defaults to ``['x0', 'x1', ...]``.
+        sample_weight : list of array-like
+            Each entry must match the spatial/time shape of the corresponding
+            trajectory (same axes as ``x`` with the coordinate axis collapsed
+            to length 1). Automatic broadcasting is not applied.
+            Weights to give to the samples to give more importance
+            to less noisy or more informative samples.
 
         Returns
         -------
         self
         """
-        if not _check_multiple_trajectories(x, t, x_dot, None):
-            x, t, x_dot, _ = _adapt_to_multiple_trajectories(x, t, x_dot, None)
+        if not _check_multiple_trajectories(x, t, x_dot, u, sample_weight):
+            x, t, x_dot, _, sample_weight = _adapt_to_multiple_trajectories(
+                x, t, x_dot, None, sample_weight
+            )
 
         x = [standardize_shape(xi) for xi in x]
-
-        if isinstance(t, np.ScalarType):
-            t = [np.arange(0, xi.shape[-2] * t, t) for xi in x]
         t = [standardize_shape(ti) for ti in t]
-
         if x_dot is not None:
             x_dot = [standardize_shape(xdoti) for xdoti in x_dot]
 
@@ -133,6 +149,17 @@ class ParallelImplicitSINDy(BaseEstimator):
             x_smooth = x
             x_dot = x_dot
 
+        if u is None:
+            self.n_control_features_ = 0
+        else:
+            u = validate_control_variables(x_smooth, u)
+            self.n_control_features_ = cast(int, u[0].n_coord)
+
+            x_smooth = [
+                np.concatenate((xi, ui), axis=xi.ax_coord)
+                for xi, ui in zip(x_smooth, u)
+            ]
+
         n_state = x_smooth[0].n_coord
         if feature_names is None:
             feature_names = [f"x{i}" for i in range(n_state)]
@@ -147,7 +174,10 @@ class ParallelImplicitSINDy(BaseEstimator):
         ]
 
         feat_list = self.feature_library.fit_transform(x_combined)
-        feats = SampleConcatter().fit_transform(feat_list)
+        features = concat_sample_axis(feat_list)
+        w_concat = concat_sample_axis(sample_weight)
+        features, _, w_concat = drop_nan_samples(features, features, w=w_concat)
+        w_concat = w_concat.reshape(-1) if w_concat is not None else None
 
         self.n_features_in_ = self.feature_library.n_features_in_
         self.n_output_features_ = self.feature_library.n_output_features_
@@ -156,16 +186,15 @@ class ParallelImplicitSINDy(BaseEstimator):
         )
 
         n_terms = self.n_output_features_
-        # feats_arr = np.asarray(feats)
         self.optimizers_: list[BaseOptimizer] = []
 
         for j in range(n_terms):
             mask = np.ones(n_terms, dtype=bool)
             mask[j] = False
-            feat_j = feats[:, mask]
-            y_j = feats[:, j]
+            feat_j = features[:, mask]
+            y_j = features[:, j]
             opt_j = deepcopy(self.optimizer)
-            opt_j.fit(feat_j, y_j)
+            opt_j.fit(feat_j, y_j, sample_weight=w_concat)
             self.optimizers_.append(opt_j)
 
         return self

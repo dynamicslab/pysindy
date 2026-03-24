@@ -2,6 +2,7 @@ import warnings
 from functools import wraps
 from typing import Callable
 from typing import cast
+from typing import Optional
 from typing import Sequence
 from typing import Union
 
@@ -96,10 +97,18 @@ def validate_no_reshape(x: FloatND, st_grid: Union[float, np.ndarray]) -> None:
         st_grid = cast(np.ndarray, st_grid)
         if st_grid.ndim < 2:
             st_grid = np.reshape(st_grid, (-1, 1))
-        n_timepoints = st_grid.shape[-2]
-        if not n_timepoints == (x_time := x.shape[-2]):
+        st_dims = st_grid.shape[:-1]
+        # Hack for PDELibrary problems which handle spatial and temporal grids
+        # separately.  Once it's removed, we can remove this special case.
+        if len(st_dims) == 1:
+            if not st_dims[0] == (x_time := x.shape[-2]):
+                raise ValueError(
+                    f"st_grid should have same number of timepoints as x ({x_time})."
+                )
+        elif not st_dims == (x_spatiotemporal := x.shape[:-1]):
             raise ValueError(
-                f"Length of t ({n_timepoints}) should match x.shape[-2] ({x_time})."
+                f"spacetime dimensions ({st_dims}) should match "
+                f"x.shape[:-1] ({x_spatiotemporal})."
             )
         for ax in range(st_grid.shape[-1]):
             slicer: list[int | slice] = [0] * st_grid.ndim
@@ -167,7 +176,7 @@ def validate_control_variables(
     return u_arr
 
 
-def drop_nan_samples(x, y):
+def drop_nan_samples(x: AxesArray, y: AxesArray, w: Optional[AxesArray] = None):
     """Drops samples from x and y where either has a nan value"""
     x_non_sample_axes = tuple(ax for ax in range(x.ndim) if ax != x.ax_sample)
     y_non_sample_axes = tuple(ax for ax in range(y.ndim) if ax != y.ax_sample)
@@ -176,7 +185,9 @@ def drop_nan_samples(x, y):
     good_sample_ind = np.nonzero(x_good_samples & y_good_samples)[0]
     x = x.take(good_sample_ind, axis=x.ax_sample)
     y = y.take(good_sample_ind, axis=y.ax_sample)
-    return x, y
+    if w is not None:
+        w = w.take(good_sample_ind, axis=w.ax_sample)
+    return x, y, w
 
 
 def reorder_constraints(arr, n_features, output_order="feature"):

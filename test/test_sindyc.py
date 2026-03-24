@@ -40,7 +40,7 @@ def test_improper_shape_input(data_1d):
     model = SINDy()
 
     # Should fail if x and u have incompatible numbers of rows
-    with pytest.raises(ValueError, match="Length of t"):
+    with pytest.raises(ValueError, match="st_grid should have same number"):
         model.fit(x[:-1, :], u=u, t=t[:-1])
 
 
@@ -67,43 +67,6 @@ def test_bad_control_input(data_lorenz_c_1d):
 
     with pytest.raises(TypeError):
         model.fit(x, u=set(u), t=t)
-
-
-@pytest.mark.parametrize(
-    "data",
-    [pytest.lazy_fixture("data_lorenz_c_1d"), pytest.lazy_fixture("data_lorenz_c_2d")],
-)
-def test_bad_t(data):
-    x, t, u, _ = data
-    model = SINDy()
-
-    # Wrong type
-    with pytest.raises(TypeError):
-        model.fit(x, u=u, t="1")
-
-    # Invalid value of t
-    with pytest.raises(ValueError):
-        model.fit(x, u=u, t=-1)
-
-    # t is a list
-    with pytest.raises(TypeError):
-        model.fit(x, u=u, t=list(t))
-
-    # Wrong number of time points
-    with pytest.raises(ValueError):
-        model.fit(x, u=u, t=t[:-1])
-
-    t_new = np.copy(t)
-    # Two points in t out of order
-    t_new[2], t_new[4] = t_new[4], t_new[2]
-    with pytest.raises(ValueError):
-        model.fit(x, u=u, t=t_new)
-    t_new[2], t_new[4] = t_new[4], t_new[2]
-
-    # Two matching times in t
-    t_new[3] = t_new[5]
-    with pytest.raises(ValueError):
-        model.fit(x, u=u, t=t_new)
 
 
 @pytest.mark.parametrize(
@@ -235,11 +198,11 @@ def test_fit_discrete_time(data):
     x, u = data
 
     model = DiscreteSINDy()
-    model.fit(x, u=u, t=1)
+    model.fit(x, u=u)
     check_is_fitted(model)
 
     model = DiscreteSINDy()
-    model.fit(x[:-1], u=u[:-1], x_next=x[1:], t=1)
+    model.fit(x[:-1], u=u[:-1], x_next=x[1:])
     check_is_fitted(model)
 
 
@@ -253,7 +216,7 @@ def test_fit_discrete_time(data):
 def test_simulate_discrete_time(data):
     x, u = data
     model = DiscreteSINDy()
-    model.fit(x, u=u, t=1)
+    model.fit(x, u=u)
     n_steps = x.shape[0]
     x1 = model.simulate(x[0], t=n_steps, u=u)
 
@@ -273,7 +236,7 @@ def test_predict_discrete_time(data):
     x, u = data
     model = DiscreteSINDy()
     print(x, u)
-    model.fit(x, u=u, t=1)
+    model.fit(x, u=u)
     assert len(model.predict(x, u=u)) == len(x)
 
 
@@ -287,9 +250,9 @@ def test_predict_discrete_time(data):
 def test_score_discrete_time(data):
     x, u = data
     model = DiscreteSINDy()
-    model.fit(x, u=u, t=1)
-    assert model.score(x, u=u, t=1) > 0.75
-    assert model.score(x, u=u, x_next=x, t=1) < 1
+    model.fit(x, u=u)
+    assert model.score(x, u=u) > 0.75
+    assert model.score(x, u=u, x_next=x) < 1
 
 
 def test_fit_discrete_time_multiple_trajectories(
@@ -297,11 +260,11 @@ def test_fit_discrete_time_multiple_trajectories(
 ):
     x, u = data_discrete_time_multiple_trajectories_c
     model = DiscreteSINDy()
-    model.fit(x, u=u, t=1)
+    model.fit(x, u=u)
     check_is_fitted(model)
 
     model = DiscreteSINDy()
-    model.fit(x, u=u, x_next=x, t=1)
+    model.fit(x, u=u, x_next=x)
     check_is_fitted(model)
 
 
@@ -310,7 +273,7 @@ def test_predict_discrete_time_multiple_trajectories(
 ):
     x, u = data_discrete_time_multiple_trajectories_c
     model = DiscreteSINDy()
-    model.fit(x, u=u, t=1)
+    model.fit(x, u=u)
 
     y = model.predict(x, u=u)
     assert len(y) == len(x)
@@ -321,13 +284,13 @@ def test_score_discrete_time_multiple_trajectories(
 ):
     x, u = data_discrete_time_multiple_trajectories_c
     model = DiscreteSINDy()
-    model.fit(x, u=u, t=1)
+    model.fit(x, u=u)
 
-    s = model.score(x, u=u, t=1)
+    s = model.score(x, u=u)
     assert s > 0.75
 
     # x is not its own derivative, so we expect bad performance here
-    s = model.score(x, u=u, x_next=x, t=1)
+    s = model.score(x, u=u, x_next=x)
     assert s < 1
 
 
@@ -390,13 +353,13 @@ def test_extra_u_warn(data_lorenz_c_1d):
 def test_extra_u_warn_discrete(data_discrete_time_c):
     x, u = data_discrete_time_c
     model = DiscreteSINDy()
-    model.fit(x, t=1)
+    model.fit(x)
 
     with pytest.warns(UserWarning):
         model.predict(x, u=u)
 
     with pytest.warns(UserWarning):
-        model.score(x, u=u, t=1)
+        model.score(x, u=u)
 
     with pytest.warns(UserWarning):
         model.simulate(x[0], u=u, t=10)

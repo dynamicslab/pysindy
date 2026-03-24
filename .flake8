@@ -8,8 +8,10 @@ exclude =
     bin,
     __pycache__
 ignore =
-    W503         # Line break before binary operator - Conflicts black
-    E203         # Whitespace before ':' - Conflicts black
+    # Line break before binary operator - Conflicts black
+    W503
+    # Whitespace before ':' - Conflicts black
+    E203
 per-file-ignores =
     __init__.py:F401,F403
     examples/**:E402,E501

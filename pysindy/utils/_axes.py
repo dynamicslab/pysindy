@@ -62,6 +62,7 @@ from typing import List
 from typing import Literal
 from typing import NewType
 from typing import Optional
+from typing import overload
 from typing import Sequence
 from typing import Tuple
 from typing import TypeVar
@@ -571,8 +572,17 @@ def einsum(
 
     for char in rscript.replace("...", "."):
         if char == ".":
+            ellipsis_names = []
             for script_names in allscript_names:
-                out_names += script_names.get("...", [])
+                ellipsis_candidate = script_names.get("...", [])
+                if not ellipsis_names:
+                    ellipsis_names = ellipsis_candidate
+                    out_names += script_names.get("...", [])
+                elif ellipsis_candidate and ellipsis_candidate != ellipsis_names:
+                    raise ValueError(
+                        f"Cannot use ellipsis for {ellipsis_names} in one array and "
+                        f"{ellipsis_candidate} in another."
+                    )
         else:
             ax_names = []
             for script_names in allscript_names:
@@ -825,7 +835,17 @@ def comprehend_axes(x):
     return axes
 
 
-def concat_sample_axis(x_list: Optional[List[AxesArray]]):
+@overload
+def concat_sample_axis(x_list: None) -> None:
+    ...
+
+
+@overload
+def concat_sample_axis(x_list: Sequence[AxesArray]) -> AxesArray:
+    ...
+
+
+def concat_sample_axis(x_list):
     """Concatenate all trajectories and axes used to create samples."""
     if x_list is None:
         return None

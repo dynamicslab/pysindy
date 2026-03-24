@@ -1,6 +1,8 @@
 import warnings
 from functools import wraps
 from typing import Callable
+from typing import cast
+from typing import Optional
 from typing import Sequence
 from typing import Union
 
@@ -10,6 +12,7 @@ from scipy.optimize import bisect
 from sklearn.base import MultiOutputMixin
 from sklearn.utils.validation import check_array
 
+from .._typing import FloatND
 from ._axes import AxesArray
 
 # Define a special object for the default value of t in
@@ -62,13 +65,15 @@ def validate_input(x, t=T_DEFAULT):
     return x_new
 
 
-def validate_no_reshape(x, t: Union[float, np.ndarray, object] = T_DEFAULT):
+def validate_no_reshape(x: FloatND, st_grid: Union[float, np.ndarray]) -> None:
     """Check types and numerical sensibility of arguments.
 
     Args:
         x: array of input data (measured coordinates across time)
-        t: time values for measurements.
-
+        st_grid: (optionally, spatial) and time values for measurements
+            Can be either a float (dt), a one-dimensional array (time points)
+            or n_spatial + 2 dimensional array as a meshgrid between spatial
+            coordinates and time points.
     Returns:
         x as 2D array, with time dimension on first axis and coordinate
         index on second axis.
@@ -76,26 +81,52 @@ def validate_no_reshape(x, t: Union[float, np.ndarray, object] = T_DEFAULT):
     if not hasattr(x, "shape"):
         raise TypeError("Input value must be array-like")
     check_array(x, ensure_2d=False, allow_nd=True)
+    if x.ndim < 2:
+        raise TypeError(
+            "Most arrays must be at least 2d."
+            "See the tutorial for array shape conventions"
+        )
 
-    if t is not T_DEFAULT:
-        if t is None:
-            raise ValueError("t must be a scalar or array-like.")
-        # Apply this check if t is a scalar
-        elif np.ndim(t) == 0 and (isinstance(t, int) or isinstance(t, float)):
-            if t <= 0:
-                raise ValueError("t must be positive")
-        # Only apply these tests if t is array-like
-        elif hasattr(t, "shape"):
-            if not len(t) == x.shape[-2]:
-                raise ValueError("Length of t should match x.shape[-2].")
-            if not np.all(t[:-1] < t[1:]):
-                raise ValueError("Values in t should be in strictly increasing order.")
-        else:
-            raise ValueError("t must be a scalar or array-like.")
-    return x
+    if st_grid is None:
+        return
+    elif np.ndim(st_grid) == 0:
+        if st_grid <= 0:
+            raise ValueError("t must be positive")
+    # Only apply these tests if t is array-like
+    elif hasattr(st_grid, "shape"):
+        st_grid = cast(np.ndarray, st_grid)
+        if st_grid.ndim < 2:
+            st_grid = np.reshape(st_grid, (-1, 1))
+        st_dims = st_grid.shape[:-1]
+        # Hack for PDELibrary problems which handle spatial and temporal grids
+        # separately.  Once it's removed, we can remove this special case.
+        if len(st_dims) == 1:
+            if not st_dims[0] == (x_time := x.shape[-2]):
+                raise ValueError(
+                    f"st_grid should have same number of timepoints as x ({x_time})."
+                )
+        elif not st_dims == (x_spatiotemporal := x.shape[:-1]):
+            raise ValueError(
+                f"spacetime dimensions ({st_dims}) should match "
+                f"x.shape[:-1] ({x_spatiotemporal})."
+            )
+        for ax in range(st_grid.shape[-1]):
+            slicer: list[int | slice] = [0] * st_grid.ndim
+            slicer[ax] = slice(None)
+            slicer[-1] = ax
+            subgrid = st_grid[*slicer]
+            if not np.all(subgrid[:-1] < subgrid[1:]):
+                raise ValueError(
+                    "st_grid should be in strictly increasing order. "
+                    f"Axis {ax} misordered."
+                )
+    else:
+        raise ValueError("t must be a scalar or array-like.")
 
 
-def validate_control_variables(x: Sequence[AxesArray], u: Sequence[AxesArray]) -> None:
+def validate_control_variables(
+    x: Sequence[AxesArray], u: Sequence[AxesArray]
+) -> list[AxesArray]:
     """Ensure that control variables u are compatible with the data x.
 
     Args:
@@ -109,7 +140,7 @@ def validate_control_variables(x: Sequence[AxesArray], u: Sequence[AxesArray]) -
     if len(x) != len(u):
         raise ValueError("x and u must be the same length")
 
-    def _check_control_shape(x, u):
+    def _check_control_shape(x: AxesArray, u: AxesArray) -> AxesArray:
         """
         Compare shape of control variable u against x.
         """
@@ -118,6 +149,26 @@ def validate_control_variables(x: Sequence[AxesArray], u: Sequence[AxesArray]) -
                 "control variables u must have same number of time points as x. "
                 f"u has {u.n_time} time points and x has {x.n_time} time points"
             )
+        try:
+            n_spatial = x.n_spatial
+        except AttributeError:
+            n_spatial = None
+        try:
+            control_spatial = u.n_spatial
+        except AttributeError:
+            if n_spatial is not None:
+                raise ValueError(
+                    "control variables u does not have any spatial axes, but x has "
+                    f"{n_spatial} points along spatial axes, respectively"
+                )
+            else:
+                control_spatial = None
+        if control_spatial != n_spatial:
+            msg = "control variables u must have same number of spatial points as x."
+            f"u has {u.n_spatial} points along spatial axes, respectively. "
+            f"x has {n_spatial} points along spatial axes, respectively"
+            raise ValueError(msg)
+
         return u
 
     u_arr = [_check_control_shape(xi, ui) for xi, ui in zip(x, u)]
@@ -125,7 +176,7 @@ def validate_control_variables(x: Sequence[AxesArray], u: Sequence[AxesArray]) -
     return u_arr
 
 
-def drop_nan_samples(x, y, w=None):
+def drop_nan_samples(x: AxesArray, y: AxesArray, w: Optional[AxesArray] = None):
     """Drops samples from x and y where either has a nan value"""
     x_non_sample_axes = tuple(ax for ax in range(x.ndim) if ax != x.ax_sample)
     y_non_sample_axes = tuple(ax for ax in range(y.ndim) if ax != y.ax_sample)
@@ -218,7 +269,6 @@ def _prox_l1(
     x: NDArray[np.float64],
     regularization_weight: Union[float, NDArray[np.float64]],
 ):
-
     return np.sign(x) * np.maximum(np.abs(x) - regularization_weight, 0)
 
 

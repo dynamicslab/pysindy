@@ -161,7 +161,6 @@ class EvidenceGreedy(BaseOptimizer):
         unbias: bool = False,
         verbose: bool = False,
     ):
-
         if max_iter is not None and max_iter <= 0:
             raise ValueError("max_iter must be positive or None.")
         if alpha <= 0:

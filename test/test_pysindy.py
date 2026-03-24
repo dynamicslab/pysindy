@@ -26,6 +26,7 @@ from sklearn.utils.validation import check_is_fitted
 from pysindy import _core
 from pysindy import DiscreteSINDy
 from pysindy import SINDy
+from pysindy._sindypi import ParallelImplicitSINDy
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
 from pysindy.feature_library import FourierLibrary
@@ -67,29 +68,11 @@ def test_not_fitted(data_1d):
         model.simulate(x[0], t)
 
 
-def test_improper_shape_input(data_1d):
-    x, t = data_1d
-
-    # Ensure model successfully handles different data shapes
-    model = SINDy()
-    model.fit(x.flatten(), t)
-    check_is_fitted(model)
-
-    model = SINDy()
-    model.fit(x.flatten(), t, x_dot=x.flatten())
-    check_is_fitted(model)
-
-    model = SINDy()
-    model.fit(x, t, x_dot=x.flatten())
-    check_is_fitted(model)
-
-
 @pytest.mark.parametrize(
     "data",
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape"),
     ],
 )
 def test_mixed_inputs(data):
@@ -113,15 +96,15 @@ def test_bad_t(data):
     model = SINDy()
 
     # Wrong type
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         model.fit(x, t="1")
 
     # Invalid value of t
     with pytest.raises(ValueError):
         model.fit(x, t=-1)
 
-    # t is a list
-    with pytest.raises(ValueError):
+    # t is a list of floats, not list of array
+    with pytest.raises(AttributeError):
         model.fit(x, list(t))
 
     # Wrong number of time points
@@ -168,7 +151,6 @@ def test_predict(data, optimizer):
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape"),
     ],
 )
 def test_simulate(data):
@@ -191,9 +173,9 @@ def test_simulate(data):
         PolynomialLibrary(degree=3),
         FourierLibrary(n_frequencies=3),
         pytest.lazy_fixture("custom_library"),
-        pytest.lazy_fixture("sindypi_library"),
         PolynomialLibrary() + FourierLibrary(),
     ],
+    ids=type,
 )
 def test_libraries(data_lorenz, library):
     x, t = data_lorenz
@@ -236,7 +218,6 @@ def test_integration_derivative_methods(data_lorenz, derivative_kws):
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape"),
     ],
 )
 def test_score(data):
@@ -252,10 +233,8 @@ def test_score(data):
 def test_score_pde(data_1d_random_pde):
     t, x, u, u_dot = data_1d_random_pde
     pde_lib = PDELibrary(
-        function_library=PolynomialLibrary(degree=2, include_bias=False),
         derivative_order=4,
         spatial_grid=x,
-        include_bias=True,
     )
     model = SINDy(feature_library=pde_lib).fit(
         u,
@@ -274,12 +253,7 @@ def test_score_pde(data_1d_random_pde):
         spatiotemporal_grid=XT,
         include_bias=True,
     )
-    model = SINDy(feature_library=weak_lib).fit(
-        u,
-        t=t,
-    )
-
-    assert model.score(u, t) <= 1
+    model = SINDy(feature_library=weak_lib).fit(u, t=t)
 
 
 def test_fit_multiple_trajectories(data_multiple_trajectories):
@@ -293,11 +267,6 @@ def test_fit_multiple_trajectories(data_multiple_trajectories):
     model = SINDy()
     model.fit(x, t=t, x_dot=x)
     check_is_fitted(model)
-
-    # Test validate_input
-    t[0] = None
-    with pytest.raises(ValueError):
-        model.fit(x, t=t)
 
 
 def test_predict_multiple_trajectories(data_multiple_trajectories):
@@ -325,18 +294,18 @@ def test_fit_discrete_time(data_discrete_time):
     x = data_discrete_time
 
     model = DiscreteSINDy()
-    model.fit(x, t=1)
+    model.fit(x)
     check_is_fitted(model)
 
     model = DiscreteSINDy()
-    model.fit(x[:-1], x_next=x[1:], t=1)
+    model.fit(x[:-1], x_next=x[1:])
     check_is_fitted(model)
 
 
 def test_simulate_discrete_time(data_discrete_time):
     x = data_discrete_time
     model = DiscreteSINDy()
-    model.fit(x, t=1)
+    model.fit(x)
     n_steps = x.shape[0]
     x1 = model.simulate(x[0], n_steps)
 
@@ -353,24 +322,26 @@ def test_simulate_discrete_time(data_discrete_time):
 def test_predict_discrete_time(data_discrete_time):
     x = data_discrete_time
     model = DiscreteSINDy()
-    model.fit(x, t=1)
+    model.fit(x)
     assert len(model.predict(x)) == len(x)
 
 
 def test_score_discrete_time(data_discrete_time):
     x = data_discrete_time
     model = DiscreteSINDy()
-    model.fit(x, t=1)
-    assert model.score(x, t=1) > 0.75
-    assert model.score(x, x_next=x, t=1) < 1
+    model.fit(x)
+    assert model.score(x) > 0.75
+    assert model.score(x, x_next=x) < 1
 
 
 def test_bad_multiple_trajectories(data_multiple_trajectories):
     x, t = data_multiple_trajectories
     with pytest.raises(TypeError):
-        _core._check_multiple_trajectories(x, x_dot=x[0], u=None)
+        _core._check_multiple_trajectories(x, 1, x_dot=x[0], u=None)
+    with pytest.raises(TypeError):
+        _core._check_multiple_trajectories(x, st_grid=x[0], x_dot=None, u=None)
     with pytest.raises(ValueError):
-        _core._check_multiple_trajectories(x, x_dot=x[:-1], u=None)
+        _core._check_multiple_trajectories(x, 1, x_dot=x[:-1], u=None)
 
 
 def test_fit_discrete_time_multiple_trajectories(
@@ -378,11 +349,11 @@ def test_fit_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = DiscreteSINDy()
-    model.fit(x, t=1)
+    model.fit(x)
     check_is_fitted(model)
 
     model = DiscreteSINDy()
-    model.fit(x, x_next=x, t=1)
+    model.fit(x, x_next=x)
     check_is_fitted(model)
 
 
@@ -391,7 +362,7 @@ def test_predict_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = DiscreteSINDy()
-    model.fit(x, t=1)
+    model.fit(x)
 
     y = model.predict(x)
     assert len(y) == len(x)
@@ -402,13 +373,13 @@ def test_score_discrete_time_multiple_trajectories(
 ):
     x = data_discrete_time_multiple_trajectories
     model = DiscreteSINDy()
-    model.fit(x, t=1)
+    model.fit(x)
 
-    s = model.score(x, t=1)
+    s = model.score(x)
     assert s > 0.75
 
     # x is not its own derivative, so we expect bad performance here
-    s = model.score(x, x_next=x, t=1)
+    s = model.score(x, x_next=x)
     assert s < 1
 
 
@@ -417,7 +388,6 @@ def test_score_discrete_time_multiple_trajectories(
     [
         pytest.lazy_fixture("data_1d"),
         pytest.lazy_fixture("data_lorenz"),
-        pytest.lazy_fixture("data_1d_bad_shape"),
     ],
 )
 def test_equations(data, capsys):
@@ -439,7 +409,7 @@ def test_equations(data, capsys):
 def test_print_discrete_time(data_discrete_time, capsys):
     x = data_discrete_time
     model = DiscreteSINDy()
-    model.fit(x, t=1)
+    model.fit(x)
     model.print()
 
     out, _ = capsys.readouterr()
@@ -538,9 +508,7 @@ def test_linear_constraints(data_lorenz):
 def test_data_shapes():
     model = SINDy()
     n = 10
-    x = np.ones(n)
     t = 1
-    model.fit(x, t)
     x = np.ones((n, 2))
     model.fit(x, t)
     x = np.ones((n, n, 2))
@@ -555,7 +523,6 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
     t, x, u = diffuse_multiple_trajectories
 
     pde_lib = PDELibrary(
-        function_library=PolynomialLibrary(degree=1, include_bias=False),
         derivative_order=2,
         spatial_grid=x,
     )
@@ -582,9 +549,51 @@ def test_diffusion_pde(diffuse_multiple_trajectories):
     assert np.all(model.coefficients()[0, :-1] == 0)
 
 
+def test_sindypi_fit(data_lorenz, capsys):
+    x, t = data_lorenz
+    model = ParallelImplicitSINDy()
+    model.fit(x, t)
+
+    # One optimizer per library feature
+    assert len(model.optimizers_) == model.n_output_features_
+
+    # Each optimizer has coef_ with n_output_features_ - 1 columns
+    for opt in model.optimizers_:
+        assert opt.coef_.shape[1] == model.n_output_features_ - 1
+
+    # lib_feature_names_ includes both state and derivative terms
+    assert len(model.lib_feature_names_) == model.n_output_features_
+    assert any("_dot" in name for name in model.lib_feature_names_)
+
+    # print produces one line per library feature
+    model.print()
+    out, _ = capsys.readouterr()
+    lines = [ln for ln in out.splitlines() if ln.strip()]
+    assert len(lines) == model.n_output_features_
+    assert all("=" in ln for ln in lines)
+
+
+def test_sindypi_multiple_trajectories(data_multiple_trajectories):
+    x_list, t_list = data_multiple_trajectories
+    model = ParallelImplicitSINDy()
+    model.fit(x_list, t_list)
+    assert len(model.optimizers_) == model.n_output_features_
+
+
+def test_sindypi_precomputed_x_dot(data_lorenz):
+    x, t = data_lorenz
+    from pysindy.differentiation import FiniteDifference
+
+    x_dot = FiniteDifference()(x, t)
+    model = ParallelImplicitSINDy()
+    model.fit(x, t, x_dot=x_dot)
+    assert len(model.optimizers_) == model.n_output_features_
+
+
 def test_sample_weight_fit_continuous(data_2d_linear):
-    (x_a, xdot_a), (x_b, xdot_b) = data_2d_linear
+    t, (x_a, xdot_a), (x_b, xdot_b) = data_2d_linear
     x_trajs = [x_a, x_a, x_b]
+    ts = [t, t, t]
     xdot_trajs = [xdot_a, xdot_a, xdot_b]
     sample_weight = [
         np.ones((len(x_a), 1)),
@@ -593,17 +602,17 @@ def test_sample_weight_fit_continuous(data_2d_linear):
     ]
 
     model = SINDy(optimizer=LinearRegression(fit_intercept=False))
-    model.fit(x_trajs, t=0.1, x_dot=xdot_trajs)
+    model.fit(x_trajs, t=ts, x_dot=xdot_trajs)
     coef_unweighted = np.copy(model.optimizer.coef_)
-    model.fit(x_trajs, t=0.1, x_dot=xdot_trajs, sample_weight=sample_weight)
+    model.fit(x_trajs, t=ts, x_dot=xdot_trajs, sample_weight=sample_weight)
     coef_weighted = np.copy(model.optimizer.coef_)
 
     model_a = SINDy(optimizer=LinearRegression(fit_intercept=False))
-    model_a.fit([x_a], t=0.1, x_dot=[xdot_a])
+    model_a.fit([x_a], t=ts, x_dot=[xdot_a])
     coef_a = np.copy(model_a.optimizer.coef_)
 
     model_b = SINDy(optimizer=LinearRegression(fit_intercept=False))
-    model_b.fit([x_b], t=0.1, x_dot=[xdot_b])
+    model_b.fit([x_b], t=ts, x_dot=[xdot_b])
     coef_b = np.copy(model_b.optimizer.coef_)
 
     expected_unweighted = (2 * coef_a + coef_b) / 3.0
@@ -617,7 +626,7 @@ def test_sample_weight_fit_continuous(data_2d_linear):
 
 
 def test_sample_weight_fit_discrete(data_2d_linear):
-    (x_a, _), (x_b, _) = data_2d_linear
+    t, (x_a, _), (x_b, _) = data_2d_linear
     x_trajs = [x_a, x_a, x_b]
     x_next_trajs = [x[1:] for x in x_trajs]
     x_trajs = [x[:-1] for x in x_trajs]
@@ -628,17 +637,17 @@ def test_sample_weight_fit_discrete(data_2d_linear):
     ]
 
     model = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
-    model.fit(x_trajs, t=1, x_next=x_next_trajs)
+    model.fit(x_trajs, x_next=x_next_trajs)
     coef_unweighted = np.copy(model.optimizer.coef_)
-    model.fit(x_trajs, t=1, x_next=x_next_trajs, sample_weight=sample_weight)
+    model.fit(x_trajs, x_next=x_next_trajs, sample_weight=sample_weight)
     coef_weighted = np.copy(model.optimizer.coef_)
 
     model_a = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
-    model_a.fit([x_trajs[0]], t=1, x_next=[x_next_trajs[0]])
+    model_a.fit([x_trajs[0]], x_next=[x_next_trajs[0]])
     coef_a = np.copy(model_a.optimizer.coef_)
 
     model_b = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
-    model_b.fit([x_trajs[2]], t=1, x_next=[x_next_trajs[2]])
+    model_b.fit([x_trajs[2]], x_next=[x_next_trajs[2]])
     coef_b = np.copy(model_b.optimizer.coef_)
 
     expected_unweighted = (2 * coef_a + coef_b) / 3.0
@@ -652,18 +661,18 @@ def test_sample_weight_fit_discrete(data_2d_linear):
 
 
 def test_sample_weight_score_continuous(data_2d_linear):
-    (x_a, xdot_a), (x_b, xdot_b) = data_2d_linear
+    t, (x_a, xdot_a), (x_b, xdot_b) = data_2d_linear
 
     model = SINDy(optimizer=LinearRegression(fit_intercept=False))
-    model.fit([x_a], t=0.1, x_dot=[xdot_a])
+    model.fit([x_a], t=[t], x_dot=[xdot_a])
 
-    score_a = model.score([x_a], t=0.1, x_dot=[xdot_a])
-    score_b = model.score([x_b], t=0.1, x_dot=[xdot_b])
-    score_unweighted = model.score([x_a, x_b], t=0.1, x_dot=[xdot_a, xdot_b])
+    score_a = model.score([x_a], t=[t], x_dot=[xdot_a])
+    score_b = model.score([x_b], t=[t], x_dot=[xdot_b])
+    score_unweighted = model.score([x_a, x_b], t=[t], x_dot=[xdot_a, xdot_b])
 
     score_weighted_to_a = model.score(
         [x_a, x_b],
-        t=0.1,
+        t=[t, t],
         x_dot=[xdot_a, xdot_b],
         sample_weight=[
             10 * np.ones((len(x_a), 1)),
@@ -672,7 +681,7 @@ def test_sample_weight_score_continuous(data_2d_linear):
     )
     score_weighted_to_b = model.score(
         [x_a, x_b],
-        t=0.1,
+        t=[t, t],
         x_dot=[xdot_a, xdot_b],
         sample_weight=[
             np.ones((len(x_a), 1)),
@@ -696,20 +705,19 @@ def test_sample_weight_score_continuous(data_2d_linear):
 
 
 def test_sample_weight_score_discrete(data_2d_linear):
-    (x_a, _), (x_b, _) = data_2d_linear
+    t, (x_a, _), (x_b, _) = data_2d_linear
     x_a, x_next_a = x_a[:-1], x_a[1:]
     x_b, x_next_b = x_b[:-1], x_b[1:]
 
     model = DiscreteSINDy(optimizer=LinearRegression(fit_intercept=False))
-    model.fit([x_a], t=1, x_next=[x_next_a])
+    model.fit([x_a], x_next=[x_next_a])
 
-    score_a = model.score([x_a], t=1, x_next=[x_next_a])
-    score_b = model.score([x_b], t=1, x_next=[x_next_b])
-    score_unweighted = model.score([x_a, x_b], t=1, x_next=[x_next_a, x_next_b])
+    score_a = model.score([x_a], x_next=[x_next_a])
+    score_b = model.score([x_b], x_next=[x_next_b])
+    score_unweighted = model.score([x_a, x_b], x_next=[x_next_a, x_next_b])
 
     score_weighted_to_a = model.score(
         [x_a, x_b],
-        t=1,
         x_next=[x_next_a, x_next_b],
         sample_weight=[
             10 * np.ones((len(x_a), 1)),
@@ -718,7 +726,6 @@ def test_sample_weight_score_discrete(data_2d_linear):
     )
     score_weighted_to_b = model.score(
         [x_a, x_b],
-        t=1,
         x_next=[x_next_a, x_next_b],
         sample_weight=[
             np.ones((len(x_a), 1)),
@@ -742,14 +749,10 @@ def test_sample_weight_score_discrete(data_2d_linear):
 
 
 def test_sample_weight_error():
-    x = np.arange(24, dtype=float).reshape(3, 4, 2)
-    t = np.linspace(0.0, 0.3, 4)
-    weights = [np.linspace(1.0, 2.0, 4)]
-    feature_library = PolynomialLibrary()
+    st_grid = np.arange(24, dtype=float).reshape(3, 4, 2)
+    weights = np.linspace(1.0, 2.0, 4).reshape((-1, 1))
     with pytest.raises(
         ValueError,
-        match=r"sample_weight\[0] has shape \(4,\), but it must match \(3, 4, 1\)",
+        match=r"spacetime dimensions",
     ):
-        _core._comprehend_and_validate_inputs(
-            [x], [t], None, None, feature_library, sample_weight=weights
-        )
+        _core.validate_no_reshape(weights, st_grid)

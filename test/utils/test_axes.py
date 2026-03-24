@@ -680,9 +680,20 @@ def test_einsum_contraction():
     ...
 
 
-@pytest.mark.skip
 def test_einsum_explicit_ellipsis():
-    ...
+    arr = AxesArray(np.ones((2, 3, 4)), {"ax_batch": 0, "ax_row": 1, "ax_col": 2})
+    vec = AxesArray(np.ones(4), {"ax_col": 0})
+    result = np.einsum("...j,...j->...", arr, vec)
+    assert result.shape == (2, 3)
+    assert result.axes == {"ax_batch": 0, "ax_row": 1}
+    assert_array_equal(result, 4 * np.ones((2, 3)))
+
+
+def test_einsum_conflicting_ellipsis_names():
+    arr1 = AxesArray(np.ones((2, 4)), {"ax_batch": 0, "ax_col": 1})
+    arr2 = AxesArray(np.ones((2, 4)), {"ax_other": 0, "ax_col": 1})
+    with pytest.raises(ValueError, match="ellipsis"):
+        np.einsum("...j,...j->...", arr1, arr2)
 
 
 def test_einsum_scalar():

@@ -2,10 +2,10 @@
 Base class for feature library classes.
 """
 import abc
-import warnings
 from functools import wraps
 from itertools import repeat
 from typing import Optional
+from typing import Self
 from typing import Sequence
 
 import numpy as np
@@ -14,6 +14,7 @@ from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
+from .._typing import FloatND
 from ..utils import AxesArray
 from ..utils import comprehend_axes
 from ..utils import validate_no_reshape
@@ -51,21 +52,6 @@ class BaseFeatureLibrary(TransformerMixin, BaseEstimator):
             },
         )
 
-    def correct_shape(self, x: AxesArray):
-        """Correct the shape of x, given what we know of the problem"""
-        if len(x.shape) == 1:
-            data = np.asarray(x).reshape((-1, 1))
-            return AxesArray(data, {"ax_time": 0, "ax_coord": 1})
-        elif len(x.shape) > 2 and type(self) is BaseFeatureLibrary:
-            warnings.warn(
-                "Data shapes with more than 2 axes are "
-                "deprecated for the default problem.  We assume that time "
-                "axis comes first, then coordinate axis, then all other "
-                "axes continue the time axis.",
-                DeprecationWarning,
-            )
-        return x
-
     def calc_trajectory(self, diff_method, x, t):
         x_dot = diff_method(x, t=t)
         x = AxesArray(diff_method.smoothed_x_, x.axes)
@@ -76,7 +62,7 @@ class BaseFeatureLibrary(TransformerMixin, BaseEstimator):
 
     # Force subclasses to implement this
     @abc.abstractmethod
-    def fit(self, x, y=None):
+    def fit(self, x, y=None) -> Self:
         """
         Compute number of output features.
 
@@ -93,7 +79,7 @@ class BaseFeatureLibrary(TransformerMixin, BaseEstimator):
 
     # Force subclasses to implement this
     @abc.abstractmethod
-    def transform(self, x):
+    def transform(self, x) -> FloatND:
         """
         Transform data.
 
@@ -143,6 +129,22 @@ class BaseFeatureLibrary(TransformerMixin, BaseEstimator):
     def size(self):
         check_is_fitted(self)
         return self.n_output_features_
+
+
+class EmptyLibrary(BaseFeatureLibrary):
+    """Empty library that outputs an empty array. Useful for testing."""
+
+    def fit(self, x, y=None):
+        self.n_features_in_ = x.shape[1]
+        self.n_output_features_ = 0
+        return self
+
+    def transform(self, x):
+        check_is_fitted(self)
+        return np.empty((*x.shape[:-1], 0))
+
+    def get_feature_names(self, input_features=None) -> list[str]:
+        return []
 
 
 def x_sequence_or_item(wrapped_func):
@@ -479,10 +481,16 @@ class TensoredLibrary(BaseFeatureLibrary):
         -------
         output_feature_names : list of string, length n_output_features
         """
-        check_is_fitted(self)
 
         if input_features is None:
+            check_is_fitted(self)
             input_features = ["x%d" % i for i in range(self.n_features_in_)]
+
+        n_features = len(input_features)
+        if self.inputs_per_library is None:
+            self.inputs_per_library = list(
+                repeat(list(range(n_features)), len(self.libraries))
+            )
 
         feature_names = self.libraries[0].get_feature_names(
             np.asarray(input_features)[_unique(self.inputs_per_library[0])].tolist()

@@ -1,5 +1,6 @@
 from typing import List
 from typing import Union
+from warnings import warn
 
 import numpy as np
 from numpy.typing import NDArray
@@ -93,8 +94,8 @@ class FiniteDifference(BaseDifferentiation):
                 "stencil_size = 2 * (d + 1) // 2 - 1 + order. "
             )
 
-    def _coefficients(self, t):
-        nt = len(t)
+    def _coefficients(self, t: AxesArray):
+        nt = t.n_time
         self.stencil_inds = AxesArray(
             np.array(
                 [
@@ -104,18 +105,25 @@ class FiniteDifference(BaseDifferentiation):
             ),
             {"ax_offset": 0, "ax_ti": 1},
         )
-        self.stencil = AxesArray(
-            np.transpose(t[self.stencil_inds]), {"ax_time": 0, "ax_offset": 1}
+        stencil = AxesArray(
+            t[self.stencil_inds], {"ax_offset": 0, "ax_time": 1, "ax_coord": 2}
         )
-        pows = np.arange(self.n_stencil)[np.newaxis, :, np.newaxis]
+        self.stencil = np.transpose(stencil, [1, 0, 2])
+        pows = AxesArray(
+            np.arange(self.n_stencil)[np.newaxis, :, np.newaxis, np.newaxis],
+            {"ax_time": 0, "ax_power": 1, "ax_offset": 2, "ax_coord": 3},
+        )
         dt_endpoints = (
             self.stencil
             - t[(self.n_stencil - 1) // 2 : -(self.n_stencil - 1) // 2, "offset"]
         )
-        matrices = dt_endpoints[:, "power", :] ** pows
+        matrices = dt_endpoints[:, "power", :, :] ** pows
         b = AxesArray(np.zeros((self.n_stencil)), {"ax_power": 0})
         b[self.d] = factorial(self.d)
-        return np.linalg.solve(matrices, b)
+        # Note the 0 index in ax_coord currently means "time", because
+        # this class was built for differentiation along a single axis,
+        # And that axis was time.
+        return np.linalg.solve(matrices[..., 0], b)
 
     def _coefficients_boundary_forward(self, t):
         # use the same stencil for each boundary point,
@@ -138,20 +146,24 @@ class FiniteDifference(BaseDifferentiation):
         )
         self.stencil_inds = np.concatenate([left, right], axis=1)
 
-        pows = np.arange(self.n_stencil_forward)[np.newaxis, :, np.newaxis]
+        pows = AxesArray(
+            np.arange(self.n_stencil_forward)[np.newaxis, :, np.newaxis, np.newaxis],
+            {"ax_time": 0, "ax_power": 1, "ax_offset": 2, "ax_coord": 3},
+        )
 
         if np.isscalar(t):
+            warn("Scalar t is deprecated here", DeprecationWarning, stacklevel=2)
             matrices = np.transpose(
-                (t * (self.stencil_inds - tinds)[:, np.newaxis, :]) ** pows
+                (t * (self.stencil_inds - tinds)[:, "power", ...]) ** pows
             )
         else:
             matrices = np.transpose(
-                ((t[self.stencil_inds] - t[tinds])[:, np.newaxis, :]) ** pows
+                ((t[self.stencil_inds] - t[tinds])[:, "power", ...]) ** pows
             )
 
         b = np.zeros((self.n_stencil_forward,))
         b[self.d] = factorial(self.d)
-        return np.linalg.solve(matrices, b)
+        return np.linalg.solve(matrices[0, ...], b)
 
     def _coefficients_boundary_periodic(self, t):
         # use centered periodic stencils
@@ -170,7 +182,10 @@ class FiniteDifference(BaseDifferentiation):
                 np.flip(-1 - np.arange((self.n_stencil - 1) // 2, dtype=int)),
             ]
         )
-        pows = np.arange(self.n_stencil)[np.newaxis, :, np.newaxis]
+        pows = AxesArray(
+            np.arange(self.n_stencil)[np.newaxis, :, np.newaxis, np.newaxis],
+            {"ax_time": 0, "ax_power": 1, "ax_offset": 2, "ax_coord": 3},
+        )
 
         if np.isscalar(t):
             matrices = (
@@ -197,14 +212,14 @@ class FiniteDifference(BaseDifferentiation):
                     (
                         np.mod(t[self.stencil_inds] - t[tinds] + period / 2, period)
                         - period / 2
-                    )[:, np.newaxis, :]
+                    )[:, "power", :, :]
                 )
                 ** pows
             )
 
         b = np.zeros(self.n_stencil)
         b[self.d] = factorial(self.d)
-        return np.linalg.solve(matrices, b)
+        return np.linalg.solve(matrices[0, ...], b)
 
     def _constant_coefficients(self, dt):
         pows = np.arange(self.n_stencil)[:, np.newaxis]
@@ -271,7 +286,7 @@ class FiniteDifference(BaseDifferentiation):
                     s[self.axis] = slice(start, stop)
                     interior = interior + x[tuple(s)] * coeffs[i]
         else:
-            t = AxesArray(np.array(t), axes={"ax_time": 0})
+            t = AxesArray(np.array(t), axes={"ax_time": 0, "ax_coord": 1})
             coeffs = self._coefficients(t)
             interior = self._accumulate(coeffs, x)
         s[self.axis] = slice((self.n_stencil - 1) // 2, -(self.n_stencil - 1) // 2)

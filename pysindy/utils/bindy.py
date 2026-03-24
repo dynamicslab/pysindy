@@ -14,7 +14,7 @@ def TemporalNoisePropagation(
     Estimate the derivative noise variance ``_sigma2`` induced by a
     finite-difference differentiator.
 
-    This treats ``differentiator._differentiate`` as a linear operator
+    This treats ``differentiator.__call__`` as a linear operator
     mapping ``x`` to ``L x``. By sending an identity matrix of size ``T``
     through the operator, we reconstruct the finite-difference matrix
     ``L`` and use
@@ -34,9 +34,8 @@ def TemporalNoisePropagation(
 
     Parameters
     ----------
-    differentiator : object
-        Differentiation object with a ``_differentiate(X, t)`` method
-        and an ``axis`` attribute, e.g.
+    differentiator : BaseDifferentiation
+        Requires an ``axis`` attribute, e.g.
         :class:`pysindy.differentiation.FiniteDifference`.
     t : array_like of shape (n_samples,)
         Time grid passed to the differentiator.
@@ -52,7 +51,7 @@ def TemporalNoisePropagation(
 
     """
 
-    if t.ndim != 1:
+    if t.ndim > 2:
         raise ValueError("t must be a 1D time grid.")
     if sigma_x < 0:
         raise ValueError("sigma_x must be non-negative.")
@@ -61,11 +60,11 @@ def TemporalNoisePropagation(
     X_probe = np.eye(n_samples, dtype=float)
 
     # Reconstruct L_dt as the image of the identity under the operator.
-    L_dt = differentiator._differentiate(X_probe, t)
+    L_dt = differentiator(X_probe, t)
 
     if L_dt.shape != (n_samples, n_samples):
         raise RuntimeError(
-            "Unexpected shape from differentiator._differentiate; "
+            "Unexpected shape from differentiator.__call__; "
             f"expected ({n_samples}, {n_samples}), got {L_dt.shape}."
         )
 

@@ -255,18 +255,15 @@ class GeneralizedLibrary(BaseFeatureLibrary):
         output_feature_names : list of string, length n_output_features
         """
         check_is_fitted(self)
+        if input_features is None:
+            input_features = ["x%d" % i for i in range(self.n_features_in_)]
         feature_names = list()
         for i, lib in enumerate(self.libraries_full_):
             if i not in self.exclude_libraries:
                 if i < len(self.libraries):
-                    if input_features is None:
-                        input_features_i = [
-                            "x%d" % k for k in _unique(self.inputs_per_library[i])
-                        ]
-                    else:
-                        input_features_i = np.asarray(input_features)[
-                            _unique(self.inputs_per_library[i])
-                        ].tolist()
+                    input_features_i = np.asarray(input_features)[
+                        _unique(self.inputs_per_library[i])
+                    ].tolist()
                 else:
                     # Tensor libraries need all the inputs and then internally
                     # handle the subsampling of the input variables

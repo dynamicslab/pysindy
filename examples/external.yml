@@ -51,3 +51,9 @@
   repo: "sindy-addl-examples"
   ref: "ba994fc"
   dir: "examples"
+
+- name: "differentiation"
+  user: "dynamicslab"
+  repo: "sindy-addl-examples"
+  ref: "324a4f9"
+  dir: "examples"

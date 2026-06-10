@@ -72,16 +72,11 @@ Shows how PySINDy interfaces with various Scikit-learn objects.
 
     ./4_scikit_learn_compatibility/example
 
-`Differentiation <./5_differentiation/example.ipynb>`_
----------------------------------------------------------------------------------------------------------
-Explore the differentiation methods available in PySINDy on pure differentiation problems and as components in the SINDy algorithm.
+.. pysindy-example::
+    :key: differentiation
+    :title: Differentiation
 
-.. toctree::
-    :hidden:
-    :maxdepth: 1
-
-    ./5_differentiation/example
-
+    Explore the differentiation methods available in PySINDy on pure differentiation problems and as components in the SINDy algorithm.
 
 `Deeptime compatibility <./6_deeptime_compatibility/example.ipynb>`_
 ------------------------------------------------------------------------------------------------------------------------

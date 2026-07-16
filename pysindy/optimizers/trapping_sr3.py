@@ -512,7 +512,7 @@ class TrappingSR3(ConstrainedSR3):
 
         obj = sindy_loss + relax_loss + L1
         if self.method == "local":
-            obj += nonlin_ens_loss + nonlin_ens_loss
+            obj += nonlin_ens_loss + cubic_ens_loss
 
         if self.verbose and k % max(1, self.max_iter // 10) == 0:
             print(

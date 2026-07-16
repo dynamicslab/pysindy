@@ -6,7 +6,9 @@ from pysindy import PolynomialLibrary
 from pysindy import TrappingSR3
 from pysindy.optimizers.trapping_sr3 import _antisymm_double_constraint
 from pysindy.optimizers.trapping_sr3 import _antisymm_triple_constraints
+from pysindy.optimizers.trapping_sr3 import _convert_quad_terms_to_ens_basis
 from pysindy.optimizers.trapping_sr3 import _make_constraints
+from pysindy.optimizers.trapping_sr3 import _permutation_asymmetry
 
 
 @pytest.fixture
@@ -59,6 +61,41 @@ def test_PQ(lib_terms_coeffs):
     expected = np.array([[[4.0, 2.5], [2.5, 6]], [[10.0, 5.5], [5.5, 12.0]]])
     result = np.einsum("ijklm,lm", PQ, coeffs)
     np.testing.assert_array_equal(result, expected)
+
+
+def test_local_objective_includes_both_enstrophy_penalties():
+    optimizer = TrappingSR3(
+        _n_tgts=2,
+        method="local",
+        eta=2.0,
+        alpha=3.0,
+        beta=5.0,
+        reg_weight_lam=0.0,
+    )
+    optimizer.PQ_ = optimizer._set_Ptensors(2)[3]
+    coefficients = np.arange(1.0, 11.0).reshape(5, 2)
+
+    quadratic_terms = np.einsum(
+        "ya,abcde,ed",
+        optimizer.enstrophy.P,
+        optimizer.PQ_,
+        coefficients,
+    )
+    permutation_sum = _permutation_asymmetry(quadratic_terms) * 3
+    cubic_terms = _convert_quad_terms_to_ens_basis(permutation_sum, optimizer.enstrophy)
+    expected = 0.5 * np.sum(quadratic_terms**2) / optimizer.alpha
+    expected += 0.5 * np.sum(cubic_terms**2) / optimizer.beta
+
+    objective = optimizer._objective(
+        np.zeros((1, 5)),
+        np.zeros((1, 2)),
+        coefficients,
+        np.zeros((2, 2)),
+        np.zeros((2, 2)),
+        0,
+    )
+
+    np.testing.assert_allclose(objective, expected)
 
 
 def test_enstrophy_constraints_imply_enstrophy_symmetry():

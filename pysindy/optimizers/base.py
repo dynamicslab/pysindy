@@ -385,6 +385,7 @@ class EnsembleOptimizer(BaseOptimizer):
         self.unbias = False
 
     def _reduce(self, x: AxesArray, y: np.ndarray) -> None:
+        self.coef_list = []
         x = AxesArray(np.asarray(x), {"ax_sample": 0, "ax_coord": 1})
         n_samples = x.shape[x.ax_sample]
         if self.bagging and self.n_subset is None:

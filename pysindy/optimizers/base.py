@@ -171,6 +171,7 @@ class BaseOptimizer(LinearRegression, _BaseOptimizer):
     def set_params(self, **kwargs):
         super().set_params(**kwargs)
         self.__post_init_guard
+        return self
 
     # Force subclasses to implement this
     @abc.abstractmethod

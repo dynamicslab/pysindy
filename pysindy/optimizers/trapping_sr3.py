@@ -347,6 +347,7 @@ class TrappingSR3(ConstrainedSR3):
     def set_params(self, **kwargs):
         super().set_params(**kwargs)
         self.__post_init_guard()
+        return self
 
     @staticmethod
     def _build_PC(polyterms: list[tuple[int, Int1D]]) -> Float3D:

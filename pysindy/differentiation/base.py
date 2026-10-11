@@ -66,7 +66,7 @@ class BaseDifferentiation(BaseEstimator):
                     f"it must be >0.  Received {t}"
                 )
             nt = x.shape[-2]
-            t = np.arange(0, t * nt, t).reshape((-1, 1))
+            t = (np.arange(nt) * t).reshape((-1, 1))
         t = cast(FloatND, t)
         if t.ndim == 1:
             t = t[:, np.newaxis]

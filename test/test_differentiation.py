@@ -130,6 +130,21 @@ def test_spectral_derivative_2d(data_derivative_quasiperiodic_2d):
     )
 
 
+@pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+@pytest.mark.parametrize("axis", [0, 1, -1])
+@pytest.mark.parametrize("d", [1, 2])
+def test_spectral_derivative_complex(dtype, axis, d):
+    t = np.arange(64) * (2 * np.pi / 64)
+    x = np.column_stack((np.exp(2j * t), np.exp(-3j * t))).astype(dtype)
+    expected = x * np.array([(2j) ** d, (-3j) ** d])
+    if axis != 0:
+        x, expected = x.T, expected.T
+    actual = SpectralDerivative(d=d, axis=axis)(x, t)
+    assert np.iscomplexobj(actual)
+    atol = 1e-4 if dtype == np.complex64 else 1e-11
+    np.testing.assert_allclose(actual, expected, atol=atol)
+
+
 def test_centered_difference_2d_uniform(data_derivative_2d):
     x, x_dot = data_derivative_2d
     centered_difference = FiniteDifference(order=2, is_uniform=True)

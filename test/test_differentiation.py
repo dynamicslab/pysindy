@@ -235,6 +235,29 @@ def test_base_class(data_derivative_1d):
         BaseDifferentiation()(x, 1)
 
 
+@pytest.mark.parametrize("n_samples, dt", [(14, 0.01), (12, 0.1), (13, 0.03)])
+@pytest.mark.parametrize(
+    "method",
+    [
+        FiniteDifference(),
+        SmoothedFiniteDifference(),
+        SINDyDerivative(kind="spline", s=0),
+    ],
+)
+def test_scalar_timestep_sample_count(n_samples, dt, method):
+    t = np.arange(n_samples) * dt
+    x = np.column_stack((t**2, t))
+    expected = np.column_stack((2 * t, np.ones(n_samples)))
+    np.testing.assert_allclose(method(x, t=dt), expected, atol=1e-12)
+
+
+@pytest.mark.parametrize("dt", [0.0, -0.1])
+@pytest.mark.parametrize("method", [FiniteDifference(), SpectralDerivative()])
+def test_scalar_timestep_must_be_positive(dt, method):
+    with pytest.raises(ValueError, match="must be >0"):
+        method(np.ones((5, 1)), t=dt)
+
+
 # Test smoothed finite difference method
 @pytest.mark.parametrize(
     "data",

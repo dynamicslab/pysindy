@@ -756,3 +756,14 @@ def test_sample_weight_error():
         match=r"spacetime dimensions",
     ):
         _core.validate_no_reshape(weights, st_grid)
+
+
+@pytest.mark.parametrize("n_samples, dt", [(14, 0.01), (12, 0.1), (13, 0.03)])
+def test_scalar_timestep_sample_count(n_samples, dt):
+    t = np.arange(n_samples) * dt
+    x = np.column_stack((3 * np.exp(-2 * t), 0.5 * np.exp(t)))
+    reference = SINDy().fit(x, t=t)
+    model = SINDy().fit(x, t=dt)
+    np.testing.assert_allclose(model.coefficients(), reference.coefficients())
+    np.testing.assert_allclose(model.predict(x), reference.predict(x))
+    assert model.score(x, t=dt) == pytest.approx(reference.score(x, t=t))

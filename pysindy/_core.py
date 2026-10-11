@@ -1487,7 +1487,7 @@ def _adapt_to_multiple_trajectories(
                 "See the tutorial for array shape conventions"
             )
         n_t = x.shape[-2]
-        t_arr = np.arange(0, dt * n_t, dt).reshape((n_t, 1))
+        t_arr = (np.arange(n_t) * dt).reshape((n_t, 1))
         lt = [t_arr]
     elif t is not None:
         lt = cast(list[np.ndarray], [t])

@@ -60,7 +60,7 @@ class BaseDifferentiation(BaseEstimator):
             not computed will have the value np.nan.
         """
         if isinstance(t, np.ScalarType):
-            if t < 0:
+            if t <= 0:
                 raise ValueError(
                     "if t is passed as a scalar to represent dt, "
                     f"it must be >0.  Received {t}"

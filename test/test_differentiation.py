@@ -251,6 +251,13 @@ def test_scalar_timestep_sample_count(n_samples, dt, method):
     np.testing.assert_allclose(method(x, t=dt), expected, atol=1e-12)
 
 
+@pytest.mark.parametrize("dt", [0.0, -0.1])
+@pytest.mark.parametrize("method", [FiniteDifference(), SpectralDerivative()])
+def test_scalar_timestep_must_be_positive(dt, method):
+    with pytest.raises(ValueError, match="must be >0"):
+        method(np.ones((5, 1)), t=dt)
+
+
 # Test smoothed finite difference method
 @pytest.mark.parametrize(
     "data",

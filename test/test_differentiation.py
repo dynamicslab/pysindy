@@ -523,3 +523,24 @@ def test_sindy_derivative_partial_kwargs_after_method_replacement():
     ).fit(x, t)
 
     np.testing.assert_allclose(model.coefficients(), expected.coefficients())
+
+
+@pytest.mark.parametrize(
+    "derivative_kws",
+    [
+        dict(kind="finite_difference", k=2),
+        dict(kind="savitzky_golay", order=2, left=0.2, right=0.2),
+        dict(kind="spline", s=0.01),
+        dict(kind="trend_filtered", order=0, alpha=0.01),
+    ],
+)
+def test_sindy_derivative_assign_initial_kind(derivative_kws):
+    options = {k: v for k, v in derivative_kws.items() if k != "kind"}
+    method = SINDyDerivative(**options)
+    result = method.set_params(kwargs={"kind": derivative_kws["kind"]})
+    t = np.linspace(0, 2, 21)
+    x = np.column_stack([np.sin(t), np.cos(t)])
+
+    assert method.kwargs == derivative_kws
+    assert result is method
+    np.testing.assert_allclose(method(x, t), SINDyDerivative(**derivative_kws)(x, t))

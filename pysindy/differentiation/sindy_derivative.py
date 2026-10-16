@@ -55,7 +55,10 @@ class SINDyDerivative(BaseDifferentiation):
             return self
         else:
             kwargs = params["kwargs"]
-            if kwargs.get("kind", self.kwargs.get("kind")) != self.kwargs.get("kind"):
+            if (
+                "kind" in self.kwargs
+                and kwargs.get("kind", self.kwargs["kind"]) != self.kwargs["kind"]
+            ):
                 self.kwargs = {}
             self.kwargs.update(kwargs)
             self.save_smooth = params.get("save_smooth", self.save_smooth)

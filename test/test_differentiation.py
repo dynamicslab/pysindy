@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from derivative import dxdt
 
+from pysindy import SINDy
 from pysindy.differentiation import FiniteDifference
 from pysindy.differentiation import SINDyDerivative
 from pysindy.differentiation import SmoothedFiniteDifference
@@ -439,3 +440,107 @@ def test_nd_differentiation(derivative, kwargs):
     xdot = derivative(**kwargs)(x, t)
     expected = np.zeros(3)
     np.testing.assert_array_almost_equal(xdot[1, :, 1], expected)
+
+
+@pytest.mark.parametrize(
+    "derivative_kws",
+    [
+        dict(kind="finite_difference", k=1),
+        dict(kind="spline", s=0.01),
+        dict(kind="spectral"),
+        dict(kind="trend_filtered", order=0, alpha=0.01),
+    ],
+)
+def test_sindy_derivative_replaces_kwargs(derivative_kws):
+    method = SINDyDerivative(kind="savitzky_golay", order=2, left=0.2, right=0.2)
+    result = method.set_params(kwargs=derivative_kws)
+    t = np.linspace(0, 2, 21)
+    x = np.column_stack([np.sin(t), np.cos(t)])
+    expected = SINDyDerivative(**derivative_kws)(x, t)
+
+    np.testing.assert_allclose(method(x, t), expected)
+    assert method.kwargs == derivative_kws
+    assert result is method
+
+
+def test_sindy_derivative_replacement_through_model():
+    model = SINDy(differentiation_method=SINDyDerivative())
+    model.set_params(
+        differentiation_method__kwargs=dict(
+            kind="savitzky_golay", order=2, left=0.2, right=0.2
+        )
+    )
+    model.set_params(
+        differentiation_method__kwargs=dict(kind="trend_filtered", order=0, alpha=0.01)
+    )
+    t = np.linspace(0, 2, 21)
+    x = np.column_stack([np.sin(t), np.cos(t)])
+    model.fit(x, t)
+    expected = SINDy(
+        differentiation_method=SINDyDerivative(
+            kind="trend_filtered", order=0, alpha=0.01
+        )
+    ).fit(x, t)
+
+    np.testing.assert_allclose(model.coefficients(), expected.coefficients())
+
+
+def test_sindy_derivative_partial_kwargs():
+    method = SINDyDerivative(kind="finite_difference", k=1)
+    result = method.set_params(kwargs={"k": 2}, save_smooth=False)
+    t = np.linspace(0, 2, 21)
+    x = np.column_stack([np.sin(t), np.cos(t)])
+    expected = SINDyDerivative(kind="finite_difference", k=2, save_smooth=False)
+
+    np.testing.assert_allclose(method(x, t), expected(x, t))
+    assert method.kwargs == {"kind": "finite_difference", "k": 2}
+    assert not method.save_smooth
+    assert result is method
+
+
+def test_sindy_derivative_empty_kwargs():
+    method = SINDyDerivative(kind="finite_difference", k=1)
+    assert method.set_params(kwargs={}) is method
+    assert method.set_params() is method
+    assert method.kwargs == {"kind": "finite_difference", "k": 1}
+
+
+def test_sindy_derivative_partial_kwargs_after_method_replacement():
+    model = SINDy(differentiation_method=SINDyDerivative())
+    model.set_params(
+        differentiation_method=SINDyDerivative(kind="savitzky_golay"),
+        differentiation_method__kwargs={"order": 2, "left": 0.2, "right": 0.2},
+    )
+    model.set_params(
+        differentiation_method=SINDyDerivative(kind="finite_difference"),
+        differentiation_method__kwargs={"k": 1},
+    )
+    t = np.linspace(0, 2, 21)
+    x = np.column_stack([np.sin(t), np.cos(t)])
+    model.fit(x, t)
+    expected = SINDy(
+        differentiation_method=SINDyDerivative(kind="finite_difference", k=1)
+    ).fit(x, t)
+
+    np.testing.assert_allclose(model.coefficients(), expected.coefficients())
+
+
+@pytest.mark.parametrize(
+    "derivative_kws",
+    [
+        dict(kind="finite_difference", k=2),
+        dict(kind="savitzky_golay", order=2, left=0.2, right=0.2),
+        dict(kind="spline", s=0.01),
+        dict(kind="trend_filtered", order=0, alpha=0.01),
+    ],
+)
+def test_sindy_derivative_assign_initial_kind(derivative_kws):
+    options = {k: v for k, v in derivative_kws.items() if k != "kind"}
+    method = SINDyDerivative(**options)
+    result = method.set_params(kwargs={"kind": derivative_kws["kind"]})
+    t = np.linspace(0, 2, 21)
+    x = np.column_stack([np.sin(t), np.cos(t)])
+
+    assert method.kwargs == derivative_kws
+    assert result is method
+    np.testing.assert_allclose(method(x, t), SINDyDerivative(**derivative_kws)(x, t))

@@ -54,7 +54,13 @@ class SINDyDerivative(BaseDifferentiation):
             # Simple optimization to gain speed (inspect is slow)
             return self
         else:
-            self.kwargs.update(params["kwargs"])
+            kwargs = params["kwargs"]
+            if (
+                "kind" in self.kwargs
+                and kwargs.get("kind", self.kwargs["kind"]) != self.kwargs["kind"]
+            ):
+                self.kwargs = {}
+            self.kwargs.update(kwargs)
             self.save_smooth = params.get("save_smooth", self.save_smooth)
 
         return self

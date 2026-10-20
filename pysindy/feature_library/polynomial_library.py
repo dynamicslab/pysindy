@@ -184,15 +184,14 @@ class PolynomialLibrary(BaseFeatureLibrary, PolynomialFeatures):
                 " be True"
             )
         n_features = x_full[0].shape[AX_COORD]
-        combinations = self._combinations(
+        self.n_features_in_ = n_features
+        self.n_output_features_ = n_poly_features(
             n_features,
             self.degree,
             self.include_interaction,
             self.interaction_only,
             self.include_bias,
         )
-        self.n_features_in_ = n_features
-        self.n_output_features_ = sum(1 for _ in combinations)
         return self
 
     @x_sequence_or_item

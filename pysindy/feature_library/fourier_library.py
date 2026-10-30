@@ -131,6 +131,9 @@ class FourierLibrary(BaseFeatureLibrary):
 
         xp_full = []
         for x in x_full:
+            # Trigonometric features need floating values, including before scaling
+            # by the frequency to avoid overflow in integer input arrays.
+            x = x.astype(np.result_type(x.dtype, 1.0), copy=False)
             # n_samples = x.shape[x.ax_sample]
             n_features = x.shape[x.ax_coord]
             shape = np.array(x.shape)

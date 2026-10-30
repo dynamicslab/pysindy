@@ -184,15 +184,14 @@ class PolynomialLibrary(BaseFeatureLibrary, PolynomialFeatures):
                 " be True"
             )
         n_features = x_full[0].shape[AX_COORD]
-        combinations = self._combinations(
+        self.n_features_in_ = n_features
+        self.n_output_features_ = n_poly_features(
             n_features,
             self.degree,
-            self.include_interaction,
-            self.interaction_only,
-            self.include_bias,
+            include_bias=self.include_bias,
+            include_interaction=self.include_interaction,
+            interaction_only=self.interaction_only,
         )
-        self.n_features_in_ = n_features
-        self.n_output_features_ = sum(1 for _ in combinations)
         return self
 
     @x_sequence_or_item
@@ -262,7 +261,7 @@ def n_poly_features(
     n_in_feat: int,
     degree: int,
     include_bias: bool = False,
-    include_interation: bool = True,
+    include_interaction: bool = True,
     interaction_only: bool = False,
 ) -> int:
     """Calculate number of polynomial features
@@ -274,10 +273,10 @@ def n_poly_features(
         include_interaction: whether to include terms mixing multiple inputs
         interaction_only: whether to omit terms of x_m * x_n^p for p > 1
     """
-    if not include_interation and interaction_only:
+    if not include_interaction and interaction_only:
         raise ValueError("Cannot set interaction only if include_interaction is False")
-    n_feat = include_bias
-    if not include_interation:
+    n_feat = int(include_bias)
+    if not include_interaction:
         return n_feat + n_in_feat * degree
     for deg in range(1, degree + 1):
         if interaction_only:

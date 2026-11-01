@@ -4,6 +4,7 @@ Unit tests for feature libraries.
 import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
+from sklearn.base import clone
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 
@@ -52,6 +53,34 @@ def test_form_sindy_pi_library():
 
     # Test without user-supplied function names
     SINDyPILibrary(library_functions=library_functions, function_names=None)
+
+
+@pytest.mark.parametrize("fitted", [False, True])
+def test_custom_library_estimator_parameters(fitted):
+    x = np.arange(12, dtype=float).reshape(6, 2)
+    functions = [lambda x: x, lambda x: x**2]
+    library = CustomLibrary(functions)
+    if fitted:
+        library.fit(x)
+
+    assert library.get_params()["library_functions"] is functions
+    assert "CustomLibrary" in repr(library)
+    cloned = clone(library)
+    np.testing.assert_array_equal(cloned.fit_transform(x), library.fit_transform(x))
+
+
+def test_custom_library_set_functions():
+    x = np.arange(12, dtype=float).reshape(6, 2)
+    library = CustomLibrary([lambda x: x])
+    replacement = [lambda x: x**2]
+    assert library.set_params(library_functions=replacement) is library
+    assert library.functions is replacement
+    np.testing.assert_array_equal(library.fit_transform(x), x**2)
+
+    # The documented attribute remains an alias in the other direction too.
+    library.functions = [lambda x: x**3]
+    assert library.get_params()["library_functions"] is library.functions
+    np.testing.assert_array_equal(clone(library).fit_transform(x), x**3)
 
 
 def test_bad_parameters():

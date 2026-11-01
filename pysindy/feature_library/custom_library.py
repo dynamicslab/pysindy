@@ -99,6 +99,15 @@ class CustomLibrary(BaseFeatureLibrary):
         self.include_bias = include_bias
         self.interaction_only = interaction_only
 
+    @property
+    def library_functions(self):
+        """Expose the constructor parameter while retaining the functions attribute."""
+        return self.functions
+
+    @library_functions.setter
+    def library_functions(self, library_functions):
+        self.functions = library_functions
+
     @staticmethod
     def _combinations(n_features, n_args, interaction_only):
         """Get the combinations of features to be passed to a library function."""

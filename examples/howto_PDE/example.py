@@ -72,13 +72,15 @@ print(f"Burgers number of SVD modes {burg_basis.shape[-1]}")
 
 # A more challenging problem from fluid dynamics, on a 2D grid.
 # Advection and diffusion of a 2D velocity field, with variable density.
-# $$u_t = -u u_x - v u_y - p_x + \nu (u_{xx} + u_{yy})$$
-# $$v_t = -u v_x - v v_y - p_y + \nu (v_{xx} + v_{yy})$$
+# With constant dynamic viscosity $\mu$ and $p = RT\rho$, the equations are
+# $$u_t = -u u_x - v u_y - (RT/\rho)\rho_x + (\mu/\rho)(u_{xx} + u_{yy})$$
+# $$v_t = -u v_x - v v_y - (RT/\rho)\rho_y + (\mu/\rho)(v_{xx} + v_{yy})$$
 # $$\rho_t = -u \rho_x - v \rho_y - \rho (u_x + v_y)$$
 
 # %%
 nx = 64
-nt = 25
+# Resolve the fast initial transient when estimating time derivatives.
+nt = 100
 compressible = data.get_compressible_data(nx, nt)
 x_fluid = np.stack(
     np.meshgrid(compressible["x"], compressible["y"], indexing="ij"), axis=-1
@@ -123,18 +125,25 @@ pdefind_burg.fit(u_burg, t=t_burg, feature_names=["u"])
 print("PDE-FIND Burgers model:")
 pdefind_burg.print()
 
-pde_lib_fluid = ps.PDELibrary(derivative_order=2, spatial_grid=x_fluid)
-inv_lib = ps.CustomLibrary([lambda x: 1 / x], [lambda x: f"{x}" + "**-1"])
+pde_lib_fluid = ps.PDELibrary(
+    derivative_order=2, spatial_grid=x_fluid, diff_kwargs={"periodic": True}
+)
+# Advection and continuity need u, v and rho multiplying their derivatives.
+# Only density is inverted: velocities cross zero in this flow.
+fluid_functions = ps.CustomLibrary(
+    [lambda x: x, lambda u, v, rho: 1 / rho],
+    [lambda x: x, lambda u, v, rho: f"{rho}**-1"],
+)
 bias_lib = ps.PolynomialLibrary(degree=0, include_bias=True)
-reg_wt = ps.SR3.calculate_l0_weight(0.1, 1)
-opt_fluid = ps.SR3(reg_weight_lam=reg_wt, regularizer="l0", max_iter=max_iter)
-fluid_lib = bias_lib + inv_lib + pde_lib_fluid + inv_lib * pde_lib_fluid
+# The coefficients in this nondimensional example have magnitude one.
+opt_fluid = ps.STLSQ(threshold=0.5, alpha=1e-10)
+fluid_lib = bias_lib + fluid_functions + pde_lib_fluid + fluid_functions * pde_lib_fluid
 pdefind_fluid = ps.SINDy(feature_library=fluid_lib, optimizer=opt_fluid)
 
 # Add some noise to improve condition number
 rng = np.random.default_rng(0)
 u_fluid += rng.normal(scale=1e-8, size=u_fluid.shape)
-pdefind_fluid.fit(u_fluid, t=t_fluid, feature_names=["u", "v", "p"])
+pdefind_fluid.fit(u_fluid, t=t_fluid, feature_names=["u", "v", "rho"])
 print("\nPDE-FIND Compressible model:")
 pdefind_fluid.print()
 
@@ -177,7 +186,7 @@ weak_fluid = ps.WeakSINDy(
     optimizer=opt_fluid2,
     n_subdomains=min(1000, max_subdomains),
 )
-weak_fluid.fit(u_fluid, st_grids=st_fluid, feature_names=["u", "v", "p"])
+weak_fluid.fit(u_fluid, st_grids=st_fluid, feature_names=["u", "v", "rho"])
 print("WeakSINDy Compressible model:")
 weak_fluid.print()
 
@@ -274,7 +283,7 @@ sindy_exp.compare_coefficient_plots_from_dicts(
 # #### Compressible isothermal flow
 
 # %%
-c_true = compressible_true_coefficients(["u", "v", "p"], 1, 1)
+c_true = compressible_true_coefficients(["u", "v", "rho"], 1, 1)
 c_true, fluid_pdefind_coeff = sindy_exp._utils.unionize_coeff_dicts(
     pdefind_fluid, c_true
 )
